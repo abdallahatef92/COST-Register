@@ -230,7 +230,6 @@ const sumTerms = (f) => COST.map((s) => f(s.code)).join('+');
   });
   ws.getRow(8).height = 24; ws.getRow(9).height = 30;
   ws.getCell(10, 1).value = 'Expenses = every cost line up to the cut date (all cost elements except 4xxxxxxx). The Expenses sheet allocates the same total by PKG, MNL and Cost element.'; ws.getCell(10, 1).font = font({ size: 9, italic: true, color: { argb: 'FF' + C.muted } });
-  ws.views = [{ showGridLines: false, state: 'frozen', ySplit: 0 }];
   ws.getCell(rRev + 2, 1).value = 'Sheets'; ws.getCell(rRev + 2, 1).font = font({ bold: true, color: { argb: 'FF' + C.navy } });
   ['Expenses', 'Checks', 'Lists', 'Rules', 'Notes'].forEach((n, i) => { const x = ws.getCell(rRev + 3 + i, 1); x.value = { text: n, hyperlink: `#'${n}'!A1` }; x.font = font({ color: { argb: 'FF' + C.blue }, underline: true }); });
   if (PREVIEW) ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 1 };
