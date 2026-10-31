@@ -65,9 +65,9 @@ if (ZINTC1_FILES.length) {
       if (g('category') !== 'WBS') { unsettled++; continue; }                       // CTR = still on a cost centre, not on the project
       const bucket = ORDER_BUCKET[g('order_type_description')]; if (!bucket) { unknown++; continue; }
       if (pk > LASTPK) { beyond++; continue; }                                        // detail after the CJI3 data date is not actuals yet
-      const item = g('cost_element_descriptio') || g('order_type_description'), pkg = B.wbsGroup(g('wbs')), ce = g('cost_element') || '', mnl = bucket === 'House rent' ? 'OTHER' : 'EQU';
-      const key = [bucket, item, ce, pkg].join('\u0001');
-      let r = rows.get(key); if (!r) rows.set(key, (r = { bucket, item, sapce: ce, pkg, mnl, cec: ce, m: {}, open: 0 }));
+      const item = g('cost_element_descriptio') || g('order_type_description'), wbsg = B.wbsGroup(g('wbs')), ce = g('cost_element') || '', mnl = bucket === 'House rent' ? 'OTHER' : 'EQU';
+      const key = [bucket, item, ce, wbsg].join('\u0001');
+      let r = rows.get(key); if (!r) rows.set(key, (r = { bucket, item, sapce: ce, wbsg, pkg: '', mnl, cec: '', m: {}, open: 0 }));
       r.m[pk] = (r.m[pk] || 0) + amt; used++; loadedFrom = Math.min(loadedFrom || pk, pk); loadedTo = Math.max(loadedTo || pk, pk);
     }
   }
@@ -96,21 +96,21 @@ for (const s of B.SHEETS) TAB.set(s.bucket, { rows: [], c3: cell0(), cov: cell0(
     const t = TAB.get(l.bucket); addAmt(t.c3, l, l.amt);
     const covered = t.provider && t.provider.covers(l);
     if (covered) { addAmt(t.cov, l, l.amt); continue; }                              // replaced by the detail report
-    const isRev = l.bucket === 'Revenue', pkg = isRev ? '' : B.wbsGroup(l.wbs), mnl = isRev ? '' : B.mnlOf(l.nature);
-    const key = [l.bucket, l.ceName, l.ce, pkg].join('\u0001');
-    let r = derived.get(key); if (!r) derived.set(key, (r = { bucket: l.bucket, item: l.ceName || '(no name)', source: 'CJI3', sapce: l.ce, pkg, mnl, cec: isRev ? '' : l.ce, open: 0, m: {} }));
+    const isRev = l.bucket === 'Revenue', wbsg = B.wbsGroup(l.wbs), mnl = isRev ? '' : B.mnlOf(l.nature);
+    const key = [l.bucket, l.ceName, l.ce, wbsg].join('\u0001');
+    let r = derived.get(key); if (!r) derived.set(key, (r = { bucket: l.bucket, item: l.ceName || '(no name)', source: 'CJI3', sapce: l.ce, wbsg, pkg: '', mnl, cec: '', open: 0, m: {} }));
     addAmt(r, l, l.amt);
   }
   for (const r of derived.values()) TAB.get(r.bucket).rows.push(r);
   for (const p of PROVIDERS) for (const d of p.rows) { const t = TAB.get(d.bucket); t.rows.push(Object.assign({ source: p.id }, d)); for (const [pk, a] of Object.entries(d.m)) t.det.m[pk] = (t.det.m[pk] || 0) + a; }
   // the adjustment: what the detail does not explain, so that the bucket still equals CJI3
   for (const t of TAB.values()) if (t.provider) {
-    const adj = { item: 'Not explained by detail (CJI3 less ' + t.provider.id + ')', source: 'Adjustment', sapce: '', pkg: '(adjustment)', mnl: null, cec: '(adjustment)', open: t.cov.open - t.det.open, m: {}, adj: true };
+    const adj = { item: 'Not explained by detail (CJI3 less ' + t.provider.id + ')', source: 'Adjustment', sapce: '', wbsg: '', pkg: '', mnl: null, cec: '', open: t.cov.open - t.det.open, m: {}, adj: true };
     for (const pk of MONTHS) { const v = (t.cov.m[pk] || 0) - (t.det.m[pk] || 0); if (Math.abs(v) > 1e-9) adj.m[pk] = v; }
     adj.mnl = t.rows.find((r) => r.mnl) ? t.rows.find((r) => r.mnl).mnl : 'OTHER'; t.rows.push(adj);
   }
   const mo = new Map(B.MNLS.map((m, i) => [m[0], i]));
-  for (const t of TAB.values()) t.rows.sort((a, b) => (a.adj ? 1 : 0) - (b.adj ? 1 : 0) || (a.source === 'CJI3' ? 0 : -1) - (b.source === 'CJI3' ? 0 : -1) || (mo.get(a.mnl) ?? 9) - (mo.get(b.mnl) ?? 9) || a.item.localeCompare(b.item, 'en', { numeric: true }) || a.pkg.localeCompare(b.pkg, 'en', { numeric: true }));
+  for (const t of TAB.values()) t.rows.sort((a, b) => (a.adj ? 1 : 0) - (b.adj ? 1 : 0) || (a.source === 'CJI3' ? 0 : -1) - (b.source === 'CJI3' ? 0 : -1) || (mo.get(a.mnl) ?? 9) - (mo.get(b.mnl) ?? 9) || a.item.localeCompare(b.item, 'en', { numeric: true }) || a.wbsg.localeCompare(b.wbsg, 'en', { numeric: true }));
 }
 const COSTS = B.SHEETS.filter((s) => s.cost);
 const sum = (o) => (o.open || 0) + Object.values(o.m).reduce((x, y) => x + y, 0);
@@ -133,12 +133,13 @@ const num = (c, v, f, o) => { c.value = v; c.numFmt = f || F.amt; c.font = font(
 const fx = (c, formula, result, f, o) => { c.value = { formula, result }; c.numFmt = f || F.amt; c.font = font(o); c.border = box; return c; };
 
 const wsSum = addWs('Summary', C.navy, { views: [{ showGridLines: false }] });
-const wsExp = addWs('Expenses', C.navy, { views: [{ showGridLines: false, state: 'frozen', xSplit: 4, ySplit: 5 }] });
+const wsExp = addWs('Expenses', C.navy, { views: [{ showGridLines: false, state: 'frozen', xSplit: 2, ySplit: 5 }] });
 const wsC3 = addWs('CJI3', C.rev, { views: [{ showGridLines: false, state: 'frozen', xSplit: 3, ySplit: 5 }] });
 
 // ------------------------------------------------------------------ 5. bucket sheets: reconciliation block + coded table
-// columns: A item | B source | C SAP cost element | D PKG | E MNL | F CE code | G opening | H.. months | total
-const COL = { item: 1, src: 2, sap: 3, pkg: 4, mnl: 5, ce: 6, open: 7, m0: 8 }, TOT = COL.m0 + MC, LM = COL.m0 + MC - 1;
+// columns: A item | B source | C SAP cost element | D WBS group (information) | E PKG | F MNL | G CE code | H opening | I.. months | total
+// PKG and Cost element code are the user's own codes (nothing comes from SAP); MNL starts from the bucket
+const COL = { item: 1, src: 2, sap: 3, wbs: 4, pkg: 5, mnl: 6, ce: 7, open: 8, m0: 9 }, TOT = COL.m0 + MC, LM = COL.m0 + MC - 1;
 const R_HDR = 5, R_PK = 6, R_C3 = 7, R_COV = 8, R_DET = 9, R_ADJ = 10, R_COD = 11, R_DIF = 12, T_HDR = 14, T0 = 15;
 const monthVal = (o, pk) => o.m[pk] || 0;
 for (const s of B.SHEETS) {
@@ -146,21 +147,24 @@ for (const s of B.SHEETS) {
   const ws = addWs(s.sheet, s.tab, { views: [{ showGridLines: true, state: 'frozen', xSplit: 1, ySplit: 0 }] });
   t.ws = ws;
   const n = Math.max(T0, T0 - 1 + t.rows.length), nRows = t.rows.length;
-  [46, 12, 11, 17, 8, 13, 14].concat(new Array(MC).fill(12), [15]).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  [46, 12, 11, 17, 17, 8, 15, 14].concat(new Array(MC).fill(12), [15]).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
   title(ws, `${s.bucket} – coded detail`, null, s.tab === 'C55A11' ? s.tab : C.navy);
   // detail source status
   const status = p ? `Detail source: ${p.label} – loaded (${mLab(p.from)} to ${mLab(p.to)}). ${p.note}.`
-    : shell ? `Detail source: ${shell.source} – not loaded yet. Coded rows below come from CJI3 by cost element and WBS package.`
+    : shell ? `Detail source: ${shell.source} – not loaded yet. Rows below come from CJI3 by cost element and WBS group.`
       : s.bucket === 'Revenue' ? 'Revenue (cost elements 4xxxxxxx), shown as posted (negative). Not part of Expenses and never netted against cost.' : 'Coded rows below come from CJI3 by cost element and WBS package.';
   ws.getCell('A2').value = status; ws.getCell('A2').font = font({ size: 10, bold: true, color: { argb: 'FF' + (p ? '548235' : 'C55A11') } });
-  note(ws, 'A3', coded ? 'Yellow cells are yours: code each item once (PKG, MNL, Cost element code). The Expenses sheet follows.' : '');
+  note(ws, 'A3', coded ? 'Yellow cells are yours: type PKG and Cost element code once per item (nothing comes from SAP). MNL starts from the bucket; change it if needed. The Expenses sheet follows.' : '');
+  if (coded) { const itemR = `$A$${T0}:$A$${n}`, pkgR = `$${col(COL.pkg)}$${T0}:$${col(COL.pkg)}$${n}`, ceR = `$${col(COL.ce)}$${T0}:$${col(COL.ce)}$${n}`;
+    ws.getCell('A4').value = { formula: `"Items not yet coded (PKG or Cost element code empty): "&SUMPRODUCT((${itemR}<>"")*(((${pkgR}="")+(${ceR}=""))>0))&" of "&COUNTA(${itemR})`, result: `Items not yet coded (PKG or Cost element code empty): ${t.rows.length} of ${t.rows.length}` };
+    ws.getCell('A4').font = font({ size: 9, bold: true, color: { argb: 'FFC55A11' } }); }
   // reconciliation block
-  head(ws.getCell(R_HDR, 1), 'Reconciliation to CJI3', C.navy); for (let c = 2; c <= 6; c++) head(ws.getCell(R_HDR, c), '', C.navy);
+  head(ws.getCell(R_HDR, 1), 'Reconciliation to CJI3', C.navy); for (let c = 2; c < COL.open; c++) head(ws.getCell(R_HDR, c), '', C.navy);
   head(ws.getCell(R_HDR, COL.open), 'Opening', C.gold); MONTHS.forEach((pk, i) => head(ws.getCell(R_HDR, COL.m0 + i), mLab(pk), C.blue)); head(ws.getCell(R_HDR, TOT), 'Total', C.navy);
   ws.getCell(R_PK, 1).value = 'period key'; ws.getCell(R_PK, 1).font = font({ size: 8, color: { argb: 'FF8C8C8C' } });
   num(ws.getCell(R_PK, COL.open), 0, '0', { size: 8, color: { argb: 'FF8C8C8C' } }); MONTHS.forEach((pk, i) => num(ws.getCell(R_PK, COL.m0 + i), pk, '0', { size: 8, color: { argb: 'FF8C8C8C' } }));
   const tcol = (c) => `${col(c)}${T0}:${col(c)}${n}`;
-  const lab = (r, text, o) => { const c = ws.getCell(r, 1); c.value = text; c.font = font(o); ws.mergeCells(r, 1, r, 6); };
+  const lab = (r, text, o) => { const c = ws.getCell(r, 1); c.value = text; c.font = font(o); ws.mergeCells(r, 1, r, COL.open - 1); };
   const rowVals = (r, get, o) => { for (let c = COL.open; c <= LM; c++) { const pk = c === COL.open ? null : MONTHS[c - COL.m0]; num(ws.getCell(r, c), get(pk), F.amt, o); } };
   lab(R_C3, 'CJI3 actual – source of truth (every line of this bucket)', { bold: true }); rowVals(R_C3, (pk) => (pk == null ? t.c3.open : monthVal(t.c3, pk)), { bold: true });
   if (p) {
@@ -169,7 +173,7 @@ for (const s of B.SHEETS) {
     for (let c = COL.open; c <= LM; c++) { const pk = c === COL.open ? null : MONTHS[c - COL.m0]; fx(ws.getCell(R_DET, c), `SUMIFS(${tcol(c)},$B${T0}:$B${n},"${p.id}")`, pk == null ? t.det.open : monthVal(t.det, pk)); }
     lab(R_ADJ, 'Adjustment: not explained by detail (shown as a row below, so the sheet ties to CJI3)', { color: { argb: 'FFC55A11' } });
     for (let c = COL.open; c <= LM; c++) { const pk = c === COL.open ? null : MONTHS[c - COL.m0]; fx(ws.getCell(R_ADJ, c), `${col(c)}${R_COV}-${col(c)}${R_DET}`, (pk == null ? t.cov.open - t.det.open : monthVal(t.cov, pk) - monthVal(t.det, pk)), F.amt, { color: { argb: 'FFC55A11' } }); }
-  } else { lab(R_COV, 'No detail report loaded: the rows below are CJI3 by cost element and WBS package.', { italic: true, color: { argb: 'FF' + C.muted } }); }
+  } else { lab(R_COV, 'No detail report loaded: the rows below are CJI3 by cost element and WBS group.', { italic: true, color: { argb: 'FF' + C.muted } }); }
   lab(R_COD, 'Coded total on this sheet', { bold: true });
   for (let c = COL.open; c <= LM; c++) { const pk = c === COL.open ? null : MONTHS[c - COL.m0]; fx(ws.getCell(R_COD, c), `SUBTOTAL(9,${tcol(c)})`, pk == null ? sum({ open: t.rows.reduce((x, r) => x + r.open, 0), m: {} }) : t.rows.reduce((x, r) => x + monthVal(r, pk), 0), F.amt, { bold: true }); }
   lab(R_DIF, 'Difference to CJI3 (must be nil)', { bold: true });
@@ -179,14 +183,14 @@ for (const s of B.SHEETS) {
   for (const r of [R_C3, R_COV, R_DET, R_ADJ, R_COD, R_DIF]) { if (!p && (r === R_COV || r === R_DET || r === R_ADJ)) continue; fx(ws.getCell(r, TOT), `SUM(${col(COL.open)}${r}:${col(LM)}${r})`, totOf[r], F.amt, { bold: true }); }
   ws.addConditionalFormatting({ ref: `${col(COL.open)}${R_DIF}:${col(TOT)}${R_DIF}`, rules: [{ type: 'cellIs', operator: 'equal', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFE2EFDA' } } } }, { type: 'cellIs', operator: 'notEqual', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF8CBAD' } } } }] });
   // table
-  ['Item', 'Source', 'SAP cost element', 'PKG', 'MNL', 'Cost element code', 'Opening'].forEach((h, i) => head(ws.getCell(T_HDR, i + 1), h, i >= 3 && i <= 5 && coded ? C.gold : i === 6 ? C.gold : C.navy));
+  ['Item', 'Source', 'SAP cost element', 'WBS group', 'PKG', 'MNL', 'Cost element code', 'Opening'].forEach((h, i) => head(ws.getCell(T_HDR, i + 1), h, i >= 4 && i <= 6 && coded ? C.gold : i === 7 ? C.gold : C.navy));
   MONTHS.forEach((pk, i) => head(ws.getCell(T_HDR, COL.m0 + i), mLab(pk), C.blue)); head(ws.getCell(T_HDR, TOT), 'Total', C.navy); ws.getRow(T_HDR).height = 28;
   const rows = PREVIEW ? t.rows.slice(0, 22) : t.rows;
   rows.forEach((r, i) => {
     const rw = T0 + i, row = ws.getRow(rw);
     const put = (c, v) => { const x = row.getCell(c); x.value = v; x.font = font(r.adj ? { italic: true, color: { argb: 'FFC55A11' } } : {}); return x; };
-    put(COL.item, r.item); put(COL.src, r.source); put(COL.sap, r.sapce || null);
-    if (coded) { put(COL.pkg, r.pkg || null); put(COL.mnl, r.mnl || null); put(COL.ce, r.cec || null); for (const c of [COL.pkg, COL.mnl, COL.ce]) row.getCell(c).fill = fill(C.edit); }
+    put(COL.item, r.item); put(COL.src, r.source); put(COL.sap, r.sapce || null); put(COL.wbs, r.wbsg || null);
+    if (coded) { put(COL.pkg, null); put(COL.mnl, r.mnl || null); put(COL.ce, null); for (const c of [COL.pkg, COL.mnl, COL.ce]) row.getCell(c).fill = fill(C.edit); }
     const v = (c, a, f) => { const x = row.getCell(c); if (f) x.value = { formula: f, result: a }; else if (a) x.value = a; x.numFmt = F.amt; x.font = font(r.adj ? { italic: true, color: { argb: 'FFC55A11' } } : {}); };
     v(COL.open, r.open, r.adj ? `${col(COL.open)}${R_ADJ}` : null);
     MONTHS.forEach((pk, k) => v(COL.m0 + k, monthVal(r, pk), r.adj ? `${col(COL.m0 + k)}${R_ADJ}` : null));
@@ -194,8 +198,8 @@ for (const s of B.SHEETS) {
   });
   if (!PREVIEW) ws.autoFilter = { from: { row: T_HDR, column: 1 }, to: { row: n, column: TOT } };
   if (coded) {
-    ws.addConditionalFormatting({ ref: `${col(COL.pkg)}${T0}:${col(COL.ce)}${n}`, rules: [{ type: 'expression', formulae: [`AND(LEN($A${T0})>0,LEN(${col(COL.pkg)}${T0})=0)`], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF8CBAD' } } } }] });
     ws.dataValidations.add(`${col(COL.mnl)}${T0}:${col(COL.mnl)}${n}`, { type: 'list', allowBlank: true, formulae: ['"' + B.MNLS.map((m) => m[0]).join(',') + '"'], showErrorMessage: false });
+    for (const [c, lc] of [[COL.pkg, 'A'], [COL.ce, 'F']]) ws.dataValidations.add(`${col(c)}${T0}:${col(c)}${n}`, { type: 'list', allowBlank: true, formulae: [`OFFSET(Lists!$${lc}$5,0,0,MAX(1,COUNTA(Lists!$${lc}$5:$${lc}$500)),1)`], showErrorMessage: false });
   }
   const nm = (k, a, b, r1, r2) => dn(`${s.code}_${k}`, `'${s.sheet}'!$${col(a)}$${r1}:$${col(b)}$${r2}`);
   nm('Src', COL.src, COL.src, T0, n); nm('Item', COL.item, COL.item, T0, n);
@@ -243,69 +247,69 @@ for (const s of B.SHEETS) {
   if (PREVIEW) ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printArea: `A1:${col(5 + MC)}${Math.min(rEnd + 6, 45)}` };
 }
 
-// ------------------------------------------------------------------ 7. Expenses: every bucket's coded table, collected
+// ------------------------------------------------------------------ 7. Expenses: every item of every cost bucket with its codes, linked live to the bucket sheets
+// One row per bucket item (the rows of the bucket tables). The codes shown are the ones typed on the bucket sheet, so coding there moves here at once.
+// Grouping and analysis by PKG / MNL / Cost element is done from this sheet (filter, pivot), outside this workbook.
 const slotOf = (isOpen, pk) => (isOpen ? 0 : pk < REPY * 100 + 1 ? 1 : Math.floor(pk / 100) === REPY && pk <= CUTPK ? 1 + (pk % 100) : null);
-const zero14 = () => new Array(14).fill(0);
-const combos = new Map();
-for (const s of COSTS) for (const r of TAB.get(s.bucket).rows) {
-  const k = [r.pkg, r.mnl, r.cec].join('\u0001'); let c = combos.get(k); if (!c) combos.set(k, (c = { pkg: r.pkg, mnl: r.mnl, cec: r.cec, names: new Map(), v: zero14() }));
-  c.names.set(r.item, (c.names.get(r.item) || 0) + Math.abs(sum(r)));
-  c.v[0] += r.open; for (const [pk, a] of Object.entries(r.m)) { const sl = slotOf(false, +pk); if (sl != null) c.v[sl] += a; }
-}
-const comboList = [...combos.values()].map((c) => Object.assign(c, { name: [...c.names].sort((a, b) => b[1] - a[1])[0][0] }));
-const mnlOrder = new Map(B.MNLS.map((m, i) => [m[0], i]));
-comboList.sort((a, b) => (mnlOrder.get(a.mnl) ?? 99) - (mnlOrder.get(b.mnl) ?? 99) || a.pkg.localeCompare(b.pkg, 'en', { numeric: true }) || a.cec.localeCompare(b.cec, 'en', { numeric: true }));
+const zero14 = () => new Array(14).fill(0), sum14 = (v) => v.reduce((x, y) => x + y, 0);
 const sumTerms = (f) => COSTS.map((s) => f(s.code)).join('+');
-const sum14 = (v) => v.reduce((x, y) => x + y, 0);
-let expTotal = 0;
+const E = { A: 1, B: 2, WBS: 3, PKG: 4, MNL: 5, CE: 6, OK: 7, OPEN: 8, PREV: 9, M0: 10, TD: 22, SH: 23 };      // columns; months 10..21
+let expTotal = 0, expRows = 0;
 {
   const ws = wsExp;
-  [20, 8, 13, 32, 14, 14].concat(new Array(12).fill(11.5), [15, 8]).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  [20, 44, 16, 16, 7, 14, 8, 14, 14].concat(new Array(12).fill(11.5), [15, 8]).forEach((w, i) => { ws.getColumn(i + 1).width = w; });
   title(ws, 'Expenses – the coded actuals of the project', null);
-  ws.getCell('A2').value = { formula: '"Collected from the coded tables of all cost buckets · cut date "&TEXT(CutDate,"dd-mmm-yyyy")&" · every amount follows the PKG, MNL and Cost element code typed on the bucket sheets"', result: `Collected from the coded tables of all cost buckets · cut date ${monthEnd(CUTPK).toISOString().slice(8, 10)}-${MON[(CUTPK % 100) - 1]}-${REPY}` };
+  ws.getCell('A2').value = { formula: '"Every item of every cost bucket · cut date "&TEXT(CutDate,"dd-mmm-yyyy")&" · PKG, MNL and Cost element code are the ones typed on the bucket sheets: code there and this sheet follows"', result: `Every item of every cost bucket · cut date ${monthEnd(CUTPK).toISOString().slice(8, 10)}-${MON[(CUTPK % 100) - 1]}-${REPY}` };
   ws.getCell('A2').font = font({ size: 9, color: { argb: 'FF' + C.muted } });
-  ws.getRow(3).hidden = true; for (let m = 1; m <= 12; m++) ws.getCell(3, 6 + m).value = { formula: `RepYear*100+${m}`, result: REPY * 100 + m };
-  ['PKG', 'MNL', 'Cost element code', 'Largest item', 'Opening balance', 'Previous'].forEach((h, i) => head(ws.getCell(4, i + 1), h, i === 4 ? C.gold : C.navy));
-  for (let m = 1; m <= 12; m++) head(ws.getCell(4, 6 + m), { formula: `TEXT(DATE(RepYear,${m},1),"mmm-yy")`, result: mLab(REPY * 100 + m) }, C.blue);
-  head(ws.getCell(4, 19), 'To date', C.navy); head(ws.getCell(4, 20), 'Share', C.navy); ws.getRow(4).height = 28;
-  const DR0 = 6; let r = DR0; const groups = [], mnlName = new Map(B.MNLS);
+  ws.getRow(3).hidden = true; for (let m = 1; m <= 12; m++) ws.getCell(3, E.M0 - 1 + m).value = { formula: `RepYear*100+${m}`, result: REPY * 100 + m };
+  ['Bucket', 'Item', 'WBS group', 'PKG', 'MNL', 'Cost element code', 'Coded', 'Opening balance', 'Previous'].forEach((h, i) => head(ws.getCell(4, i + 1), h, i === 7 || (i >= 3 && i <= 5) ? C.gold : C.navy));
+  for (let m = 1; m <= 12; m++) head(ws.getCell(4, E.M0 - 1 + m), { formula: `TEXT(DATE(RepYear,${m},1),"mmm-yy")`, result: mLab(REPY * 100 + m) }, C.blue);
+  head(ws.getCell(4, E.TD), 'To date', C.navy); head(ws.getCell(4, E.SH), 'Share', C.navy); ws.getRow(4).height = 28;
   const setN = (row, c, f, res, bold, bg) => { const x = ws.getCell(row, c); x.value = { formula: f, result: res }; x.numFmt = F.amt; x.font = font({ bold }); x.border = box; if (bg) x.fill = fill(bg); };
   const monthRes = (v, mm) => (REPY * 100 + mm > CUTPK ? '' : v[1 + mm]);
-  for (const m of B.MNLS.map((x) => x[0])) {
-    const cs = comboList.filter((c) => c.mnl === m); if (!cs.length) continue;
-    const gr = r++, first = r, last = r + cs.length - 1, gv = zero14(); cs.forEach((c) => c.v.forEach((x, i) => { gv[i] += x; }));
-    ws.getCell(gr, 1).value = `${m} · ${mnlName.get(m)}`; ws.getCell(gr, 2).value = m; groups.push({ gr, m, v: gv });
-    for (let c = 5; c <= 19; c++) setN(gr, c, `SUBTOTAL(9,${col(c)}${first}:${col(c)}${last})`, c === 5 ? gv[0] : c === 6 ? gv[1] : c === 19 ? sum14(gv) : monthRes(gv, c - 6), true, C.light);
-    for (let c = 1; c <= 4; c++) { const x = ws.getCell(gr, c); x.font = font({ bold: true, color: { argb: 'FF' + C.navy } }); x.fill = fill(C.light); x.border = box; }
-    cs.forEach((cmb) => {
-      const row = r++; ws.getRow(row).outlineLevel = 1;
-      [cmb.pkg, cmb.mnl, cmb.cec, cmb.name].forEach((v, i) => { const x = ws.getCell(row, i + 1); x.value = v; x.font = font(); x.border = box; });
-      const t = (p, body) => `SUMPRODUCT(${body(p)}*(${p}_PKG=$A${row})*(${p}_MNL=$B${row})*(${p}_CE=$C${row})*${p}_Blk)`, v = cmb.v;
-      setN(row, 5, sumTerms((p) => `SUMIFS(${p}_Open,${p}_PKG,$A${row},${p}_MNL,$B${row},${p}_CE,$C${row})`), v[0]);
-      setN(row, 6, sumTerms((p) => t(p, (q) => `(${q}_Hdr<RepYear*100+1)`)), v[1]);
-      for (let mm = 1; mm <= 12; mm++) setN(row, 6 + mm, `IF(${col(6 + mm)}$3>CutPK,"",${sumTerms((p) => t(p, (q) => `(${q}_Hdr=${col(6 + mm)}$3)`))})`, monthRes(v, mm));
-      setN(row, 19, `E${row}+F${row}+SUM(G${row}:R${row})`, sum14(v), true);
+  const v14 = (r) => { const v = zero14(); v[0] = r.open; for (const [pk, a] of Object.entries(r.m)) { const sl = slotOf(false, +pk); if (sl != null) v[sl] += a; } return v; };
+  const DR0 = 6; let r = DR0; const groups = []; const gt = zero14();
+  for (const sh of COSTS) {
+    const t = TAB.get(sh.bucket); if (!t.rows.length) continue;
+    const gr = r++, first = r, last = r + t.rows.length - 1, gv = zero14();
+    const hc = ws.getCell(gr, 1); hc.value = { text: sh.bucket, hyperlink: `#'${sh.sheet}'!A1` }; hc.font = font({ bold: true, underline: true, color: { argb: 'FF' + C.navy } });
+    t.rows.forEach((row0, i) => {
+      const row = r++, src = T0 + i, S = `'${sh.sheet}'!`, v = v14(row0); ws.getRow(row).outlineLevel = 1; v.forEach((x, k) => { gv[k] += x; gt[k] += x; });
+      ws.getCell(row, E.A).value = sh.bucket; ws.getCell(row, E.B).value = row0.item; ws.getCell(row, E.WBS).value = row0.wbsg || null;
+      for (const c of [E.A, E.B, E.WBS]) { ws.getCell(row, c).font = font({ italic: !!row0.adj, color: { argb: 'FF' + (row0.adj ? 'C55A11' : '000000') } }); ws.getCell(row, c).border = box; }
+      const link = (c, srcCol, res) => { const x = ws.getCell(row, c); x.value = { formula: `IF(${S}${col(srcCol)}${src}="","",${S}${col(srcCol)}${src})`, result: res }; x.font = font({ bold: c === E.PKG || c === E.CE }); x.fill = fill(C.edit); x.border = box; };
+      link(E.PKG, COL.pkg, ''); link(E.MNL, COL.mnl, row0.mnl || ''); link(E.CE, COL.ce, '');
+      const ok = ws.getCell(row, E.OK); ok.value = { formula: `IF(AND(${col(E.PKG)}${row}<>"",${col(E.MNL)}${row}<>"",${col(E.CE)}${row}<>""),"Yes","No")`, result: 'No' }; ok.font = font({ size: 9 }); ok.alignment = { horizontal: 'center' }; ok.border = box;
+      setN(row, E.OPEN, `${S}${col(COL.open)}${src}`, v[0]);
+      setN(row, E.PREV, `SUMPRODUCT((${sh.code}_Hdr<RepYear*100+1)*${S}${col(COL.m0)}${src}:${col(LM)}${src})`, v[1]);
+      for (let mm = 1; mm <= 12; mm++) setN(row, E.M0 - 1 + mm, `IF(${col(E.M0 - 1 + mm)}$3>CutPK,"",SUMIFS(${S}$${col(COL.m0)}${src}:$${col(LM)}${src},${sh.code}_Hdr,${col(E.M0 - 1 + mm)}$3))`, monthRes(v, mm));
+      setN(row, E.TD, `${col(E.OPEN)}${row}+${col(E.PREV)}${row}+SUM(${col(E.M0)}${row}:${col(E.TD - 1)}${row})`, sum14(v), true);
     });
+    groups.push({ gr, v: gv });
+    for (let c = 1; c <= E.SH; c++) { const x = ws.getCell(gr, c); if (c < E.OPEN) { x.font = font({ bold: true, color: { argb: 'FF' + C.navy } }); x.fill = fill(C.light); x.border = box; } }
+    for (let c = E.OPEN; c <= E.TD; c++) setN(gr, c, `SUBTOTAL(9,${col(c)}${first}:${col(c)}${last})`, c === E.OPEN ? gv[0] : c === E.PREV ? gv[1] : c === E.TD ? sum14(gv) : monthRes(gv, c - E.M0 + 1), true, C.light);
   }
-  const lastRow = r - 1, gt = zero14(); comboList.forEach((c) => c.v.forEach((x, i) => { gt[i] += x; })); expTotal = sum14(gt);
-  ws.getCell(5, 1).value = 'TOTAL EXPENSES'; for (let c = 1; c <= 4; c++) { const x = ws.getCell(5, c); x.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); x.fill = fill(C.navy); x.border = box; }
-  for (let c = 5; c <= 19; c++) { setN(5, c, `SUBTOTAL(9,${col(c)}${DR0}:${col(c)}${lastRow})`, c === 5 ? gt[0] : c === 6 ? gt[1] : c === 19 ? sum14(gt) : monthRes(gt, c - 6), true, C.navy); ws.getCell(5, c).font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); }
-  const share = (rw, res) => { const x = ws.getCell(rw, 20); x.value = { formula: `IF($S$5=0,"",S${rw}/$S$5)`, result: res }; x.numFmt = F.pct; x.font = font({ bold: rw === 5 }); x.border = box; };
+  const lastRow = r - 1; expTotal = sum14(gt); expRows = lastRow - DR0 + 1 - groups.length;
+  ws.getCell(5, 1).value = 'TOTAL EXPENSES'; for (let c = 1; c < E.OPEN; c++) { const x = ws.getCell(5, c); x.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); x.fill = fill(C.navy); x.border = box; }
+  for (let c = E.OPEN; c <= E.TD; c++) { setN(5, c, `SUBTOTAL(9,${col(c)}${DR0}:${col(c)}${lastRow})`, c === E.OPEN ? gt[0] : c === E.PREV ? gt[1] : c === E.TD ? sum14(gt) : monthRes(gt, c - E.M0 + 1), true, C.navy); ws.getCell(5, c).font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); }
+  const share = (rw, res) => { const x = ws.getCell(rw, E.SH); x.value = { formula: `IF($${col(E.TD)}$5=0,"",${col(E.TD)}${rw}/$${col(E.TD)}$5)`, result: res }; x.numFmt = F.pct; x.font = font({ bold: rw === 5 }); x.border = box; };
   share(5, 1); groups.forEach((g) => share(g.gr, expTotal ? sum14(g.v) / expTotal : ''));
+  // control: the coded totals of the bucket sheets, independent of this sheet's rows
   const cR = lastRow + 2;
   ws.getCell(cR, 1).value = 'Control: coded totals of the bucket sheets'; ws.getCell(cR, 1).font = font({ bold: true, color: { argb: 'FF' + C.muted } });
   ws.getCell(cR + 1, 1).value = 'Difference (must be nil)'; ws.getCell(cR + 1, 1).font = font({ bold: true });
-  for (let c = 5; c <= 19; c++) {
-    let f; if (c === 5) f = sumTerms((p) => `INDEX(${p}_Cod,1,1)`); else if (c === 6) f = sumTerms((p) => `SUMPRODUCT((${p}_Hdr<RepYear*100+1)*${p}_CodM)`);
-    else if (c === 19) f = `E${cR}+F${cR}+SUM(G${cR}:R${cR})`; else f = `IF(${col(c)}$3>CutPK,"",${sumTerms((p) => `SUMPRODUCT((${p}_Hdr=${col(c)}$3)*${p}_CodM)`)})`;
-    fx(ws.getCell(cR, c), f, c === 5 ? gt[0] : c === 6 ? gt[1] : c === 19 ? sum14(gt) : monthRes(gt, c - 6), F.amt, { color: { argb: 'FF' + C.muted } });
+  for (let c = E.OPEN; c <= E.TD; c++) {
+    let f; if (c === E.OPEN) f = sumTerms((p) => `INDEX(${p}_Cod,1,1)`); else if (c === E.PREV) f = sumTerms((p) => `SUMPRODUCT((${p}_Hdr<RepYear*100+1)*${p}_CodM)`);
+    else if (c === E.TD) f = `${col(E.OPEN)}${cR}+${col(E.PREV)}${cR}+SUM(${col(E.M0)}${cR}:${col(E.TD - 1)}${cR})`; else f = `IF(${col(c)}$3>CutPK,"",${sumTerms((p) => `SUMPRODUCT((${p}_Hdr=${col(c)}$3)*${p}_CodM)`)})`;
+    fx(ws.getCell(cR, c), f, c === E.OPEN ? gt[0] : c === E.PREV ? gt[1] : c === E.TD ? sum14(gt) : monthRes(gt, c - E.M0 + 1), F.amt, { color: { argb: 'FF' + C.muted } });
     fx(ws.getCell(cR + 1, c), `ROUND(N(${col(c)}5)-N(${col(c)}${cR}),2)`, 0, F.amt, { bold: true });
   }
-  ws.addConditionalFormatting({ ref: `E${cR + 1}:S${cR + 1}`, rules: [{ type: 'cellIs', operator: 'equal', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFE2EFDA' } } } }, { type: 'cellIs', operator: 'notEqual', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF8CBAD' } } } }] });
+  ws.addConditionalFormatting({ ref: `${col(E.OPEN)}${cR + 1}:${col(E.TD)}${cR + 1}`, rules: [{ type: 'cellIs', operator: 'equal', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFE2EFDA' } } } }, { type: 'cellIs', operator: 'notEqual', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFF8CBAD' } } } }] });
   ws.properties.outlineProperties = { summaryBelow: false }; ws.properties.outlineLevelRow = 1;
-  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: lastRow, column: 20 } }; dn('Exp_Total', `'Expenses'!$S$5`);
-  if (PREVIEW) ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printArea: `A1:T${Math.min(lastRow, 60)}` };
-  console.log('Expenses:', comboList.length, 'PKG+MNL+CE rows, total', expTotal.toFixed(2));
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: lastRow, column: E.SH } };
+  dn('Exp_Total', `'Expenses'!$${col(E.TD)}$5`); dn('Exp_ToDate', `'Expenses'!$${col(E.TD)}$${DR0}:$${col(E.TD)}$${lastRow}`); dn('Exp_Coded', `'Expenses'!$${col(E.OK)}$${DR0}:$${col(E.OK)}$${lastRow}`);
+  if (PREVIEW) ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printArea: `A1:${col(E.SH)}${Math.min(lastRow, 60)}` };
+  console.log('Expenses:', expRows, 'items in', groups.length, 'buckets, total', expTotal.toFixed(2));
 }
 
 // ------------------------------------------------------------------ 8. Summary: the big picture
@@ -328,11 +332,12 @@ let expTotal = 0;
   // KPI band
   const costC3 = COSTS.reduce((x, s) => x + sumTo(TAB.get(s.bucket).c3), 0), revC3 = sumTo(TAB.get('Revenue').c3);
   const kp = [['Cost to date (CJI3)', COSTS.map((s) => toDate(s.code, 'C3').f).join('+'), costC3, C.navy], ['Revenue to date', `-(${toDate('REV', 'C3').f})`, -revC3, C.rev],
-    ['Expenses (coded) to date', 'Exp_Total', expTotal, C.navy], ['Buckets with a detail report', `${PROVIDERS.reduce((x, p) => x + p.buckets.length, 0)}&" of "&${NEED}`, `${PROVIDERS.reduce((x, p) => x + p.buckets.length, 0)} of ${NEED}`, C.gold]];
-  const spans = [[1, 1], [2, 2], [3, 4], [5, 6]];
+    ['Expenses (coded) to date', 'Exp_Total', expTotal, C.navy], ['Buckets with a detail report', `${PROVIDERS.reduce((x, p) => x + p.buckets.length, 0)}&" of "&${NEED}`, `${PROVIDERS.reduce((x, p) => x + p.buckets.length, 0)} of ${NEED}`, C.gold],
+    ['Expenses coded (PKG + Cost element)', 'IF(Exp_Total=0,"",SUMIFS(Exp_ToDate,Exp_Coded,"Yes")/Exp_Total)', 0, C.gold]];
+  const spans = [[1, 1], [2, 2], [3, 4], [5, 6], [7, 9]];
   kp.forEach(([lab, f, res, bg], i) => { const [c1, c2] = spans[i]; ws.mergeCells(8, c1, 8, c2); ws.mergeCells(9, c1, 9, c2);
     const l = ws.getCell(8, c1), v = ws.getCell(9, c1); l.value = lab; l.font = font({ size: 9, bold: true, color: { argb: 'FFFFFFFF' } }); l.fill = fill(bg); l.alignment = { horizontal: 'center', vertical: 'middle' };
-    v.value = { formula: f, result: res }; v.numFmt = F.amt; v.font = font({ size: 14, bold: true, color: { argb: 'FF' + C.navy } }); v.alignment = { horizontal: 'center', vertical: 'middle' }; v.fill = fill(i === 1 ? C.ok : C.white);
+    v.value = { formula: f, result: res }; v.numFmt = i === 4 ? F.pct : F.amt; v.font = font({ size: 14, bold: true, color: { argb: 'FF' + C.navy } }); v.alignment = { horizontal: 'center', vertical: 'middle' }; v.fill = fill(i === 1 ? C.ok : C.white);
     for (let c = c1; c <= c2; c++) { ws.getCell(8, c).fill = fill(bg); ws.getCell(8, c).border = box; ws.getCell(9, c).border = box; } });
   ws.getRow(8).height = 22; ws.getRow(9).height = 30;
   // reconciliation table: one row per cost bucket
@@ -400,12 +405,11 @@ let expTotal = 0;
   PROVIDERS.forEach((p, i) => { ws.getCell(13 + i, 1).value = `${p.label}: ${p.note}`; ws.getCell(13 + i, 1).font = font({ size: 9 }); });
 }
 {
-  const ws = addWs('Lists', C.gold, { views: [{ showGridLines: false }] }); [22, 4, 12, 18, 4, 14].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
-  title(ws, 'Lists – the codes in use', 'PKG, MNL and Cost element code are free codes: type any new code on an item.', C.gold);
-  head(ws.getCell(4, 1), 'PKG', C.gold); head(ws.getCell(4, 3), 'MNL', C.gold); head(ws.getCell(4, 4), 'MNL name', C.gold); head(ws.getCell(4, 6), 'Cost element code', C.gold);
-  [...new Set(comboList.map((c) => c.pkg))].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })).forEach((p, i) => { ws.getCell(5 + i, 1).value = p; });
+  const ws = addWs('Lists', C.gold, { views: [{ showGridLines: false }] }); [26, 4, 12, 18, 4, 26].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  title(ws, 'Lists – your codes', 'Nothing here comes from SAP. Type your PKG codes in column A and your Cost element codes in column F: they feed the drop-downs on the bucket sheets. A code that is not in the list can still be typed.', C.gold);
+  head(ws.getCell(4, 1), 'PKG (your codes)', C.gold); head(ws.getCell(4, 3), 'MNL', C.gold); head(ws.getCell(4, 4), 'MNL name', C.gold); head(ws.getCell(4, 6), 'Cost element code (yours)', C.gold);
   B.MNLS.forEach(([c, n], i) => { ws.getCell(5 + i, 3).value = c; ws.getCell(5 + i, 4).value = n; });
-  [...new Set(comboList.map((c) => c.cec))].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })).forEach((p, i) => { ws.getCell(5 + i, 6).value = p; });
+  for (let i = 0; i < 60; i++) for (const c of [1, 6]) { const x = ws.getCell(5 + i, c); x.fill = fill(C.edit); x.border = box; }
 }
 {
   const ws = addWs('Notes', '7F7F7F', { views: [{ showGridLines: false }] }); ws.getColumn(1).width = 130; title(ws, 'How this register works', null, C.navy);
@@ -413,8 +417,8 @@ let expTotal = 0;
     '2. Months come from the posting date. Go-live opening balances (document types UE, ZB, MD, HT) are the Opening column, not month activity.',
     '3. Every other report is detail for one bucket. Where a detail report is loaded, it replaces the CJI3 lines it explains; the difference is one visible Adjustment row, so the bucket sheet always equals CJI3.',
     '4. Detail dated after the CJI3 data date is left out: CJI3 decides what is actual.',
-    '5. Each bucket sheet is a coded table: PKG, MNL and Cost element code are typed once per item (yellow). Until the project\'s own code lists are used, PKG is the WBS work-package group, MNL comes from the bucket, and the cost element code is the SAP number.',
-    '6. Expenses collects the coded tables of all cost buckets into one coded sheet. Analysis of Expenses is done outside this workbook.',
+    '5. Each bucket sheet is a coded table, one row per item. PKG and Cost element code are your own codes, typed once per item (yellow): nothing comes from SAP. MNL starts from the bucket (Material = MAT, Subcontractor = SUB, Labor = LAB, Equipment and Fleet = EQU, the rest = OTHER) and can be changed. The WBS group column is information only.',
+    '6. Expenses lists every item of every cost bucket with its codes, linked live to the bucket sheets, so coding there moves here at once. Analysis by PKG, MNL or Cost element is done from this sheet, outside this workbook.',
     '7. Shells: Subcontractor and Material show their CJI3 rows until their Subcontract / Material report output is plugged in. Labor, Depreciation and G&A have no SAP detail report; they stay on CJI3 rows unless an offline sheet is plugged in.'].forEach((t, i) => { const c = ws.getCell(3 + i, 1); c.value = t; c.font = font(); c.alignment = { wrapText: true, vertical: 'top' }; ws.getRow(3 + i).height = 30; });
 }
 { const ws = wb.addWorksheet('_Cal', { state: 'hidden' }); MONTHS.forEach((pk, i) => { const c = ws.getCell(i + 1, 1); c.value = monthEnd(pk); c.numFmt = F.date; }); }
