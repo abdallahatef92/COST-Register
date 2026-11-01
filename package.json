@@ -1,0 +1,9 @@
+{
+  "name": "cost-register",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Project Cost Register: CJI3 split into buckets, coded, collected in one Expenses sheet",
+  "bin": { "register": "bin/register.js" },
+  "scripts": { "build": "node bin/register.js" },
+  "dependencies": { "exceljs": "^4.4.0", "xlsx": "^0.18.5" }
+}
