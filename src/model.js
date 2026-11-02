@@ -6,7 +6,7 @@ const { famLabel, divLabel, grpLabel, divKey, FAM_RANK, famOf, NO_GRP } = requir
 const orderKey = (l) => l.order || '(no order)';
 const BUCKETS = [
   { id: 'Material', tab: '1F3864', mnl: 'MAT', qty: true, key: (l) => l.mat || '(no material)',
-    cols: [['Family', 22], ['Division', 22], ['Material group', 26], ['Material', 11], ['Description', 40], ['Unit', 6]] },
+    cols: [['Family', 7], ['Division', 8], ['Group', 10], ['Material', 11], ['Description', 40], ['Unit', 6]] },
   { id: 'Subcontractor', tab: '2F5597', mnl: 'SUB', key: (l) => l.po || '(no PO)', cols: [['PO', 12], ['Service text', 52]] },
   { id: 'Subcontractor deductions', short: 'Sub deductions', tab: '2F5597', mnl: 'SUB', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
   { id: 'Other direct cost', short: 'Other direct', tab: '1F3864', mnl: 'OTHER', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
@@ -23,7 +23,7 @@ for (const b of BUCKETS) b.short = b.short || b.id;
 function descriptors(b, first, groups) {
   switch (b.id) {
     case 'Material': { const gi = groups.get(first.mat); const g = gi ? gi.group : '';
-      return { vals: [famLabel(g), divLabel(g), grpLabel(g), first.mat || '(no material)', first.matDesc, first.unit || (gi && gi.unit) || ''], group: g }; }
+      return { vals: [famOf(g) || '–', g ? divKey(g) : '–', g || '–', first.mat || '(no material)', first.matDesc, first.unit || (gi && gi.unit) || ''], group: g, famFull: famLabel(g), divFull: divLabel(g) }; }
     case 'Subcontractor': return { vals: [first.po || '(no PO)', first.poText || first.name] };
     case 'House rent': case 'Equipment / fuel': case 'Fleet / transportation': return { vals: [first.order || '(no order)', first.orderName || (first.order ? '' : first.cen)] };
     case 'G&A': return { vals: [first.sub || 'G&A', first.cen] };
@@ -50,7 +50,7 @@ function buildModel(lines, { groups = new Map(), prev = null, cut = '' } = {}) {
       const big = ls.reduce((m, l) => (Math.abs(l.amt) > Math.abs(m.amt) ? l : m), ls[0]);
       const d = descriptors(def, big, groups);
       const act = ls.filter((l) => !l.open && l.per !== 'Pending');
-      return { key, lines: ls, vals: d.vals, group: d.group || '', total: r2(ls.reduce((s, l) => s + l.amt, 0)),
+      return { key, lines: ls, vals: d.vals, group: d.group || '', famFull: d.famFull, divFull: d.divFull, total: r2(ls.reduce((s, l) => s + l.amt, 0)),
         firstP: act.length ? ymLabel(act[0].ym) : 'Opening', lastP: act.length ? ymLabel(act[act.length - 1].ym) : 'Opening' };
     });
     if (def.id === 'Material') {

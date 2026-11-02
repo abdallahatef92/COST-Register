@@ -18,20 +18,32 @@ const DATA_H = 4, DATA_1 = 5, COD_H = 6, COD_1 = 7, PM_H = 5, PM_1 = 6;
 const STRONG = ['A4EAA4', 'EAA4B8', 'A4CDEA', 'FFE699', 'C1A4EA', 'A4EAD8', 'EAC1A4', 'D8A4EA', 'A4C3EA', 'EAA4D8', 'C8EAA4', 'EAD8A4'];
 const tint = (hex, t) => [0, 2, 4].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) + (255 - parseInt(hex.slice(i, i + 2), 16)) * t).toString(16).padStart(2, '0')).join('').toUpperCase();
 const UE_FILL = 'FFE699';
-// Data sheet columns. Material gets the group tree, the issue type (from MB51) and the material document.
+// One colour per month (hue steps of the golden angle so neighbouring months differ), used on Data rows, per Month headers and Summary alike
+const hsl = (h, sat, l) => { const f = (n) => { const k = (n + h / 30) % 12, a2 = sat * Math.min(l, 1 - l); return l - a2 * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('').toUpperCase(); };
+const monthStrong = (i) => hsl((i * 137.5) % 360, 0.55, 0.8), monthLight = (i) => hsl((i * 137.5) % 360, 0.6, 0.93);
+const OPEN_C = ['D9D9D9', 'F2F2F2'], PEND_C = ['F4B183', 'FBE5D6'];
+const perColors = (periods) => periods.map((p, i) => (p === 'Opening' ? OPEN_C : p === 'Pending' ? PEND_C : [monthStrong(i), monthLight(i)]));
+// Data sheet columns: what you read first on the left (date, period, item, qty, rate, amount, codes), references on the right.
 function dlayout(def) {
   const cols = [], add = (k, l, w) => cols.push({ k, l, w }), mat = def.id === 'Material';
-  add('id', 'Line ID', 26); add('date', 'Posting date', 11); add('per', 'Period', 9); add('doc', 'Document', 12); add('type', 'Type', 6); add('ce', 'Cost element', 11); add('cen', 'Cost element name', 24);
-  if (mat) { add('fam', 'Family', 22); add('div', 'Division', 22); add('grp', 'Material group', 26); }
-  add('item', mat ? 'Material' : 'Item', 14); add('desc', 'Description', 40);
-  if (mat) { add('name', 'Name', 30); add('issue', 'Issue type', 12); add('stock', 'Stock account', 22); }
-  add('wbs', 'WBS element', 22); add('qty', 'Qty', 10); add('unit', 'Unit', 6); if (mat) add('rate', 'Rate', 12); add('amt', 'Amount', 14);
-  add('pkg', 'PKG', 10); add('mnl', 'MNL', 8); add('cec', 'Cost element code', 14); add('inc', 'Include', 8); add('cid', 'Coding ID', 7); add('over', 'Typed over', 7);
-  if (mat) { add('mdoc', 'Material doc.', 12); add('entry', 'Entry date', 11); add('user', 'User', 10); }
+  add('date', 'Posting date', 11); add('per', 'Period', 8);
+  if (mat) { add('fam', 'Family', 7); add('div', 'Division', 9); add('grp', 'Group', 9); }
+  add('item', mat ? 'Material' : 'Item', mat ? 10 : 14); add('desc', 'Description', mat ? 36 : 44);
+  if (mat) { add('name', 'Name', 24); add('issue', 'Issue', 8); }
+  if (!mat) add('wbs', 'WBS element', 18);
+  add('qty', 'Qty', 9); add('unit', 'Unit', 5); if (mat) add('rate', 'Rate', 10); add('amt', 'Amount', 13);
+  add('pkg', 'PKG', 9); add('mnl', 'MNL', 7); add('cec', 'Cost element code', 12); add('inc', 'Include', 7);
+  if (mat) { add('wbs', 'WBS element', 18); add('stock', 'Stock account', 20); }
+  add('doc', 'Document', 11); add('type', 'Type', 5); add('ce', 'Cost element', 10); add('cen', 'Cost element name', 20);
+  if (mat) { add('mdoc', 'Material doc.', 11); add('entry', 'Entry date', 10); add('user', 'User', 9); }
+  add('id', 'Line ID', 22); add('cid', 'Coding ID', 6); add('over', 'Typed over', 6); add('flag', 'Count', 6);
   const D = {}; cols.forEach((c, i) => { D[c.k] = i + 1; });
-  return { cols, D };
+  return { cols, D, freeze: D.item };
 }
-const BASE = dlayout({ id: '' }), D0 = BASE.D;
+// Revenue Data keeps its own fixed layout (the Summary reads its columns C, F, M, N)
+const REV = (() => { const l = [['id', 'Line ID', 26], ['date', 'Posting date', 11], ['per', 'Period', 9], ['doc', 'Document', 12], ['type', 'Type', 6], ['ce', 'Cost element', 11], ['cen', 'Cost element name', 24], ['item', 'Item', 14],
+  ['desc', 'Description', 40], ['wbs', 'WBS element', 22], ['qty', 'Qty', 10], ['unit', 'Unit', 6], ['amt', 'Amount', 14], ['inc', 'Include', 8]]; const D = {}; l.forEach((c, i) => { D[c[0]] = i + 1; }); return { cols: l.map(([k, lb, w]) => ({ k, l: lb, w })), D }; })();
+const BASE = REV, D0 = REV.D;
 
 const CUT = 'Summary!$B$4', CUTLAB = 'Summary!$D$4';
 const periodF = (row, D) => `IF(OR($${colL(D.type)}${row}="UE",$${colL(D.type)}${row}="ZB",$${colL(D.type)}${row}="MD",$${colL(D.type)}${row}="HT"),"Opening",IF(OR($${colL(D.date)}${row}="",$${colL(D.date)}${row}>${CUT}),"Pending",CHOOSE(MONTH($${colL(D.date)}${row}),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")&"-"&RIGHT(YEAR($${colL(D.date)}${row}),2)))`;
@@ -78,11 +90,16 @@ function bucketSheets(wb, b, model, opts) {
   // ---- row positions: Material has a Division header row above each division (the report's tree), the other buckets are flat
   let crow = COD_1; const heads = []; let cur = null;
   b.items.forEach((it) => {
-    if (isMat && (!cur || cur.key !== it.dk)) { cur = { key: it.dk, label: it.vals[1], fam: it.vals[0], famCode: it.fam, row: crow, items: [] }; heads.push(cur); crow++; }
+    if (isMat && (!cur || cur.key !== it.dk)) { cur = { key: it.dk, label: it.famFull + '  ›  ' + it.divFull, famCode: it.fam, row: crow, items: [] }; heads.push(cur); crow++; }
     it.crow = crow; it.id = crow - COD_1 + 1; it.pmRow = PM_1 + (crow - COD_1); if (cur) cur.items.push(it); crow++;
   });
   const lastC = crow - 1, lastD = DATA_1 + N - 1, lastItem = PM_1 + (lastC - COD_1);
-  let r = DATA_1; for (const it of b.items) { it.r1 = r; r += it.lines.length; it.r2 = r - 1; }
+  // Data rows run by month (Opening, the months, Pending), inside a month in the report's item order
+  const pOrd = new Map(periods.map((pp, i) => [pp, i])), flat = []; b.items.forEach((it, ii) => it.lines.forEach((l) => flat.push({ l, it, ii })));
+  const sortFlat = () => flat.sort((x, y) => pOrd.get(x.l.per) - pOrd.get(y.l.per) || x.ii - y.ii || (x.l.date < y.l.date ? -1 : x.l.date > y.l.date ? 1 : x.l.id < y.l.id ? -1 : 1)); sortFlat();
+  // each item's lines of one month sit together: those blocks are what the per Month and Coding formulas read (small ranges – quick to recalculate)
+  flat.forEach((f, i) => { const bl = (f.it.blocks = f.it.blocks || []), last = bl[bl.length - 1]; if (last && last.p === pOrd.get(f.l.per) && last.r2 === DATA_1 + i - 1) last.r2 = DATA_1 + i; else bl.push({ p: pOrd.get(f.l.per), r1: DATA_1 + i, r2: DATA_1 + i }); });
+  const blockTerms = (it, dcol, flagCrit, perCrit, only) => (it.blocks || []).filter((bk) => only === undefined || bk.p === only).map((bk) => `SUMIFS(${dr(dcol, bk.r1, bk.r2)},${dr(D.flag, bk.r1, bk.r2)},${flagCrit},${dr(D.per, bk.r1, bk.r2)},${perCrit})`);
   const dr = (col, a = DATA_1, z = lastD) => q(nDat) + '!$' + colL(col) + '$' + a + ':$' + colL(col) + '$' + z;
   const cr = (col) => q(nCod) + '!$' + colL(col) + '$' + COD_1 + ':$' + colL(col) + '$' + lastC;
   // colours follow the DIVISION (each division its own colour, in sheet order), as in the Material report
@@ -101,8 +118,8 @@ function bucketSheets(wb, b, model, opts) {
     const full = it.pkg && it.mnl && it.ce, part = it.pkg || it.ce, status = full ? 'Fully coded' : part ? 'Partly coded' : 'Not coded';
     setF(wsC.getCell(row, C.st), `IF(AND(${rg(C.pkg)}<>"",${rg(C.mnl)}<>"",${rg(C.ce)}<>""),"Fully coded",IF(OR(${rg(C.pkg)}<>"",${rg(C.ce)}<>""),"Partly coded","Not coded"))`, status);
     const incl = it.lines.filter((l) => l.inc === 'Yes'); it.tot = r2(incl.filter((l) => l.per !== 'Pending').reduce((s, l) => s + l.amt, 0)); it.tmv = r2(incl.filter((l) => l.per === rep).reduce((s, l) => s + l.amt, 0));
-    setF(wsC.getCell(row, C.td), `SUMIFS(${dr(D.amt, it.r1, it.r2)},${dr(D.inc, it.r1, it.r2)},"Yes",${dr(D.per, it.r1, it.r2)},"<>Pending")`, it.tot);
-    setF(wsC.getCell(row, C.tm), `SUMIFS(${dr(D.amt, it.r1, it.r2)},${dr(D.inc, it.r1, it.r2)},"Yes",${dr(D.per, it.r1, it.r2)},${CUTLAB})`, it.tmv);
+    setF(wsC.getCell(row, C.td), blockTerms(it, D.amt, '">0"', '"<>Pending"').join('+') || '0', it.tot);
+    setF(wsC.getCell(row, C.tm), blockTerms(it, D.amt, '">0"', CUTLAB).join('+') || '0', it.tmv);
     [[C.nw, it.isNew ? 'New' : null], [C.fp, it.firstP], [C.lp, it.lastP], [C.ln, it.lines.length], [C.id, it.id], [C.key, it.key]].forEach(([c, v]) => { wsC.getCell(row, c).value = v; });
     for (const nm of ['st', 'td', 'tm', 'nw', 'fp', 'lp', 'ln', 'id', 'key']) { const x = wsC.getCell(row, C[nm]); x.border = box; x.font = font(nm === 'key' ? { size: 8, color: { argb: 'FF' + GREY } } : {}); }
     wsC.getCell(row, C.td).numFmt = AMT0; wsC.getCell(row, C.tm).numFmt = AMT0;
@@ -111,15 +128,15 @@ function bucketSheets(wb, b, model, opts) {
   for (const h of heads) {   // division rows: coloured by family, (heading only, no numbers)
     const f1 = h.items[0].crow, f2 = h.items[h.items.length - 1].crow, c = strong(h.key);
     for (let col = 1; col <= C.key; col++) { const x = wsC.getCell(h.row, col); x.fill = fill(c); x.border = box; x.font = font({ bold: true }); }
-    wsC.getCell(h.row, 1).value = h.fam; wsC.getCell(h.row, 2).value = h.label;
+    wsC.getCell(h.row, 1).value = h.label;
   }
   [['Items', `COUNT(${cr(C.id)})`, n, '#,##0'], ['Fully coded', `COUNTIF(${cr(C.st)},"Fully coded")`, nFull, '#,##0'], ['Partly coded', `COUNTIF(${cr(C.st)},"Partly coded")`, nPart, '#,##0'],
-    ['Not coded', `COUNTIF(${cr(C.st)},"Not coded")`, nNot, '#,##0'], ['Coded share of To date', `IFERROR(SUMIFS(${cr(C.td)},${cr(C.st)},"Fully coded")/SUMIFS(${cr(C.td)},${cr(C.id)},">0"),0)`, tdSum ? fullSum / tdSum : 0, PCT],
-    ['Items excluded', `COUNTIF(${cr(C.inc)},"No")`, nEx, '#,##0']].forEach(([l, f, v, nf], i) => {
-    const a = wsC.getCell(3, i + 1), x = wsC.getCell(4, i + 1); a.value = l; a.font = font({ size: 9, color: { argb: 'FF' + GREY } }); a.fill = fill('DDEBF7'); a.alignment = { horizontal: 'center' };
+    ['Not coded', `COUNTIF(${cr(C.st)},"Not coded")`, nNot, '#,##0'], ['Coded share', `IFERROR(SUMIFS(${cr(C.td)},${cr(C.st)},"Fully coded")/SUMIFS(${cr(C.td)},${cr(C.id)},">0"),0)`, tdSum ? fullSum / tdSum : 0, PCT],
+    ['Excluded', `COUNTIF(${cr(C.inc)},"No")`, nEx, '#,##0']].forEach(([l, f, v, nf], i) => {
+    const a = wsC.getCell(3, i + 1), x = wsC.getCell(4, i + 1); a.value = l; a.font = font({ size: 8, color: { argb: 'FF' + GREY } }); a.fill = fill('DDEBF7'); a.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     setF(x, f, v); x.numFmt = nf; x.font = font({ size: 14, bold: true, color: { argb: 'FF' + NAVY } }); x.fill = fill('DDEBF7'); x.alignment = { horizontal: 'center' };
   });
-  def.cols.forEach((c, i) => { wsC.getColumn(i + 1).width = c[1]; });
+  wsC.getRow(3).height = 24; def.cols.forEach((c, i) => { wsC.getColumn(i + 1).width = c[1]; });
   [[C.pkg, 12], [C.mnl, 8], [C.ce, 16], [C.inc, 9], [C.st, 13], [C.td, 15], [C.tm, 16], [C.nw, 6], [C.fp, 10], [C.lp, 10], [C.ln, 7], [C.id, 6], [C.key, 18]].forEach(([c, w]) => { wsC.getColumn(c).width = w; });
   wsC.views = [{ showGridLines: false, state: 'frozen', xSplit: k, ySplit: COD_H }];
   wsC.autoFilter = { from: { row: COD_H, column: 1 }, to: { row: lastC, column: C.key } };
@@ -133,10 +150,10 @@ function bucketSheets(wb, b, model, opts) {
 
   // ================= Data
   title(wsD, def.id + ' Data — ' + opts.project, 'One row per CJI3 line. PKG, MNL, Cost element code and Include are FORMULAS reading the item on "' + nCod + '". Type over any of them to code or exclude one line (orange = typed over; Include = No greys the line out and takes it out of all totals).');
-  wsD.getCell('A3').value = 'Yellow-orange rows = UE documents (opening balances).' + (isMat ? '' : ''); wsD.getCell('A3').font = font({ bold: true, color: { argb: 'FFBF8F00' } });
+  wsD.getCell('A3').value = 'Rows run by month, each month its own colour. Yellow-orange = UE document (opening balance). Orange code = typed over.'; wsD.getCell('A3').font = font({ bold: true, color: { argb: 'FFBF8F00' } });
   header(wsD, DATA_H, DC.map((c) => c.l), ['PKG', 'MNL', 'Cost element code', 'Include']); DC.forEach((c, i) => { wsD.getColumn(i + 1).width = c.w; });
-  b.items.forEach((it) => it.lines.forEach((l, j) => {
-    const row = it.r1 + j, cell = (c) => wsD.getCell(row, c), bf = isMat ? light(it.dk) : null;
+  flat.forEach(({ l, it }, fi) => {
+    const row = DATA_1 + fi, cell = (c) => wsD.getCell(row, c), bf = isMat ? light(it.dk) : null; l.row = row;
     const v = { id: l.id, date: new Date(l.date + 'T00:00:00Z'), per: undefined, doc: l.doc, type: l.type, ce: l.ce, cen: l.cen, item: itemOf(def, it), desc: isMat ? l.matDesc : (l.poText || l.name || l.header), wbs: l.wbs,
       qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, stock: l.stock || null, mdoc: l.refDoc, entry: l.created ? new Date(l.created + 'T00:00:00Z') : null, user: l.user || null, name: l.name || null };
     DC.forEach((c, i) => { if (v[c.k] !== undefined) cell(i + 1).value = v[c.k]; });
@@ -148,16 +165,22 @@ function bucketSheets(wb, b, model, opts) {
     put(D.pkg, C.pkg, l.pkg, l.typed.pkg); put(D.mnl, C.mnl, l.mnl, l.typed.mnl); put(D.cec, C.ce, l.cec, l.typed.cec);
     if (l.typed.inc) cell(D.inc).value = l.inc; else setF(cell(D.inc), `IFERROR(IF(INDEX(${cr(C.inc)},$${colL(D.cid)}${row})="No","No","Yes"),"Yes")`, l.inc);
     setF(cell(D.over), `IF(AND($${colL(D.pkg)}${row}=${ix(C.pkg)},$${colL(D.mnl)}${row}=${ix(C.mnl)},$${colL(D.cec)}${row}=${ix(C.ce)}),0,1)`, l.s);
-    for (let c = 1; c <= nD; c++) { const x = cell(c); x.border = box; x.font = font({ size: c === 1 ? 8 : 10, bold: c >= D.pkg && c <= D.cec, color: c === 1 ? { argb: 'FF' + GREY } : undefined }); }
+    setF(cell(D.flag), `IF($${colL(D.inc)}${row}="No",0,IF($${colL(D.over)}${row}=1,2,1))`, l.inc === 'No' ? 0 : l.s === 1 ? 2 : 1);
+    for (let c = 1; c <= nD; c++) { const x = cell(c); x.border = box; x.font = font({ size: c === D.id ? 8 : 10, bold: c >= D.pkg && c <= D.cec, color: c === D.id ? { argb: 'FF' + GREY } : undefined }); }
     if (bf) for (const kx of ['fam', 'div', 'grp']) cell(D[kx]).fill = fill(bf);
-  }));
-  wsD.views = [{ showGridLines: false, state: 'frozen', xSplit: 3, ySplit: DATA_H }];
+  });
+  wsD.views = [{ showGridLines: false, state: 'frozen', xSplit: dlayout(def).freeze, ySplit: DATA_H }];
   wsD.autoFilter = { from: { row: DATA_H, column: 1 }, to: { row: lastD, column: nD } };
   wsD.dataValidations.add(`${colL(D.inc)}${DATA_1}:${colL(D.inc)}${lastD}`, { type: 'list', allowBlank: true, formulae: ['"Yes,No"'] });
   wsD.addConditionalFormatting({ ref: `${colL(D.pkg)}${DATA_1}:${colL(D.cec)}${lastD}`, rules: [{ type: 'expression', formulae: [`$${colL(D.over)}${DATA_1}=1`], style: { fill: cfFill(ORANGE), font: { bold: true, color: { argb: 'FFC55A11' } } }, priority: 5 }] });
   wsD.addConditionalFormatting({ ref: `A${DATA_1}:${colL(nD)}${lastD}`, rules: [
     { type: 'expression', formulae: [`$${colL(D.inc)}${DATA_1}="No"`], style: { font: { color: { argb: 'FFA6A6A6' }, strike: true }, fill: cfFill('EDEDED') }, priority: 6 },
     { type: 'expression', formulae: [`$${colL(D.type)}${DATA_1}="UE"`], style: { fill: cfFill(UE_FILL), font: { bold: true } }, priority: 7 }] });
+  const pc = perColors(periods);   // every month its own colour: the row is tinted, the date and period cells carry the stronger colour
+  periods.forEach((pp, i) => {
+    wsD.addConditionalFormatting({ ref: `A${DATA_1}:${colL(nD)}${lastD}`, rules: [{ type: 'expression', formulae: [`$${colL(D.per)}${DATA_1}="${pp}"`], style: { fill: cfFill(pc[i][1]) }, priority: 20 + i }] });
+    wsD.addConditionalFormatting({ ref: `${colL(D.date)}${DATA_1}:${colL(D.per)}${lastD}`, rules: [{ type: 'expression', formulae: [`$${colL(D.per)}${DATA_1}="${pp}"`], style: { fill: cfFill(pc[i][0]), font: { bold: true } }, priority: 50 + i }] });
+  });
 
   // ================= per Month – Material: Qty | Rate | Amount side by side for every month (the report's layout); other buckets: amount only
   const M = isMat ? ['Qty', 'Rate', 'Amount'] : ['Amount'], lead = k + 3, aM = M.length - 1, per = (p) => (p < np ? periods[p] : 'To date');
@@ -166,12 +189,12 @@ function bucketSheets(wb, b, model, opts) {
   title(wsP, def.id + ' per Month — ' + opts.project, 'Live: sums the lines of each item by posting month (counted lines only: Include = Yes and not typed over). Codes follow "' + nCod + '". The rows under the items catch typed-over and excluded lines, so the total always equals the Data sheet.');
   const hdr = [...def.cols.map((c) => c[0]), 'PKG', 'MNL', 'Cost element code']; for (let p = 0; p <= np; p++) for (const bn of M) hdr.push(isMat ? bn : per(p));
   header(wsP, PM_H, hdr);
+  const pcm = perColors(periods), dark = { argb: 'FF1F3864' };
   if (isMat) for (let p = 0; p <= np; p++) {
     const c0 = colOf('Qty', p); wsP.mergeCells(PM_H - 1, c0, PM_H - 1, c0 + 2); const x = wsP.getCell(PM_H - 1, c0); x.value = per(p);
-    const col = p === np ? NAVY : p === np - 1 ? 'C55A11' : 'A6A6A6'; x.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); x.fill = fill(col); x.alignment = { horizontal: 'center' };
-    M.forEach((bn, bi) => { const h = wsP.getCell(PM_H, c0 + bi); h.fill = fill(BLOCK[bn]); h.font = font({ bold: true }); });
-  } else { wsP.mergeCells(PM_H - 1, lead + 1, PM_H - 1, lastCol); const x = wsP.getCell(PM_H - 1, lead + 1); x.value = 'Amount (EGP)'; x.font = font({ bold: true }); x.fill = fill(BLOCK.Amount); x.alignment = { horizontal: 'center' };
-    for (let p = 0; p <= np; p++) { const h = wsP.getCell(PM_H, colOf('Amount', p)); h.fill = fill(BLOCK.Amount); h.font = font({ bold: true }); } }
+    x.font = font({ bold: true, color: p === np ? { argb: 'FFFFFFFF' } : dark }); x.fill = fill(p === np ? NAVY : pcm[p][0]); x.alignment = { horizontal: 'center' };
+  } else { wsP.mergeCells(PM_H - 1, lead + 1, PM_H - 1, lastCol); const x = wsP.getCell(PM_H - 1, lead + 1); x.value = 'Amount (EGP)'; x.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); x.fill = fill(NAVY); x.alignment = { horizontal: 'center' };
+    for (let p = 0; p < np; p++) { const h = wsP.getCell(PM_H, colOf('Amount', p)); h.fill = fill(pcm[p][0]); h.font = font({ bold: true, color: dark }); } }
   const sumL = (ls, key) => (key === 'qty' ? r3(ls.reduce((s, l) => s + l.qty, 0)) : r2(ls.reduce((s, l) => s + l.amt, 0)));
   const inP = (ls, p) => (p < np ? ls.filter((l) => l.per === periods[p]) : ls.filter((l) => l.per !== 'Pending'));
   const todate = (bn, row) => `SUM(${Array.from({ length: np - 1 }, (_, p) => colL(colOf(bn, p)) + row).join(',')})`;
@@ -179,7 +202,7 @@ function bucketSheets(wb, b, model, opts) {
   // cell writer shared by item rows, division rows and the total row: (row, p, bn) -> formula + value
   const rateCell = (x, row, p, qv, av) => { setF(x, `IFERROR(${colL(colOf('Amount', p))}${row}/${colL(colOf('Qty', p))}${row},"")`, qv ? av / qv : ''); };
   b.items.forEach((it, i) => {
-    const row = it.pmRow, bf = isMat ? light(it.dk) : null, own = it.lines.filter((l) => l.inc === 'Yes' && l.s === 0), rd = (c) => dr(c, it.r1, it.r2);
+    const row = it.pmRow, bf = isMat ? light(it.dk) : null, own = it.lines.filter((l) => l.inc === 'Yes' && l.s === 0), rd = (c) => dr(c);
     if (isMat) wsP.getRow(row).outlineLevel = 1;
     it.vals.forEach((v, c) => { const x = wsP.getCell(row, c + 1); x.value = v; x.border = box; x.font = font(); if (bf && c < 3) x.fill = fill(bf); });
     [[C.pkg, it.pkg], [C.mnl, it.mnl], [C.ce, it.ce]].forEach(([cc, v], j) => { const x = wsP.getCell(row, k + 1 + j); setF(x, `${q(nCod)}!${colL(cc)}${it.crow}&""`, v || ''); x.font = font({ bold: true }); x.border = box; });
@@ -187,14 +210,14 @@ function bucketSheets(wb, b, model, opts) {
       const x = wsP.getCell(row, colOf(bn, p)); x.border = box; x.font = font({ bold: p === np }); x.numFmt = fmtOf(bn); 
       if (bn === 'Rate') { rateCell(x, row, p, sumL(inP(own, p), 'qty'), sumL(inP(own, p), 'amt')); continue; }
       const key = bn === 'Qty' ? 'qty' : 'amt', dcol = bn === 'Qty' ? D.qty : D.amt;
-      if (p < np) setF(x, `SUMIFS(${rd(dcol)},${rd(D.over)},0,${rd(D.inc)},"Yes",${rd(D.per)},${pRef(p)})`, sumL(inP(own, p), key));
+      if (p < np) { const t = p === np - 1 ? blockTerms(it, dcol, 1, '"Pending"') : blockTerms(it, dcol, 1, pRef(p), p); setF(x, t.join('+') || '0', sumL(inP(own, p), key)); }
       else setF(x, todate(bn, row), sumL(own, key));
     }
   });
   for (const h of heads) {   // division rows: coloured by family, subtotals of the items below
     const f1 = h.items[0].pmRow, f2 = h.items[h.items.length - 1].pmRow, c = strong(h.key), own = h.items.flatMap((it) => it.lines.filter((l) => l.inc === 'Yes' && l.s === 0)), row = h.row - COD_1 + PM_1;
     for (let col = 1; col <= lastCol; col++) { const x = wsP.getCell(row, col); x.fill = fill(c); x.border = box; x.font = font({ bold: true }); }
-    wsP.getCell(row, 1).value = h.fam; wsP.getCell(row, 2).value = h.label;
+    wsP.getCell(row, 1).value = h.label;
   }
   const rHand = lastItem + 2, rTot = rHand + 1, rData = rHand + 2, rDiff = rHand + 3, rExc = rHand + 4, all = b.items.flatMap((it) => it.lines);
   [[rHand, 'Hand-coded lines (typed over on the Data sheet)', false, null], [rTot, 'TOTAL counted', true, NAVY], [rData, 'Data sheet total, counted lines (check)', false, GREY],
@@ -208,11 +231,11 @@ function bucketSheets(wb, b, model, opts) {
     // item rows only (the division rows above carry the same numbers again – they are left out of the total)
     const itemRows = b.items.map((it) => cl + it.pmRow);
     const rng = []; let a = null, z = null; for (const it of b.items) { if (a === null) { a = z = it.pmRow; } else if (it.pmRow === z + 1) z = it.pmRow; else { rng.push([a, z]); a = z = it.pmRow; } } if (a !== null) rng.push([a, z]); void itemRows;
-    set(rHand, `SUMIFS(${dr(dcol)},${dr(D.over)},1,${dr(D.inc)},"Yes"${perCrit})`, hand);
+    set(rHand, `SUMIFS(${dr(dcol)},${dr(D.flag)},2${perCrit})`, hand);
     set(rTot, `${rng.map(([x1, x2]) => `SUM(${cl}${x1}:${cl}${x2})`).join('+')}+${cl}${rHand}`, counted, true);
-    set(rData, `SUMIFS(${dr(dcol)},${dr(D.inc)},"Yes"${perCrit})`, counted);
+    set(rData, `SUMIFS(${dr(dcol)},${dr(D.flag)},">0"${perCrit})`, counted);
     set(rDiff, `ROUND(${cl}${rTot}-${cl}${rData},${key === 'qty' ? 3 : 2})`, 0, true);
-    set(rExc, `SUMIFS(${dr(dcol)},${dr(D.inc)},"No"${perAll})`, sumL(all.filter((l) => l.inc === 'No' && (p < np ? l.per === periods[p] : true)), key));
+    set(rExc, `SUMIFS(${dr(dcol)},${dr(D.flag)},0${perAll})`, sumL(all.filter((l) => l.inc === 'No' && (p < np ? l.per === periods[p] : true)), key));
   }
   def.cols.forEach((c, i) => { wsP.getColumn(i + 1).width = c[1]; }); wsP.getColumn(k + 1).width = 12; wsP.getColumn(k + 2).width = 8; wsP.getColumn(k + 3).width = 16;
   for (let c = lead + 1; c <= lastCol; c++) wsP.getColumn(c).width = isMat ? 12 : 13;
@@ -229,7 +252,7 @@ function revenueSheet(wb, model, opts) {
   const lines = model.lines.filter((l) => l.bucket === 'Revenue').sort((a, b) => (a.date < b.date ? -1 : a.id < b.id ? -1 : 1)); if (!lines.length) return null;
   const ws = wb.addWorksheet('Revenue Data', { properties: { tabColor: { argb: 'FF548235' } } });
   title(ws, 'Revenue Data — ' + opts.project, 'Cost elements starting with 4 (revenue) and Client-Deductions. Signs as CJI3 has them (revenue is a credit = negative). Never netted against cost.');
-  header(ws, DATA_H, [...BASE.cols.slice(0, 13).map((c) => c.l), 'Include']); BASE.cols.slice(0, 13).forEach((c, i) => { ws.getColumn(i + 1).width = c.w; }); ws.getColumn(14).width = 8;
+  header(ws, DATA_H, REV.cols.map((c) => c.l)); REV.cols.forEach((c, i) => { ws.getColumn(i + 1).width = c.w; });
   lines.forEach((l, i) => {
     const row = DATA_1 + i;
     [l.id, new Date(l.date + 'T00:00:00Z'), null, l.doc, l.type, l.ce, l.cen, '', l.name || l.header, l.wbs, null, null, l.amt, 'Yes'].forEach((v, c) => { const x = ws.getCell(row, c + 1); if (c === 2) setF(x, periodF(row, D0), l.per); else x.value = v; if (c === 1) x.numFmt = 'yyyy-mm-dd'; x.border = box; x.font = font({ size: c === 0 ? 8 : 10 }); });
