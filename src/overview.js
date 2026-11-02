@@ -7,7 +7,10 @@ const { fill, font, box, q, setF, title, header, itemOf, descOf, AMT0, AMT2, PCT
 
 function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   const np = model.periods.length, P = model.periods, nm = np - 2, ed = 'Expenses!', rep = model.reportLabel, CUTC = 'Summary!$B$4';
-  const rc = (c) => ex.rng(c), bk = ex.bk, sb = (c, id) => `SUMIFS(${rc(c)},${bk},"${id}")`, NUM = '#,##0;[Red]\\-#,##0;"-"', PC = '0.0%;[Red]\\-0.0%;"-"';
+  // figures come straight from each bucket's per Month sheet (TOTAL counted row): column c = 7+p period p · 7+np To date · 8+np This month
+  const cTo = 7 + np, cTm = 8 + np, pmCell = (inf, p, row = inf.rTot) => `${q(inf.nPm)}!$${colL(inf.amtCol(p))}$${row}`;
+  const sbI = (c, inf) => (c === cTo ? pmCell(inf, np) : c === cTm ? `(${P.slice(1, np - 1).map((lab, i) => `(${CUTC.replace('$B$4', '$D$4')}="${lab}")*${pmCell(inf, i + 1)}`).join('+')})` : pmCell(inf, c - 7));
+  const sb = (c, id) => sbI(c, infos.find((i) => i.def.id === id)), sumB = (c) => infos.map((inf) => sbI(c, inf)).join('+'), NUM = '#,##0;[Red]\\-#,##0;"-"', PC = '0.0%;[Red]\\-0.0%;"-"';
   const counted = (inf) => inf.b.items.flatMap((it) => it.lines).filter((l) => l.inc === 'Yes'), sum = (ls) => r2(ls.reduce((s, l) => s + l.amt, 0));
   const pastel = (i) => W.BAND[i % W.BAND.length];
   const T = (c, v, o = {}) => { const x = ws.getCell(c); x.value = v; x.font = font(o); return x; };
@@ -39,8 +42,8 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   const excl = r2(infos.flatMap((inf) => inf.b.items.flatMap((it) => it.lines)).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0));
   const clientDed = r2(model.lines.filter((l) => l.bucket === 'Revenue' && l.ce[0] !== '4').reduce((s, l) => s + l.amt, 0));
   // ---- KPI cards (row 6 labels, row 7 values)
-  const cards = [['Previous (before this month)', r2(toDate - thisM), `C7-B7`, null], ['="This month · "&D4', thisM, `SUM(${ex.rng(ex.cTm)})`, 'FFF2CC'], ['To date (counted)', toDate, `SUM(${ex.rng(ex.cTo)})`, null],
-    ['Pending – not in To date', pend, `SUM(${ex.rng(ex.cPend)})`, null], ['Excluded by user', excl, ex.excRef, null], ['Difference to CJI3 (must be 0)', 0, null, null]];
+  const cards = [['Previous (before this month)', r2(toDate - thisM), `C7-B7`, null], ['="This month · "&D4', thisM, sumB(cTm), 'FFF2CC'], ['To date (counted)', toDate, sumB(cTo), null],
+    ['Pending – not in To date', pend, sumB(6 + np), null], ['Excluded by user', excl, infos.map((inf) => pmCell(inf, np, inf.rExc)).join('+'), null], ['Difference to CJI3 (must be 0)', 0, null, null]];
   cards.forEach(([l, v, f, bg], i) => { const c = i + 1, a = ws.getCell(6, c), x = ws.getCell(7, c);
     if (l[0] === '=') setF(a, l.slice(1), 'This month · ' + rep); else a.value = l;
     a.font = font({ bold: true, size: 9, color: { argb: 'FFFFFFFF' } }); a.fill = fill(i === 1 ? GOLD : i === 5 ? RED : NAVY); a.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
@@ -71,15 +74,15 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   // current-month column tint (follows the cut date)
   ws.addConditionalFormatting({ ref: `A${firstM + 1}:${colL(3 + nb)}${lastM}`, rules: [{ type: 'expression', formulae: [`$A${firstM + 1}=$D$4`], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFFF2CC' } }, font: { bold: true } }, priority: 1 }] });
   // ---- 2. cost by bucket
-  sec(r, '2. Cost by bucket', 'live – from the counted lines behind the Expenses sheet, so the cut date flows through; click a bucket to open its Coding sheet'); r++;
+  sec(r, '2. Cost by bucket', 'live – from each bucket\'s per Month sheet, so the cut date flows through; click a bucket to open its Coding sheet'); r++;
   head(r, ['Bucket', 'Lines', 'Opening', 'Previous', 'This month', 'To date', '% of to date', 'Pending', 'Coded share', 'Excluded (memo)', 'Check (must be 0)']); r++;
   const b0 = r, tot = infos.length + b0;
   infos.forEach((inf, i) => {
     const ls = counted(inf), id = inf.def.id, op = sum(ls.filter((l) => l.per === 'Opening')), td = sum(ls.filter((l) => l.per !== 'Pending')), tm = sum(ls.filter((l) => l.per === rep)), pe = sum(ls.filter((l) => l.per === 'Pending'));
     const exv = r2(inf.b.items.flatMap((it) => it.lines).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0)), pm = q(inf.nPm);
     const a = ws.getCell(r, 1); setF(a, `HYPERLINK("#'${inf.nCod}'!A1","${id}")`, id); a.font = font({ bold: true, underline: true, color: { argb: 'FF2F5597' } }); a.fill = fill('DDE5EE');
-    cell(r, 2, inf.b.count, null, { fmt: '#,##0' }); cell(r, 3, op, sb(7, id), { fmt: NUM }); cell(r, 4, r2(td - tm), `F${r}-E${r}`, { fmt: NUM }); cell(r, 5, tm, sb(colIx(ex.cTm), id), { fmt: NUM, fill: 'FFF2CC' });
-    cell(r, 6, td, sb(colIx(ex.cTo), id), { fmt: NUM, font: { bold: true } }); cell(r, 7, 0, `IF($F$${tot}=0,"",F${r}/$F$${tot})`, { fmt: PC }); ws.getCell(r, 7).value = { formula: `IF($F$${tot}=0,"",F${r}/$F$${tot})`, result: toDate ? td / toDate : '' };
+    cell(r, 2, inf.b.count, null, { fmt: '#,##0' }); cell(r, 3, op, sb(7, id), { fmt: NUM }); cell(r, 4, r2(td - tm), `F${r}-E${r}`, { fmt: NUM }); cell(r, 5, tm, sb(cTm, id), { fmt: NUM, fill: 'FFF2CC' });
+    cell(r, 6, td, sb(cTo, id), { fmt: NUM, font: { bold: true } }); cell(r, 7, 0, `IF($F$${tot}=0,"",F${r}/$F$${tot})`, { fmt: PC }); ws.getCell(r, 7).value = { formula: `IF($F$${tot}=0,"",F${r}/$F$${tot})`, result: toDate ? td / toDate : '' };
     cell(r, 8, pe, sb(6 + np, id), { fmt: NUM }); cell(r, 9, 0, inf.toolC ? `${q(inf.nCod)}!I2` : `${q(inf.nCod)}!E4`, { fmt: PC }); ws.getCell(r, 9).value = { formula: inf.toolC ? `${q(inf.nCod)}!I2` : `${q(inf.nCod)}!E4`, result: inf.coded }; cell(r, 10, exv, `${pm}!${colL(inf.amtCol(np))}${inf.rExc}`, { fmt: NUM, font: { color: { argb: 'FF595959' } } });
     cell(r, 11, 0, `${pm}!${colL(inf.amtCol(np))}${inf.rDiff}`, { fmt: '#,##0.00;[Red]\\-#,##0.00;"-"' }); for (let c = 1; c <= 11; c++) ws.getCell(r, c).border = box; r++;
   });
@@ -126,8 +129,6 @@ function writeChecks(ws, model, infos, ex, opts, stats) {
   add('Duplicate line keys (document | row | year)', null, stats.dupes, 'zero', 'A key that appears twice would be double-counted.');
   add('Lines with no bucket (Unclassified)', null, model.lines.filter((l) => l.bucket === 'Unclassified').length, 'zero', 'A cost element without a rule – add one in the rule table.');
   add('Register vs CJI3 cost – difference', stats.diffRef, 0, 'abs', 'Expenses counted + excluded + client deductions − CJI3 cost.');
-  if (ex && ex.stack) { add('Expenses: total vs the per Month sheets', `ROUND(SUM(${ex.rng(ex.cTo)})-(${infos.map((inf) => `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rTot}`).join('+')}),2)`, 0, 'abs', 'Items + hand-coded lines behind the Expenses list = TOTAL counted of every bucket.');
-    add('Expenses: hand-coded blocks that overflow or fail', ex.stack.anchors.filter((a) => a.sheet === '_Stack').map((a) => `ISERROR(_Stack!${a.cell})`).join('+'), 0, 'zero', 'Each bucket has room for 250 hand-coded item × PKG × MNL × code combinations.'); }
   for (const inf of infos) add(inf.def.id + ': per Month total vs Data sheet', `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rDiff}`, 0, 'abs', 'Must be 0.');
   for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIFS(${q(inf.nCod)}!${colL(inf.C.st)}${inf.cod1}:${colL(inf.C.st)}${inf.lastC},"<>${inf.fullWord}",${q(inf.nCod)}!${colL(inf.C.id)}${inf.cod1}:${colL(inf.C.id)}${inf.lastC},">0")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
   for (const inf of infos) add(inf.def.id + ': lines typed over', `SUM(${q(inf.nDat)}!${colL(inf.D.over)}5:${colL(inf.D.over)}${inf.lastD})`, inf.b.items.flatMap((it) => it.lines).filter((l) => l.s === 1).length, 'info', 'Lines coded differently from their item.');
