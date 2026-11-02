@@ -19,10 +19,13 @@ async function build(opts) {
   const groups = readGroups({ me2n: opts.me2n, mb52: opts.mb52 }); log(`Material groups: ${groups.map.size} materials (ME2N ${groups.src.me2n}, MB52 ${groups.src.mb52})`);
   const costAll = r2(cji.lines.filter((l) => l.ce[0] !== '4').reduce((x, l) => x + l.amt, 0));
   let lines = cji.lines, subRes = null, serv = null;
+  const vm = String(opts.vat || 'exclude').toLowerCase(), vatOpt = { mode: vm.startsWith('before') || vm.includes('before') ? 'Include VAT before date' : vm.startsWith('incl') ? 'Include VAT' : 'Exclude VAT', from: opts.vatfrom || '' };
+  if (vatOpt.mode === 'Include VAT before date' && !vatOpt.from) throw new Error('--vat before needs --vatfrom yyyy-mm-dd');
+  opts.vatOpt = vatOpt;
   if (opts.zscprg01) {
     const prog = SC.readProg(opts.zscprg01); serv = opts.zscsrv1 ? SC.readServ(opts.zscsrv1) : null;
     const ceNames = new Map(cji.lines.map((l) => [l.ce, l.cen]));
-    subRes = SC.buildSubcontractor(cji.lines.filter((l) => l.bucket === 'Subcontractor'), prog, serv, ceNames);
+    subRes = SC.buildSubcontractor(cji.lines.filter((l) => l.bucket === 'Subcontractor'), prog, serv, ceNames, vatOpt);
     lines = cji.lines.filter((l) => l.bucket !== 'Subcontractor').concat(subRes.lines);
     const st = subRes.stats; log(`Subcontractor: ${prog.lines.length} certificate lines; ${st.docs} of ${st.cjiDocs} CJI3 documents explained; certificates ${st.certPosted}; opening ${st.openRep} (CJI3 ${st.cjiOpen}, difference ${st.openDiff}); ${st.docAdjN} documents differ by 1 EGP or more (${st.docAdj}), ${st.roundN} by cents; ${st.cjiOnlyN} CJI3-only lines`);
   }

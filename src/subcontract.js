@@ -60,7 +60,10 @@ function readServ(file) {
 }
 const unitFromCode = (svc) => { const m = /-([A-Za-z0-9]{1,4})$/.exec(str(svc)); return m ? m[1].toUpperCase() : ''; };
 
-function buildSubcontractor(cjiSub, prog, serv, ceNames) {
+function buildSubcontractor(cjiSub, prog, serv, ceNames, vatOpt) {
+  const vmode = (vatOpt && vatOpt.mode) || 'Exclude VAT', vfrom = vatOpt && vatOpt.from ? vatOpt.from : '';
+  // the VAT a line carries into its amount: none, all, or only certificates dated before the VAT date (no date: opening invoices count as before)
+  const vatIn = (l) => (vmode === 'Include VAT' ? l.vat : vmode === 'Include VAT before date' ? ((l.date ? !!vfrom && l.date < vfrom : l.flag === 'X') ? l.vat : 0) : 0);
   const cjiOpen = cjiSub.filter((l) => l.open), cjiRest = cjiSub.filter((l) => !l.open);
   const scDocs = new Map(); for (const l of cjiRest) if (l.type === 'SC' && l.refDoc) (scDocs.get(l.refDoc) || scDocs.set(l.refDoc, []).get(l.refDoc)).push(l);
   const approved = prog.lines.filter((l) => l.appr === 'X'), opening = approved.filter((l) => l.flag === 'X'), rest = approved.filter((l) => l.flag !== 'X');
@@ -68,7 +71,7 @@ function buildSubcontractor(cjiSub, prog, serv, ceNames) {
   const notApproved = prog.lines.filter((l) => l.appr !== 'X');
   const unitOf = (svc) => (serv && serv.unit.get(svc)) || unitFromCode(svc), towOf = (po) => (serv && serv.poType.get(po)) || '';
   const ceName = (ce) => (ceNames && ceNames.get(ce)) || '';
-  const mk = (l, extra) => ({ id: l.lid, doc: '', row: '', fy: '', date: '', ym: '', type: 'SC', ce: l.gl, cen: ceName(l.gl), amt: r2(l.amt), wbs: l.wbs, mat: '', matDesc: '', qty: r3(l.rq), unit: unitOf(l.svc), name: '', header: l.certText, poText: l.text,
+  const mk = (l, extra) => ({ id: l.lid, doc: '', row: '', fy: '', date: '', ym: '', type: 'SC', ce: l.gl, cen: ceName(l.gl), net: r2(l.amt), vat: r2(l.vat), vin: r2(vatIn(l)), amt: r2(l.amt + vatIn(l)), tax: l.tax, vrate: prog.vat[l.tax] || 0, gross: l.price, ctype: l.ctype, wbs: l.wbs, mat: '', matDesc: '', qty: Math.round(l.rq * 1e6) / 1e6, unit: unitOf(l.svc), name: '', header: l.certText, poText: l.text,
     po: l.po, order: '', orderName: '', offset: l.supName, refDoc: l.docNo, bucket: 'Subcontractor', sub: '', open: false, svc: l.svc, desc: l.text, tow: towOf(l.po), sup: l.supName, cert: l.serial, cdate: l.date,
     ikey: l.svc + '|' + normText(l.text), source: 'Certificate', ...extra });
   const out = [];
@@ -93,7 +96,8 @@ function buildSubcontractor(cjiSub, prog, serv, ceNames) {
     out.push({ id: 'ADJ|ROUND|' + ym, doc: '', row: '', fy: '', date: last, ym, type: 'SC', ce: '', cen: '', amt: v, wbs: '', mat: '', matDesc: '', qty: 0, unit: '', name: '', header: '', poText: 'Rounding: documents where CJI3 and the certificates differ by under 1 EGP', po: '', order: '', orderName: '',
       offset: '', refDoc: '', bucket: 'Subcontractor', sub: '', open: false, svc: '(adjustment)', desc: 'Rounding differences (under 1 EGP per document)', tow: '', sup: '', cert: '', cdate: '', ikey: 'ADJ', source: 'Rounding' }); }
   const openCji = r2(cjiOpen.reduce((s, l) => s + l.amt, 0)), openRep = r2(opening.reduce((s, l) => s + l.amt, 0)), openDiff = r2(openCji - openRep);
-  if (cjiOpen.length && Math.abs(openDiff) >= 0.005) out.push({ id: 'ADJ|OPENING', doc: '', row: '', fy: '', date: openDate, ym: openDate.slice(0, 7), type: 'UE', ce: cjiOpen[0].ce, cen: cjiOpen[0].cen, amt: openDiff, wbs: '', mat: '', matDesc: '', qty: 0, unit: '', name: '', header: '',
+  const openVatIn = r2(out.filter((x) => x.source === 'Opening certificate').reduce((t, x) => t + x.vin, 0));
+  if (cjiOpen.length && Math.abs(openDiff) >= 0.005) out.push({ id: 'ADJ|OPENING', offsetVat: true, net: openDiff, vat: 0, vin: -openVatIn, doc: '', row: '', fy: '', date: openDate, ym: openDate.slice(0, 7), type: 'UE', ce: cjiOpen[0].ce, cen: cjiOpen[0].cen, amt: r2(openDiff - openVatIn), wbs: '', mat: '', matDesc: '', qty: 0, unit: '', name: '', header: '',
     poText: 'CJI3 opening balance minus the opening certificates (to confirm – VAT?)', po: '', order: '', orderName: '', offset: '', refDoc: '', bucket: 'Subcontractor', sub: '', open: true, svc: '(adjustment)', desc: 'Opening difference to CJI3 (to confirm)', tow: '', sup: '', cert: '', cdate: '', ikey: 'ADJ', source: 'Opening difference' });
   // CJI3 subcontractor lines that no certificate explains (reversals, other documents)
   const only = cjiRest.filter((l) => !(l.type === 'SC' && scDocs.has(l.refDoc) && certDoc.has(l.refDoc)));
@@ -101,11 +105,11 @@ function buildSubcontractor(cjiSub, prog, serv, ceNames) {
   // a CJI3 document the certificates cover but with no certificate lines left after zero-line removal still needs its CJI3 lines kept
   const noCert = [...scDocs.keys()].filter((d) => !certDoc.has(d) && posted.every((x) => x.docNo !== d));
   void noCert;
-  for (const l of out) { if (!l.po) l.po = '(no PO)'; }
+  for (const l of out) { if (!l.po) l.po = '(no PO)'; if (l.net === undefined) { l.net = l.amt; l.vat = 0; l.vin = 0; } }
   const sumA = (ls) => r2(ls.reduce((s, l) => s + l.amt, 0));
   return { lines: out, stats: { cjiTotal: sumA(cjiSub), cjiOpen: openCji, certPosted: sumA(posted), certPostedN: posted.length, docs: certDoc.size, cjiDocs: scDocs.size, openRep, openN: opening.length, openDiff, docAdj: r2(docAdj), docAdjN, roundN, roundAmt: r2(roundAmt),
     cjiOnly: sumA(only), cjiOnlyN: only.length, unposted: sumA(unposted), unpostedN: unposted.length, notApproved: sumA(notApproved), notApprovedN: notApproved.length,
-    vatPosted: r2(posted.reduce((s, l) => s + l.vat, 0) + opening.reduce((s, l) => s + l.vat, 0)), dup: { rows: prog.dupRows, amt: prog.dupAmt }, zero: prog.allLines - prog.lines.length,
+    vatPosted: r2(posted.reduce((s, l) => s + l.vat, 0) + opening.reduce((s, l) => s + l.vat, 0)), vatOnPosted: r2(posted.reduce((s, l) => s + l.vat, 0)), vatOnOpening: r2(opening.reduce((s, l) => s + l.vat, 0)), vatCounted: r2(out.reduce((t, x) => t + x.vin, 0)), vmode, vfrom, dup: { rows: prog.dupRows, amt: prog.dupAmt }, zero: prog.allLines - prog.lines.length,
     unpostedByPo: (() => { const m = new Map(); for (const l of unposted) m.set(l.po, r2((m.get(l.po) || 0) + l.amt)); return m; })(),
     certByPo: (() => { const m = new Map(); for (const l of [...posted, ...opening]) { const x = m.get(l.po) || { n: new Set(), first: '', last: '', contract: '' }; x.n.add(l.serial); if (l.date && (!x.first || l.date < x.first)) x.first = l.date; if (l.date && l.date > x.last) x.last = l.date; x.contract = l.ctype; m.set(l.po, x); } return m; })() } };
 }

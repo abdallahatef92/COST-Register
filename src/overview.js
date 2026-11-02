@@ -67,6 +67,16 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   const rm = ws.getCell('D4'); setF(rm, `CHOOSE(MONTH(B4),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")&"-"&RIGHT(YEAR(B4),2)`, rep); rm.font = font({ bold: true, size: 12, color: { argb: 'FF' + NAVY } }); rm.fill = fill('FFF2CC'); rm.alignment = { horizontal: 'center' }; rm.border = box;
   T('E4', 'Pick the cut date from the list (▼): later postings go to Pending and stay out of To date. Every sheet follows it.', { size: 9, color: { argb: 'FF595959' } });
   ws.getRow(4).height = 24;
+  const subInf = infos.find((i) => i.def.id === 'Subcontractor'), vo = opts.vatOpt || { mode: 'Exclude VAT', from: '' };
+  if (subInf && stats.sub) {   // VAT switch, as in the Subcontract report: Exclude / Include / Include before a date
+    T('A5', 'VAT  ▸', { bold: true, size: 12, color: { argb: 'FF' + NAVY } });
+    const vm = ws.getCell('B5'); vm.value = vo.mode; vm.fill = fill(YELLOW); vm.font = font({ bold: true, size: 11 }); vm.border = box; vm.alignment = { horizontal: 'center' };
+    vm.dataValidation = { type: 'list', allowBlank: false, formulae: ['"Exclude VAT,Include VAT,Include VAT before date"'], showErrorMessage: true, errorTitle: 'VAT', error: 'Pick one from the list.', showInputMessage: true, promptTitle: 'VAT', prompt: 'Exclude VAT = net (as CJI3). Include VAT = + VAT on every certificate line. Include VAT before date = VAT on certificates dated before the date in C5, net from it on.' };
+    const vd = ws.getCell('C5'); if (vo.from) vd.value = new Date(vo.from + 'T00:00:00Z'); vd.numFmt = 'dd\\-mmm\\-yyyy'; vd.fill = fill(YELLOW); vd.font = font({ bold: true, size: 11 }); vd.border = box; vd.alignment = { horizontal: 'center' };
+    vd.dataValidation = { type: 'date', operator: 'greaterThan', allowBlank: true, formulae: [36526], showErrorMessage: true, errorTitle: 'VAT date', error: 'Type a date, e.g. 01-Jan-2026.' };
+    const vt = vo.mode === 'Include VAT' ? 'Subcontractor amounts include VAT' : vo.mode === 'Include VAT before date' ? (vo.from ? 'Subcontractor amounts include VAT on certificates dated before ' + new Date(vo.from + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/ /g, '-') + ' (opening invoices count as before)' : 'Type the date in C5 – VAT is not included until then') : 'Subcontractor amounts are net of VAT (as CJI3)';
+    const E5 = ws.getCell('E5'); setF(E5, `IF(B5="Include VAT","Subcontractor amounts include VAT",IF(B5="Include VAT before date",IF(ISNUMBER(C5),"Subcontractor amounts include VAT on certificates dated before "&TEXT(C5,"dd-mmm-yyyy")&" (opening invoices count as before)","Type the date in C5 – VAT is not included until then"),"Subcontractor amounts are net of VAT (as CJI3)"))`, vt); E5.font = font({ size: 9, color: { argb: 'FF595959' } });
+  }
   // ---- numbers
   const all = infos.flatMap((inf) => counted(inf)), toDate = sum(all.filter((l) => l.per !== 'Pending')), thisM = sum(all.filter((l) => l.per === rep)), pend = sum(all.filter((l) => l.per === 'Pending'));
   const excl = r2(infos.flatMap((inf) => inf.b.items.flatMap((it) => it.lines)).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0));
@@ -130,9 +140,11 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   sec(r, '4. Reconciliation to CJI3', 'CJI3 is the single source of truth – the difference must be 0'); r++;
   const rec0 = r, rec = [['CJI3 cost, all cost elements except 4xxxxxxx (from the file)', stats.cost, null], ['– Counted to the cut date (To date)', toDate, 'C7'], ['– Pending (posted after the cut date)', pend, 'D7'], ['– Excluded by user (memo, listed on each per Month sheet)', excl, 'E7'],
     ['– Client deductions (cost element Client-Deductions, shown with revenue)', clientDed, revInfo ? `SUMIFS('Revenue Data'!$M$5:$M$${revInfo.last},'Revenue Data'!$F$5:$F$${revInfo.last},"<>4*")` : null]];
+  const vatTot = subInf && stats.sub ? stats.sub.vatCounted : 0;
+  if (subInf && stats.sub) rec.push(['+ VAT included in the Subcontractor amounts (CJI3 has none – set by VAT B5)', vatTot, `SUM(${q(subInf.nDat)}!$${colL(subInf.D.vatin)}$5:$${colL(subInf.D.vatin)}$${subInf.lastD})`]);
   rec.forEach(([l, v, f]) => { T(`A${r}`, l); cell(r, 5, v, f, { fmt: NUM }); r++; });
-  T(`A${r}`, 'Difference (must be 0)', { bold: true, color: { argb: 'FF' + RED } }); const dc = cell(r, 5, r2(stats.cost - toDate - pend - excl - clientDed), `ROUND(E${rec0}-E${rec0 + 1}-E${rec0 + 2}-E${rec0 + 3}-E${rec0 + 4},2)`, { fmt: '#,##0.00;[Red]\\-#,##0.00;"-"', font: { bold: true, color: { argb: 'FF' + RED } } });
-  setF(ws.getCell('F7'), `E${r}`, r2(stats.cost - toDate - pend - excl - clientDed)); void dc; const diffRow = r; r += 2;
+  T(`A${r}`, 'Difference (must be 0)', { bold: true, color: { argb: 'FF' + RED } }); const dc = cell(r, 5, r2(stats.cost - toDate - pend - excl - clientDed + vatTot), `ROUND(E${rec0}-E${rec0 + 1}-E${rec0 + 2}-E${rec0 + 3}-E${rec0 + 4}${vatTot || (subInf && stats.sub) ? '+E' + (rec0 + 5) : ''},2)`, { fmt: '#,##0.00;[Red]\\-#,##0.00;"-"', font: { bold: true, color: { argb: 'FF' + RED } } });
+  setF(ws.getCell('F7'), `E${r}`, r2(stats.cost - toDate - pend - excl - clientDed + vatTot)); void dc; const diffRow = r; r += 2;
   // ---- 5. revenue
   sec(r, '5. Revenue', 'kept apart, never netted against cost – to the cut date'); r++;
   if (revInfo) {
@@ -162,7 +174,7 @@ function writeChecks(ws, model, infos, ex, opts, stats) {
   add('ZY accrual-reversal lines paired to a bucket', null, stats.zyPaired, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
   if (stats.sub && stats.poInfo) { add('Subcontractor: certificates → CJI3 bridge difference', stats.poInfo.bridgeDiff, 0, 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); add('Subcontractor: PO per Month vs Data sheet', stats.poInfo.poDiff, 0, 'abs', 'Must be 0.');
     add('Subcontractor: CJI3 documents explained by certificates', null, stats.sub.docs, 'info', 'of ' + stats.sub.cjiDocs + ' CJI3 subcontractor documents.'); add('Subcontractor: documents that really differ (≥ 1 EGP)', null, stats.sub.docAdjN, 'info', 'One Document difference row each.');
-    add('Subcontractor: opening difference to CJI3 (EGP)', null, stats.sub.openDiff, 'info', 'CJI3 opening minus the opening certificates – to confirm (VAT?).'); add('Subcontractor: approved certificates not yet in CJI3 (EGP)', null, stats.sub.unposted, 'info', stats.sub.unpostedN + ' lines.'); }
+    add('Subcontractor: opening difference to CJI3 (EGP)', null, stats.sub.openDiff, 'info', 'CJI3 opening minus the opening certificates, net of VAT – to confirm (VAT?).'); add('Subcontractor: approved certificates not yet in CJI3 (EGP)', null, stats.sub.unposted, 'info', stats.sub.unpostedN + ' lines.'); }
   if (stats.noGroup !== undefined) add('Materials without a material group', null, stats.noGroup, 'info', 'Load MB52 / ME2N to give them a family and division.');
   rows.forEach(([n, f, v, ok, note], i) => { const r = 5 + i; ws.getCell(r, 1).value = n; const x = ws.getCell(r, 2); if (f) setF(x, f, v); else x.value = v; x.numFmt = '#,##0.00';
     const s = ws.getCell(r, 3); const test = ok === 'abs' ? `IF(ABS(B${r})<0.01,"OK","CHECK")` : ok === 'zero' ? `IF(B${r}=0,"OK","CHECK")` : `"info"`;

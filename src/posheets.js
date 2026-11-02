@@ -66,28 +66,32 @@ function poSheets(wb, inf, model, opts, sub) {
 
   // ---------------- Bridge
   const wbz = wb.addWorksheet('Subcontractor Bridge', { properties: { tabColor: { argb: 'FF2F5597' } } });
-  title(wbz, 'Subcontractor Bridge — ' + opts.project, 'From the certificate report (ZSCPRG01, net of VAT) to the Subcontractor bucket in CJI3. CJI3 is the truth: what the certificates do not explain is shown, never hidden.'); wbz.views = [{ showGridLines: false }];
+  title(wbz, 'Subcontractor Bridge — ' + opts.project, 'From the certificate report (ZSCPRG01) to the Subcontractor bucket in CJI3. CJI3 is the truth: what the certificates do not explain is shown, never hidden.'); wbz.views = [{ showGridLines: false }];
   header(wbz, 4, ['Step', 'Lines', 'EGP', 'What it is']);
   const st = sub.stats, src = (name) => `SUMIFS(${dr(D.amt)},${dr(D.source)},"${name}")`, cnt = (name) => `COUNTIFS(${dr(D.source)},"${name}")`, n = (name) => lines.filter((l) => l.source === name).length, a = (name) => r2(lines.filter((l) => l.source === name).reduce((s, l) => s + l.amt, 0));
   let r = 5; const put = (label, nn, formulaN, v, formulaV, note, bold) => { wbz.getCell(r, 1).value = label; const c2 = wbz.getCell(r, 2), c3 = wbz.getCell(r, 3); if (formulaN) setF(c2, formulaN, nn); else c2.value = nn; if (formulaV) setF(c3, formulaV, v); else c3.value = v; c2.numFmt = '#,##0'; c3.numFmt = '#,##0.00;[Red]\\-#,##0.00;"-"'; wbz.getCell(r, 4).value = note;
     for (let k = 1; k <= 4; k++) { const y = wbz.getCell(r, k); y.border = box; y.font = font({ bold }); } r++; };
   const s0 = r; wbz.getCell(r, 1).value = 'A. Certificates → CJI3 Subcontractor bucket'; wbz.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF' + NAVY } }); r++;
   const first = r;
-  put('Certificate lines posted in CJI3', n('Certificate'), cnt('Certificate'), a('Certificate'), src('Certificate'), 'Approved certificate lines whose invoice document is in CJI3 (month = CJI3 posting date), net of VAT.');
+  put('Certificate lines posted in CJI3', n('Certificate'), cnt('Certificate'), a('Certificate'), src('Certificate'), 'Approved certificate lines whose invoice document is in CJI3 (month = CJI3 posting date). Net of VAT unless the VAT switch on Summary adds it.');
   put('Opening certificates (flag X)', n('Opening certificate'), cnt('Opening certificate'), a('Opening certificate'), src('Opening certificate'), 'Initial invoices from before go-live: the detail of the CJI3 opening balance.');
-  put('+ Opening difference to CJI3', n('Opening difference'), cnt('Opening difference'), a('Opening difference'), src('Opening difference'), 'CJI3 opening (UE) minus the opening certificates. To confirm – VAT is the likely cause.');
+  put('+ Opening difference to CJI3', n('Opening difference'), cnt('Opening difference'), a('Opening difference'), src('Opening difference'), 'CJI3 opening (UE) minus the opening certificates (net of VAT; reduced by their VAT when the VAT switch includes it). To confirm – VAT is the likely cause, see section B.');
   put('+ Documents that differ (1 EGP or more)', n('Document difference'), cnt('Document difference'), a('Document difference'), src('Document difference'), 'One row per document where CJI3 and the certificate report really differ.');
   put('+ Rounding (under 1 EGP per document)', n('Rounding'), cnt('Rounding'), a('Rounding'), src('Rounding'), st.roundN + ' documents, cents only: one row per month.');
   put('+ CJI3 lines no certificate explains', n('CJI3 only'), cnt('CJI3 only'), a('CJI3 only'), src('CJI3 only'), 'Reversal pairs (ZY) and other subcontractor documents with no certificate lines.');
-  const lastS = r - 1; wbz.getCell(r, 1).value = '= Subcontractor bucket (register)'; const tt = wbz.getCell(r, 3); setF(tt, `SUM(C${first}:C${lastS})`, a('Certificate') + a('Opening certificate') + a('Opening difference') + a('Document difference') + a('Rounding') + a('CJI3 only')); tt.numFmt = '#,##0.00'; setF(wbz.getCell(r, 2), `SUM(B${first}:B${lastS})`, lines.length); wbz.getCell(r, 2).numFmt = '#,##0';
+  const lastS = r - 1; const regTot = r2(lines.reduce((t, l) => t + l.amt, 0)), vatC = st.vatCounted;
+  wbz.getCell(r, 1).value = '= Subcontractor bucket (register, as the sheets show it)'; const tt = wbz.getCell(r, 3); setF(tt, `SUM(C${first}:C${lastS})`, regTot); tt.numFmt = '#,##0.00'; setF(wbz.getCell(r, 2), `SUM(B${first}:B${lastS})`, lines.length); wbz.getCell(r, 2).numFmt = '#,##0';
   for (let k = 1; k <= 4; k++) { const y = wbz.getCell(r, k); y.fill = fill('DDEBF7'); y.font = font({ bold: true }); y.border = box; } r++;
+  put('– VAT included in the amounts (Summary B5)', null, null, vatC, `SUM(${dr(D.vatin)})`, 'VAT on the certificate lines, only what the VAT switch on Summary adds (0 when Exclude VAT). CJI3 has none. The opening difference above is already reduced by the VAT of the opening certificates.');
+  wbz.getCell(r, 1).value = '= Register without VAT'; setF(wbz.getCell(r, 3), `C${r - 2}-C${r - 1}`, r2(regTot - vatC)); wbz.getCell(r, 3).numFmt = '#,##0.00'; for (let k = 1; k <= 4; k++) { wbz.getCell(r, k).border = box; wbz.getCell(r, k).font = font({ bold: true }); } r++;
   wbz.getCell(r, 1).value = 'Subcontractor bucket in CJI3 (the file)'; wbz.getCell(r, 3).value = st.cjiTotal; wbz.getCell(r, 3).numFmt = '#,##0.00'; for (let k = 1; k <= 4; k++) { wbz.getCell(r, k).border = box; wbz.getCell(r, k).font = font(); } r++;
   wbz.getCell(r, 1).value = 'Difference (must be 0)'; setF(wbz.getCell(r, 3), `ROUND(C${r - 2}-C${r - 1},2)`, 0); wbz.getCell(r, 3).numFmt = '#,##0.00'; for (let k = 1; k <= 4; k++) { wbz.getCell(r, k).font = font({ bold: true, color: { argb: 'FF' + RED } }); wbz.getCell(r, k).border = box; }
   const bridgeDiff = `'Subcontractor Bridge'!C${r}`; r += 2;
   wbz.getCell(r, 1).value = 'B. Not in the register (information)'; wbz.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF' + NAVY } }); r++;
   put('Approved certificates not yet in CJI3', st.unpostedN, null, st.unposted, null, 'Approved, not an opening invoice, but no CJI3 document yet. Will arrive in CJI3 when finance posts them (see PO Register, last column).');
   put('Certificates not approved', st.notApprovedN, null, st.notApproved, null, 'Pending in the Subcontract report; not cost yet.');
-  put('VAT on the certificate lines above', null, null, st.vatPosted, null, 'CJI3 never contains VAT, so every figure here is net of VAT.');
+  put('VAT on the certificates posted in CJI3', null, null, st.vatOnPosted, null, 'VAT Current of the certificate lines posted in CJI3. The posted documents match CJI3 net of VAT, so CJI3 does not carry it.');
+  put('VAT on the opening certificates', null, null, st.vatOnOpening, null, 'Compare with the opening difference: if CJI3 opening includes VAT, this is the part of the difference it explains (switch VAT to Include VAT to see the register with it).');
   put('WBS repeats removed', st.dup.rows, null, st.dup.amt, null, 'SAP repeats a certificate line on every WBS with the full amount: kept once (as the Subcontract report does).');
   put('Zero lines removed', st.zero, null, 0, null, 'PO lines on a certificate with no progress.');
   r++; wbz.getCell(r, 1).value = 'C. Documents'; wbz.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF' + NAVY } }); r++;
