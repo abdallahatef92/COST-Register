@@ -167,33 +167,42 @@ function bucketSheets(wb, b, model, opts) {
   title(wsD, def.id + ' Data — ' + opts.project, 'One row per CJI3 line. PKG, MNL, Cost element code and Include are FORMULAS reading the item on "' + nCod + '". Type over any of them to code or exclude one line (orange = typed over; Include = No greys the line out and takes it out of all totals).');
   wsD.getCell('A3').value = 'Rows run by month (months alternate light blue-grey / white, a navy line starts each month). Amber = UE document. Orange code = typed over. Grey struck-through = excluded.'; wsD.getCell('A3').font = font({ bold: true, color: { argb: 'FFBF8F00' } });
   header(wsD, DATA_H, DC.map((c) => c.l), ['PKG', 'MNL', 'Cost element code', 'Include']); DC.forEach((c, i) => { wsD.getColumn(i + 1).width = c.w; });
+  // shared formulas: a column's formula is stored once per run of rows (Excel's compact form) – much smaller file, faster to open
+  const runs = new Map(), flushRun = (col, run) => {
+    if (!run) return; const L = colL(col), c0 = run.cells[0];
+    if (run.cells.length === 1) { setF(wsD.getCell(c0.row, col), c0.f, c0.v); return; }
+    const m = { formula: c0.f, shareType: 'shared', ref: `${L}${c0.row}:${L}${run.cells[run.cells.length - 1].row}` }; if (!process.env.NO_RESULT) m.result = c0.v; wsD.getCell(c0.row, col).value = m;
+    for (const c of run.cells.slice(1)) { const v = { sharedFormula: `${L}${c0.row}` }; if (!process.env.NO_RESULT) v.result = c.v; wsD.getCell(c.row, col).value = v; }
+  };
+  const setS = (col, row, key, f, v) => { const run = runs.get(col); if (run && run.key === key && run.last === row - 1) { run.cells.push({ row, f, v }); run.last = row; return; } flushRun(col, run); runs.set(col, { key, last: row, cells: [{ row, f, v }] }); };
   flat.forEach(({ l, it }, fi) => {
     const row = DATA_1 + fi, cell = (c) => wsD.getCell(row, c), bf = isMat ? light(it.dk) : null; l.row = row;
     const v = { id: l.id, date: new Date(l.date + 'T00:00:00Z'), per: undefined, doc: l.doc, type: l.type, ce: l.ce, cen: l.cen, item: itemOf(def, it), desc: isMat ? l.matDesc : (l.desc || l.poText || l.name || l.header), wbs: l.wbs, po: l.po || null, sup: l.sup || null, cert: l.cert || null, cdate: l.cdate ? new Date(l.cdate + 'T00:00:00Z') : null, source: l.source || null,
       qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, stock: l.stock || null, mdoc: l.refDoc, entry: l.created ? new Date(l.created + 'T00:00:00Z') : null, user: l.user || null, name: l.name || null, net: l.net, vatin: 0, vat: l.vat || null, vrate: l.vrate || null, tax: l.tax || null, ctype: l.ctype || null, gross: l.gross || null };
     DC.forEach((c, i) => { if (v[c.k] !== undefined) cell(i + 1).value = v[c.k]; });
     cell(D.amt).numFmt = AMT2; cell(D.qty).numFmt = QTY; cell(D.date).numFmt = 'yyyy-mm-dd';
-    if (isQ) { setF(cell(D.rate), `IF(ABS($${colL(D.qty)}${row})<0.000001,"",$${colL(D.amt)}${row}/$${colL(D.qty)}${row})`, Math.abs(l.qty) < 0.000001 ? '' : l.amt / l.qty); cell(D.rate).numFmt = '#,##0.00'; if (isMat) cell(D.entry).numFmt = 'yyyy-mm-dd'; if (D.cdate) cell(D.cdate).numFmt = 'yyyy-mm-dd'; }
+    if (isQ) { setS(D.rate, row, 'rate', `IF(ABS($${colL(D.qty)}${row})<0.000001,"",$${colL(D.amt)}${row}/$${colL(D.qty)}${row})`, Math.abs(l.qty) < 0.000001 ? '' : l.amt / l.qty); cell(D.rate).numFmt = '#,##0.00'; if (isMat) cell(D.entry).numFmt = 'yyyy-mm-dd'; if (D.cdate) cell(D.cdate).numFmt = 'yyyy-mm-dd'; }
     if (D.net) {   // Subcontractor: Amount = Net amount + VAT in amount; VAT follows the Summary switch (B5, date C5)
       cell(D.net).numFmt = AMT2; cell(D.vatin).numFmt = AMT2; cell(D.vat).numFmt = AMT2; cell(D.gross).numFmt = '#,##0.00'; cell(D.vrate).numFmt = '0%';
       const V = `$${colL(D.vat)}${row}`, cd = `$${colL(D.cdate)}${row}`, src = `$${colL(D.source)}${row}`;
       if (l.offsetVat) { const vc = (a, z) => `SUMIFS(${dr(D.vatin, a, z)},${dr(D.source, a, z)},"Opening certificate")`, parts = []; if (row > DATA_1) parts.push(vc(DATA_1, row - 1)); if (row < lastD) parts.push(vc(row + 1, lastD));
         setF(cell(D.vatin), '-(' + parts.join('+') + ')', l.vin); }
-      else if (l.source === 'Certificate' || l.source === 'Opening certificate') setF(cell(D.vatin), `IF(${VATM}="Include VAT",${V},IF(${VATM}="Include VAT before date",IF(IF(${cd}="",${src}="Opening certificate",AND(ISNUMBER(${VATF}),${cd}<${VATF})),${V},0),0))`, l.vin);
+      else if (l.source === 'Certificate' || l.source === 'Opening certificate') setS(D.vatin, row, 'vatin', `IF(${VATM}="Include VAT",${V},IF(${VATM}="Include VAT before date",IF(IF(${cd}="",${src}="Opening certificate",AND(ISNUMBER(${VATF}),${cd}<${VATF})),${V},0),0))`, l.vin);
       else cell(D.vatin).value = 0;
-      setF(cell(D.amt), `$${colL(D.net)}${row}+$${colL(D.vatin)}${row}`, l.amt);
+      setS(D.amt, row, 'amt', `$${colL(D.net)}${row}+$${colL(D.vatin)}${row}`, l.amt);
     }
-    setF(cell(D.per), periodF(row, D), l.per);
+    setS(D.per, row, 'per', periodF(row, D), l.per);
     const ix = (col) => `IFERROR(INDEX(${cr(col)},$${colL(D.cid)}${row})&"","")`;
-    const put = (dcol, ccol, val, typed) => { if (typed) cell(dcol).value = val; else setF(cell(dcol), ix(ccol), val); };
+    const put = (dcol, ccol, val, typed) => { if (typed) cell(dcol).value = val; else setS(dcol, row, 'c' + ccol, ix(ccol), val); };
     put(D.pkg, C.pkg, l.pkg, l.typed.pkg); put(D.mnl, C.mnl, l.mnl, l.typed.mnl); put(D.cec, C.ce, l.cec, l.typed.cec);
-    if (l.typed.inc) cell(D.inc).value = l.inc; else setF(cell(D.inc), `IFERROR(IF(INDEX(${cr(C.inc)},$${colL(D.cid)}${row})="No","No","Yes"),"Yes")`, l.inc);
-    setF(cell(D.over), `IF(AND($${colL(D.pkg)}${row}=${ix(C.pkg)},$${colL(D.mnl)}${row}=${ix(C.mnl)},$${colL(D.cec)}${row}=${ix(C.ce)}),0,1)`, l.s);
-    setF(cell(D.flag), `IF($${colL(D.inc)}${row}="No",0,IF($${colL(D.over)}${row}=1,2,1))`, l.inc === 'No' ? 0 : l.s === 1 ? 2 : 1);
+    if (l.typed.inc) cell(D.inc).value = l.inc; else setS(D.inc, row, 'inc', `IFERROR(IF(INDEX(${cr(C.inc)},$${colL(D.cid)}${row})="No","No","Yes"),"Yes")`, l.inc);
+    setS(D.over, row, 'over', `IF(AND($${colL(D.pkg)}${row}=${ix(C.pkg)},$${colL(D.mnl)}${row}=${ix(C.mnl)},$${colL(D.cec)}${row}=${ix(C.ce)}),0,1)`, l.s);
+    setS(D.flag, row, 'flag', `IF($${colL(D.inc)}${row}="No",0,IF($${colL(D.over)}${row}=1,2,1))`, l.inc === 'No' ? 0 : l.s === 1 ? 2 : 1);
     for (let c = 1; c <= nD; c++) { const x = cell(c); x.border = box; x.font = font({ size: c === D.id ? 8 : 10, bold: c >= D.pkg && c <= D.cec, color: c === D.id ? { argb: 'FF' + GREY } : undefined }); }
     cell(D.per).font = font({ bold: true });
     if (fi === 0 || flat[fi - 1].l.per !== l.per) for (let c = 1; c <= nD; c++) { const x = cell(c); x.border = { ...box, top: { style: 'medium', color: { argb: 'FF' + NAVY } } }; }
   });
+  for (const [col, run] of runs) flushRun(col, run);
   wsD.views = [{ showGridLines: false, state: 'frozen', xSplit: dlayout(def).freeze, ySplit: DATA_H }];
   wsD.autoFilter = { from: { row: DATA_H, column: 1 }, to: { row: lastD, column: nD } };
   wsD.dataValidations.add(`${colL(D.inc)}${DATA_1}:${colL(D.inc)}${lastD}`, { type: 'list', allowBlank: true, formulae: ['"Yes,No"'] });
