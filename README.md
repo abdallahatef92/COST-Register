@@ -13,7 +13,7 @@ ZINTC1 detail (equipment, fleet, house rent), Labor and Depreciation offline she
 
 ```bash
 npm install
-node bin/register.js --cji3 CJI3.xlsx --mb52 MB52.xlsx --me2n ME2N.xlsx --prev LastRegister.xlsx --project SUTH --out out/Cost_Register.xlsx
+node bin/register.js --cji3 CJI3.xlsx --mb52 MB52.xlsx --zscprg01 ZSCPRG01.xlsx --zscsrv1 ZSCSRV1.xlsx --prev LastRegister.xlsx --project SUTH --out out/Cost_Register.xlsx
 ```
 
 Only `--cji3` is required. `--prev` brings last month's codes and typed-over lines back in (matched by item key and by line id).

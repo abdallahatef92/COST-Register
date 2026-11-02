@@ -3,11 +3,12 @@ const { r2, r3, ymLabel, nextYm } = require('./util');
 const { famLabel, divLabel, grpLabel, divKey, FAM_RANK, famOf, NO_GRP } = require('./groups');
 
 // Bucket definitions. key(l) = the unique-list item the line belongs to; cols = descriptor columns of that item.
+const ADJ_GROUP = '~ Adjustments and CJI3-only lines';
 const orderKey = (l) => l.order || '(no order)';
 const BUCKETS = [
-  { id: 'Material', tab: '1F3864', mnl: 'MAT', qty: true, key: (l) => l.mat || '(no material)',
+  { id: 'Material', tab: '1F3864', mnl: 'MAT', qty: true, tree: true, boldCol: 3, tintCols: 3, key: (l) => l.mat || '(no material)',
     cols: [['Family', 7], ['Division', 8], ['Group', 10], ['Material', 11], ['Description', 40], ['Unit', 6]] },
-  { id: 'Subcontractor', tab: '2F5597', mnl: 'SUB', key: (l) => l.po || '(no PO)', cols: [['PO', 12], ['Service text', 52]] },
+  { id: 'Subcontractor', tab: '2F5597', mnl: 'SUB', qty: true, tree: true, boldCol: 1, tintCols: 1, pmName: 'Service per Month', key: (l) => l.ikey || l.po || '(no PO)', cols: [['Type of works', 26], ['Service', 11], ['Description', 44], ['Unit', 6]] },
   { id: 'Subcontractor deductions', short: 'Sub deductions', tab: '2F5597', mnl: 'SUB', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
   { id: 'Other direct cost', short: 'Other direct', tab: '1F3864', mnl: 'OTHER', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
   { id: 'Labor', tab: '548235', mnl: 'LAB', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
@@ -18,13 +19,14 @@ const BUCKETS = [
   { id: 'G&A', tab: 'BF8F00', mnl: 'OTHER', key: (l) => (l.sub || 'G&A') + ' · ' + (l.cen || '(none)'), cols: [['Sub-group', 26], ['Cost element name', 30]] },
   { id: 'Unclassified', tab: 'C00000', mnl: 'OTHER', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
 ];
-for (const b of BUCKETS) b.short = b.short || b.id;
+for (const b of BUCKETS) { b.short = b.short || b.id; b.boldCol = b.boldCol || 0; b.tintCols = b.tintCols || 0; }
 
 function descriptors(b, first, groups) {
   switch (b.id) {
     case 'Material': { const gi = groups.get(first.mat); const g = gi ? gi.group : '';
-      return { vals: [famOf(g) || '–', g ? divKey(g) : '–', g || '–', first.mat || '(no material)', first.matDesc, first.unit || (gi && gi.unit) || ''], group: g, famFull: famLabel(g), divFull: divLabel(g) }; }
-    case 'Subcontractor': return { vals: [first.po || '(no PO)', first.poText || first.name] };
+      return { vals: [famOf(g) || '–', g ? divKey(g) : '–', g || '–', first.mat || '(no material)', first.matDesc, first.unit || (gi && gi.unit) || ''], group: g, famFull: famLabel(g), divFull: divLabel(g), headLabel: famLabel(g) + '  ›  ' + divLabel(g) }; }
+    case 'Subcontractor': { const odd = first.ikey === 'ADJ' || first.ikey === 'CJI3', unit = first.unit || '';
+      return { vals: [odd ? ADJ_GROUP : first.tow || '(no type of works)', first.svc || '', odd ? (first.ikey === 'ADJ' ? 'Differences between CJI3 and the certificate report (see Source)' : 'CJI3 lines no certificate explains (reversals, other documents)') : first.desc, odd ? '' : unit], headLabel: odd ? ADJ_GROUP : first.tow || '(no type of works)' }; }
     case 'House rent': case 'Equipment / fuel': case 'Fleet / transportation': return { vals: [first.order || '(no order)', first.orderName || (first.order ? '' : first.cen)] };
     case 'G&A': return { vals: [first.sub || 'G&A', first.cen] };
     default: return { vals: [first.cen] };
@@ -50,7 +52,7 @@ function buildModel(lines, { groups = new Map(), prev = null, cut = '' } = {}) {
       const big = ls.reduce((m, l) => (Math.abs(l.amt) > Math.abs(m.amt) ? l : m), ls[0]);
       const d = descriptors(def, big, groups);
       const act = ls.filter((l) => !l.open && l.per !== 'Pending');
-      return { key, lines: ls, vals: d.vals, group: d.group || '', famFull: d.famFull, divFull: d.divFull, total: r2(ls.reduce((s, l) => s + l.amt, 0)),
+      return { key, lines: ls, vals: d.vals, group: d.group || '', famFull: d.famFull, divFull: d.divFull, headLabel: d.headLabel, total: r2(ls.reduce((s, l) => s + l.amt, 0)),
         firstP: act.length ? ymLabel(act[0].ym) : 'Opening', lastP: act.length ? ymLabel(act[act.length - 1].ym) : 'Opening' };
     });
     if (def.id === 'Material') {
@@ -60,6 +62,10 @@ function buildModel(lines, { groups = new Map(), prev = null, cut = '' } = {}) {
       const dT = tot((it) => it.dk), gT = tot((it) => it.dk + '|' + it.group);
       const fr = (it) => (it.group ? (FAM_RANK.has(it.fam) ? FAM_RANK.get(it.fam) : 98) : 99);
       items.sort((a, b) => fr(a) - fr(b) || (a.fam < b.fam ? -1 : a.fam > b.fam ? 1 : 0) || dT.get(b.dk) - dT.get(a.dk) || (a.dk < b.dk ? -1 : a.dk > b.dk ? 1 : 0) || gT.get(b.dk + '|' + b.group) - gT.get(a.dk + '|' + a.group) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0) || Math.abs(b.total) - Math.abs(a.total) || (a.key < b.key ? -1 : 1));
+    } else if (def.id === 'Subcontractor') {
+      for (const it of items) { it.dk = it.vals[0]; it.fam = ''; }
+      const tot = (f) => { const m = new Map(); for (const it of items) { const k = f(it); m.set(k, (m.get(k) || 0) + Math.abs(it.total)); } return m; }, dT = tot((it) => it.dk), sT = tot((it) => it.dk + '|' + it.vals[1]), last = (it) => (it.dk === ADJ_GROUP ? 1 : 0);
+      items.sort((a, b) => last(a) - last(b) || dT.get(b.dk) - dT.get(a.dk) || (a.dk < b.dk ? -1 : a.dk > b.dk ? 1 : 0) || sT.get(b.dk + '|' + b.vals[1]) - sT.get(a.dk + '|' + a.vals[1]) || (a.vals[1] < b.vals[1] ? -1 : a.vals[1] > b.vals[1] ? 1 : 0) || Math.abs(b.total) - Math.abs(a.total) || (a.key < b.key ? -1 : 1));
     } else items.sort((a, b) => Math.abs(b.total) - Math.abs(a.total) || (a.key < b.key ? -1 : 1));
     items.forEach((it, i) => { it.id = i + 1; const p = prev && prev.coding.get(def.id); const c = p && p.get(it.key); it.isNew = !!prev && !c;
       it.pkg = c ? c.pkg : ''; it.mnl = c && c.mnl ? c.mnl : def.mnl; it.ce = c ? c.ce : ''; it.inc = c && c.inc ? c.inc : 'Yes'; });

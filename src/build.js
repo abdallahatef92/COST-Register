@@ -6,6 +6,8 @@ const { classify } = require('./rules');
 const { readCji3 } = require('./cji3');
 const { readGroups, NO_GRP } = require('./groups');
 const { readPrev } = require('./prev');
+const SC = require('./subcontract');
+const { poSheets } = require('./posheets');
 const { r2 } = require('./util');
 const { fitWidths } = require('./fit');
 
@@ -16,7 +18,14 @@ async function build(opts) {
   const zyPaired = classify(cji.lines);
   const groups = readGroups({ me2n: opts.me2n, mb52: opts.mb52 }); log(`Material groups: ${groups.map.size} materials (ME2N ${groups.src.me2n}, MB52 ${groups.src.mb52})`);
   const costAll = r2(cji.lines.filter((l) => l.ce[0] !== '4').reduce((x, l) => x + l.amt, 0));
-  const lines = cji.lines;
+  let lines = cji.lines, subRes = null, serv = null;
+  if (opts.zscprg01) {
+    const prog = SC.readProg(opts.zscprg01); serv = opts.zscsrv1 ? SC.readServ(opts.zscsrv1) : null;
+    const ceNames = new Map(cji.lines.map((l) => [l.ce, l.cen]));
+    subRes = SC.buildSubcontractor(cji.lines.filter((l) => l.bucket === 'Subcontractor'), prog, serv, ceNames);
+    lines = cji.lines.filter((l) => l.bucket !== 'Subcontractor').concat(subRes.lines);
+    const st = subRes.stats; log(`Subcontractor: ${prog.lines.length} certificate lines; ${st.docs} of ${st.cjiDocs} CJI3 documents explained; certificates ${st.certPosted}; opening ${st.openRep} (CJI3 ${st.cjiOpen}, difference ${st.openDiff}); ${st.docAdjN} documents differ by 1 EGP or more (${st.docAdj}), ${st.roundN} by cents; ${st.cjiOnlyN} CJI3-only lines`);
+  }
   for (const l of lines) if (l.bucket === 'Material') l.issue = l.amt === 0 && l.qty === 0 ? 'No value' : l.amt < 0 || l.qty < 0 ? 'Return' : l.amt === 0 ? 'No value' : 'Issue';
   const prev = readPrev(opts.prev); if (prev) log(`Last report: ${prev.items} coded items, ${prev.typed} typed-over lines carried over`);
   const monthEnd = (iso) => { const [y, m] = iso.split('-'); return new Date(Date.UTC(+y, +m, 0)).toISOString().slice(0, 10); };
@@ -26,13 +35,14 @@ async function build(opts) {
   const wb = new W.ExcelJS.Workbook(); wb.creator = 'Cost Register'; wb.calcProperties = { fullCalcOnLoad: true };
   const wsS = wb.addWorksheet('Summary', { properties: { tabColor: { argb: 'FF' + W.NAVY } } }), wsE = wb.addWorksheet('Expenses', { properties: { tabColor: { argb: 'FF' + W.NAVY } } });
   const costBuckets = model.buckets.filter((b) => b.def.id !== 'Revenue');
-  const infos = []; for (const b of costBuckets) { W.applyCodes(b, prev && prev.over); infos.push(W.bucketSheets(wb, b, model, opts)); log(`  ${b.def.id}: ${b.count} lines, ${b.items.length} items`); }
+  const infos = []; let poInfo = null; for (const b of costBuckets) { W.applyCodes(b, prev && prev.over); const inf = W.bucketSheets(wb, b, model, opts); infos.push(inf); log(`  ${b.def.id}: ${b.count} lines, ${b.items.length} items`);
+    if (b.def.id === 'Subcontractor' && subRes) poInfo = poSheets(wb, inf, model, opts, { stats: subRes.stats, serv }); }
   const revInfo = W.revenueSheet(wb, model, opts);
   const wsR = wb.addWorksheet('Rules', { properties: { tabColor: { argb: 'FF' + W.GREY } } }), wsC = wb.addWorksheet('Checks', { properties: { tabColor: { argb: 'FF' + W.GREY } } });
-  const stats = { file: require('path').basename(opts.cji3), grand: cji.grand, sum: cji.sum, dupes, zyPaired, cost: costAll,
+  const stats = { file: require('path').basename(opts.cji3), grand: cji.grand, sum: cji.sum, dupes, zyPaired, cost: costAll, sub: subRes ? subRes.stats : null, poInfo: null,
     noGroup: model.buckets.find((b) => b.def.id === 'Material') ? model.buckets.find((b) => b.def.id === 'Material').items.filter((it) => !it.group).length : undefined };
   const ex = O.writeExpenses(wsE, model, infos, opts);
-  stats.diffRef = O.writeSummary(wsS, model, infos, ex, opts, revInfo, stats).diffRef; O.writeChecks(wsC, model, infos, ex, opts, stats); O.writeRules(wsR, opts);
+  stats.poInfo = poInfo; stats.diffRef = O.writeSummary(wsS, model, infos, ex, opts, revInfo, stats).diffRef; O.writeChecks(wsC, model, infos, ex, opts, stats); O.writeRules(wsR, opts);
   // cut-date list: month ends from two months before the first posting to two months after the last
   const cal = wb.addWorksheet('_Cal', { state: 'hidden' }); cal.getCell('A1').value = 'Cut dates'; const ms = []; { const f = lines.map((l) => l.date).filter(Boolean).sort()[0].slice(0, 7), z = lastDate.slice(0, 7); let [y, m] = f.split('-').map(Number); m -= 2; while (m < 1) { m += 12; y--; } let [ey, em] = z.split('-').map(Number); em += 2; while (em > 12) { em -= 12; ey++; }
     for (; y < ey || (y === ey && m <= em); ) { ms.push(monthEnd(y + '-' + String(m).padStart(2, '0'))); m++; if (m > 12) { m = 1; y++; } } }
