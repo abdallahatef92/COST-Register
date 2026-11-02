@@ -296,7 +296,7 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
   const navy = (x, size = 10) => { x.font = font({ bold: true, size, color: { argb: 'FFFFFFFF' } }); x.fill = fill(NAVY); x.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; x.border = box; };
   let tdSum = 0, fullSum = 0, nFull = 0, nPart = 0, nNot = 0, nEx = 0, nNew = 0, n2po = 0, tdNot = 0, tmNot = 0; const miss = { div: 0, pkg: 0, mnl: 0, ce: 0 };
   b.items.forEach((it) => {
-    const r = it.crow, incl = it.lines.filter((l) => l.inc === 'Yes'), cnt = incl.filter((l) => l.per !== 'Pending'), q = r3(cnt.reduce((s, l) => s + (l.qty || 0), 0));
+    const r = it.crow, incl = it.lines.filter((l) => l.inc === 'Yes'), cnt = incl.filter((l) => l.per !== 'Pending'), q = Math.round(cnt.reduce((s, l) => s + (l.qty || 0), 0) * 1e6) / 1e6;
     it.tot = r2(cnt.reduce((s, l) => s + l.amt, 0)); it.tmv = r2(incl.filter((l) => l.per === rep).reduce((s, l) => s + l.amt, 0));
     const pos = [...new Set(it.lines.map((l) => l.po).filter((p) => p && !String(p).startsWith('(')))], subs = [...new Set(it.lines.map((l) => l.sup).filter(Boolean))];
     const cds = it.lines.map((l) => l.cdate || l.date).filter(Boolean).sort();
