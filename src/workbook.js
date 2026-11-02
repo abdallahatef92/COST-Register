@@ -24,11 +24,10 @@ function dlayout(def) {
   add('id', 'Line ID', 26); add('date', 'Posting date', 11); add('per', 'Period', 9); add('doc', 'Document', 12); add('type', 'Type', 6); add('ce', 'Cost element', 11); add('cen', 'Cost element name', 24);
   if (mat) { add('fam', 'Family', 22); add('div', 'Division', 22); add('grp', 'Material group', 26); }
   add('item', mat ? 'Material' : 'Item', 14); add('desc', 'Description', 40);
-  if (mat) { add('issue', 'Issue type', 17); add('mvt', 'Movement', 9); add('mvtText', 'Movement text', 22); }
+  if (mat) { add('issue', 'Issue type', 12); add('stock', 'Stock account', 22); }
   add('wbs', 'WBS element', 22); add('qty', 'Qty', 10); add('unit', 'Unit', 6); if (mat) add('rate', 'Rate', 12); add('amt', 'Amount', 14);
   add('pkg', 'PKG', 10); add('mnl', 'MNL', 8); add('cec', 'Cost element code', 14); add('inc', 'Include', 8); add('cid', 'Coding ID', 7); add('over', 'Typed over', 7);
-  if (mat) { add('mdoc', 'Material doc.', 12); add('supplier', 'Subcontractor (SAP code)', 14); add('sapqty', 'SAP qty', 10); add('sapamt', 'SAP amount', 13); add('unitE', 'Unit of entry', 8); add('entry', 'Entry date', 11);
-    add('resv', 'Reservation', 11); add('user', 'User', 10); add('text', 'Text', 26); add('hdr', 'Header text', 22); add('val', 'Valuation type', 9); add('sloc', 'Storage location', 9); add('order', 'Order', 10); add('ditem', 'Doc item', 6); add('dyear', 'Doc year', 7); add('noval', 'No value', 8); }
+  if (mat) { add('mdoc', 'Material doc.', 12); add('entry', 'Entry date', 11); add('user', 'User', 10); add('hdr', 'Header text', 28); }
   const D = {}; cols.forEach((c, i) => { D[c.k] = i + 1; });
   return { cols, D };
 }
@@ -134,17 +133,15 @@ function bucketSheets(wb, b, model, opts) {
 
   // ================= Data
   title(wsD, def.id + ' Data — ' + opts.project, 'One row per CJI3 line. PKG, MNL, Cost element code and Include are FORMULAS reading the item on "' + nCod + '". Type over any of them to code or exclude one line (orange = typed over; Include = No greys the line out and takes it out of all totals).');
-  wsD.getCell('A3').value = 'Yellow-orange rows = UE documents (opening balances).' + (isMat ? ' Orange italic rows = adjustment to CJI3 (MB51 and CJI3 differ for that material and month).' : ''); wsD.getCell('A3').font = font({ bold: true, color: { argb: 'FFBF8F00' } });
+  wsD.getCell('A3').value = 'Yellow-orange rows = UE documents (opening balances).' + (isMat ? '' : ''); wsD.getCell('A3').font = font({ bold: true, color: { argb: 'FFBF8F00' } });
   header(wsD, DATA_H, DC.map((c) => c.l), ['PKG', 'MNL', 'Cost element code', 'Include']); DC.forEach((c, i) => { wsD.getColumn(i + 1).width = c.w; });
   b.items.forEach((it) => it.lines.forEach((l, j) => {
     const row = it.r1 + j, cell = (c) => wsD.getCell(row, c), bf = isMat ? light(it.dk) : null;
     const v = { id: l.id, date: new Date(l.date + 'T00:00:00Z'), per: undefined, doc: l.doc, type: l.type, ce: l.ce, cen: l.cen, item: itemOf(def, it), desc: isMat ? l.matDesc : (l.poText || l.name || l.header), wbs: l.wbs,
-      qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, mvt: l.mvt || null, mvtText: l.mvtText || null, mdoc: l.refDoc, supplier: l.supplier || null,
-      ...(l.mb ? { sapqty: l.mb.sapQty, sapamt: l.mb.sapAmt, unitE: l.mb.unitEntry || null, entry: l.mb.entry ? new Date(l.mb.entry + 'T00:00:00Z') : null, resv: l.mb.resv || null, user: l.mb.user || null, text: l.mb.text || null,
-        hdr: l.header || null, val: l.mb.val || null, sloc: l.mb.sloc || null, order: l.order || null, ditem: l.mb.item || null, dyear: l.mb.year || null, noval: l.mb.noValue ? 'No value' : null } : {}) };
+      qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, stock: l.stock || null, mdoc: l.refDoc, entry: l.created ? new Date(l.created + 'T00:00:00Z') : null, user: l.user || null, hdr: l.header || null };
     DC.forEach((c, i) => { if (v[c.k] !== undefined) cell(i + 1).value = v[c.k]; });
     cell(D.amt).numFmt = AMT2; cell(D.qty).numFmt = QTY; cell(D.date).numFmt = 'yyyy-mm-dd';
-    if (isMat) { setF(cell(D.rate), `IF(ABS($${colL(D.qty)}${row})<0.000001,"",$${colL(D.amt)}${row}/$${colL(D.qty)}${row})`, Math.abs(l.qty) < 0.000001 ? '' : l.amt / l.qty); cell(D.rate).numFmt = '#,##0.00'; if (cell(D.entry).value) cell(D.entry).numFmt = 'yyyy-mm-dd'; cell(D.sapqty).numFmt = QTY; cell(D.sapamt).numFmt = AMT2; }
+    if (isMat) { setF(cell(D.rate), `IF(ABS($${colL(D.qty)}${row})<0.000001,"",$${colL(D.amt)}${row}/$${colL(D.qty)}${row})`, Math.abs(l.qty) < 0.000001 ? '' : l.amt / l.qty); cell(D.rate).numFmt = '#,##0.00'; cell(D.entry).numFmt = 'yyyy-mm-dd'; }
     setF(cell(D.per), periodF(row, D), l.per);
     const ix = (col) => `IFERROR(INDEX(${cr(col)},$${colL(D.cid)}${row})&"","")`;
     const put = (dcol, ccol, val, typed) => { if (typed) cell(dcol).value = val; else setF(cell(dcol), ix(ccol), val); };
@@ -160,7 +157,7 @@ function bucketSheets(wb, b, model, opts) {
   wsD.addConditionalFormatting({ ref: `${colL(D.pkg)}${DATA_1}:${colL(D.cec)}${lastD}`, rules: [{ type: 'expression', formulae: [`$${colL(D.over)}${DATA_1}=1`], style: { fill: cfFill(ORANGE), font: { bold: true, color: { argb: 'FFC55A11' } } }, priority: 5 }] });
   wsD.addConditionalFormatting({ ref: `A${DATA_1}:${colL(nD)}${lastD}`, rules: [
     { type: 'expression', formulae: [`$${colL(D.inc)}${DATA_1}="No"`], style: { font: { color: { argb: 'FFA6A6A6' }, strike: true }, fill: cfFill('EDEDED') }, priority: 6 },
-    { type: 'expression', formulae: [`$${colL(D.type)}${DATA_1}="UE"`], style: { fill: cfFill(UE_FILL), font: { bold: true } }, priority: 7 }].concat(isMat ? [{ type: 'expression', formulae: [`$${colL(D.issue)}${DATA_1}="Adjustment to CJI3"`], style: { fill: cfFill('F8CBAD'), font: { italic: true } }, priority: 8 }] : []) });
+    { type: 'expression', formulae: [`$${colL(D.type)}${DATA_1}="UE"`], style: { fill: cfFill(UE_FILL), font: { bold: true } }, priority: 7 }] });
 
   // ================= per Month – Material: Qty | Rate | Amount side by side for every month (the report's layout); other buckets: amount only
   const M = isMat ? ['Qty', 'Rate', 'Amount'] : ['Amount'], lead = k + 3, aM = M.length - 1, per = (p) => (p < np ? periods[p] : 'To date');

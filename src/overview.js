@@ -77,7 +77,7 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
     const cells = [id, inf.b.count, { f: sx('G', id), v: op }, { f: `E${r}-C${r}`, v: r2(td - op) }, { f: sx(colL(ex.cTo), id), v: td }, { f: sx(colL(ex.cTm), id), v: tm }, { f: sx(colL(6 + np), id), v: pe },
       { f: `${q(inf.nCod)}!E4`, v: 0 }, { f: `${pm}!${colL(inf.amtCol(np))}${inf.rExc}`, v: exv }, { f: `${pm}!${colL(inf.amtCol(np))}${inf.rDiff}`, v: 0 }];
     cells.forEach((c, i) => { const y = ws.getCell(r, i + 1); if (c && c.f) setF(y, c.f, c.v); else y.value = c; y.border = box; y.font = font({ bold: i === 0 }); if (i >= 2) y.numFmt = i === 7 ? PCT : AMT0; });
-    ws.getCell(r, 1).value = { text: id, hyperlink: '#' + q(inf.nCod) + '!A1' }; ws.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF2F5597' }, underline: true });
+    setF(ws.getCell(r, 1), `HYPERLINK("#'${inf.nCod}'!A1","${id}")`, id); ws.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF2F5597' }, underline: true });
     t.lines += inf.b.count; t.op += op; t.td += td; t.tm += tm; t.pe += pe; t.ex += exv; r++;
   }
   const last = r - 1; ws.getCell(r, 1).value = 'TOTAL'; ws.getCell(r, 1).font = font({ bold: true }); ws.getCell(r, 1).fill = fill('DDEBF7'); ws.getCell(r, 1).border = box;
@@ -111,8 +111,6 @@ function writeChecks(ws, model, infos, ex, opts, stats) {
   for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIFS(${q(inf.nCod)}!${colL(inf.C.st)}7:${colL(inf.C.st)}${inf.lastC},"<>Fully coded",${q(inf.nCod)}!${colL(inf.C.id)}7:${colL(inf.C.id)}${inf.lastC},">0")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
   for (const inf of infos) add(inf.def.id + ': lines typed over', `SUM(${q(inf.nDat)}!${colL(inf.D.over)}5:${colL(inf.D.over)}${inf.lastD})`, inf.b.items.flatMap((it) => it.lines).filter((l) => l.s === 1).length, 'info', 'Lines coded differently from their item.');
   add('ZY accrual-reversal lines paired to a bucket', null, stats.zyPaired, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
-  if (stats.mb) { add('Material Data: MB51 goods issues used', null, stats.mb.used, 'info', 'One row per goods issue charged to the project, up to the CJI3 horizon.'); add('Material Data: adjustment rows to CJI3', null, stats.mb.adj, 'info', 'Material and month where MB51 and CJI3 differ – one orange row each.');
-    add('Material Data: adjustment total (EGP)', null, stats.mb.adjAmt, 'info', 'Sum of the adjustment rows.'); add('MB51 issues posted after the CJI3 horizon – not in the register (EGP)', null, stats.mb.after.amt, 'info', stats.mb.after.n + ' goods issues not yet in CJI3.'); }
   if (stats.noGroup !== undefined) add('Materials without a material group', null, stats.noGroup, 'info', 'Load MB52 / ME2N to give them a family and division.');
   rows.forEach(([n, f, v, ok, note], i) => { const r = 5 + i; ws.getCell(r, 1).value = n; const x = ws.getCell(r, 2); if (f) setF(x, f, v); else x.value = v; x.numFmt = '#,##0.00';
     const s = ws.getCell(r, 3); const test = ok === 'abs' ? `IF(ABS(B${r})<0.01,"OK","CHECK")` : ok === 'zero' ? `IF(B${r}=0,"OK","CHECK")` : `"info"`;
