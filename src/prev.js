@@ -15,7 +15,7 @@ function readPrev(file) {
       const rows = XLSX.utils.sheet_to_json(sc, { header: 1, raw: true, defval: null, blankrows: false });
       const hi = rows.findIndex((r) => r.includes('Item key')); if (hi >= 0) {
         const ix = (n) => rows[hi].indexOf(n); const m = new Map();
-        for (const r of rows.slice(hi + 1)) { const k = str(r[ix('Item key')]); if (!k) continue; m.set(k, { pkg: str(r[ix('PKG')]), mnl: str(r[ix('MNL')]), ce: str(r[ix('Cost element code')]), inc: str(r[ix('Include')]) }); items++; }
+        for (const r of rows.slice(hi + 1)) { const k = str(r[ix('Item key')]); if (!k) continue; const ceI = ix('Cost element code') >= 0 ? ix('Cost element code') : ix('Cost element'), o = { pkg: str(r[ix('PKG')]), mnl: str(r[ix('MNL')]), ce: str(r[ceI]), inc: str(r[ix('Include')]) }; if (ix('DIV') >= 0) o.div = str(r[ix('DIV')]); m.set(k, o); items++; }
         coding.set(b.id, m);
       }
     }

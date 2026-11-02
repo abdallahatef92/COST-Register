@@ -84,19 +84,22 @@ function applyCodes(bucket, over) {
 function bucketSheets(wb, b, model, opts) {
   const def = b.def, isMat = def.id === 'Material', isQ = !!def.qty, isTree = !!def.tree, k = def.cols.length, n = b.items.length, N = b.count, np = model.periods.length, periods = model.periods;
   const { cols: DC, D } = dlayout(def), nD = DC.length;
-  const C = { pkg: k + 1, mnl: k + 2, ce: k + 3, inc: k + 4, st: k + 5, td: k + 6, tm: k + 7, nw: k + 8, fp: k + 9, lp: k + 10, ln: k + 11, id: k + 12, key: k + 13 };
+  // the Subcontractor Coding sheet is laid out exactly as the Subcontract report's Coding sheet (band rows 1-2, header row 4, flat list from row 5, DIV first)
+  const toolC = def.id === 'Subcontractor', cod1 = toolC ? 5 : COD_1;
+  const C = toolC ? { div: 5, pkg: 6, mnl: 7, ce: 8, st: 9, qty: 10, rate: 11, td: 12, tm: 13, nw: 14, pos: 15, subs: 16, fp: 17, lp: 18, id: 19, inc: 20, key: 21 }
+    : { pkg: k + 1, mnl: k + 2, ce: k + 3, inc: k + 4, st: k + 5, td: k + 6, tm: k + 7, nw: k + 8, fp: k + 9, lp: k + 10, ln: k + 11, id: k + 12, key: k + 13 };
   const nCod = def.short + ' Coding', nDat = def.short + ' Data', nPm = def.pmName || (def.short + ' per Month');
   const wsC = wb.addWorksheet(nCod, { properties: { tabColor: { argb: 'FF' + GOLD }, outlineProperties: { summaryBelow: false } } });
   const wsP = wb.addWorksheet(nPm, { properties: { tabColor: { argb: 'FF' + def.tab }, outlineProperties: { summaryBelow: false } } });
   const wsD = wb.addWorksheet(nDat, { properties: { tabColor: { argb: 'FF' + GREY } } });
   const rep = model.reportLabel;
   // ---- row positions: Material has a Division header row above each division (the report's tree), the other buckets are flat
-  let crow = COD_1; const heads = []; let cur = null;
-  b.items.forEach((it) => {
-    if (isTree && (!cur || cur.key !== it.dk)) { cur = { key: it.dk, label: it.headLabel, famCode: it.fam, row: crow, items: [] }; heads.push(cur); crow++; }
-    it.crow = crow; it.id = crow - COD_1 + 1; it.pmRow = PM_1 + (crow - COD_1); if (cur) cur.items.push(it); crow++;
+  let pr = 0; const heads = []; let cur = null;
+  b.items.forEach((it, i) => {
+    if (isTree && (!cur || cur.key !== it.dk)) { cur = { key: it.dk, label: it.headLabel, famCode: it.fam, row: COD_1 + pr, items: [] }; heads.push(cur); pr++; }
+    it.pmRow = PM_1 + pr; it.crow = toolC ? cod1 + i : COD_1 + pr; it.id = it.crow - cod1 + 1; if (cur) cur.items.push(it); pr++;
   });
-  const lastC = crow - 1, lastD = DATA_1 + N - 1, lastItem = PM_1 + (lastC - COD_1);
+  const lastC = toolC ? cod1 + n - 1 : COD_1 + pr - 1, lastD = DATA_1 + N - 1, lastItem = PM_1 + pr - 1;
   // Data rows run by month (Opening, the months, Pending), inside a month in the report's item order
   const pOrd = new Map(periods.map((pp, i) => [pp, i])), flat = []; b.items.forEach((it, ii) => it.lines.forEach((l) => flat.push({ l, it, ii })));
   const sortFlat = () => flat.sort((x, y) => pOrd.get(x.l.per) - pOrd.get(y.l.per) || x.ii - y.ii || (x.l.date < y.l.date ? -1 : x.l.date > y.l.date ? 1 : x.l.id < y.l.id ? -1 : 1)); sortFlat();
@@ -104,15 +107,17 @@ function bucketSheets(wb, b, model, opts) {
   flat.forEach((f, i) => { const bl = (f.it.blocks = f.it.blocks || []), last = bl[bl.length - 1]; if (last && last.p === pOrd.get(f.l.per) && last.r2 === DATA_1 + i - 1) last.r2 = DATA_1 + i; else bl.push({ p: pOrd.get(f.l.per), r1: DATA_1 + i, r2: DATA_1 + i }); });
   const blockTerms = (it, dcol, flagCrit, perCrit, only) => (it.blocks || []).filter((bk) => only === undefined || bk.p === only).map((bk) => `SUMIFS(${dr(dcol, bk.r1, bk.r2)},${dr(D.flag, bk.r1, bk.r2)},${flagCrit},${dr(D.per, bk.r1, bk.r2)},${perCrit})`);
   const dr = (col, a = DATA_1, z = lastD) => q(nDat) + '!$' + colL(col) + '$' + a + ':$' + colL(col) + '$' + z;
-  const cr = (col) => q(nCod) + '!$' + colL(col) + '$' + COD_1 + ':$' + colL(col) + '$' + lastC;
+  const cr = (col) => q(nCod) + '!$' + colL(col) + '$' + cod1 + ':$' + colL(col) + '$' + lastC;
   // colours follow the DIVISION (each division its own colour, in sheet order), as in the Material report
   const divIdx = new Map(); for (const it of b.items) if (isTree && !divIdx.has(it.dk)) divIdx.set(it.dk, divIdx.size);
   const strong = (dk) => STRONG[(divIdx.get(dk) || 0) % STRONG.length], light = (dk) => tint(strong(dk), 0.55);
 
   // ================= Coding
+  let tdSum = 0, fullSum = 0, nFull = 0, nPart = 0, nNot = 0, nEx = 0;
+  if (toolC) ({ tdSum, fullSum, nFull, nPart, nNot, nEx } = toolCoding(wsC, b, def, C, cod1, lastC, model, opts, blockTerms, D, nDat));
+  else {
   title(wsC, def.id + ' Coding — ' + opts.project, 'Unique list: type PKG, MNL, Cost element code and Include ONCE per item (yellow). Every line on "' + nDat + '" reads its code from here; type over a code on the Data sheet to code a single line differently.' + (isTree ? ' Grouped and largest first; the − / + at the left folds a group.' : ''));
   header(wsC, COD_H, [...def.cols.map((c) => c[0]), 'PKG', 'MNL', 'Cost element code', 'Include', 'Status', 'To date', 'This month', 'New', 'First posted', 'Last posted', 'Lines', 'ID', 'Item key'], ['PKG', 'MNL', 'Cost element code', 'Include']);
-  let tdSum = 0, fullSum = 0, nFull = 0, nPart = 0, nNot = 0, nEx = 0;
   b.items.forEach((it) => {
     const row = it.crow, bf = isTree ? light(it.dk) : null, rg = (col) => '$' + colL(col) + row;
     if (isTree) wsC.getRow(row).outlineLevel = 1;
@@ -152,6 +157,7 @@ function bucketSheets(wb, b, model, opts) {
     { type: 'expression', formulae: [`$${sc}${COD_1}="Partly coded"`], style: { fill: cfFill('FFEB9C') }, priority: 2 },
     { type: 'expression', formulae: [`$${sc}${COD_1}="Not coded"`], style: { fill: cfFill('FFC7CE') }, priority: 3 }] });
   wsC.addConditionalFormatting({ ref: `A${COD_1}:${colL(C.key)}${lastC}`, rules: [{ type: 'expression', formulae: [`$${colL(C.inc)}${COD_1}="No"`], style: { font: { color: { argb: 'FFA6A6A6' }, strike: true } }, priority: 4 }] });
+  }
 
   // ================= Data
   title(wsD, def.id + ' Data — ' + opts.project, 'One row per CJI3 line. PKG, MNL, Cost element code and Include are FORMULAS reading the item on "' + nCod + '". Type over any of them to code or exclude one line (orange = typed over; Include = No greys the line out and takes it out of all totals).');
@@ -259,7 +265,7 @@ function bucketSheets(wb, b, model, opts) {
     wsP.addConditionalFormatting({ ref: `${a}${PM_1}:${colL(c0 + 2)}${lastItem}`, rules: [{ type: 'expression', formulae: [`AND($${a}$${PM_H - 1}=${CUTLAB},$${colL(1)}${PM_1}<>"")`], style: { fill: cfFill('FFF2CC') }, priority: 60 + p }] }); }
   if (!isQ) for (let p = 0; p < np - 1; p++) { const a = colL(colOf('Amount', p)); wsP.addConditionalFormatting({ ref: `${a}${PM_H}`, rules: [{ type: 'expression', formulae: [`${a}$${PM_H}=${CUTLAB}`], style: { fill: cfFill(GOLD) }, priority: 20 + p }] }); }
   const amtCol = (p) => colOf('Amount', p);
-  return { def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
+  return { cod1, toolC, fullWord: toolC ? 'Coded' : 'Fully coded', def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
 }
 
 function revenueSheet(wb, model, opts) {
@@ -280,4 +286,68 @@ function revenueSheet(wb, model, opts) {
   return { lines, last, name: 'Revenue Data' };
 }
 
-module.exports = { VATM, VATF, CUT, CUTLAB, applyCodes, bucketSheets, revenueSheet, ExcelJS, AMT0, AMT2, QTY, PCT, NAVY, GOLD, GREY, YELLOW, RED, BAND, fill, font, box, q, setF, title, header, itemOf, descOf, DATA_H, DATA_1, COD_1, PM_H, PM_1, dlayout, D: D0, UE_FILL };
+// ---- Subcontractor Coding exactly as the Subcontract report's Coding sheet
+const DIVS = ['03', '04', '05', '06', '07', '08', '09', '10', '21', '22', '23', '26', '27', '31', '32', '33'];
+const divOfService = (svc) => { const m = /^S(\d\d)/i.exec(String(svc || '')); return m && DIVS.includes(m[1]) ? 'DIV ' + m[1] : String(svc || '').startsWith('(') ? '' : 'INDIRECT'; };
+const hashBand = (t) => { let h = 0; for (const ch of String(t)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return BAND[h % BAND.length]; };
+const monLab = (iso) => (iso ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4) : '');
+function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) {
+  const rep = model.reportLabel, rg = (c) => `$${colL(c)}$${R1}:$${colL(c)}$${lastR}`, NUM0 = '#,##0;\\-#,##0;"-"', AMT = '#,##0;[Red]\\-#,##0;"-"';
+  const navy = (x, size = 10) => { x.font = font({ bold: true, size, color: { argb: 'FFFFFFFF' } }); x.fill = fill(NAVY); x.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; x.border = box; };
+  let tdSum = 0, fullSum = 0, nFull = 0, nPart = 0, nNot = 0, nEx = 0, nNew = 0, n2po = 0, tdNot = 0, tmNot = 0; const miss = { div: 0, pkg: 0, mnl: 0, ce: 0 };
+  b.items.forEach((it) => {
+    const r = it.crow, incl = it.lines.filter((l) => l.inc === 'Yes'), cnt = incl.filter((l) => l.per !== 'Pending'), q = r3(cnt.reduce((s, l) => s + (l.qty || 0), 0));
+    it.tot = r2(cnt.reduce((s, l) => s + l.amt, 0)); it.tmv = r2(incl.filter((l) => l.per === rep).reduce((s, l) => s + l.amt, 0));
+    const pos = [...new Set(it.lines.map((l) => l.po).filter((p) => p && !String(p).startsWith('(')))], subs = [...new Set(it.lines.map((l) => l.sup).filter(Boolean))];
+    const cds = it.lines.map((l) => l.cdate || l.date).filter(Boolean).sort();
+    it.vals.forEach((v, c) => { const x = ws.getCell(r, c + 1); x.value = v; x.font = font(); if (c === 0) x.fill = fill(hashBand(v)); if (c === 1) x.fill = fill(hashBand('s' + v)); });
+    [['div', it.div], ['pkg', it.pkg], ['mnl', it.mnl], ['ce', it.ce]].forEach(([k, v]) => { const x = ws.getCell(r, C[k]); x.value = v ? v : null; x.fill = fill(YELLOW); x.font = font({ bold: true }); x.border = box; });
+    const full = it.div && it.pkg && it.mnl && it.ce, none = !it.div && !it.pkg && !it.mnl && !it.ce, status = full ? 'Coded' : none ? 'Not coded' : 'Partly coded';
+    setF(ws.getCell(r, C.st), `IF(COUNTA(${colL(C.div)}${r}:${colL(C.ce)}${r})=4,"Coded",IF(COUNTA(${colL(C.div)}${r}:${colL(C.ce)}${r})=0,"Not coded","Partly coded"))`, status);
+    const x1 = ws.getCell(r, C.qty); setF(x1, blockTerms(it, D.qty, '">0"', '"<>Pending"').join('+') || '0', q); x1.numFmt = '#,##0.00;[Red]\\-#,##0.00;"-"';
+    const x2 = ws.getCell(r, C.rate); setF(x2, `IF(ABS(${colL(C.qty)}${r})<0.000001,"",${colL(C.td)}${r}/${colL(C.qty)}${r})`, Math.abs(q) < 1e-6 ? '' : it.tot / q); x2.numFmt = '#,##0.00;[Red]\\-#,##0.00;""';
+    const x3 = ws.getCell(r, C.td); setF(x3, blockTerms(it, D.amt, '">0"', '"<>Pending"').join('+') || '0', it.tot); x3.numFmt = AMT; x3.font = font({ bold: true });
+    const x4 = ws.getCell(r, C.tm); setF(x4, blockTerms(it, D.amt, '">0"', CUTLAB).join('+') || '0', it.tmv); x4.numFmt = AMT;
+    const grey = { color: { argb: 'FF595959' } };
+    ws.getCell(r, C.nw).value = it.isNew ? 'New' : null; ws.getCell(r, C.nw).font = font(grey);
+    const x5 = ws.getCell(r, C.pos); x5.value = pos.length || null; x5.numFmt = NUM0; x5.font = font({ bold: true }); x5.alignment = { horizontal: 'center' };
+    ws.getCell(r, C.subs).value = subs.length ? subs.slice(0, 2).join(' · ') + (subs.length > 2 ? ' +' + (subs.length - 2) : '') : null; ws.getCell(r, C.subs).font = font(grey);
+    ws.getCell(r, C.fp).value = monLab(cds[0]) || null; ws.getCell(r, C.lp).value = monLab(cds[cds.length - 1]) || null; ws.getCell(r, C.fp).font = font(grey); ws.getCell(r, C.lp).font = font(grey);
+    ws.getCell(r, C.id).value = it.id;
+    const inc = ws.getCell(r, C.inc); inc.value = it.inc; inc.fill = fill(YELLOW); inc.font = font({ bold: true }); inc.border = box; inc.alignment = { horizontal: 'center' };
+    ws.getCell(r, C.key).value = it.key; ws.getCell(r, C.key).font = font({ size: 8, color: { argb: 'FF' + GREY } });
+    tdSum += it.tot; if (full) { fullSum += it.tot; nFull++; } else { if (none) nNot++; else nPart++; tdNot += it.tot; tmNot += it.tmv; }
+    if (it.inc === 'No') nEx++; if (it.isNew) nNew++; if (pos.length > 1) n2po++; for (const k of Object.keys(miss)) if (!it[k]) miss[k]++;
+  });
+  // ---- band (rows 1-2)
+  const band = [[1, 'Services still to code', `COUNTIF(${rg(C.st)},"Not coded")+COUNTIF(${rg(C.st)},"Partly coded")`, nNot + nPart, NUM0],
+    [2, 'Fully coded', `COUNTIF(${rg(C.st)},"Coded")&" of "&(COUNTIF(${rg(C.st)},"Coded")+COUNTIF(${rg(C.st)},"Partly coded")+COUNTIF(${rg(C.st)},"Not coded"))`, `${nFull} of ${nFull + nPart + nNot}`, 'General'],
+    [5, 'DIV missing', `COUNTIFS(${rg(C.div)},"",${rg(C.id)},">0")`, miss.div, NUM0], [6, 'PKG missing', `COUNTIFS(${rg(C.pkg)},"",${rg(C.id)},">0")`, miss.pkg, NUM0],
+    [7, 'MNL missing', `COUNTIFS(${rg(C.mnl)},"",${rg(C.id)},">0")`, miss.mnl, NUM0], [8, 'Cost element missing', `COUNTIFS(${rg(C.ce)},"",${rg(C.id)},">0")`, miss.ce, NUM0],
+    [9, 'Coded – share of To date', `IFERROR(SUMIFS(${rg(C.td)},${rg(C.st)},"Coded")/SUM(${rg(C.td)}),0)`, tdSum ? fullSum / tdSum : 0, '0.0%;[Red]\\-0.0%;"-"'],
+    [12, 'To date not fully coded', `SUMIFS(${rg(C.td)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.td)},${rg(C.st)},"Not coded")`, r2(tdNot), AMT],
+    [13, 'This month not fully coded', `SUMIFS(${rg(C.tm)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.tm)},${rg(C.st)},"Not coded")`, r2(tmNot), AMT],
+    [14, 'New', `COUNTIF(${rg(C.nw)},"New")`, nNew, NUM0], [15, '2+ POs', `COUNTIF(${rg(C.pos)},">1")`, n2po, NUM0]];
+  for (const [c, l, f, v, nf] of band) { const a = ws.getCell(1, c); a.value = l; navy(a, 9); const x = ws.getCell(2, c); setF(x, f, v); x.numFmt = nf; x.font = font({ bold: true, size: 13, color: { argb: 'FF' + NAVY } }); x.alignment = { horizontal: 'center' }; x.border = box; }
+  ws.mergeCells(1, 2, 1, 3); ws.mergeCells(2, 2, 2, 3); ws.getRow(1).height = 30; ws.getRow(2).height = 24;
+  ws.addConditionalFormatting({ ref: 'A2', rules: [{ type: 'cellIs', operator: 'greaterThan', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFCE4D6' } } }, priority: 1 }, { type: 'cellIs', operator: 'equal', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFE2EFDA' } } }, priority: 2 }] });
+  ws.addConditionalFormatting({ ref: 'E2:H2', rules: [{ type: 'cellIs', operator: 'greaterThan', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFCE4D6' } } }, priority: 3 }, { type: 'cellIs', operator: 'equal', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFE2EFDA' } } }, priority: 4 }] });
+  // ---- note + header (rows 3-4)
+  const nt = ws.getCell(3, 1); nt.value = 'Live – the band follows the codes typed below · a service = one Service code + description · type DIV, PKG, MNL and Cost element once per service (yellow); every line on "' + nDat + '" reads its code from here · Include = No takes the service out of all totals.'; nt.font = font({ size: 9, color: { argb: 'FF595959' } });
+  const hd = ['Type of works (SAP)', 'Service', 'Description', 'Unit', 'DIV', 'PKG', 'MNL', 'Cost element', 'Status', 'Qty to date', 'Rate', 'To date', null, 'New', 'POs', 'Subcontractors', 'First certified', 'Last certified', 'ID', 'Include', 'Item key'];
+  hd.forEach((h, i) => { const x = ws.getCell(4, i + 1); if (h === null) setF(x, `"This month · "&${CUTLAB}`, 'This month · ' + rep); else x.value = h; navy(x); if (i + 1 >= C.div && i + 1 <= C.ce || i + 1 === C.inc) x.fill = fill(GOLD); });
+  ws.getRow(4).height = 30;
+  // ---- formats, widths, filter, freeze, CF
+  [26, 11, 46, 7, 11, 9, 8, 14, 13, 12, 11, 14, 14, 6, 6, 30, 10, 10, 6, 8, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  ws.views = [{ showGridLines: false, state: 'frozen', xSplit: 4, ySplit: 4 }]; ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: lastR, column: C.key } };
+  ws.dataValidations.add(`${colL(C.inc)}${R1}:${colL(C.inc)}${lastR}`, { type: 'list', allowBlank: true, formulae: ['"Yes,No"'] });
+  ws.dataValidations.add(`${colL(C.div)}${R1}:${colL(C.div)}${lastR}`, { type: 'list', allowBlank: true, showErrorMessage: false, formulae: ['"' + [...DIVS.map((d) => 'DIV ' + d), 'DIV 0302', 'INDIRECT'].join(',') + '"'] });
+  const cf = (ref, f, c, pr) => ws.addConditionalFormatting({ ref, rules: [{ type: 'expression', formulae: [f], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FF' + c } } }, priority: pr }] });
+  cf(`${colL(C.div)}${R1}:${colL(C.ce)}${lastR}`, `AND($${colL(C.id)}${R1}<>"",LEN(TRIM(${colL(C.div)}${R1}))=0)`, 'F8CBAD', 5);
+  const st = colL(C.st);
+  cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Coded"`, 'E2EFDA', 6); cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Partly coded"`, 'FFF2CC', 7); cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Not coded"`, 'FCE4D6', 8);
+  ws.addConditionalFormatting({ ref: `A${R1}:${colL(C.key)}${lastR}`, rules: [{ type: 'expression', formulae: [`$${colL(C.inc)}${R1}="No"`], style: { font: { color: { argb: 'FFA6A6A6' }, strike: true } }, priority: 9 }] });
+  return { tdSum, fullSum, nFull, nPart, nNot, nEx };
+}
+
+module.exports = { divOfService, VATM, VATF, CUT, CUTLAB, applyCodes, bucketSheets, revenueSheet, ExcelJS, AMT0, AMT2, QTY, PCT, NAVY, GOLD, GREY, YELLOW, RED, BAND, fill, font, box, q, setF, title, header, itemOf, descOf, DATA_H, DATA_1, COD_1, PM_H, PM_1, dlayout, D: D0, UE_FILL };

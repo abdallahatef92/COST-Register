@@ -80,7 +80,7 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
     const a = ws.getCell(r, 1); setF(a, `HYPERLINK("#'${inf.nCod}'!A1","${id}")`, id); a.font = font({ bold: true, underline: true, color: { argb: 'FF2F5597' } }); a.fill = fill('DDE5EE');
     cell(r, 2, inf.b.count, null, { fmt: '#,##0' }); cell(r, 3, op, sb(7, id), { fmt: NUM }); cell(r, 4, r2(td - tm), `F${r}-E${r}`, { fmt: NUM }); cell(r, 5, tm, sb(colIx(ex.cTm), id), { fmt: NUM, fill: 'FFF2CC' });
     cell(r, 6, td, sb(colIx(ex.cTo), id), { fmt: NUM, font: { bold: true } }); cell(r, 7, 0, `IF($F$${tot}=0,"",F${r}/$F$${tot})`, { fmt: PC }); ws.getCell(r, 7).value = { formula: `IF($F$${tot}=0,"",F${r}/$F$${tot})`, result: toDate ? td / toDate : '' };
-    cell(r, 8, pe, sb(6 + np, id), { fmt: NUM }); cell(r, 9, 0, `${q(inf.nCod)}!E4`, { fmt: PC }); ws.getCell(r, 9).value = { formula: `${q(inf.nCod)}!E4`, result: inf.coded }; cell(r, 10, exv, `${pm}!${colL(inf.amtCol(np))}${inf.rExc}`, { fmt: NUM, font: { color: { argb: 'FF595959' } } });
+    cell(r, 8, pe, sb(6 + np, id), { fmt: NUM }); cell(r, 9, 0, inf.toolC ? `${q(inf.nCod)}!I2` : `${q(inf.nCod)}!E4`, { fmt: PC }); ws.getCell(r, 9).value = { formula: inf.toolC ? `${q(inf.nCod)}!I2` : `${q(inf.nCod)}!E4`, result: inf.coded }; cell(r, 10, exv, `${pm}!${colL(inf.amtCol(np))}${inf.rExc}`, { fmt: NUM, font: { color: { argb: 'FF595959' } } });
     cell(r, 11, 0, `${pm}!${colL(inf.amtCol(np))}${inf.rDiff}`, { fmt: '#,##0.00;[Red]\\-#,##0.00;"-"' }); for (let c = 1; c <= 11; c++) ws.getCell(r, c).border = box; r++;
   });
   ws.getCell(r, 1).value = 'Total'; for (let c = 1; c <= 11; c++) { const x = ws.getCell(r, c); x.fill = fill('DDEBF7'); x.font = font({ bold: true }); x.border = box; }
@@ -91,7 +91,8 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   sec(r, '3. Coding status', 'live – follows each Coding sheet: type PKG, MNL, Cost element code once per item'); r++;
   head(r, ['Bucket', 'Items', 'Fully coded', 'Partly coded', 'Not coded', 'Coded share of to date', 'Items excluded']); r++;
   infos.forEach((inf, i) => { const a = ws.getCell(r, 1); a.value = inf.def.id; a.font = font({ bold: true }); a.fill = fill('DDE5EE'); const st = inf.nStatus;
-    [['A', inf.n, '#,##0'], ['B', st.nFull, '#,##0'], ['C', st.nPart, '#,##0'], ['D', st.nNot, '#,##0'], ['E', inf.coded, PC], ['F', st.nEx, '#,##0']].forEach(([cc, v, f], j) => cell(r, 2 + j, v, `${q(inf.nCod)}!${cc}4`, { fmt: f })); for (let c = 1; c <= 7; c++) ws.getCell(r, c).border = box; r++; });
+    const cg = (c) => `${q(inf.nCod)}!$${colL(c)}$${inf.cod1}:$${colL(c)}$${inf.lastC}`, stF = inf.toolC ? [`COUNT(${cg(inf.C.id)})`, `COUNTIF(${cg(inf.C.st)},"Coded")`, `COUNTIF(${cg(inf.C.st)},"Partly coded")`, `COUNTIF(${cg(inf.C.st)},"Not coded")`, `${q(inf.nCod)}!I2`, `COUNTIF(${cg(inf.C.inc)},"No")`] : ['A', 'B', 'C', 'D', 'E', 'F'].map((cc) => `${q(inf.nCod)}!${cc}4`);
+    [[inf.n, '#,##0'], [st.nFull, '#,##0'], [st.nPart, '#,##0'], [st.nNot, '#,##0'], [inf.coded, PC], [st.nEx, '#,##0']].forEach(([v, f], j) => cell(r, 2 + j, v, stF[j], { fmt: f })); for (let c = 1; c <= 7; c++) ws.getCell(r, c).border = box; r++; });
   r++;
   // ---- 4. reconciliation
   sec(r, '4. Reconciliation to CJI3', 'CJI3 is the single source of truth – the difference must be 0'); r++;
@@ -128,7 +129,7 @@ function writeChecks(ws, model, infos, ex, opts, stats) {
   if (ex && ex.stack) { add('Expenses: total vs the per Month sheets', `ROUND(SUM(${ex.rng(ex.cTo)})-(${infos.map((inf) => `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rTot}`).join('+')}),2)`, 0, 'abs', 'Items + hand-coded lines behind the Expenses list = TOTAL counted of every bucket.');
     add('Expenses: hand-coded blocks that overflow or fail', ex.stack.anchors.filter((a) => a.sheet === '_Stack').map((a) => `ISERROR(_Stack!${a.cell})`).join('+'), 0, 'zero', 'Each bucket has room for 250 hand-coded item × PKG × MNL × code combinations.'); }
   for (const inf of infos) add(inf.def.id + ': per Month total vs Data sheet', `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rDiff}`, 0, 'abs', 'Must be 0.');
-  for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIFS(${q(inf.nCod)}!${colL(inf.C.st)}7:${colL(inf.C.st)}${inf.lastC},"<>Fully coded",${q(inf.nCod)}!${colL(inf.C.id)}7:${colL(inf.C.id)}${inf.lastC},">0")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
+  for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIFS(${q(inf.nCod)}!${colL(inf.C.st)}${inf.cod1}:${colL(inf.C.st)}${inf.lastC},"<>${inf.fullWord}",${q(inf.nCod)}!${colL(inf.C.id)}${inf.cod1}:${colL(inf.C.id)}${inf.lastC},">0")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
   for (const inf of infos) add(inf.def.id + ': lines typed over', `SUM(${q(inf.nDat)}!${colL(inf.D.over)}5:${colL(inf.D.over)}${inf.lastD})`, inf.b.items.flatMap((it) => it.lines).filter((l) => l.s === 1).length, 'info', 'Lines coded differently from their item.');
   add('ZY accrual-reversal lines paired to a bucket', null, stats.zyPaired, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
   if (stats.sub && stats.poInfo) { add('Subcontractor: certificates → CJI3 bridge difference', stats.poInfo.bridgeDiff, 0, 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); add('Subcontractor: PO per Month vs Data sheet', stats.poInfo.poDiff, 0, 'abs', 'Must be 0.');

@@ -54,7 +54,7 @@ function stackSheets(wb, model, infos, opts, prev) {
   const lastItemRow = r - 1, HB = r + 1, END = HB + infos.length * HC_ROWS - 1, anchors = [];
   // ---- hand-coded lines: one spill per bucket, rows HB + i*HC_ROWS
   infos.forEach((inf, bi) => {
-    const def = inf.def, D = inf.D, dr = (c) => `${q(inf.nDat)}!$${colL(c)}$5:$${colL(c)}$${inf.lastD}`, cr = (c) => `${q(inf.nCod)}!$${colL(c)}$7:$${colL(c)}$${inf.lastC}`;
+    const def = inf.def, D = inf.D, dr = (c) => `${q(inf.nDat)}!$${colL(c)}$5:$${colL(c)}$${inf.lastD}`, cr = (c) => `${q(inf.nCod)}!$${colL(c)}$${inf.cod1}:$${colL(c)}$${inf.lastC}`;
     const ar = HB + bi * HC_ROWS, n = 'h' + bi;
     // JS: the same grouping (first occurrence in Data row order, case-insensitive keys like UNIQUE)
     const hc = inf.b.items.flatMap((it) => it.lines.map((l) => ({ l, it }))).filter(({ l }) => l.inc === 'Yes' && l.s === 1).sort((a, b) => a.l.row - b.l.row);
