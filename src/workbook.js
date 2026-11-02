@@ -319,6 +319,8 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
     tdSum += it.tot; if (full) { fullSum += it.tot; nFull++; } else { if (none) nNot++; else nPart++; tdNot += it.tot; tmNot += it.tmv; }
     if (it.inc === 'No') nEx++; if (it.isNew) nNew++; if (pos.length > 1) n2po++; for (const k of Object.keys(miss)) if (!it[k]) miss[k]++;
   });
+  // a navy line where a new Type of works starts (as in the Subcontract report)
+  b.items.forEach((it, i) => { if (i && it.vals[0] === b.items[i - 1].vals[0]) return; for (let c = 1; c <= C.key; c++) { const x = ws.getCell(it.crow, c); x.border = { ...(x.border || {}), top: { style: 'medium', color: { argb: 'FF' + NAVY } } }; } });
   // ---- band (rows 1-2)
   const band = [[1, 'Services still to code', `COUNTIF(${rg(C.st)},"Not coded")+COUNTIF(${rg(C.st)},"Partly coded")`, nNot + nPart, NUM0],
     [2, 'Fully coded', `COUNTIF(${rg(C.st)},"Coded")&" of "&(COUNTIF(${rg(C.st)},"Coded")+COUNTIF(${rg(C.st)},"Partly coded")+COUNTIF(${rg(C.st)},"Not coded"))`, `${nFull} of ${nFull + nPart + nNot}`, 'General'],
