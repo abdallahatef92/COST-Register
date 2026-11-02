@@ -9,7 +9,7 @@ const { r2, colL } = require('./util');
 const { fill, font, box, q, setF, title, header, itemOf, descOf, AMT0, NAVY, GREY, RED, GOLD, YELLOW } = W;
 
 const R_SHOW = 4, L_H = 6, L_1 = 7;                                       // Show PKG cell, list header, list anchor
-const HC_ROWS = 1000;                                                     // room for hand-coded combinations per bucket
+const HC_ROWS = 250;                                                      // room for hand-coded combinations per bucket
 const NO_PKG = '(no PKG yet)';
 const STRONG = ['A4CDEA', 'EAC1A4', 'C8EAA4', 'D8A4EA', 'A4EAD8', 'EAD8A4', 'EAA4B8', 'A4C3EA', 'EAA4D8', 'C1A4EA', 'A4EAA4', 'EAA4A4'];
 const tint = (hex, t) => [0, 2, 4].map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) + (255 - parseInt(hex.slice(i, i + 2), 16)) * t).toString(16).padStart(2, '0')).join('').toUpperCase();
@@ -143,6 +143,9 @@ function writeExpenses(ws, model, infos, opts, prev, wb) {
   [26, 44, 7, 14, 11].forEach((w, i) => { ws.getColumn(i + 1).width = w; }); for (let c = c0; c <= c0 + NP2 - 1; c++) ws.getColumn(c).width = 13;
   ws.getColumn(cLev).hidden = true; ws.getColumn(cIdx).hidden = true;
   ws.views = [{ showGridLines: false, state: 'frozen', xSplit: 1, ySplit: L_H }];
+  // print-ready: landscape A3, fit to the page width, header rows repeat
+  ws.pageSetup = { orientation: 'landscape', paperSize: 8, fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: `${L_H}:${L_H}`, margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } };
+  ws.headerFooter = { oddFooter: '&L' + opts.project + ' · Expenses&RPage &P of &N' };
   // colours: level 1 PKG heading (strong), 2 bucket heading (lighter), 3 items (lightest); (no PKG yet) amber; TOTAL navy
   const LV = `$${colL(cLev)}${L_1}`, IX = `$${colL(cIdx)}${L_1}`, area = `A${L_1}:${colL(nc - 2)}${MAXL}`;
   const rule = (f, style, pr) => ws.addConditionalFormatting({ ref: area, rules: [{ type: 'expression', formulae: [f], style, priority: pr }] });
@@ -153,6 +156,13 @@ function writeExpenses(ws, model, infos, opts, prev, wb) {
   for (let k = 0; k < STRONG.length; k++) [[1, STRONG[k], true], [2, tint(STRONG[k], 0.45), true], [3, tint(STRONG[k], 0.82), false]].forEach(([lv2, c, b], i) =>
     rule(`AND(${LV}=${lv2},${IX}>0,MOD(${IX}-1,${STRONG.length})=${k})`, { fill: cfFill(c), font: { bold: b } }, 10 + k * 3 + i));
   rule(`$A${L_1}<>""`, { border: { top: thinB, bottom: thinB, left: thinB, right: thinB } }, 100);
+  // reading aids that follow the cut date: the cut month column tinted gold down the list, months after it greyed
+  for (let p = 1; p < np - 1; p++) {
+    const a = colL(c0 + p), ref = `${a}${L_1}:${a}${MAXL}`, ym = model.months[p - 1], me = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 1)).toISOString().slice(0, 10);
+    ws.addConditionalFormatting({ ref, rules: [
+      { type: 'expression', formulae: [`AND($A${L_1}<>"",${LV}=3,${a}$${L_H}=Summary!$D$4)`], style: { fill: cfFill('FFF2CC') }, priority: 7 },
+      { type: 'expression', formulae: [`AND($A${L_1}<>"",DATE(${me.slice(0, 4)},${+me.slice(5, 7)},1)>Summary!$B$4)`], style: { font: { color: { argb: 'FFBFBFBF' } } }, priority: 8 }] });
+  }
   const excF = infos.map((inf) => `${q(inf.nPm)}!${colL(inf.amtCol(np))}${inf.rExc}`).join('+');
   const excTo = r2(infos.flatMap((inf) => inf.b.items.flatMap((it) => it.lines)).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0));
   return { stack: st, anchors: st.anchors, rng: R, bk: R(1), cTo: cTD, cTm: cTM, cPend: cPer(np - 1), cPer, excRef: excF, total: r2(tot[np]), pending: r2(tot[np - 1]), excTo, np, shownN: outRows.length };
