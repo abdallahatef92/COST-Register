@@ -1,7 +1,7 @@
 'use strict';
 // The bucket sheets: <Bucket> Coding (unique list), <Bucket> Data (one row per CJI3 line) and <Bucket> per Month (allocation per month).
 const ExcelJS = require('exceljs');
-const { r2, r3, colL } = require('./util');
+const { r2, r3, colL, ymLabel } = require('./util');
 const { famOf, FAMILY } = require('./groups');
 
 const NAVY = '1F3864', GOLD = 'BF8F00', GREY = '7F7F7F', YELLOW = 'FFFFCC', ORANGE = 'F8CBAD', RED = 'C00000';
@@ -36,7 +36,7 @@ function dlayout(def) {
   add('pkg', 'PKG', 9); add('mnl', 'MNL', 7); add('cec', 'Cost element code', 12); add('inc', 'Include', 7);
   if (mat) { add('wbs', 'WBS element', 18); add('stock', 'Stock account', 20); }
   if (sub) add('wbs', 'WBS element', 18);
-  add('doc', 'Document', 11); add('type', 'Type', 5); add('ce', 'Cost element', 10); add('cen', 'Cost element name', 20);
+  add('doc', 'Document', 11); add('type', 'Type', 5); add('mon', 'Posting month', 8); add('ce', 'Cost element', 10); add('cen', 'Cost element name', 20);
   if (mat) { add('mdoc', 'Material doc.', 11); add('entry', 'Entry date', 10); add('user', 'User', 9); }
   if (sub) { add('vat', 'VAT', 12); add('vrate', 'VAT rate', 8); add('tax', 'Tax code', 7); add('ctype', 'Contract', 8); add('gross', 'Gross price', 11); }
   add('id', 'Line ID', 22); add('cid', 'Coding ID', 6); add('over', 'Typed over', 6); add('flag', 'Count', 6);
@@ -173,10 +173,10 @@ function bucketSheets(wb, b, model, opts) {
   flat.forEach(({ l, it }, fi) => {
     const row = DATA_1 + fi, cell = (c) => wsD.getCell(row, c), bf = isMat ? light(it.dk) : null; l.row = row;
     const v = { id: l.id, date: new Date(l.date + 'T00:00:00Z'), per: undefined, doc: l.doc, type: l.type, ce: l.ce, cen: l.cen, item: itemOf(def, it), desc: isMat ? l.matDesc : (l.desc || l.poText || l.name || l.header), wbs: l.wbs, po: l.po || null, sup: l.sup || null, cert: l.cert || null, cdate: l.cdate ? new Date(l.cdate + 'T00:00:00Z') : null, source: l.source || null,
-      qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, stock: l.stock || null, mdoc: l.refDoc, entry: l.created ? new Date(l.created + 'T00:00:00Z') : null, user: l.user || null, name: l.name || null, net: l.net, vatin: 0, vat: l.vat || null, vrate: l.vrate || null, tax: l.tax || null, ctype: l.ctype || null, gross: l.gross || null };
+      qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, stock: l.stock || null, mdoc: l.refDoc, entry: l.created ? new Date(l.created + 'T00:00:00Z') : null, user: l.user || null, name: l.name || null, mon: ['UE', 'ZB', 'MD', 'HT'].includes(l.type) ? 'Opening' : l.date ? ymLabel(l.date.slice(0, 7)) : '', net: l.net, vatin: 0, vat: l.vat || null, vrate: l.vrate || null, tax: l.tax || null, ctype: l.ctype || null, gross: l.gross || null };
     DC.forEach((c, i) => { if (v[c.k] !== undefined) cell(i + 1).value = v[c.k]; });
     cell(D.amt).numFmt = AMT2; cell(D.qty).numFmt = QTY; cell(D.date).numFmt = 'yyyy-mm-dd';
-    if (isQ) { setS(D.rate, row, 'rate', `IF(ABS($${colL(D.qty)}${row})<0.000001,"",$${colL(D.amt)}${row}/$${colL(D.qty)}${row})`, Math.abs(l.qty) < 0.000001 ? '' : l.amt / l.qty); cell(D.rate).numFmt = '#,##0.00'; if (isMat) cell(D.entry).numFmt = 'yyyy-mm-dd'; if (D.cdate) cell(D.cdate).numFmt = 'yyyy-mm-dd'; }
+    if (isQ) { const rv = Math.abs(l.qty) < 0.000001 ? '' : l.amt / l.qty; if (D.net) setS(D.rate, row, 'rate', `IF(ABS($${colL(D.qty)}${row})<0.000001,"",$${colL(D.amt)}${row}/$${colL(D.qty)}${row})`, rv); else cell(D.rate).value = rv === '' ? null : rv; cell(D.rate).numFmt = '#,##0.00'; if (isMat) cell(D.entry).numFmt = 'yyyy-mm-dd'; if (D.cdate) cell(D.cdate).numFmt = 'yyyy-mm-dd'; }
     if (D.net) {   // Subcontractor: Amount = Net amount + VAT in amount; VAT follows the Summary switch (B5, date C5)
       cell(D.net).numFmt = AMT2; cell(D.vatin).numFmt = AMT2; cell(D.vat).numFmt = AMT2; cell(D.gross).numFmt = '#,##0.00'; cell(D.vrate).numFmt = '0%';
       const V = `$${colL(D.vat)}${row}`, cd = `$${colL(D.cdate)}${row}`, src = `$${colL(D.source)}${row}`;
@@ -186,12 +186,12 @@ function bucketSheets(wb, b, model, opts) {
       else cell(D.vatin).value = 0;
       setS(D.amt, row, 'amt', `$${colL(D.net)}${row}+$${colL(D.vatin)}${row}`, l.amt);
     }
-    setS(D.per, row, 'per', periodF(row, D, 'CutDate'), l.per);
+    setS(D.per, row, 'per', `IF(AND($${colL(D.mon)}${row}<>"Opening",OR($${colL(D.date)}${row}="",$${colL(D.date)}${row}>CutDate)),"Pending",$${colL(D.mon)}${row})`, l.per);
     const ix = (col) => `IFERROR(INDEX(${crN(col)},$${colL(D.cid)}${row})&"","")`;
     const put = (dcol, ccol, val, typed) => { if (typed) cell(dcol).value = val; else setS(dcol, row, 'c' + ccol, ix(ccol), val); };
     put(D.pkg, C.pkg, l.pkg, l.typed.pkg); put(D.mnl, C.mnl, l.mnl, l.typed.mnl); put(D.cec, C.ce, l.cec, l.typed.cec);
     if (l.typed.inc) cell(D.inc).value = l.inc; else setS(D.inc, row, 'inc', `IFERROR(IF(INDEX(${crN(C.inc)},$${colL(D.cid)}${row})="No","No","Yes"),"Yes")`, l.inc);
-    setS(D.over, row, 'over', `IF(AND($${colL(D.pkg)}${row}=${ix(C.pkg)},$${colL(D.mnl)}${row}=${ix(C.mnl)},$${colL(D.cec)}${row}=${ix(C.ce)}),0,1)`, l.s);
+    setS(D.over, row, 'over', `IF(AND(_xlfn.ISFORMULA($${colL(D.pkg)}${row}),_xlfn.ISFORMULA($${colL(D.mnl)}${row}),_xlfn.ISFORMULA($${colL(D.cec)}${row})),0,1)`, l.s);
     setS(D.flag, row, 'flag', `IF($${colL(D.inc)}${row}="No",0,IF($${colL(D.over)}${row}=1,2,1))`, l.inc === 'No' ? 0 : l.s === 1 ? 2 : 1);
     for (let c = 1; c <= nD; c++) { const x = cell(c); x.border = box; x.font = font({ size: c === D.id ? 8 : 10, bold: c >= D.pkg && c <= D.cec, color: c === D.id ? { argb: 'FF' + GREY } : undefined }); }
     cell(D.per).font = font({ bold: true });
@@ -272,7 +272,8 @@ function bucketSheets(wb, b, model, opts) {
     wsP.addConditionalFormatting({ ref: `${a}${PM_1}:${colL(c0 + 2)}${lastItem}`, rules: [{ type: 'expression', formulae: [`AND($${a}$${PM_H - 1}=${CUTLAB},$${colL(1)}${PM_1}<>"")`], style: { fill: cfFill('FFF2CC') }, priority: 60 + p }] }); }
   if (!isQ) for (let p = 0; p < np - 1; p++) { const a = colL(colOf('Amount', p)); wsP.addConditionalFormatting({ ref: `${a}${PM_H}`, rules: [{ type: 'expression', formulae: [`${a}$${PM_H}=${CUTLAB}`], style: { fill: cfFill(GOLD) }, priority: 20 + p }] }); }
   const amtCol = (p) => colOf('Amount', p);
-  return { cod1, toolC, fullWord: toolC ? 'Coded' : 'Fully coded', def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
+  const perRows = new Map(); flat.forEach((f, i) => { const p = pOrd.get(f.l.per), x = perRows.get(p); if (x) x[1] = DATA_1 + i; else perRows.set(p, [DATA_1 + i, DATA_1 + i]); });
+  return { perRows, cod1, toolC, fullWord: toolC ? 'Coded' : 'Fully coded', def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
 }
 
 function revenueSheet(wb, model, opts) {

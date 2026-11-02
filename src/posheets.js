@@ -26,7 +26,8 @@ function poSheets(wb, inf, model, opts, sub) {
   list.forEach((x, i) => {
     const r = R1 + i; [x.po, poTitle(x.po), x.sup, x.tow].forEach((v, c) => { const y = ws.getCell(r, c + 1); y.value = v; y.border = box; y.font = font({ bold: c === 0 }); });
     for (let p = 0; p <= np; p++) { const y = ws.getCell(r, 5 + p); y.numFmt = AMT0; y.border = box; y.font = font({ bold: p === np });
-      if (p < np) setF(y, `SUMIFS(${dr(D.amt)},${dr(D.po)},$A${r},${dr(D.flag)},">0",${dr(D.per)},${colL(5 + p)}$${H})`, sumL(x.lines, (l) => l.per === periods[p]));
+      if (p < np) { const b = inf.perRows.get(p), rr = (c) => `${q(nDat)}!$${colL(c)}$${b[0]}:$${colL(c)}$${b[1]}`;   // only the rows of that period (the Data sheet runs by month)
+        setF(y, b ? `SUMIFS(${rr(D.amt)},${rr(D.po)},$A${r},${rr(D.flag)},">0",${rr(D.per)},${colL(5 + p)}$${H})` : '0', sumL(x.lines, (l) => l.per === periods[p])); }
       else setF(y, `SUM(${colL(5)}${r}:${colL(4 + np - 1)}${r})`, sumL(x.lines, (l) => l.per !== 'Pending')); }
   });
   const last = R1 + list.length - 1, tr = last + 2;
@@ -48,12 +49,12 @@ function poSheets(wb, inf, model, opts, sub) {
   header(wr, H, heads); wr.views = [{ showGridLines: false, state: 'frozen', xSplit: 4, ySplit: H }];
   list.forEach((x, i) => {
     const r = R1 + i, c = sub.stats.certByPo.get(x.po), un = sub.stats.unpostedByPo.get(x.po) || 0;
-    const base = (extra) => `SUMIFS(${dr(D.amt)},${dr(D.po)},$A${r},${dr(D.flag)},">0",${extra})`;
     const ov = sumL(x.lines, (l) => l.per === 'Opening'), td = sumL(x.lines, (l) => l.per !== 'Pending'), tm = sumL(x.lines, (l) => l.per === rep), pe = sumL(x.lines, (l) => l.per === 'Pending');
     [x.po, poTitle(x.po), x.sup, x.tow, c ? (c.contract === 'A2' ? 'Incl. VAT (A2)' : c.contract === 'A1' ? 'Excl. VAT (A1)' : c.contract) : '', c ? c.n.size : null, c && c.first ? new Date(c.first + 'T00:00:00Z') : null, c && c.last ? new Date(c.last + 'T00:00:00Z') : null].forEach((v, k) => {
       const y = wr.getCell(r, k + 1); y.value = v; y.border = box; y.font = font({ bold: k === 0 }); if (k >= 6) y.numFmt = 'yyyy-mm-dd'; });
-    setF(wr.getCell(r, 9), base(`${dr(D.per)},"Opening"`), ov); setF(wr.getCell(r, 11), base(`${dr(D.per)},${CUTLAB}`), tm); setF(wr.getCell(r, 12), base(`${dr(D.per)},"<>Pending"`), td);
-    setF(wr.getCell(r, 10), `L${r}-K${r}`, r2(td - tm)); setF(wr.getCell(r, 13), base(`${dr(D.per)},"Pending"`), pe); wr.getCell(r, 14).value = un || null;
+    const pm = (c) => `'PO per Month'!${colL(c)}${r}`;   // same PO, same row on PO per Month
+    setF(wr.getCell(r, 9), pm(5), ov); setF(wr.getCell(r, 11), `SUMIF('PO per Month'!$E$${H}:$${colL(4 + np - 1)}$${H},${CUTLAB},'PO per Month'!$E${r}:$${colL(4 + np - 1)}${r})`, tm); setF(wr.getCell(r, 12), pm(5 + np), td);
+    setF(wr.getCell(r, 10), `L${r}-K${r}`, r2(td - tm)); setF(wr.getCell(r, 13), pm(4 + np), pe); wr.getCell(r, 14).value = un || null;
     for (let k = 9; k <= 14; k++) { const y = wr.getCell(r, k); y.numFmt = AMT0; y.border = box; y.font = font({ bold: k === 12 }); } wr.getCell(r, 11).fill = fill('FFF2CC');
   });
   const lr = R1 + list.length - 1, trr = lr + 1; wr.getCell(trr, 1).value = 'TOTAL';
