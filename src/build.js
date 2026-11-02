@@ -44,7 +44,7 @@ async function build(opts) {
   const wsR = wb.addWorksheet('Rules', { properties: { tabColor: { argb: 'FF' + W.GREY } } }), wsC = wb.addWorksheet('Checks', { properties: { tabColor: { argb: 'FF' + W.GREY } } });
   const stats = { file: require('path').basename(opts.cji3), grand: cji.grand, sum: cji.sum, dupes, zyPaired, cost: costAll, sub: subRes ? subRes.stats : null, poInfo: null,
     noGroup: model.buckets.find((b) => b.def.id === 'Material') ? model.buckets.find((b) => b.def.id === 'Material').items.filter((it) => !it.group).length : undefined };
-  const ex = O.writeExpenses(wsE, model, infos, opts);
+  const ex = require('./expenses').writeExpenses(wsE, model, infos, opts, prev, wb);
   stats.poInfo = poInfo; stats.diffRef = O.writeSummary(wsS, model, infos, ex, opts, revInfo, stats).diffRef; O.writeChecks(wsC, model, infos, ex, opts, stats); O.writeRules(wsR, opts);
   // cut-date list: month ends from two months before the first posting to two months after the last
   const cal = wb.addWorksheet('_Cal', { state: 'hidden' }); cal.getCell('A1').value = 'Cut dates'; const ms = []; { const f = lines.map((l) => l.date).filter(Boolean).sort()[0].slice(0, 7), z = lastDate.slice(0, 7); let [y, m] = f.split('-').map(Number); m -= 2; while (m < 1) { m += 12; y--; } let [ey, em] = z.split('-').map(Number); em += 2; while (em > 12) { em -= 12; ey++; }
@@ -55,6 +55,7 @@ async function build(opts) {
   [['Project', opts.project], ['Report month', model.reportLabel], ['CJI3', stats.file], ['CJI3 lines', cji.lines.length], ['CJI3 grand total', cji.grand], ['MB52', opts.mb52 ? require('path').basename(opts.mb52) : ''], ['ME2N', opts.me2n ? require('path').basename(opts.me2n) : ''], ['Generated', new Date().toISOString()]].forEach((r, i) => { meta.getCell(i + 1, 1).value = r[0]; meta.getCell(i + 1, 2).value = r[1]; });
   log(`Column widths widened where a number or date would show ####: ${fitWidths(wb)} columns`);
   await wb.xlsx.writeFile(opts.out);
+  await require('./dynarray').markDynamic(opts.out, ex.anchors); log(`Dynamic lists: ${ex.anchors.length} (Expenses list ${ex.shownN} rows)`);
   log(`Written ${opts.out} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   return { model, infos, stats, ex };
 }

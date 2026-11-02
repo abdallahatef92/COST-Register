@@ -37,6 +37,10 @@ function readPrev(file) {
       }
     }
   }
-  return { coding, over, items, typed, file };
+  // the PKG list on top of the Expenses sheet (code + name), in its order
+  const pkgList = []; const se = wb.Sheets.Expenses;
+  if (se) { const { PK_1, PK_N, PK_H } = require('./expenses'), v = (r, c) => { const x = se[XLSX.utils.encode_cell({ r: r - 1, c })]; return x ? str(x.v) : ''; };
+    if (v(PK_H, 0) === 'PKG' && v(PK_H, 1) === 'Name') for (let i = 0; i < PK_N; i++) { const code = v(PK_1 + i, 0); if (code) pkgList.push({ code, name: v(PK_1 + i, 1) }); } }
+  return { coding, over, items, typed, file, pkgList };
 }
 module.exports = { readPrev, CODING_H, DATA_H };

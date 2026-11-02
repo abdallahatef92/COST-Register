@@ -4,53 +4,10 @@ const W = require('./workbook');
 const { r2, colL } = require('./util');
 const { RULES, GA } = require('./rules');
 const { fill, font, box, q, setF, title, header, itemOf, descOf, AMT0, AMT2, PCT, NAVY, GREY, RED, GOLD, YELLOW } = W;
-const E_H = 6, E_1 = 7;
-
-function writeExpenses(ws, model, infos, opts) {
-  const np = model.periods.length, cTo = 6 + np + 1, cTm = 6 + np + 2, P = model.periods, rep = model.reportLabel, nm = (ls, f) => r2(ls.filter(f).reduce((s, l) => s + l.amt, 0));
-  title(ws, 'Expenses — ' + opts.project + ' — coded actual cost', 'Every item of every bucket, with its codes, by posting month. Live links to the "per Month" sheets; counted lines only. To date = up to the cut date on Summary; later postings sit in Pending. Filter by Bucket, PKG, MNL or Cost element code.');
-  header(ws, E_H, ['Bucket', 'Item', 'Description', 'PKG', 'MNL', 'Cost element code', ...P, 'To date', 'This month']);
-  let row = E_1, excTo = 0; const colSum = Array(np + 2).fill(0), lastP = colL(6 + np), thisF = (r) => `SUMIF($G$${E_H}:$${lastP}$${E_H},${W.CUTLAB},G${r}:${lastP}${r})`;
-  const put = (r, vals) => vals.forEach((v, c) => { const x = ws.getCell(r, c + 1); if (v && v.formula) setF(x, v.formula, v.result); else x.value = v; x.border = box; x.font = font(); });
-  const cellsFor = (pm, inf, src, ls) => {
-    const cells = [];
-    for (let p = 0; p <= np; p++) cells.push({ formula: `${pm}!${colL(inf.amtCol(p))}${src}`, result: nm(ls, (l) => (p < np ? l.per === P[p] : l.per !== 'Pending')) });
-    cells.push({ formula: thisF(row), result: nm(ls, (l) => l.per === rep) });
-    return cells;
-  };
-  for (const inf of infos) {
-    const pm = q(inf.nPm), all = inf.b.items.flatMap((it) => it.lines);
-    for (const it of inf.b.items) {
-      const cells = cellsFor(pm, inf, it.pmRow, it.lines.filter((l) => l.inc === 'Yes' && l.s === 0));
-      put(row, [inf.def.id, itemOf(inf.def, it), descOf(inf.def, it), { formula: `${pm}!${colL(inf.k + 1)}${it.pmRow}`, result: it.pkg }, { formula: `${pm}!${colL(inf.k + 2)}${it.pmRow}`, result: it.mnl }, { formula: `${pm}!${colL(inf.k + 3)}${it.pmRow}`, result: it.ce }, ...cells]);
-      cells.forEach((c, j) => { colSum[j] += c.result; });
-      for (let c = 7; c <= cTm; c++) ws.getCell(row, c).numFmt = AMT0; ws.getCell(row, cTo).font = font({ bold: true }); row++;
-    }
-    const cells = cellsFor(pm, inf, inf.rHand, all.filter((l) => l.inc === 'Yes' && l.s === 1)); cells.forEach((c, j) => { cells[j] = c; });
-    for (let p = 0; p <= np; p++) cells[p].formula = `${pm}!${colL(inf.amtCol(p))}${inf.rHand}`;
-    put(row, [inf.def.id, 'Hand-coded lines', 'typed over on the ' + inf.nDat + ' sheet', null, null, null, ...cells]);
-    cells.forEach((c, j) => { colSum[j] += c.result; }); for (let c = 7; c <= cTm; c++) ws.getCell(row, c).numFmt = AMT0; ws.getCell(row, 2).font = font({ italic: true, color: { argb: 'FF' + GREY } }); row++;
-  }
-  const last = row - 1; row++; const tot = row, exc = row + 1;
-  ws.getCell(tot, 1).value = 'TOTAL counted'; ws.getCell(tot, 1).font = font({ bold: true, color: { argb: 'FF' + NAVY } });
-  ws.getCell(exc, 1).value = 'Excluded by user (memo – not in the total)'; ws.getCell(exc, 1).font = font({ color: { argb: 'FF' + GREY } });
-  const allLines = infos.flatMap((inf) => inf.b.items.flatMap((it) => it.lines));
-  for (let c = 7; c <= cTm; c++) {
-    const cl = colL(c), t = ws.getCell(tot, c), x = ws.getCell(exc, c);
-    setF(t, `SUM(${cl}${E_1}:${cl}${last})`, r2(colSum[c - 7])); t.numFmt = AMT0; t.font = font({ bold: true }); t.border = box; t.fill = fill('DDEBF7');
-    const ev = nm(allLines, (l) => l.inc === 'No' && (c === cTo ? true : c === cTm ? l.per === rep : l.per === P[c - 7]));
-    if (c === cTo) excTo = ev;
-    if (c === cTm) setF(x, thisF(exc), ev); else setF(x, infos.map((inf) => `${q(inf.nPm)}!${colL(inf.amtCol(c <= cTo ? c - 7 : np))}${inf.rExc}`).join('+'), ev);
-    x.numFmt = AMT0; x.font = font({ color: { argb: 'FF' + GREY } }); x.border = box;
-  }
-  [24, 16, 44, 12, 8, 16].forEach((w, i) => { ws.getColumn(i + 1).width = w; }); for (let c = 7; c <= cTm; c++) ws.getColumn(c).width = 14;
-  ws.views = [{ showGridLines: false, state: 'frozen', xSplit: 3, ySplit: E_H }]; ws.autoFilter = { from: { row: E_H, column: 1 }, to: { row: last, column: cTm } };
-  return { tot, exc, last, cTo, cTm, total: r2(colSum[np]), excTo, pending: r2(colSum[np - 1]), np };
-}
 
 function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   const np = model.periods.length, P = model.periods, nm = np - 2, ed = 'Expenses!', rep = model.reportLabel, CUTC = 'Summary!$B$4';
-  const rc = (c) => `${ed}$${colL(c)}$${E_1}:$${colL(c)}$${ex.last}`, bk = `${ed}$A$${E_1}:$A$${ex.last}`, sb = (c, id) => `SUMIFS(${rc(c)},${bk},"${id}")`, NUM = '#,##0;[Red]\\-#,##0;"-"', PC = '0.0%;[Red]\\-0.0%;"-"';
+  const rc = (c) => ex.rng(c), bk = ex.bk, sb = (c, id) => `SUMIFS(${rc(c)},${bk},"${id}")`, NUM = '#,##0;[Red]\\-#,##0;"-"', PC = '0.0%;[Red]\\-0.0%;"-"';
   const counted = (inf) => inf.b.items.flatMap((it) => it.lines).filter((l) => l.inc === 'Yes'), sum = (ls) => r2(ls.reduce((s, l) => s + l.amt, 0));
   const pastel = (i) => W.BAND[i % W.BAND.length];
   const T = (c, v, o = {}) => { const x = ws.getCell(c); x.value = v; x.font = font(o); return x; };
@@ -82,8 +39,8 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   const excl = r2(infos.flatMap((inf) => inf.b.items.flatMap((it) => it.lines)).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0));
   const clientDed = r2(model.lines.filter((l) => l.bucket === 'Revenue' && l.ce[0] !== '4').reduce((s, l) => s + l.amt, 0));
   // ---- KPI cards (row 6 labels, row 7 values)
-  const cards = [['Previous (before this month)', r2(toDate - thisM), `${colL(ex.cTo) === 'x' ? '' : ''}C7-B7`, null], ['="This month · "&D4', thisM, `${ed}${colL(ex.cTm)}${ex.tot}`, 'FFF2CC'], ['To date (counted)', toDate, `${ed}${colL(ex.cTo)}${ex.tot}`, null],
-    ['Pending – not in To date', pend, `${ed}${colL(6 + np)}${ex.tot}`, null], ['Excluded by user', excl, `${ed}${colL(ex.cTo)}${ex.exc}`, null], ['Difference to CJI3 (must be 0)', 0, null, null]];
+  const cards = [['Previous (before this month)', r2(toDate - thisM), `C7-B7`, null], ['="This month · "&D4', thisM, `SUM(${ex.rng(ex.cTm)})`, 'FFF2CC'], ['To date (counted)', toDate, `SUM(${ex.rng(ex.cTo)})`, null],
+    ['Pending – not in To date', pend, `SUM(${ex.rng(ex.cPend)})`, null], ['Excluded by user', excl, ex.excRef, null], ['Difference to CJI3 (must be 0)', 0, null, null]];
   cards.forEach(([l, v, f, bg], i) => { const c = i + 1, a = ws.getCell(6, c), x = ws.getCell(7, c);
     if (l[0] === '=') setF(a, l.slice(1), 'This month · ' + rep); else a.value = l;
     a.font = font({ bold: true, size: 9, color: { argb: 'FFFFFFFF' } }); a.fill = fill(i === 1 ? GOLD : i === 5 ? RED : NAVY); a.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
@@ -114,7 +71,7 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   // current-month column tint (follows the cut date)
   ws.addConditionalFormatting({ ref: `A${firstM + 1}:${colL(3 + nb)}${lastM}`, rules: [{ type: 'expression', formulae: [`$A${firstM + 1}=$D$4`], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFFF2CC' } }, font: { bold: true } }, priority: 1 }] });
   // ---- 2. cost by bucket
-  sec(r, '2. Cost by bucket', 'live – from the Expenses sheet, so the cut date flows through; click a bucket to open its Coding sheet'); r++;
+  sec(r, '2. Cost by bucket', 'live – from the counted lines behind the Expenses sheet, so the cut date flows through; click a bucket to open its Coding sheet'); r++;
   head(r, ['Bucket', 'Lines', 'Opening', 'Previous', 'This month', 'To date', '% of to date', 'Pending', 'Coded share', 'Excluded (memo)', 'Check (must be 0)']); r++;
   const b0 = r, tot = infos.length + b0;
   infos.forEach((inf, i) => {
@@ -168,6 +125,9 @@ function writeChecks(ws, model, infos, ex, opts, stats) {
   add('Duplicate line keys (document | row | year)', null, stats.dupes, 'zero', 'A key that appears twice would be double-counted.');
   add('Lines with no bucket (Unclassified)', null, model.lines.filter((l) => l.bucket === 'Unclassified').length, 'zero', 'A cost element without a rule – add one in the rule table.');
   add('Register vs CJI3 cost – difference', stats.diffRef, 0, 'abs', 'Expenses counted + excluded + client deductions − CJI3 cost.');
+  if (ex && ex.stack) { add('Expenses: total vs the per Month sheets', `ROUND(SUM(${ex.rng(ex.cTo)})-(${infos.map((inf) => `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rTot}`).join('+')}),2)`, 0, 'abs', 'Items + hand-coded lines behind the Expenses list = TOTAL counted of every bucket.');
+    add('Expenses: hand-coded blocks that overflow or fail', ex.stack.anchors.filter((a) => a.sheet === '_Stack').map((a) => `ISERROR(_Stack!${a.cell})`).join('+'), 0, 'zero', 'Each bucket has room for 1,000 hand-coded item × PKG × MNL × code combinations.');
+    add('Expenses: money on a PKG that is not in the PKG list', `Expenses!I${ex.R_TOT - 1}`, ex.outTd, 'abs', 'Add the PKG to the list on top of the Expenses sheet (or correct the code).'); }
   for (const inf of infos) add(inf.def.id + ': per Month total vs Data sheet', `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rDiff}`, 0, 'abs', 'Must be 0.');
   for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIFS(${q(inf.nCod)}!${colL(inf.C.st)}7:${colL(inf.C.st)}${inf.lastC},"<>Fully coded",${q(inf.nCod)}!${colL(inf.C.id)}7:${colL(inf.C.id)}${inf.lastC},">0")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
   for (const inf of infos) add(inf.def.id + ': lines typed over', `SUM(${q(inf.nDat)}!${colL(inf.D.over)}5:${colL(inf.D.over)}${inf.lastD})`, inf.b.items.flatMap((it) => it.lines).filter((l) => l.s === 1).length, 'info', 'Lines coded differently from their item.');
@@ -192,4 +152,4 @@ function writeRules(ws, opts) {
   for (const [sub, list] of Object.entries(GA)) { ws.getCell(row, 2).value = sub; ws.getCell(row, 2).font = font({ bold: true }); ws.getCell(row, 3).value = list.join(', '); ws.getCell(row, 3).alignment = { wrapText: true }; ws.getCell(row, 3).font = font(); row++; }
   [5, 62, 50, 40].forEach((w, i) => { ws.getColumn(i + 1).width = w; }); ws.views = [{ showGridLines: false }];
 }
-module.exports = { writeExpenses, writeSummary, writeChecks, writeRules };
+module.exports = { writeSummary, writeChecks, writeRules };
