@@ -27,7 +27,7 @@ function readCji3(file) {
       qty: num(g(r, 'Total quantity')), unit: str(g(r, 'Unit of Measure')) || str(g(r, 'Posted unit of meas.')),
       name: str(g(r, 'Name')), header: str(g(r, 'Document Header Text')), poText: str(g(r, 'Purchase Order Text')), po: str(g(r, 'Purchasing Document')),
       order: str(g(r, 'Partner Object')), orderName: str(g(r, 'Partner object name')), offset: str(g(r, 'Name of offsetting account')),
-      refDoc: str(g(r, 'Ref. document number')),
+      refDoc: str(g(r, 'Ref. document number')), mvt: '', mvtText: '', issue: '', supplier: '',
     });
   }
   const sum = r2(lines.reduce((s, l) => s + l.amt, 0));

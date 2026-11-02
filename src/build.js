@@ -6,6 +6,7 @@ const { classify } = require('./rules');
 const { readCji3 } = require('./cji3');
 const { readGroups, NO_GRP } = require('./groups');
 const { readPrev } = require('./prev');
+const { readMb51, attach } = require('./mb51');
 const { r2 } = require('./util');
 
 async function build(opts) {
@@ -14,6 +15,7 @@ async function build(opts) {
   const dupes = cji.lines.length - new Set(cji.lines.map((l) => l.id)).size;
   const zyPaired = classify(cji.lines);
   const groups = readGroups({ me2n: opts.me2n, mb52: opts.mb52 }); log(`Material groups: ${groups.map.size} materials (ME2N ${groups.src.me2n}, MB52 ${groups.src.mb52})`);
+  if (opts.mb51) { const mb = readMb51(String(opts.mb51).split(',')); const hit = attach(cji.lines, mb); log(`MB51: ${mb.lines} movement lines, issue type found for ${hit} of ${cji.lines.filter((l) => l.bucket === 'Material').length} material lines`); }
   const prev = readPrev(opts.prev); if (prev) log(`Last report: ${prev.items} coded items, ${prev.typed} typed-over lines carried over`);
   const model = buildModel(cji.lines, { groups: groups.map, prev });
   model.firstLabel = model.periods[1];

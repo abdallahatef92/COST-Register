@@ -1,12 +1,12 @@
 'use strict';
 const { r2, r3, ymLabel, nextYm } = require('./util');
-const { famLabel, divLabel, treeCmp, NO_GRP } = require('./groups');
+const { famLabel, divLabel, grpLabel, divKey, FAM_RANK, famOf, NO_GRP } = require('./groups');
 
 // Bucket definitions. key(l) = the unique-list item the line belongs to; cols = descriptor columns of that item.
 const orderKey = (l) => l.order || '(no order)';
 const BUCKETS = [
   { id: 'Material', tab: '1F3864', mnl: 'MAT', qty: true, key: (l) => l.mat || '(no material)',
-    cols: [['Family', 22], ['Division', 20], ['Group', 11], ['Material', 11], ['Description', 40], ['Unit', 6]] },
+    cols: [['Family', 22], ['Division', 22], ['Material group', 26], ['Material', 11], ['Description', 40], ['Unit', 6]] },
   { id: 'Subcontractor', tab: '2F5597', mnl: 'SUB', key: (l) => l.po || '(no PO)', cols: [['PO', 12], ['Service text', 52]] },
   { id: 'Subcontractor deductions', short: 'Sub deductions', tab: '2F5597', mnl: 'SUB', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
   { id: 'Other direct cost', short: 'Other direct', tab: '1F3864', mnl: 'OTHER', key: (l) => l.cen || '(none)', cols: [['Cost element name', 34]] },
@@ -23,7 +23,7 @@ for (const b of BUCKETS) b.short = b.short || b.id;
 function descriptors(b, first, groups) {
   switch (b.id) {
     case 'Material': { const gi = groups.get(first.mat); const g = gi ? gi.group : '';
-      return { vals: [famLabel(g), divLabel(g), g || NO_GRP, first.mat || '(no material)', first.matDesc, first.unit || (gi && gi.unit) || ''], group: g }; }
+      return { vals: [famLabel(g), divLabel(g), grpLabel(g), first.mat || '(no material)', first.matDesc, first.unit || (gi && gi.unit) || ''], group: g }; }
     case 'Subcontractor': return { vals: [first.po || '(no PO)', first.poText || first.name] };
     case 'House rent': case 'Equipment / fuel': case 'Fleet / transportation': return { vals: [first.order || '(no order)', first.orderName || (first.order ? '' : first.cen)] };
     case 'G&A': return { vals: [first.sub || 'G&A', first.cen] };
@@ -51,7 +51,14 @@ function buildModel(lines, { groups = new Map(), prev = null } = {}) {
       return { key, lines: ls, vals: d.vals, group: d.group || '', total: r2(ls.reduce((s, l) => s + l.amt, 0)),
         firstP: act.length ? ymLabel(act[0].ym) : 'Opening', lastP: act.length ? ymLabel(act[act.length - 1].ym) : 'Opening' };
     });
-    items.sort((a, b) => (def.id === 'Material' ? treeCmp(a.group, b.group) : 0) || Math.abs(b.total) - Math.abs(a.total) || (a.key < b.key ? -1 : 1));
+    if (def.id === 'Material') {
+      // the report's order: family (fixed order), then division, group and material each largest first
+      const tot = (f) => { const m = new Map(); for (const it of items) { const k = f(it); m.set(k, (m.get(k) || 0) + Math.abs(it.total)); } return m; };
+      for (const it of items) { it.dk = divKey(it.group); it.fam = famOf(it.group); }
+      const dT = tot((it) => it.dk), gT = tot((it) => it.dk + '|' + it.group);
+      const fr = (it) => (it.group ? (FAM_RANK.has(it.fam) ? FAM_RANK.get(it.fam) : 98) : 99);
+      items.sort((a, b) => fr(a) - fr(b) || (a.fam < b.fam ? -1 : a.fam > b.fam ? 1 : 0) || dT.get(b.dk) - dT.get(a.dk) || (a.dk < b.dk ? -1 : a.dk > b.dk ? 1 : 0) || gT.get(b.dk + '|' + b.group) - gT.get(a.dk + '|' + a.group) || (a.group < b.group ? -1 : a.group > b.group ? 1 : 0) || Math.abs(b.total) - Math.abs(a.total) || (a.key < b.key ? -1 : 1));
+    } else items.sort((a, b) => Math.abs(b.total) - Math.abs(a.total) || (a.key < b.key ? -1 : 1));
     items.forEach((it, i) => { it.id = i + 1; const p = prev && prev.coding.get(def.id); const c = p && p.get(it.key); it.isNew = !!prev && !c;
       it.pkg = c ? c.pkg : ''; it.mnl = c && c.mnl ? c.mnl : def.mnl; it.ce = c ? c.ce : ''; it.inc = c && c.inc ? c.inc : 'Yes'; });
     buckets.push({ def, items, count: bl.length, total: r2(bl.reduce((s, l) => s + l.amt, 0)) });

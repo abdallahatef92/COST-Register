@@ -15,7 +15,7 @@ function writeExpenses(ws, model, infos, opts, extra) {
   for (const inf of infos) {
     const pm = q(inf.nPm), all = inf.b.items.flatMap((it) => it.lines);
     inf.b.items.forEach((it, i) => {
-      const src = 6 + i, own = it.lines.filter((l) => l.inc === 'Yes' && l.s === 0);
+      const src = it.pmRow, own = it.lines.filter((l) => l.inc === 'Yes' && l.s === 0);
       const cells = [];
       for (let p = 0; p <= np; p++) cells.push({ formula: `${pm}!${colL(inf.amtCol(p))}${src}`, result: r2(own.filter((l) => (p < np ? l.per === model.periods[p] : true)).reduce((s, l) => s + l.amt, 0)) });
       cells.push({ formula: `${pm}!${colL(inf.amtCol(np - 1))}${src}`, result: cells[np - 1].result });
@@ -103,8 +103,8 @@ function writeChecks(ws, model, infos, ex, opts, stats) {
   add('Lines with no bucket (Unclassified)', null, model.lines.filter((l) => l.bucket === 'Unclassified').length, 'zero', 'A cost element without a rule – add one in the rule table.');
   add('Register vs CJI3 cost – difference', `Summary!I5`, 0, 'abs', 'Expenses counted + excluded + client deductions − CJI3 cost.');
   for (const inf of infos) add(inf.def.id + ': per Month total vs Data sheet', `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rDiff}`, 0, 'abs', 'Must be 0.');
-  for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIF(${q(inf.nCod)}!${colL(inf.C.st)}7:${colL(inf.C.st)}${inf.lastC},"<>Fully coded")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
-  for (const inf of infos) add(inf.def.id + ': lines typed over', `SUM(${q(inf.nDat)}!S5:S${inf.lastD})`, inf.b.items.flatMap((it) => it.lines).filter((l) => l.s === 1).length, 'info', 'Lines coded differently from their item.');
+  for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIFS(${q(inf.nCod)}!${colL(inf.C.st)}7:${colL(inf.C.st)}${inf.lastC},"<>Fully coded",${q(inf.nCod)}!${colL(inf.C.id)}7:${colL(inf.C.id)}${inf.lastC},">0")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
+  for (const inf of infos) add(inf.def.id + ': lines typed over', `SUM(${q(inf.nDat)}!${colL(inf.D.over)}5:${colL(inf.D.over)}${inf.lastD})`, inf.b.items.flatMap((it) => it.lines).filter((l) => l.s === 1).length, 'info', 'Lines coded differently from their item.');
   add('ZY accrual-reversal lines paired to a bucket', null, stats.zyPaired, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
   if (stats.noGroup !== undefined) add('Materials without a material group', null, stats.noGroup, 'info', 'Load MB52 / ME2N to give them a family and division.');
   rows.forEach(([n, f, v, ok, note], i) => { const r = 5 + i; ws.getCell(r, 1).value = n; const x = ws.getCell(r, 2); if (f) setF(x, f, v); else x.value = v; x.numFmt = '#,##0.00';

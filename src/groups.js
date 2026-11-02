@@ -9,10 +9,16 @@ const FAMILY = [['M', 'Materials'], ['P', 'Plant & tools'], ['SP', 'Spare parts,
   ['L', 'Labour'], ['OVM', 'Overhead'], ['WST', 'Wastage']];
 const FAM_NAME = new Map(FAMILY), FAM_RANK = new Map(FAMILY.map(([k], i) => [k, i]));
 const NO_GRP = '(no material group)';
+const NAMES = require('./groupnames.json');
+const nm = (k) => NAMES[k] || (FAM_NAME.get(k) || '');
+const lab = (k) => (nm(k) ? k + ' · ' + nm(k) : k);
 const famOf = (g) => { const m = /^[A-Z&]+/.exec(str(g)); return m ? m[0] : ''; };
-const divOf = (g) => { const f = famOf(g); const m = new RegExp('^' + f + '(\\d{2})').exec(str(g)); return f && m ? f + m[1] : ''; };
+const DIV_FAMILIES = new Set(['M', 'P', 'S']);   // the families whose groups sit under two-digit divisions in SAP (M03, P04 …)
+const divOf = (g) => { const f = famOf(g); const m = new RegExp('^' + f + '(\\d{2})').exec(str(g)); return f && m && DIV_FAMILIES.has(f) ? f + m[1] : ''; };
 const famLabel = (g) => (!g ? NO_GRP : famOf(g) ? famOf(g) + ' · ' + (FAM_NAME.get(famOf(g)) || famOf(g)) : g);
-const divLabel = (g) => (!g ? NO_GRP : divOf(g) || famOf(g) + ' · no SAP division');
+const divLabel = (g) => (!g ? NO_GRP : divOf(g) ? lab(divOf(g)) : famOf(g) + ' · no SAP division');
+const grpLabel = (g) => (!g ? NO_GRP : lab(g));
+const divKey = (g) => (!g ? NO_GRP : divOf(g) || famOf(g) || g);
 const treeKey = (g) => { const f = famOf(g); return [g ? (FAM_RANK.has(f) ? FAM_RANK.get(f) : 98) : 99, f, divOf(g), str(g)]; };
 function treeCmp(a, b) { const x = treeKey(a), y = treeKey(b); for (let i = 0; i < 4; i++) { if (x[i] < y[i]) return -1; if (x[i] > y[i]) return 1; } return 0; }
 
@@ -30,4 +36,4 @@ function readGroups({ me2n, mb52 }) {
   read(mb52, 'Material', 'Material Group', 'Base Unit of Measure', 'MB52');
   return { map, src };
 }
-module.exports = { FAMILY, famOf, divOf, famLabel, divLabel, treeCmp, readGroups, NO_GRP };
+module.exports = { FAMILY, FAM_RANK, famOf, divOf, famLabel, divLabel, grpLabel, divKey, treeCmp, readGroups, NO_GRP };
