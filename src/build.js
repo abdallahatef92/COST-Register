@@ -7,6 +7,7 @@ const { readCji3 } = require('./cji3');
 const { readGroups, NO_GRP } = require('./groups');
 const { readPrev } = require('./prev');
 const { r2 } = require('./util');
+const { fitWidths } = require('./fit');
 
 async function build(opts) {
   const t0 = Date.now(), log = opts.log || (() => {});
@@ -39,6 +40,7 @@ async function build(opts) {
   wsS.getCell('B4').dataValidation = { type: 'list', allowBlank: false, formulae: [`_Cal!$A$2:$A$${ms.length + 1}`], showErrorMessage: true, errorTitle: 'Cut date', error: 'Pick a month-end from the list.', showInputMessage: true, promptTitle: 'Cut date', prompt: 'Pick the month-end the report should run to. Later postings go to Pending.' };
   const meta = wb.addWorksheet('_Meta', { state: 'hidden' });
   [['Project', opts.project], ['Report month', model.reportLabel], ['CJI3', stats.file], ['CJI3 lines', cji.lines.length], ['CJI3 grand total', cji.grand], ['MB52', opts.mb52 ? require('path').basename(opts.mb52) : ''], ['ME2N', opts.me2n ? require('path').basename(opts.me2n) : ''], ['Generated', new Date().toISOString()]].forEach((r, i) => { meta.getCell(i + 1, 1).value = r[0]; meta.getCell(i + 1, 2).value = r[1]; });
+  log(`Column widths widened where a number or date would show ####: ${fitWidths(wb)} columns`);
   await wb.xlsx.writeFile(opts.out);
   log(`Written ${opts.out} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   return { model, infos, stats, ex };
