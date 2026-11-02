@@ -86,7 +86,8 @@ function bucketSheets(wb, b, model, opts) {
   const { cols: DC, D } = dlayout(def), nD = DC.length;
   // the Subcontractor Coding sheet is laid out exactly as the Subcontract report's Coding sheet (band rows 1-2, header row 4, flat list from row 5, DIV first)
   const toolC = def.id === 'Subcontractor', cod1 = toolC ? 5 : COD_1;
-  const C = toolC ? { div: 5, pkg: 6, mnl: 7, ce: 8, st: 9, qty: 10, rate: 11, td: 12, tm: 13, nw: 14, pos: 15, subs: 16, fp: 17, lp: 18, id: 19, inc: 20, key: 21 }
+  const C = toolC ? { div: 5, pkg: 6, mnl: 7, ce: 8, st: 9, inc: 10, qty: 11, rate: 12, td: 13, tm: 14, nw: 15, pos: 16, subs: 17, fp: 18, lp: 19, id: 20, key: 21 }
+    : isMat ? { pkg: k + 1, mnl: k + 2, ce: k + 3, inc: k + 4, st: k + 5, qty: k + 6, rate: k + 7, td: k + 8, tm: k + 9, nw: k + 10, fp: k + 11, lp: k + 12, ln: k + 13, id: k + 14, key: k + 15 }
     : { pkg: k + 1, mnl: k + 2, ce: k + 3, inc: k + 4, st: k + 5, td: k + 6, tm: k + 7, nw: k + 8, fp: k + 9, lp: k + 10, ln: k + 11, id: k + 12, key: k + 13 };
   const nCod = def.short + ' Coding', nDat = def.short + ' Data', nPm = def.pmName || (def.short + ' per Month');
   const wsC = wb.addWorksheet(nCod, { properties: { tabColor: { argb: 'FF' + GOLD }, outlineProperties: { summaryBelow: false } } });
@@ -117,7 +118,7 @@ function bucketSheets(wb, b, model, opts) {
   if (toolC) ({ tdSum, fullSum, nFull, nPart, nNot, nEx } = toolCoding(wsC, b, def, C, cod1, lastC, model, opts, blockTerms, D, nDat));
   else {
   title(wsC, def.id + ' Coding — ' + opts.project, 'Unique list: type PKG, MNL, Cost element code and Include ONCE per item (yellow). Every line on "' + nDat + '" reads its code from here; type over a code on the Data sheet to code a single line differently.' + (isTree ? ' Grouped and largest first; the − / + at the left folds a group.' : ''));
-  header(wsC, COD_H, [...def.cols.map((c) => c[0]), 'PKG', 'MNL', 'Cost element code', 'Include', 'Status', 'To date', 'This month', 'New', 'First posted', 'Last posted', 'Lines', 'ID', 'Item key'], ['PKG', 'MNL', 'Cost element code', 'Include']);
+  header(wsC, COD_H, [...def.cols.map((c) => c[0]), 'PKG', 'MNL', 'Cost element code', 'Include', 'Status', ...(isMat ? ['Qty to date', 'Rate'] : []), 'To date', 'This month', 'New', 'First posted', 'Last posted', 'Lines', 'ID', 'Item key'], ['PKG', 'MNL', 'Cost element code', 'Include']);
   b.items.forEach((it) => {
     const row = it.crow, bf = isTree ? light(it.dk) : null, rg = (col) => '$' + colL(col) + row;
     if (isTree) wsC.getRow(row).outlineLevel = 1;
@@ -127,6 +128,9 @@ function bucketSheets(wb, b, model, opts) {
     setF(wsC.getCell(row, C.st), `IF(AND(${rg(C.pkg)}<>"",${rg(C.mnl)}<>"",${rg(C.ce)}<>""),"Fully coded",IF(OR(${rg(C.pkg)}<>"",${rg(C.ce)}<>""),"Partly coded","Not coded"))`, status);
     const incl = it.lines.filter((l) => l.inc === 'Yes'); it.tot = r2(incl.filter((l) => l.per !== 'Pending').reduce((s, l) => s + l.amt, 0)); it.tmv = r2(incl.filter((l) => l.per === rep).reduce((s, l) => s + l.amt, 0));
     setF(wsC.getCell(row, C.td), blockTerms(it, D.amt, '">0"', '"<>Pending"').join('+') || '0', it.tot);
+    if (isMat) { const qv = Math.round(incl.filter((l) => l.per !== 'Pending').reduce((s2, l) => s2 + (l.qty || 0), 0) * 1e6) / 1e6, xq = wsC.getCell(row, C.qty), xr = wsC.getCell(row, C.rate);
+      setF(xq, blockTerms(it, D.qty, '">0"', '"<>Pending"').join('+') || '0', qv); xq.numFmt = QTY; xq.border = box; xq.font = font();
+      setF(xr, `IF(ABS(${colL(C.qty)}${row})<0.000001,"",${colL(C.td)}${row}/${colL(C.qty)}${row})`, Math.abs(qv) < 1e-6 ? '' : it.tot / qv); xr.numFmt = '#,##0.00;[Red]-#,##0.00;""'; xr.border = box; xr.font = font(); }
     setF(wsC.getCell(row, C.tm), blockTerms(it, D.amt, '">0"', CUTLAB).join('+') || '0', it.tmv);
     [[C.nw, it.isNew ? 'New' : null], [C.fp, it.firstP], [C.lp, it.lastP], [C.ln, it.lines.length], [C.id, it.id], [C.key, it.key]].forEach(([c, v]) => { wsC.getCell(row, c).value = v; });
     for (const nm of ['st', 'td', 'tm', 'nw', 'fp', 'lp', 'ln', 'id', 'key']) { const x = wsC.getCell(row, C[nm]); x.border = box; x.font = font(nm === 'key' ? { size: 8, color: { argb: 'FF' + GREY } } : {}); }
@@ -147,7 +151,7 @@ function bucketSheets(wb, b, model, opts) {
     setF(x, f, v); x.numFmt = nf; x.font = font({ size: 14, bold: true, color: { argb: 'FF' + NAVY } }); x.fill = fill('DDEBF7'); x.alignment = { horizontal: 'center' };
   });
   wsC.getRow(3).height = 24; def.cols.forEach((c, i) => { wsC.getColumn(i + 1).width = c[1]; });
-  [[C.pkg, 12], [C.mnl, 8], [C.ce, 16], [C.inc, 9], [C.st, 13], [C.td, 15], [C.tm, 16], [C.nw, 6], [C.fp, 10], [C.lp, 10], [C.ln, 7], [C.id, 6], [C.key, 18]].forEach(([c, w]) => { wsC.getColumn(c).width = w; });
+  [[C.pkg, 12], [C.mnl, 8], [C.ce, 16], [C.inc, 9], [C.st, 13], ...(isMat ? [[C.qty, 12], [C.rate, 11]] : []), [C.td, 15], [C.tm, 16], [C.nw, 6], [C.fp, 10], [C.lp, 10], [C.ln, 7], [C.id, 6], [C.key, 18]].forEach(([c, w]) => { wsC.getColumn(c).width = w; });
   wsC.views = [{ showGridLines: false, state: 'frozen', xSplit: k, ySplit: COD_H }];
   wsC.autoFilter = { from: { row: COD_H, column: 1 }, to: { row: lastC, column: C.key } };
   wsC.dataValidations.add(`${colL(C.inc)}${COD_1}:${colL(C.inc)}${lastC}`, { type: 'list', allowBlank: true, formulae: ['"Yes,No"'] });
@@ -327,20 +331,20 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
     [5, 'DIV missing', `COUNTIFS(${rg(C.div)},"",${rg(C.id)},">0")`, miss.div, NUM0], [6, 'PKG missing', `COUNTIFS(${rg(C.pkg)},"",${rg(C.id)},">0")`, miss.pkg, NUM0],
     [7, 'MNL missing', `COUNTIFS(${rg(C.mnl)},"",${rg(C.id)},">0")`, miss.mnl, NUM0], [8, 'Cost element missing', `COUNTIFS(${rg(C.ce)},"",${rg(C.id)},">0")`, miss.ce, NUM0],
     [9, 'Coded – share of To date', `IFERROR(SUMIFS(${rg(C.td)},${rg(C.st)},"Coded")/SUM(${rg(C.td)}),0)`, tdSum ? fullSum / tdSum : 0, '0.0%;[Red]\\-0.0%;"-"'],
-    [12, 'To date not fully coded', `SUMIFS(${rg(C.td)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.td)},${rg(C.st)},"Not coded")`, r2(tdNot), AMT],
-    [13, 'This month not fully coded', `SUMIFS(${rg(C.tm)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.tm)},${rg(C.st)},"Not coded")`, r2(tmNot), AMT],
-    [14, 'New', `COUNTIF(${rg(C.nw)},"New")`, nNew, NUM0], [15, '2+ POs', `COUNTIF(${rg(C.pos)},">1")`, n2po, NUM0]];
+    [C.td, 'To date not fully coded', `SUMIFS(${rg(C.td)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.td)},${rg(C.st)},"Not coded")`, r2(tdNot), AMT],
+    [C.tm, 'This month not fully coded', `SUMIFS(${rg(C.tm)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.tm)},${rg(C.st)},"Not coded")`, r2(tmNot), AMT],
+    [C.nw, 'New', `COUNTIF(${rg(C.nw)},"New")`, nNew, NUM0], [C.pos, '2+ POs', `COUNTIF(${rg(C.pos)},">1")`, n2po, NUM0]];
   for (const [c, l, f, v, nf] of band) { const a = ws.getCell(1, c); a.value = l; navy(a, 9); const x = ws.getCell(2, c); setF(x, f, v); x.numFmt = nf; x.font = font({ bold: true, size: 13, color: { argb: 'FF' + NAVY } }); x.alignment = { horizontal: 'center' }; x.border = box; }
   ws.mergeCells(1, 2, 1, 3); ws.mergeCells(2, 2, 2, 3); ws.getRow(1).height = 30; ws.getRow(2).height = 24;
   ws.addConditionalFormatting({ ref: 'A2', rules: [{ type: 'cellIs', operator: 'greaterThan', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFCE4D6' } } }, priority: 1 }, { type: 'cellIs', operator: 'equal', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFE2EFDA' } } }, priority: 2 }] });
   ws.addConditionalFormatting({ ref: 'E2:H2', rules: [{ type: 'cellIs', operator: 'greaterThan', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFCE4D6' } } }, priority: 3 }, { type: 'cellIs', operator: 'equal', formulae: ['0'], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFE2EFDA' } } }, priority: 4 }] });
   // ---- note + header (rows 3-4)
   const nt = ws.getCell(3, 1); nt.value = 'Live – the band follows the codes typed below · a service = one Service code + description · type DIV, PKG, MNL and Cost element once per service (yellow); every line on "' + nDat + '" reads its code from here · Include = No takes the service out of all totals.'; nt.font = font({ size: 9, color: { argb: 'FF595959' } });
-  const hd = ['Type of works (SAP)', 'Service', 'Description', 'Unit', 'DIV', 'PKG', 'MNL', 'Cost element', 'Status', 'Qty to date', 'Rate', 'To date', null, 'New', 'POs', 'Subcontractors', 'First certified', 'Last certified', 'ID', 'Include', 'Item key'];
+  const hd = ['Type of works (SAP)', 'Service', 'Description', 'Unit', 'DIV', 'PKG', 'MNL', 'Cost element', 'Status', 'Include', 'Qty to date', 'Rate', 'To date', null, 'New', 'POs', 'Subcontractors', 'First certified', 'Last certified', 'ID', 'Item key'];
   hd.forEach((h, i) => { const x = ws.getCell(4, i + 1); if (h === null) setF(x, `"This month · "&${CUTLAB}`, 'This month · ' + rep); else x.value = h; navy(x); if (i + 1 >= C.div && i + 1 <= C.ce || i + 1 === C.inc) x.fill = fill(GOLD); });
   ws.getRow(4).height = 30;
   // ---- formats, widths, filter, freeze, CF
-  [26, 11, 46, 7, 11, 9, 8, 14, 13, 12, 11, 14, 14, 6, 6, 30, 10, 10, 6, 8, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  [26, 11, 46, 7, 11, 9, 8, 14, 13, 8, 12, 11, 14, 14, 6, 6, 30, 10, 10, 6, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
   ws.views = [{ showGridLines: false, state: 'frozen', xSplit: 4, ySplit: 4 }]; ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: lastR, column: C.key } };
   ws.dataValidations.add(`${colL(C.inc)}${R1}:${colL(C.inc)}${lastR}`, { type: 'list', allowBlank: true, formulae: ['"Yes,No"'] });
   ws.dataValidations.add(`${colL(C.div)}${R1}:${colL(C.div)}${lastR}`, { type: 'list', allowBlank: true, showErrorMessage: false, formulae: ['"' + [...DIVS.map((d) => 'DIV ' + d), 'DIV 0302', 'INDIRECT'].join(',') + '"'] });
