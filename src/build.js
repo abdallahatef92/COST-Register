@@ -36,6 +36,7 @@ async function build(opts) {
   const model = buildModel(lines, { groups: groups.map, prev, cut: monthEnd(opts.cut || lastDate) });
   log(`Cut date ${model.cut} (report month ${model.reportLabel})`);
   const wb = new W.ExcelJS.Workbook(); wb.creator = 'Cost Register'; wb.calcProperties = { fullCalcOnLoad: !!process.env.NO_RESULT };   // every formula carries its verified result: Excel opens without a full recalculation
+  [['Summary!$B$4', 'CutDate'], ['Summary!$B$5', 'VatMode'], ['Summary!$C$5', 'VatFrom']].forEach(([r, n]) => wb.definedNames.add(r, n));
   const wsS = wb.addWorksheet('Summary', { properties: { tabColor: { argb: 'FF' + W.NAVY } } }), wsE = wb.addWorksheet('Expenses', { properties: { tabColor: { argb: 'FF' + W.NAVY } } });
   const costBuckets = model.buckets.filter((b) => b.def.id !== 'Revenue');
   const infos = []; let poInfo = null; for (const b of costBuckets) { W.applyCodes(b, prev && prev.over); const inf = W.bucketSheets(wb, b, model, opts); infos.push(inf); log(`  ${b.def.id}: ${b.count} lines, ${b.items.length} items`);
