@@ -49,54 +49,103 @@ function writeExpenses(ws, model, infos, opts) {
 }
 
 function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
-  const np = model.periods.length, P = model.periods, ed = 'Expenses!';
-  title(ws, 'Project Cost Register — ' + opts.project, 'Actual cost from CJI3 (' + stats.file + ') posted ' + model.periods[1] + ' → ' + model.reportLabel + ', EGP. CJI3 is the single source of truth; every sheet below reconciles to it.');
-  // ---- cut date: the report follows it (postings after it are Pending)
-  ws.getCell('A3').value = 'Cut date (type a date – later postings go to Pending)'; ws.getCell('A3').font = font({ bold: true });
-  const cd = ws.getCell('B3'); cd.value = new Date(model.cut + 'T00:00:00Z'); cd.numFmt = 'dd-mmm-yyyy'; cd.fill = fill(YELLOW); cd.font = font({ bold: true, size: 11 }); cd.border = box; cd.alignment = { horizontal: 'center' };
-  ws.getCell('C3').value = 'Report month'; ws.getCell('C3').font = font({ color: { argb: 'FF' + GREY } }); ws.getCell('C3').alignment = { horizontal: 'right' };
-  const rm = ws.getCell('D3'); setF(rm, `CHOOSE(MONTH(B3),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")&"-"&RIGHT(YEAR(B3),2)`, model.reportLabel); rm.font = font({ bold: true, size: 11, color: { argb: 'FF' + NAVY } }); rm.alignment = { horizontal: 'center' }; rm.fill = fill('FFF2CC'); rm.border = box;
-  const cji = stats.cost, rng = (c) => `'Revenue Data'!$${c}$5:$${c}$${revInfo ? revInfo.last : 5}`;
+  const np = model.periods.length, P = model.periods, nm = np - 2, ed = 'Expenses!', rep = model.reportLabel, CUTC = 'Summary!$B$4';
+  const rc = (c) => `${ed}$${colL(c)}$${E_1}:$${colL(c)}$${ex.last}`, bk = `${ed}$A$${E_1}:$A$${ex.last}`, sb = (c, id) => `SUMIFS(${rc(c)},${bk},"${id}")`, NUM = '#,##0;[Red]\\-#,##0;"-"', PC = '0.0%;[Red]\\-0.0%;"-"';
+  const counted = (inf) => inf.b.items.flatMap((it) => it.lines).filter((l) => l.inc === 'Yes'), sum = (ls) => r2(ls.reduce((s, l) => s + l.amt, 0));
+  const pastel = (i) => W.BAND[i % W.BAND.length];
+  const T = (c, v, o = {}) => { const x = ws.getCell(c); x.value = v; x.font = font(o); return x; };
+  const sec = (r, t, note) => { T(`A${r}`, t, { bold: true, size: 12, color: { argb: 'FF' + NAVY } }); if (note) T(`B${r}`, note, { size: 9, color: { argb: 'FF595959' } }); ws.getRow(r).height = 15.6; };
+  const head = (r, labels) => { labels.forEach((h, i) => { const c = ws.getCell(r, i + 1); c.value = h; c.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); c.fill = fill(NAVY); c.alignment = { horizontal: i ? 'center' : 'left', vertical: 'middle', wrapText: true }; }); ws.getRow(r).height = 28; };
+  const cell = (r, c, v, f, o = {}) => { const x = ws.getCell(r, c); if (f) setF(x, f, v); else x.value = v; x.font = font(o.font || {}); if (o.fmt) x.numFmt = o.fmt; if (o.fill) x.fill = fill(o.fill); if (o.align) x.alignment = { horizontal: o.align }; return x; };
+  ws.getCell('A1').value = 'Project Cost Register'; ws.getCell('A1').font = font({ bold: true, size: 16, color: { argb: 'FF' + NAVY } }); ws.getRow(1).height = 21;
+  T('A2', opts.project + ' · EGP · actual cost from CJI3', { bold: true, size: 11 });
+  T('A3', `CJI3 ${stats.file} · posted ${model.periods[1]} → ${model.periods[np - 2]} · made ${new Date().toISOString().slice(0, 10)} with Cost Register`, { size: 9, color: { argb: 'FF595959' } });
+  // ---- cut date
+  T('A4', 'Cut date  ▸', { bold: true, size: 12, color: { argb: 'FF' + NAVY } });
+  const cd = ws.getCell('B4'); cd.value = new Date(model.cut + 'T00:00:00Z'); cd.numFmt = 'dd\\-mmm\\-yyyy'; cd.fill = fill(YELLOW); cd.font = font({ bold: true, size: 12 }); cd.border = box; cd.alignment = { horizontal: 'center' };
+  T('C4', 'Month  ▸', { bold: true, size: 12, color: { argb: 'FF' + NAVY } }).alignment = { horizontal: 'right' };
+  const rm = ws.getCell('D4'); setF(rm, `CHOOSE(MONTH(B4),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")&"-"&RIGHT(YEAR(B4),2)`, rep); rm.font = font({ bold: true, size: 12, color: { argb: 'FF' + NAVY } }); rm.fill = fill('FFF2CC'); rm.alignment = { horizontal: 'center' }; rm.border = box;
+  T('E4', 'Pick the cut date from the list (▼): later postings go to Pending and stay out of To date. Every sheet follows it.', { size: 9, color: { argb: 'FF595959' } });
+  ws.getRow(4).height = 24;
+  // ---- numbers
+  const all = infos.flatMap((inf) => counted(inf)), toDate = sum(all.filter((l) => l.per !== 'Pending')), thisM = sum(all.filter((l) => l.per === rep)), pend = sum(all.filter((l) => l.per === 'Pending'));
+  const excl = r2(infos.flatMap((inf) => inf.b.items.flatMap((it) => it.lines)).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0));
   const clientDed = r2(model.lines.filter((l) => l.bucket === 'Revenue' && l.ce[0] !== '4').reduce((s, l) => s + l.amt, 0));
-  const counted = ex.total, excl = ex.excTo, pend = ex.pending;
-  const cards = [['CJI3 cost (cost elements not 4xxxxxxx)', cji, null], ['Expenses – counted to the cut date', counted, `${ed}${colL(ex.cTo)}${ex.tot}`], ['Excluded by user', excl, `${ed}${colL(ex.cTo)}${ex.exc}`],
-    ['Client deductions (shown with revenue)', clientDed, revInfo ? `SUMIFS(${rng('M')},${rng('F')},"<>4*")` : null], ['Pending (posted after the cut date)', pend, `${ed}${colL(6 + np)}${ex.tot}`]];
-  cards.forEach(([l, v, f], i) => { const c = 1 + i * 2; ws.mergeCells(4, c, 4, c + 1); ws.mergeCells(5, c, 5, c + 1); const a = ws.getCell(4, c), x = ws.getCell(5, c); a.value = l; a.font = font({ size: 9, color: { argb: 'FF' + GREY } }); a.fill = fill('DDEBF7'); a.alignment = { horizontal: 'center', wrapText: true };
-    if (f) setF(x, f, v); else x.value = v; x.numFmt = AMT0; x.font = font({ size: 14, bold: true, color: { argb: 'FF' + NAVY } }); x.fill = fill('DDEBF7'); x.alignment = { horizontal: 'center' }; });
-  ws.mergeCells(4, 11, 4, 12); ws.mergeCells(5, 11, 5, 12); const a = ws.getCell(4, 11), x = ws.getCell(5, 11); a.value = 'Difference to CJI3 (must be 0)'; a.font = font({ size: 9, bold: true, color: { argb: 'FF' + RED } }); a.fill = fill('FDE9E7'); a.alignment = { horizontal: 'center' };
-  setF(x, 'ROUND(A5-C5-E5-G5-I5,2)', r2(cji - counted - excl - clientDed - pend)); x.numFmt = AMT2; x.font = font({ size: 14, bold: true, color: { argb: 'FF' + RED } }); x.fill = fill('FDE9E7'); x.alignment = { horizontal: 'center' };
-  ws.getRow(4).height = 28;
-  // ---- bucket table (from the Expenses sheet, so the cut date flows through)
-  const H = 8; header(ws, H, ['Bucket', 'Lines', 'Opening', 'Activity', 'To date', 'This month', 'Pending', 'Coded share', 'Excluded (memo)', 'Check (must be 0)']);
-  let r = H + 1; const first = r, t = { lines: 0, op: 0, td: 0, tm: 0, pe: 0, ex: 0 };
-  const sx = (col, id) => `SUMIFS(${ed}$${col}$${E_1}:$${col}$${ex.last},${ed}$A$${E_1}:$A$${ex.last},"${id}")`;
-  for (const inf of infos) {
-    const lines = inf.b.items.flatMap((it) => it.lines), yes = lines.filter((l) => l.inc === 'Yes'), s = (f) => r2(yes.filter(f).reduce((a2, l) => a2 + l.amt, 0));
-    const op = s((l) => l.per === 'Opening'), td = s((l) => l.per !== 'Pending'), tm = s((l) => l.per === model.reportLabel), pe = s((l) => l.per === 'Pending'), exv = r2(lines.filter((l) => l.inc === 'No').reduce((a2, l) => a2 + l.amt, 0));
-    const pm = q(inf.nPm), id = inf.def.id;
-    const cells = [id, inf.b.count, { f: sx('G', id), v: op }, { f: `E${r}-C${r}`, v: r2(td - op) }, { f: sx(colL(ex.cTo), id), v: td }, { f: sx(colL(ex.cTm), id), v: tm }, { f: sx(colL(6 + np), id), v: pe },
-      { f: `${q(inf.nCod)}!E4`, v: 0 }, { f: `${pm}!${colL(inf.amtCol(np))}${inf.rExc}`, v: exv }, { f: `${pm}!${colL(inf.amtCol(np))}${inf.rDiff}`, v: 0 }];
-    cells.forEach((c, i) => { const y = ws.getCell(r, i + 1); if (c && c.f) setF(y, c.f, c.v); else y.value = c; y.border = box; y.font = font({ bold: i === 0 }); if (i >= 2) y.numFmt = i === 7 ? PCT : AMT0; });
-    setF(ws.getCell(r, 1), `HYPERLINK("#'${inf.nCod}'!A1","${id}")`, id); ws.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF2F5597' }, underline: true });
-    t.lines += inf.b.count; t.op += op; t.td += td; t.tm += tm; t.pe += pe; t.ex += exv; r++;
+  // ---- KPI cards (row 6 labels, row 7 values)
+  const cards = [['Previous (before this month)', r2(toDate - thisM), `${colL(ex.cTo) === 'x' ? '' : ''}C7-B7`, null], ['="This month · "&D4', thisM, `${ed}${colL(ex.cTm)}${ex.tot}`, 'FFF2CC'], ['To date (counted)', toDate, `${ed}${colL(ex.cTo)}${ex.tot}`, null],
+    ['Pending – not in To date', pend, `${ed}${colL(6 + np)}${ex.tot}`, null], ['Excluded by user', excl, `${ed}${colL(ex.cTo)}${ex.exc}`, null], ['Difference to CJI3 (must be 0)', 0, null, null]];
+  cards.forEach(([l, v, f, bg], i) => { const c = i + 1, a = ws.getCell(6, c), x = ws.getCell(7, c);
+    if (l[0] === '=') setF(a, l.slice(1), 'This month · ' + rep); else a.value = l;
+    a.font = font({ bold: true, size: 9, color: { argb: 'FFFFFFFF' } }); a.fill = fill(i === 1 ? GOLD : i === 5 ? RED : NAVY); a.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    if (f) setF(x, f, v); x.numFmt = i === 5 ? '#,##0.00;[Red]\\-#,##0.00;"-"' : NUM; x.font = font({ bold: true, size: 14, color: { argb: 'FF' + (i === 5 ? RED : NAVY) } }); x.fill = fill(bg || 'FFFFFF'); x.alignment = { horizontal: 'center' }; x.border = box; });
+  ws.getRow(6).height = 40; ws.getRow(7).height = 24;
+  // ---- 1. cost per month
+  let r = 9; sec(r, '1. Cost per month', 'live – months after the cut date stay empty; Pending is shown apart'); r++;
+  const nb = infos.length, hc = nb + 4;   // month-end helper column
+  head(r, ['Month', ...infos.map((i) => i.def.id), 'Total', 'Cumulative']); const hr = r; r++;
+  const rowsM = []; const firstM = r;
+  for (let p = 0; p <= nm; p++) {
+    const lab = P[p], isOp = p === 0, ym = isOp ? null : model.months[p - 1], me = ym ? new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7), 0)) : null, inCut = isOp || me.toISOString().slice(0, 10) <= model.cut;
+    cell(r, 1, lab, null, { font: { bold: isOp } }); if (!isOp) { const h = ws.getCell(r, hc); h.value = me; h.numFmt = 'dd-mmm-yy'; h.font = font({ size: 8, color: { argb: 'FFA6A6A6' } }); }
+    let tot = 0;
+    infos.forEach((inf, j) => { const v = inCut ? sum(counted(inf).filter((l) => l.per === lab)) : ''; if (v !== '') tot += v;
+      const base = sb(6 + 1 + p, inf.def.id); cell(r, 2 + j, v, isOp ? base : `IF($${colL(hc)}${r}>${CUTC},"",${base})`, { fmt: NUM }); });
+    const sumF = `SUM(${colL(2)}${r}:${colL(1 + nb)}${r})`; cell(r, 2 + nb, inCut ? r2(tot) : '', isOp ? sumF : `IF($${colL(hc)}${r}>${CUTC},"",${sumF})`, { fmt: NUM, font: { bold: true } });
+    rowsM.push([r, inCut ? r2(tot) : '']); r++;
   }
-  const last = r - 1; ws.getCell(r, 1).value = 'TOTAL'; ws.getCell(r, 1).font = font({ bold: true }); ws.getCell(r, 1).fill = fill('DDEBF7'); ws.getCell(r, 1).border = box;
-  [[2, t.lines, '#,##0'], [3, t.op, AMT0], [4, r2(t.td - t.op), AMT0], [5, t.td, AMT0], [6, t.tm, AMT0], [7, t.pe, AMT0], [9, t.ex, AMT0], [10, 0, AMT2]].forEach(([c, v, nf]) => { const y = ws.getCell(r, c); setF(y, `SUM(${colL(c)}${first}:${colL(c)}${last})`, r2(v)); y.numFmt = nf; y.font = font({ bold: true }); y.border = box; y.fill = fill('DDEBF7'); });
-  // ---- reconciliation + revenue
-  r += 2; ws.getCell(r, 1).value = 'Reconciliation to CJI3'; ws.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF' + NAVY }, size: 11 }); r++;
-  const rec = [['CJI3 cost, all cost elements except 4xxxxxxx (from the file)', null, cji], ['– Expenses counted to the cut date', 'C5', counted], ['– Pending (posted after the cut date)', 'I5', pend], ['– Excluded by user (memo, listed on each per Month sheet)', 'E5', excl], ['– Client deductions (shown with revenue)', 'G5', clientDed]];
-  rec.forEach(([l, f, v]) => { ws.getCell(r, 1).value = l; ws.getCell(r, 1).font = font(); const y = ws.getCell(r, 5); if (f) setF(y, f, v); else y.value = v; y.numFmt = AMT0; r++; });
-  ws.getCell(r, 1).value = 'Difference (must be 0)'; ws.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF' + RED } }); setF(ws.getCell(r, 5), `ROUND(E${r - 5}-E${r - 4}-E${r - 3}-E${r - 2}-E${r - 1},2)`, r2(cji - counted - pend - excl - clientDed)); ws.getCell(r, 5).numFmt = AMT2; ws.getCell(r, 5).font = font({ bold: true, color: { argb: 'FF' + RED } });
-  r += 2; ws.getCell(r, 1).value = 'Revenue (kept apart, never netted) – to the cut date'; ws.getCell(r, 1).font = font({ bold: true, color: { argb: 'FF' + NAVY }, size: 11 }); r++;
+  let cum = 0; rowsM.forEach(([rr, v], i) => { if (v !== '') cum += v; const cl = colL(2 + nb); cell(rr, 3 + nb, v === '' ? '' : r2(cum), i === 0 ? `${cl}${rr}` : `IF($${colL(hc)}${rr}>${CUTC},"",SUM(${cl}$${firstM}:${cl}${rr}))`, { fmt: NUM }); });
+  const lastM = r - 1; ws.getCell(`A${r}`).value = 'Total (to date)'; for (let c = 1; c <= 3 + nb; c++) { const x = ws.getCell(r, c); x.fill = fill('DDEBF7'); x.font = font({ bold: true }); }
+  infos.forEach((inf, j) => { const cl = colL(2 + j), v = sum(counted(inf).filter((l) => l.per !== 'Pending')); cell(r, 2 + j, v, `SUM(${cl}${firstM}:${cl}${lastM})`, { fmt: NUM, fill: 'DDEBF7', font: { bold: true } }); });
+  cell(r, 2 + nb, toDate, `SUM(${colL(2 + nb)}${firstM}:${colL(2 + nb)}${lastM})`, { fmt: NUM, fill: 'DDEBF7', font: { bold: true } }); r++;
+  ws.getCell(`A${r}`).value = 'Pending (after the cut date – not in To date)'; ws.getCell(`A${r}`).font = font({ color: { argb: 'FF595959' } });
+  infos.forEach((inf, j) => cell(r, 2 + j, sum(counted(inf).filter((l) => l.per === 'Pending')), sb(6 + np, inf.def.id), { fmt: NUM, font: { color: { argb: 'FF595959' } } }));
+  cell(r, 2 + nb, pend, `SUM(${colL(2)}${r}:${colL(1 + nb)}${r})`, { fmt: NUM, font: { color: { argb: 'FF595959' } } });
+  ws.getColumn(hc).hidden = true; r += 2;
+  // current-month column tint (follows the cut date)
+  ws.addConditionalFormatting({ ref: `A${firstM + 1}:${colL(3 + nb)}${lastM}`, rules: [{ type: 'expression', formulae: [`$A${firstM + 1}=$D$4`], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FFFFF2CC' } }, font: { bold: true } }, priority: 1 }] });
+  // ---- 2. cost by bucket
+  sec(r, '2. Cost by bucket', 'live – from the Expenses sheet, so the cut date flows through; click a bucket to open its Coding sheet'); r++;
+  head(r, ['Bucket', 'Lines', 'Opening', 'Previous', 'This month', 'To date', '% of to date', 'Pending', 'Coded share', 'Excluded (memo)', 'Check (must be 0)']); r++;
+  const b0 = r, tot = infos.length + b0;
+  infos.forEach((inf, i) => {
+    const ls = counted(inf), id = inf.def.id, op = sum(ls.filter((l) => l.per === 'Opening')), td = sum(ls.filter((l) => l.per !== 'Pending')), tm = sum(ls.filter((l) => l.per === rep)), pe = sum(ls.filter((l) => l.per === 'Pending'));
+    const exv = r2(inf.b.items.flatMap((it) => it.lines).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0)), pm = q(inf.nPm);
+    const a = ws.getCell(r, 1); setF(a, `HYPERLINK("#'${inf.nCod}'!A1","${id}")`, id); a.font = font({ bold: true, underline: true, color: { argb: 'FF2F5597' } }); a.fill = fill(pastel(i));
+    cell(r, 2, inf.b.count, null, { fmt: '#,##0' }); cell(r, 3, op, sb(7, id), { fmt: NUM }); cell(r, 4, r2(td - tm), `F${r}-E${r}`, { fmt: NUM }); cell(r, 5, tm, sb(colIx(ex.cTm), id), { fmt: NUM, fill: 'FFF2CC' });
+    cell(r, 6, td, sb(colIx(ex.cTo), id), { fmt: NUM, font: { bold: true } }); cell(r, 7, 0, `IF($F$${tot}=0,"",F${r}/$F$${tot})`, { fmt: PC }); ws.getCell(r, 7).value = { formula: `IF($F$${tot}=0,"",F${r}/$F$${tot})`, result: toDate ? td / toDate : '' };
+    cell(r, 8, pe, sb(6 + np, id), { fmt: NUM }); cell(r, 9, 0, `${q(inf.nCod)}!E4`, { fmt: PC }); ws.getCell(r, 9).value = { formula: `${q(inf.nCod)}!E4`, result: inf.coded }; cell(r, 10, exv, `${pm}!${colL(inf.amtCol(np))}${inf.rExc}`, { fmt: NUM, font: { color: { argb: 'FF595959' } } });
+    cell(r, 11, 0, `${pm}!${colL(inf.amtCol(np))}${inf.rDiff}`, { fmt: '#,##0.00;[Red]\\-#,##0.00;"-"' }); for (let c = 1; c <= 11; c++) ws.getCell(r, c).border = box; r++;
+  });
+  ws.getCell(r, 1).value = 'Total'; for (let c = 1; c <= 11; c++) { const x = ws.getCell(r, c); x.fill = fill('DDEBF7'); x.font = font({ bold: true }); x.border = box; }
+  const tv = [[2, infos.reduce((s, i) => s + i.b.count, 0), '#,##0'], [3, sum(all.filter((l) => l.per === 'Opening')), NUM], [4, r2(toDate - thisM), NUM], [5, thisM, NUM], [6, toDate, NUM], [8, pend, NUM], [10, excl, NUM], [11, 0, '#,##0.00;[Red]\\-#,##0.00;"-"']];
+  tv.forEach(([c, v, f]) => cell(r, c, v, `SUM(${colL(c)}${b0}:${colL(c)}${r - 1})`, { fmt: f, fill: 'DDEBF7', font: { bold: true } })); cell(r, 7, 1, `IF($F$${r}=0,"",1)`, { fmt: PC, fill: 'DDEBF7', font: { bold: true } }); ws.getCell(r, 7).value = { formula: `SUM(G${b0}:G${r - 1})`, result: toDate ? 1 : '' };
+  r += 2;
+  // ---- 3. coding status
+  sec(r, '3. Coding status', 'live – follows each Coding sheet: type PKG, MNL, Cost element code once per item'); r++;
+  head(r, ['Bucket', 'Items', 'Fully coded', 'Partly coded', 'Not coded', 'Coded share of to date', 'Items excluded']); r++;
+  infos.forEach((inf, i) => { const a = ws.getCell(r, 1); a.value = inf.def.id; a.font = font({ bold: true }); a.fill = fill(pastel(i)); const st = inf.nStatus;
+    [['A', inf.n, '#,##0'], ['B', st.nFull, '#,##0'], ['C', st.nPart, '#,##0'], ['D', st.nNot, '#,##0'], ['E', inf.coded, PC], ['F', st.nEx, '#,##0']].forEach(([cc, v, f], j) => cell(r, 2 + j, v, `${q(inf.nCod)}!${cc}4`, { fmt: f })); for (let c = 1; c <= 7; c++) ws.getCell(r, c).border = box; r++; });
+  r++;
+  // ---- 4. reconciliation
+  sec(r, '4. Reconciliation to CJI3', 'CJI3 is the single source of truth – the difference must be 0'); r++;
+  const rec0 = r, rec = [['CJI3 cost, all cost elements except 4xxxxxxx (from the file)', stats.cost, null], ['– Counted to the cut date (To date)', toDate, 'C7'], ['– Pending (posted after the cut date)', pend, 'D7'], ['– Excluded by user (memo, listed on each per Month sheet)', excl, 'E7'],
+    ['– Client deductions (cost element Client-Deductions, shown with revenue)', clientDed, revInfo ? `SUMIFS('Revenue Data'!$M$5:$M$${revInfo.last},'Revenue Data'!$F$5:$F$${revInfo.last},"<>4*")` : null]];
+  rec.forEach(([l, v, f]) => { T(`A${r}`, l); cell(r, 5, v, f, { fmt: NUM }); r++; });
+  T(`A${r}`, 'Difference (must be 0)', { bold: true, color: { argb: 'FF' + RED } }); const dc = cell(r, 5, r2(stats.cost - toDate - pend - excl - clientDed), `ROUND(E${rec0}-E${rec0 + 1}-E${rec0 + 2}-E${rec0 + 3}-E${rec0 + 4},2)`, { fmt: '#,##0.00;[Red]\\-#,##0.00;"-"', font: { bold: true, color: { argb: 'FF' + RED } } });
+  setF(ws.getCell('F7'), `E${r}`, r2(stats.cost - toDate - pend - excl - clientDed)); void dc; const diffRow = r; r += 2;
+  // ---- 5. revenue
+  sec(r, '5. Revenue', 'kept apart, never netted against cost – to the cut date'); r++;
   if (revInfo) {
-    const rv = model.lines.filter((l) => l.bucket === 'Revenue' && l.per !== 'Pending'), rev4 = r2(-rv.filter((l) => l.ce[0] === '4').reduce((s, l) => s + l.amt, 0)), cdv = r2(rv.filter((l) => l.ce[0] !== '4').reduce((s, l) => s + l.amt, 0)), rpend = r2(-model.lines.filter((l) => l.bucket === 'Revenue' && l.per === 'Pending').reduce((s, l) => s + l.amt, 0));
-    [['Revenue (cost elements 4xxxxxxx)', `-SUMIFS(${rng('M')},${rng('F')},"4*",${rng('C')},"<>Pending")`, rev4], ['Client deductions', `-SUMIFS(${rng('M')},${rng('F')},"<>4*",${rng('C')},"<>Pending")`, -cdv]].forEach(([l, f, v]) => { ws.getCell(r, 1).value = l; ws.getCell(r, 1).font = font(); setF(ws.getCell(r, 5), f, v); ws.getCell(r, 5).numFmt = AMT0; r++; });
-    ws.getCell(r, 1).value = 'Net revenue'; ws.getCell(r, 1).font = font({ bold: true }); setF(ws.getCell(r, 5), `E${r - 2}+E${r - 1}`, r2(rev4 - cdv)); ws.getCell(r, 5).numFmt = AMT0; ws.getCell(r, 5).font = font({ bold: true }); r++;
-    ws.getCell(r, 1).value = 'Revenue posted after the cut date (pending)'; ws.getCell(r, 1).font = font({ color: { argb: 'FF' + GREY } }); setF(ws.getCell(r, 5), `-SUMIFS(${rng('M')},${rng('C')},"Pending")`, rpend); ws.getCell(r, 5).numFmt = AMT0;
+    const rng = (c) => `'Revenue Data'!$${c}$5:$${c}$${revInfo.last}`, rv = model.lines.filter((l) => l.bucket === 'Revenue' && l.per !== 'Pending'), rev4 = r2(-rv.filter((l) => l.ce[0] === '4').reduce((s, l) => s + l.amt, 0)), cdv = r2(rv.filter((l) => l.ce[0] !== '4').reduce((s, l) => s + l.amt, 0)), rpend = r2(-model.lines.filter((l) => l.bucket === 'Revenue' && l.per === 'Pending').reduce((s, l) => s + l.amt, 0));
+    [['Revenue (cost elements 4xxxxxxx)', rev4, `-SUMIFS(${rng('M')},${rng('F')},"4*",${rng('C')},"<>Pending")`, false], ['Client deductions', -cdv, `-SUMIFS(${rng('M')},${rng('F')},"<>4*",${rng('C')},"<>Pending")`, false]].forEach(([l, v, f]) => { T(`A${r}`, l); cell(r, 5, v, f, { fmt: NUM }); r++; });
+    T(`A${r}`, 'Net revenue', { bold: true }); for (let c = 1; c <= 5; c++) { ws.getCell(r, c).fill = fill('DDEBF7'); } cell(r, 5, r2(rev4 - cdv), `E${r - 2}+E${r - 1}`, { fmt: NUM, fill: 'DDEBF7', font: { bold: true } }); r++;
+    T(`A${r}`, 'Revenue posted after the cut date (pending)', { color: { argb: 'FF595959' } }); cell(r, 5, rpend, `-SUMIFS(${rng('M')},${rng('C')},"Pending")`, { fmt: NUM, font: { color: { argb: 'FF595959' } } });
   }
-  [44, 10, 16, 16, 16, 16, 14, 12, 16, 16, 14, 8].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
-  ws.views = [{ showGridLines: false }];
+  ws.getColumn(1).width = 44; for (let c = 2; c <= 13; c++) ws.getColumn(c).width = 15; ws.getColumn(hc).hidden = true;
+  ws.views = [{ showGridLines: false }]; ws.properties.tabColor = { argb: 'FF' + NAVY };
+  return { diffRef: `Summary!E${diffRow}` };
 }
+const colIx = (c) => c;
 
 function writeChecks(ws, model, infos, ex, opts, stats) {
   title(ws, 'Checks — ' + opts.project, 'Everything here should read OK. A CHECK means the register and CJI3 disagree somewhere.');
@@ -106,7 +155,7 @@ function writeChecks(ws, model, infos, ex, opts, stats) {
   add('CJI3 lines vs the grand-total row of the file', null, r2(stats.sum - stats.grand), 'abs', 'Sum of all lines minus the file\'s own grand-total row.');
   add('Duplicate line keys (document | row | year)', null, stats.dupes, 'zero', 'A key that appears twice would be double-counted.');
   add('Lines with no bucket (Unclassified)', null, model.lines.filter((l) => l.bucket === 'Unclassified').length, 'zero', 'A cost element without a rule – add one in the rule table.');
-  add('Register vs CJI3 cost – difference', `Summary!K5`, 0, 'abs', 'Expenses counted + excluded + client deductions − CJI3 cost.');
+  add('Register vs CJI3 cost – difference', stats.diffRef, 0, 'abs', 'Expenses counted + excluded + client deductions − CJI3 cost.');
   for (const inf of infos) add(inf.def.id + ': per Month total vs Data sheet', `${q(inf.nPm)}!${colL(inf.amtCol(model.periods.length))}${inf.rDiff}`, 0, 'abs', 'Must be 0.');
   for (const inf of infos) add(inf.def.id + ': items not fully coded', `COUNTIFS(${q(inf.nCod)}!${colL(inf.C.st)}7:${colL(inf.C.st)}${inf.lastC},"<>Fully coded",${q(inf.nCod)}!${colL(inf.C.id)}7:${colL(inf.C.id)}${inf.lastC},">0")`, inf.nStatus.nPart + inf.nStatus.nNot, 'info', 'Items still to code.');
   for (const inf of infos) add(inf.def.id + ': lines typed over', `SUM(${q(inf.nDat)}!${colL(inf.D.over)}5:${colL(inf.D.over)}${inf.lastD})`, inf.b.items.flatMap((it) => it.lines).filter((l) => l.s === 1).length, 'info', 'Lines coded differently from their item.');

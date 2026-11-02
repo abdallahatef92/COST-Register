@@ -24,16 +24,16 @@ function dlayout(def) {
   add('id', 'Line ID', 26); add('date', 'Posting date', 11); add('per', 'Period', 9); add('doc', 'Document', 12); add('type', 'Type', 6); add('ce', 'Cost element', 11); add('cen', 'Cost element name', 24);
   if (mat) { add('fam', 'Family', 22); add('div', 'Division', 22); add('grp', 'Material group', 26); }
   add('item', mat ? 'Material' : 'Item', 14); add('desc', 'Description', 40);
-  if (mat) { add('issue', 'Issue type', 12); add('stock', 'Stock account', 22); }
+  if (mat) { add('name', 'Name', 30); add('issue', 'Issue type', 12); add('stock', 'Stock account', 22); }
   add('wbs', 'WBS element', 22); add('qty', 'Qty', 10); add('unit', 'Unit', 6); if (mat) add('rate', 'Rate', 12); add('amt', 'Amount', 14);
   add('pkg', 'PKG', 10); add('mnl', 'MNL', 8); add('cec', 'Cost element code', 14); add('inc', 'Include', 8); add('cid', 'Coding ID', 7); add('over', 'Typed over', 7);
-  if (mat) { add('mdoc', 'Material doc.', 12); add('entry', 'Entry date', 11); add('user', 'User', 10); add('hdr', 'Header text', 28); }
+  if (mat) { add('mdoc', 'Material doc.', 12); add('entry', 'Entry date', 11); add('user', 'User', 10); }
   const D = {}; cols.forEach((c, i) => { D[c.k] = i + 1; });
   return { cols, D };
 }
 const BASE = dlayout({ id: '' }), D0 = BASE.D;
 
-const CUT = 'Summary!$B$3', CUTLAB = 'Summary!$D$3';
+const CUT = 'Summary!$B$4', CUTLAB = 'Summary!$D$4';
 const periodF = (row, D) => `IF(OR($${colL(D.type)}${row}="UE",$${colL(D.type)}${row}="ZB",$${colL(D.type)}${row}="MD",$${colL(D.type)}${row}="HT"),"Opening",IF(OR($${colL(D.date)}${row}="",$${colL(D.date)}${row}>${CUT}),"Pending",CHOOSE(MONTH($${colL(D.date)}${row}),"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")&"-"&RIGHT(YEAR($${colL(D.date)}${row}),2)))`;
 function title(ws, t, note) {
   ws.getCell('A1').value = t; ws.getCell('A1').font = font({ size: 14, bold: true, color: { argb: 'FF' + NAVY } });
@@ -138,7 +138,7 @@ function bucketSheets(wb, b, model, opts) {
   b.items.forEach((it) => it.lines.forEach((l, j) => {
     const row = it.r1 + j, cell = (c) => wsD.getCell(row, c), bf = isMat ? light(it.dk) : null;
     const v = { id: l.id, date: new Date(l.date + 'T00:00:00Z'), per: undefined, doc: l.doc, type: l.type, ce: l.ce, cen: l.cen, item: itemOf(def, it), desc: isMat ? l.matDesc : (l.poText || l.name || l.header), wbs: l.wbs,
-      qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, stock: l.stock || null, mdoc: l.refDoc, entry: l.created ? new Date(l.created + 'T00:00:00Z') : null, user: l.user || null, hdr: l.header || null };
+      qty: l.qty || null, unit: l.unit || null, amt: l.amt, cid: it.id, fam: it.vals[0], div: it.vals[1], grp: it.vals[2], issue: l.issue || null, stock: l.stock || null, mdoc: l.refDoc, entry: l.created ? new Date(l.created + 'T00:00:00Z') : null, user: l.user || null, name: l.name || null };
     DC.forEach((c, i) => { if (v[c.k] !== undefined) cell(i + 1).value = v[c.k]; });
     cell(D.amt).numFmt = AMT2; cell(D.qty).numFmt = QTY; cell(D.date).numFmt = 'yyyy-mm-dd';
     if (isMat) { setF(cell(D.rate), `IF(ABS($${colL(D.qty)}${row})<0.000001,"",$${colL(D.amt)}${row}/$${colL(D.qty)}${row})`, Math.abs(l.qty) < 0.000001 ? '' : l.amt / l.qty); cell(D.rate).numFmt = '#,##0.00'; cell(D.entry).numFmt = 'yyyy-mm-dd'; }
@@ -222,7 +222,7 @@ function bucketSheets(wb, b, model, opts) {
     wsP.addConditionalFormatting({ ref: `${a}${PM_H - 1}:${colL(c0 + 2)}${PM_H - 1}`, rules: [{ type: 'expression', formulae: [`$${a}$${PM_H - 1}=${CUTLAB}`], style: { fill: cfFill(GOLD) }, priority: 20 + p }] });
     wsP.addConditionalFormatting({ ref: `${a}${PM_1}:${colL(c0 + 2)}${lastItem}`, rules: [{ type: 'expression', formulae: [`AND($${a}$${PM_H - 1}=${CUTLAB},$${colL(1)}${PM_1}<>"")`], style: { fill: cfFill('FFF2CC') }, priority: 60 + p }] }); }
   const amtCol = (p) => colOf('Amount', p);
-  return { def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, nStatus: { nFull, nPart, nNot, nEx } };
+  return { def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
 }
 
 function revenueSheet(wb, model, opts) {
