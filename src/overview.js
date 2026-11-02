@@ -110,7 +110,7 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   infos.forEach((inf, i) => {
     const ls = counted(inf), id = inf.def.id, op = sum(ls.filter((l) => l.per === 'Opening')), td = sum(ls.filter((l) => l.per !== 'Pending')), tm = sum(ls.filter((l) => l.per === rep)), pe = sum(ls.filter((l) => l.per === 'Pending'));
     const exv = r2(inf.b.items.flatMap((it) => it.lines).filter((l) => l.inc === 'No').reduce((s, l) => s + l.amt, 0)), pm = q(inf.nPm);
-    const a = ws.getCell(r, 1); setF(a, `HYPERLINK("#'${inf.nCod}'!A1","${id}")`, id); a.font = font({ bold: true, underline: true, color: { argb: 'FF2F5597' } }); a.fill = fill(pastel(i));
+    const a = ws.getCell(r, 1); setF(a, `HYPERLINK("#'${inf.nCod}'!A1","${id}")`, id); a.font = font({ bold: true, underline: true, color: { argb: 'FF2F5597' } }); a.fill = fill('DDE5EE');
     cell(r, 2, inf.b.count, null, { fmt: '#,##0' }); cell(r, 3, op, sb(7, id), { fmt: NUM }); cell(r, 4, r2(td - tm), `F${r}-E${r}`, { fmt: NUM }); cell(r, 5, tm, sb(colIx(ex.cTm), id), { fmt: NUM, fill: 'FFF2CC' });
     cell(r, 6, td, sb(colIx(ex.cTo), id), { fmt: NUM, font: { bold: true } }); cell(r, 7, 0, `IF($F$${tot}=0,"",F${r}/$F$${tot})`, { fmt: PC }); ws.getCell(r, 7).value = { formula: `IF($F$${tot}=0,"",F${r}/$F$${tot})`, result: toDate ? td / toDate : '' };
     cell(r, 8, pe, sb(6 + np, id), { fmt: NUM }); cell(r, 9, 0, `${q(inf.nCod)}!E4`, { fmt: PC }); ws.getCell(r, 9).value = { formula: `${q(inf.nCod)}!E4`, result: inf.coded }; cell(r, 10, exv, `${pm}!${colL(inf.amtCol(np))}${inf.rExc}`, { fmt: NUM, font: { color: { argb: 'FF595959' } } });
@@ -123,7 +123,7 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   // ---- 3. coding status
   sec(r, '3. Coding status', 'live – follows each Coding sheet: type PKG, MNL, Cost element code once per item'); r++;
   head(r, ['Bucket', 'Items', 'Fully coded', 'Partly coded', 'Not coded', 'Coded share of to date', 'Items excluded']); r++;
-  infos.forEach((inf, i) => { const a = ws.getCell(r, 1); a.value = inf.def.id; a.font = font({ bold: true }); a.fill = fill(pastel(i)); const st = inf.nStatus;
+  infos.forEach((inf, i) => { const a = ws.getCell(r, 1); a.value = inf.def.id; a.font = font({ bold: true }); a.fill = fill('DDE5EE'); const st = inf.nStatus;
     [['A', inf.n, '#,##0'], ['B', st.nFull, '#,##0'], ['C', st.nPart, '#,##0'], ['D', st.nNot, '#,##0'], ['E', inf.coded, PC], ['F', st.nEx, '#,##0']].forEach(([cc, v, f], j) => cell(r, 2 + j, v, `${q(inf.nCod)}!${cc}4`, { fmt: f })); for (let c = 1; c <= 7; c++) ws.getCell(r, c).border = box; r++; });
   r++;
   // ---- 4. reconciliation

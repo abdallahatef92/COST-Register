@@ -129,6 +129,8 @@ function bucketSheets(wb, b, model, opts) {
     const f1 = h.items[0].crow, f2 = h.items[h.items.length - 1].crow, c = strong(h.key);
     for (let col = 1; col <= C.key; col++) { const x = wsC.getCell(h.row, col); x.fill = fill(c); x.border = box; x.font = font({ bold: true }); }
     wsC.getCell(h.row, 1).value = h.label;
+    { const st = colL(C.st), a1 = h.items[0].crow, a2 = h.items[h.items.length - 1].crow, nf = h.items.filter((it) => it.pkg && it.mnl && it.ce).length, x = wsC.getCell(h.row, C.st);
+      setF(x, `COUNTIF(${st}${a1}:${st}${a2},"Fully coded")&" / "&COUNT(${colL(C.id)}${a1}:${colL(C.id)}${a2})&" coded"`, `${nf} / ${h.items.length} coded`); x.alignment = { horizontal: 'center' }; x.font = font({ bold: true, size: 9 }); }
   }
   [['Items', `COUNT(${cr(C.id)})`, n, '#,##0'], ['Fully coded', `COUNTIF(${cr(C.st)},"Fully coded")`, nFull, '#,##0'], ['Partly coded', `COUNTIF(${cr(C.st)},"Partly coded")`, nPart, '#,##0'],
     ['Not coded', `COUNTIF(${cr(C.st)},"Not coded")`, nNot, '#,##0'], ['Coded share', `IFERROR(SUMIFS(${cr(C.td)},${cr(C.st)},"Fully coded")/SUMIFS(${cr(C.td)},${cr(C.id)},">0"),0)`, tdSum ? fullSum / tdSum : 0, PCT],
@@ -150,7 +152,7 @@ function bucketSheets(wb, b, model, opts) {
 
   // ================= Data
   title(wsD, def.id + ' Data — ' + opts.project, 'One row per CJI3 line. PKG, MNL, Cost element code and Include are FORMULAS reading the item on "' + nCod + '". Type over any of them to code or exclude one line (orange = typed over; Include = No greys the line out and takes it out of all totals).');
-  wsD.getCell('A3').value = 'Rows run by month, each month its own colour. Yellow-orange = UE document (opening balance). Orange code = typed over.'; wsD.getCell('A3').font = font({ bold: true, color: { argb: 'FFBF8F00' } });
+  wsD.getCell('A3').value = 'Rows run by month (months alternate light blue-grey / white, a navy line starts each month). Amber = UE document. Orange code = typed over. Grey struck-through = excluded.'; wsD.getCell('A3').font = font({ bold: true, color: { argb: 'FFBF8F00' } });
   header(wsD, DATA_H, DC.map((c) => c.l), ['PKG', 'MNL', 'Cost element code', 'Include']); DC.forEach((c, i) => { wsD.getColumn(i + 1).width = c.w; });
   flat.forEach(({ l, it }, fi) => {
     const row = DATA_1 + fi, cell = (c) => wsD.getCell(row, c), bf = isMat ? light(it.dk) : null; l.row = row;
@@ -167,7 +169,8 @@ function bucketSheets(wb, b, model, opts) {
     setF(cell(D.over), `IF(AND($${colL(D.pkg)}${row}=${ix(C.pkg)},$${colL(D.mnl)}${row}=${ix(C.mnl)},$${colL(D.cec)}${row}=${ix(C.ce)}),0,1)`, l.s);
     setF(cell(D.flag), `IF($${colL(D.inc)}${row}="No",0,IF($${colL(D.over)}${row}=1,2,1))`, l.inc === 'No' ? 0 : l.s === 1 ? 2 : 1);
     for (let c = 1; c <= nD; c++) { const x = cell(c); x.border = box; x.font = font({ size: c === D.id ? 8 : 10, bold: c >= D.pkg && c <= D.cec, color: c === D.id ? { argb: 'FF' + GREY } : undefined }); }
-    if (bf) for (const kx of ['fam', 'div', 'grp']) cell(D[kx]).fill = fill(bf);
+    cell(D.per).font = font({ bold: true });
+    if (fi === 0 || flat[fi - 1].l.per !== l.per) for (let c = 1; c <= nD; c++) { const x = cell(c); x.border = { ...box, top: { style: 'medium', color: { argb: 'FF' + NAVY } } }; }
   });
   wsD.views = [{ showGridLines: false, state: 'frozen', xSplit: dlayout(def).freeze, ySplit: DATA_H }];
   wsD.autoFilter = { from: { row: DATA_H, column: 1 }, to: { row: lastD, column: nD } };
@@ -176,11 +179,9 @@ function bucketSheets(wb, b, model, opts) {
   wsD.addConditionalFormatting({ ref: `A${DATA_1}:${colL(nD)}${lastD}`, rules: [
     { type: 'expression', formulae: [`$${colL(D.inc)}${DATA_1}="No"`], style: { font: { color: { argb: 'FFA6A6A6' }, strike: true }, fill: cfFill('EDEDED') }, priority: 6 },
     { type: 'expression', formulae: [`$${colL(D.type)}${DATA_1}="UE"`], style: { fill: cfFill(UE_FILL), font: { bold: true } }, priority: 7 }] });
-  const pc = perColors(periods);   // every month its own colour: the row is tinted, the date and period cells carry the stronger colour
-  periods.forEach((pp, i) => {
-    wsD.addConditionalFormatting({ ref: `A${DATA_1}:${colL(nD)}${lastD}`, rules: [{ type: 'expression', formulae: [`$${colL(D.per)}${DATA_1}="${pp}"`], style: { fill: cfFill(pc[i][1]) }, priority: 20 + i }] });
-    wsD.addConditionalFormatting({ ref: `${colL(D.date)}${DATA_1}:${colL(D.per)}${lastD}`, rules: [{ type: 'expression', formulae: [`$${colL(D.per)}${DATA_1}="${pp}"`], style: { fill: cfFill(pc[i][0]), font: { bold: true } }, priority: 50 + i }] });
-  });
+  // ledger banding: months alternate white / light blue-grey, Opening grey, Pending light orange; signals above win; a navy line starts every month
+  periods.forEach((pp, i) => { const c = pp === 'Opening' ? 'F2F2F2' : pp === 'Pending' ? 'FBE5D6' : i % 2 === 0 ? 'EEF2F7' : null; if (!c) return;
+    wsD.addConditionalFormatting({ ref: `A${DATA_1}:${colL(nD)}${lastD}`, rules: [{ type: 'expression', formulae: [`$${colL(D.per)}${DATA_1}="${pp}"`], style: { fill: cfFill(c) }, priority: 20 + i }] }); });
 
   // ================= per Month – Material: Qty | Rate | Amount side by side for every month (the report's layout); other buckets: amount only
   const M = isMat ? ['Qty', 'Rate', 'Amount'] : ['Amount'], lead = k + 3, aM = M.length - 1, per = (p) => (p < np ? periods[p] : 'To date');
@@ -189,12 +190,12 @@ function bucketSheets(wb, b, model, opts) {
   title(wsP, def.id + ' per Month — ' + opts.project, 'Live: sums the lines of each item by posting month (counted lines only: Include = Yes and not typed over). Codes follow "' + nCod + '". The rows under the items catch typed-over and excluded lines, so the total always equals the Data sheet.');
   const hdr = [...def.cols.map((c) => c[0]), 'PKG', 'MNL', 'Cost element code']; for (let p = 0; p <= np; p++) for (const bn of M) hdr.push(isMat ? bn : per(p));
   header(wsP, PM_H, hdr);
-  const pcm = perColors(periods), dark = { argb: 'FF1F3864' };
+  const dark = { argb: 'FF1F3864' }, bandC = (p) => (p === np ? NAVY : p === np - 1 ? 'C55A11' : p === 0 ? 'D9D9D9' : p % 2 ? 'BDD7EE' : 'DDEBF7');
   if (isMat) for (let p = 0; p <= np; p++) {
     const c0 = colOf('Qty', p); wsP.mergeCells(PM_H - 1, c0, PM_H - 1, c0 + 2); const x = wsP.getCell(PM_H - 1, c0); x.value = per(p);
-    x.font = font({ bold: true, color: p === np ? { argb: 'FFFFFFFF' } : dark }); x.fill = fill(p === np ? NAVY : pcm[p][0]); x.alignment = { horizontal: 'center' };
+    x.font = font({ bold: true, color: p >= np - 1 ? { argb: 'FFFFFFFF' } : dark }); x.fill = fill(bandC(p)); x.alignment = { horizontal: 'center' };
   } else { wsP.mergeCells(PM_H - 1, lead + 1, PM_H - 1, lastCol); const x = wsP.getCell(PM_H - 1, lead + 1); x.value = 'Amount (EGP)'; x.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); x.fill = fill(NAVY); x.alignment = { horizontal: 'center' };
-    for (let p = 0; p < np; p++) { const h = wsP.getCell(PM_H, colOf('Amount', p)); h.fill = fill(pcm[p][0]); h.font = font({ bold: true, color: dark }); } }
+    for (let p = 0; p <= np; p++) { const h = wsP.getCell(PM_H, colOf('Amount', p)); h.fill = fill(p === np - 1 ? 'C55A11' : NAVY); h.font = font({ bold: true, color: { argb: 'FFFFFFFF' } }); } }
   const sumL = (ls, key) => (key === 'qty' ? r3(ls.reduce((s, l) => s + l.qty, 0)) : r2(ls.reduce((s, l) => s + l.amt, 0)));
   const inP = (ls, p) => (p < np ? ls.filter((l) => l.per === periods[p]) : ls.filter((l) => l.per !== 'Pending'));
   const todate = (bn, row) => `SUM(${Array.from({ length: np - 1 }, (_, p) => colL(colOf(bn, p)) + row).join(',')})`;
@@ -244,6 +245,7 @@ function bucketSheets(wb, b, model, opts) {
   if (isMat) for (let p = 0; p < np - 1; p++) { const c0 = colOf('Qty', p), a = colL(c0);
     wsP.addConditionalFormatting({ ref: `${a}${PM_H - 1}:${colL(c0 + 2)}${PM_H - 1}`, rules: [{ type: 'expression', formulae: [`$${a}$${PM_H - 1}=${CUTLAB}`], style: { fill: cfFill(GOLD) }, priority: 20 + p }] });
     wsP.addConditionalFormatting({ ref: `${a}${PM_1}:${colL(c0 + 2)}${lastItem}`, rules: [{ type: 'expression', formulae: [`AND($${a}$${PM_H - 1}=${CUTLAB},$${colL(1)}${PM_1}<>"")`], style: { fill: cfFill('FFF2CC') }, priority: 60 + p }] }); }
+  if (!isMat) for (let p = 0; p < np - 1; p++) { const a = colL(colOf('Amount', p)); wsP.addConditionalFormatting({ ref: `${a}${PM_H}`, rules: [{ type: 'expression', formulae: [`${a}$${PM_H}=${CUTLAB}`], style: { fill: cfFill(GOLD) }, priority: 20 + p }] }); }
   const amtCol = (p) => colOf('Amount', p);
   return { def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
 }
