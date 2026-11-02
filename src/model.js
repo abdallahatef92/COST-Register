@@ -31,13 +31,15 @@ function descriptors(b, first, groups) {
   }
 }
 
-function buildModel(lines, { groups = new Map(), prev = null } = {}) {
+function buildModel(lines, { groups = new Map(), prev = null, cut = '' } = {}) {
   const posted = lines.filter((l) => !l.open && l.ym).map((l) => l.ym).sort();
   const first = posted[0], last = posted[posted.length - 1];
+  const maxDate = lines.map((l) => l.date).filter(Boolean).sort().pop();
+  cut = cut || maxDate;                                   // the cut date: later postings are Pending
   const months = []; for (let m = first; m <= last; m = nextYm(m)) months.push(m);
-  const periods = ['Opening', ...months.map(ymLabel)];
-  const reportLabel = ymLabel(last);
-  for (const l of lines) l.per = l.open ? 'Opening' : ymLabel(l.ym);
+  const periods = ['Opening', ...months.map(ymLabel), 'Pending'];
+  const reportLabel = ymLabel(cut.slice(0, 7));
+  for (const l of lines) l.per = l.open ? 'Opening' : !l.date || l.date > cut ? 'Pending' : ymLabel(l.ym);
 
   const buckets = [];
   for (const def of BUCKETS) {
@@ -47,7 +49,7 @@ function buildModel(lines, { groups = new Map(), prev = null } = {}) {
       ls.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id < b.id ? -1 : 1));
       const big = ls.reduce((m, l) => (Math.abs(l.amt) > Math.abs(m.amt) ? l : m), ls[0]);
       const d = descriptors(def, big, groups);
-      const act = ls.filter((l) => !l.open);
+      const act = ls.filter((l) => !l.open && l.per !== 'Pending');
       return { key, lines: ls, vals: d.vals, group: d.group || '', total: r2(ls.reduce((s, l) => s + l.amt, 0)),
         firstP: act.length ? ymLabel(act[0].ym) : 'Opening', lastP: act.length ? ymLabel(act[act.length - 1].ym) : 'Opening' };
     });
@@ -63,6 +65,6 @@ function buildModel(lines, { groups = new Map(), prev = null } = {}) {
       it.pkg = c ? c.pkg : ''; it.mnl = c && c.mnl ? c.mnl : def.mnl; it.ce = c ? c.ce : ''; it.inc = c && c.inc ? c.inc : 'Yes'; });
     buckets.push({ def, items, count: bl.length, total: r2(bl.reduce((s, l) => s + l.amt, 0)) });
   }
-  return { buckets, months, periods, reportLabel, lines };
+  return { buckets, months, periods, reportLabel, cut, lines };
 }
 module.exports = { buildModel, BUCKETS };
