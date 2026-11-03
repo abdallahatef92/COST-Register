@@ -10,6 +10,7 @@
 body{margin:0;font:13px/1.35 "Segoe UI",Arial,sans-serif;color:var(--txt);background:var(--bg);height:100vh;display:flex;flex-direction:column}
 button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;color:var(--txt)}
 button:hover{border-color:var(--navy2)} button.pri{background:var(--navy);color:#fff;border-color:var(--navy)} button:disabled{opacity:.45;cursor:default}
+button.clr{color:#C00000;border-color:#E6A0A0;background:#FFF5F5} button.clr:hover{border-color:#C00000} button.clr.on{background:#C00000;color:#fff;border-color:#C00000}
 input,select{font:inherit}
 header.top{background:var(--navy);color:#fff;padding:7px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 header.top h1{font-size:17px;margin:0;font-weight:600} .sub{opacity:.75;font-size:11.5px}
@@ -364,10 +365,11 @@ function pageDef() {
     cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
     ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : 80, code: 1, v: (r) => ef(r.i, f) || '(blank)', h: (r) => { const o = OVR[L.id[r.i]]; return codeInput(it(r.i), f, o && o[f] !== undefined ? o[f] : undefined); } }));
     cols.push({ k: 'inc', l: 'Include', w: 70, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` },
+      { k: 'wbs', l: 'WBS element', w: 150, v: (r) => S[L.wbs[r.i]], h: (r) => `<td>${esc(S[L.wbs[r.i]])}</td>` },
       // the CJI3 text columns – the allocation information (as on the Excel Data sheets)
-      tx('name', 'Name (CJI3)', 220, L.name), tx('hdr', 'Document header text', 200, L.hdr), tx('pot', 'Purchase order text', 200, L.pot), tx('off', 'Offsetting account', 180, L.off),
+      tx('name', 'Name (CJI3)', 220, L.name), tx('hdr', 'Document header text', 200, L.hdr), tx('off', 'Offsetting account', 180, L.off),
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 52, v: (r) => S[L.ty[r.i]], h: (r) => `<td>${esc(S[L.ty[r.i]])}</td>` },
-      { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` }, { k: 'wbs', l: 'WBS element', w: 150, v: (r) => S[L.wbs[r.i]], h: (r) => `<td>${esc(S[L.wbs[r.i]])}</td>` });
+      { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` });
     const lastLab = cols[cols.findIndex((c) => c.k === (anyQ ? 'qty' : 'amt')) - 1].k;
     return { cols, rows: idx.map((i) => ({ i, it: it(i), g: L.b[i] + ':' + L.it[i] })), lines: true, sel: true, groups: true, gSpanK: lastLab, gColor: () => '#EEF2F8',
       gLabel: (g, rs) => { const [gb, gi] = g.split(':').map(Number), x = BK[gb].items[gi]; return `${all ? `<span class="u" style="background:#DDE5EE">${esc(BK[gb].short)}</span> ` : ''}<a class="lk open2" data-bi="${gb}" data-ii="${gi}">${esc(itemCode(x))}</a> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(itemDesc(x))}</span><span class="gm">${rs.length} lines${itemUnit(x) ? ' · ' + esc(itemUnit(x)) : ''}</span>`; },
@@ -476,7 +478,7 @@ function renderTable() {
   else if (['cod', 'pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = (ST.tab === 'lines' ? `<button class="chip ${ST.bk === -1 ? 'on' : ''}" data-bk="-1">All buckets</button>` : '') + BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
     return `<button class="chip ${bi === ST.bk ? 'on' : ''}" data-bk="${bi}">${esc(b.short)}<span class="pc">${t ? (100 * f / t).toFixed(0) : 0}%</span></button>`; }).join(''); } else $('bkbar').style.display = 'none';
   $('tools').innerHTML = `${D.noFilter && !D.search ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Partly coded', 'Fully coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
-    ${D.extraTools || ''} ${D.groups ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : '<button id="bClr">✕ Clear filters</button>'} <span class="help" id="cnt"></span>`;
+    ${D.extraTools || ''} ${D.groups ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : `<button id="bClr" class="clr">✕ Clear filters</button>`} <span class="help" id="cnt"></span>`;
   const cols = D.cols, q = S0.q.trim().toLowerCase();
   let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && statusOf(r.it) !== S0.st) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
     if (q && !D.tree) { const t = D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.ce ? [r.ce, r.x.name].join(' ') : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
@@ -508,6 +510,7 @@ function renderTable() {
     R.disp = tb; R.nc = nc; renderVirtual();
   }
   $('cnt').textContent = `${rows.length.toLocaleString('en-US')} rows`;
+  { const S1 = vs(), on = !!S1.q || (S1.st && S1.st !== 'All') || Object.values(S1.f).some((f) => f && (f.set || f.q)); $('bClr') && $('bClr').classList.toggle('on', on); }
   $('bulk').classList.toggle('show', !!D.sel && sel.size > 0); $('bdiv').style.display = (ST.tab === 'cod' && isSub(ST.bk)) || ST.tab === 'sub' ? '' : 'none'; $('bInc').textContent = ST.tab === 'lines' ? 'Include' : 'Include'; $('bClear').textContent = ST.tab === 'lines' ? 'Back to item codes' : 'Clear codes';
   $('bsel').textContent = (selLines().length ? selLines().length.toLocaleString('en-US') + ' lines selected · ' + fmt2(selLines().reduce((s0, i) => s0 + R.amt[i], 0)) : sel.size + ' selected');
   const a = $('all'); if (a) a.checked = rows.length > 0 && rows.every((r) => sel.has(selKey(r)));
@@ -566,7 +569,7 @@ function openPop(k, btn) {
   const others = D.rows.filter((row) => D.cols.every((cc) => cc.k === k || passF(cc, row, S0.f[cc.k]))), cnt = new Map();
   others.forEach((x) => { const vv = c.v(x); (Array.isArray(vv) ? vv : [vv]).forEach((v0) => { const v = keyOf(c, v0); cnt.set(v, (cnt.get(v) || 0) + 1); }); });
   const vals = [...cnt.keys()].sort((a, b) => (c.num ? keyNum(a) - keyNum(b) : a.localeCompare(b))), shown = vals.slice(0, 2000);
-  pop.innerHTML = `<div class="row"><button data-a="asc">${c.num ? 'Smallest → largest' : 'Sort A → Z'}</button><button data-a="desc">${c.num ? 'Largest → smallest' : 'Sort Z → A'}</button></div><input type="search" id="pS" placeholder="Search values"><div class="vals"><label><input type="checkbox" id="pAll" ${!f.set ? 'checked' : ''}> <b>(Select all)</b></label>${shown.map((v) => `<label data-v="${esc(v.toLowerCase())}"><input type="checkbox" class="pv" value="${esc(v)}" ${!f.set || f.set.has(v) ? 'checked' : ''}> <span dir="auto">${esc(v)}</span><span class="cn">${cnt.get(v)}</span></label>`).join('')}${vals.length > shown.length ? `<div class="help">… ${vals.length - shown.length} more – use the search box</div>` : ''}</div><div class="row" style="margin:0"><button class="pri" data-a="ok">OK</button><button data-a="clr">Clear filter</button></div>`;
+  pop.innerHTML = `<div class="row"><button data-a="asc">${c.num ? 'Smallest → largest' : 'Sort A → Z'}</button><button data-a="desc">${c.num ? 'Largest → smallest' : 'Sort Z → A'}</button></div><input type="search" id="pS" placeholder="Search values"><div class="vals"><label><input type="checkbox" id="pAll" ${!f.set ? 'checked' : ''}> <b>(Select all)</b></label>${shown.map((v) => `<label data-v="${esc(v.toLowerCase())}"><input type="checkbox" class="pv" value="${esc(v)}" ${!f.set || f.set.has(v) ? 'checked' : ''}> <span dir="auto">${esc(v)}</span><span class="cn">${cnt.get(v)}</span></label>`).join('')}${vals.length > shown.length ? `<div class="help">… ${vals.length - shown.length} more – use the search box</div>` : ''}</div><div class="row" style="margin:0"><button class="pri" data-a="ok">OK</button><button class="clr" data-a="clr">✕ Clear filter</button></div>`;
   pop.classList.add('show'); pop.style.left = Math.max(4, Math.min(window.innerWidth - 280, r.left - 210)) + 'px'; pop.style.top = r.bottom + 4 + 'px';
   const s = $('pS'); s.oninput = () => { const qq = s.value.toLowerCase(); pop.querySelectorAll('.vals label[data-v]').forEach((l) => { l.style.display = l.dataset.v.includes(qq) ? '' : 'none'; }); }; s.focus();
   $('pAll').onchange = () => pop.querySelectorAll('.pv').forEach((x) => { if (x.closest('label').style.display !== 'none') x.checked = $('pAll').checked; });
