@@ -2,6 +2,9 @@
 const { buildModel } = require('./model');
 const { classify } = require('./rules');
 const { readCji3 } = require('./cji3');
+// most frequent project code in the WBS elements: I-SUTH.IN-05-2 → SUTH (falls back to the part before the first dot)
+const projectOf = (lines) => { const m = new Map(); for (const l of lines) { const w = String(l.wbs || '').trim(); if (!w) continue; const k = ((w.match(/^[A-Z]-([A-Z0-9]+)/i) || [])[1] || w.split(/[.\-]/)[0]).toUpperCase(); m.set(k, (m.get(k) || 0) + 1); }
+  return [...m].sort((a, b) => b[1] - a[1])[0]?.[0] || 'Project'; };
 const { readGroups } = require('./groups');
 const { readPrev } = require('./prev');
 const SC = require('./subcontract');
@@ -11,7 +14,8 @@ const { r2 } = require('./util');
 function prepare(opts) {
   const t0 = Date.now(), log = opts.log || (() => {}), step = opts.step || (() => {});
   step('Reading CJI3');
-  const cji = readCji3(opts.cji3); log(`CJI3: ${cji.files.length} file(s), ${cji.lines.length} lines (${cji.dropped} found in more than one file, ${cji.conflicts.length} conflicts), ${cji.subtotals} subtotal rows skipped`);
+  const cji = readCji3(opts.cji3);
+  if (!opts.project) opts.project = projectOf(cji.lines);   // the project code from the WBS elements (I-SUTH.01 → SUTH), never hard coded log(`CJI3: ${cji.files.length} file(s), ${cji.lines.length} lines (${cji.dropped} found in more than one file, ${cji.conflicts.length} conflicts), ${cji.subtotals} subtotal rows skipped`);
   const dupes = cji.within;   // the same key twice inside one file
   step('Last report');
   const prev = opts.prevObj || readPrev(opts.prev), rules = opts.rules || (prev && prev.rules) || [];

@@ -2,7 +2,7 @@
 'use strict';
 const path = require('path');
 const { build } = require('../src/build');
-const a = process.argv.slice(2), o = { project: 'SUTH', out: 'out/Cost_Register.xlsx', log: console.log };
+const a = process.argv.slice(2), o = { out: 'out/Cost_Register.xlsx', log: console.log };
 for (let i = 0; i < a.length; i += 2) { const k = a[i].replace(/^--/, ''); o[k] = k in o && ['cji3', 'mb52', 'me2n', 'zscprg01', 'zscsrv1'].includes(k) ? [].concat(o[k], a[i + 1]) : a[i + 1]; }   // --cji3 a.xlsx --cji3 b.xlsx
 if (!o.cji3) { console.error('usage: register --cji3 <CJI3.xlsx> [--mb52 f] [--zscprg01 f] [--zscsrv1 f] [--vat exclude|include|before] [--vatfrom yyyy-mm-dd] [--me2n f] [--prev lastReport.xlsx] [--project SUTH] [--out out/Cost_Register.xlsx]'); process.exit(1); }
 require('fs').mkdirSync(path.dirname(o.out), { recursive: true });

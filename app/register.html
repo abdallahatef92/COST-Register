@@ -740,7 +740,7 @@ function showStart(canCancel) {
       m.textContent = 'Building… (about 20–30 seconds)'; await new Promise((r) => setTimeout(r, 50));
       try { const t0 = Date.now(), files = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), mb52: by('mb52'), me2n: by('me2n'), prev: by('prev')[0] };
         for (const k of ['zscprg01', 'zscsrv1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
-        const data = Engine.build(files, { project: 'SUTH' }); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`; await idbSet('lastBuild', data); try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
+        const data = Engine.build(files, {}); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`; await idbSet('lastBuild', data); try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
       catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
   };
   draw();

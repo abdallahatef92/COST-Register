@@ -13,7 +13,7 @@ function prevFromJson(s) {
 globalThis.Engine = {
   KINDS, sniff(f) { try { return sniff(f); } catch (e) { return 'ignore'; } },
   build(files, opts = {}) {   // files: { cji3, mb52, zscprg01, zscsrv1, prev } each { name, data }
-    const o = { project: opts.project || 'SUTH', ...files, step: opts.step, log: opts.log, ...(opts.rules ? { rules: opts.rules } : {}) };
+    const o = { project: opts.project || '', ...files, step: opts.step, log: opts.log, ...(opts.rules ? { rules: opts.rules } : {}) };
     if (files.prev && /\.json$/i.test(files.prev.name)) { o.prevObj = prevFromJson(JSON.parse(new TextDecoder().decode(files.prev.data))); delete o.prev; }
     return toAppData(prepare(o), o);
   },
