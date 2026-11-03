@@ -156,12 +156,14 @@ const COLS = {
     { k: 'rate', l: 'Rate', w: 80, num: 1, v: (r) => (r.it.qty ? r.it.td / r.it.qty : 0), h: (r) => `<td class="num">${r.it.qty ? fmt(r.it.td / r.it.qty) : ''}</td>` },
     { k: 'td', l: 'To date', w: 112, num: 1, v: (r) => r.it.td, h: (r) => `<td class="num"><b>${fmt(r.it.td)}</b></td>` },
     { k: 'tm', l: 'This month', w: 104, num: 1, v: (r) => r.it.tm, h: (r) => `<td class="num">${fmt(r.it.tm)}</td>` },
-    { k: 'pos', l: 'POs', w: 50, num: 1, v: (r) => r.it.pos, h: (r) => `<td class="num">${r.it.pos || ''}</td>` },
+    { k: 'pos', l: 'POs', w: 120, multi: 1, v: (r) => (r.it.poList.length ? r.it.poList : ['(none)']), h: (r) => `<td title="${esc(r.it.poTxt)}">${esc(r.it.poList[0] || '')}${r.it.poList.length > 1 ? ` <span class="help">+${r.it.poList.length - 1}</span>` : ''}</td>` },
     { k: 'subs', l: 'Subcontractors', w: 230, v: (r) => r.it.subs, h: (r) => `<td dir="auto" title="${esc(r.it.subs)}">${esc(r.it.subs)}</td>` },
   ],
   po: [
+    { k: 'po', l: 'PO', w: 96, v: (r) => r.p.po, h: (r) => `<td class="help">${esc(r.p.po)}</td>` },
+    { k: 'sup', l: 'Subcontractor', w: 150, v: (r) => r.p.sup, h: (r) => `<td dir="auto" class="help" title="${esc(r.p.sup)}">${esc(r.p.sup)}</td>` },
     { k: 'svc', l: 'Service', w: 96, v: (r) => r.it.svc, h: (r) => `<td><a href="#" class="lk open">${esc(r.it.svc)}</a></td>` },
-    { k: 'desc', l: 'Description', w: 330, v: (r) => r.it.desc, h: (r) => `<td dir="auto" title="${esc(r.it.desc)}">${esc(r.it.desc)}</td>` },
+    { k: 'desc', l: 'Description', w: 270, v: (r) => r.it.desc, h: (r) => `<td dir="auto" title="${esc(r.it.desc)}">${esc(r.it.desc)}</td>` },
     { k: 'unit', l: 'Unit', w: 58, v: (r) => r.it.unit, h: (r) => `<td>${r.it.unit ? `<span class="u" style="background:${unitCol(r.it.unit)}">${esc(r.it.unit)}</span>` : ''}</td>` },
     ...F.map((f) => ({ k: f, l: FN[f], w: f === 'ce' ? 100 : f === 'div' ? 88 : f === 'mnl' ? 66 : 80, code: 1, v: (r) => r.it[f] || '(blank)', h: codeCell(f) })),
     { k: 'st', l: 'Status', w: 100, v: (r) => statusOf(r.it), h: (r) => { const s = statusOf(r.it); return `<td><span class="st ${s.split(' ')[0]}">${s}</span></td>`; } },
@@ -172,16 +174,17 @@ const COLS = {
     { k: 'share', l: '% of PO', w: 70, num: 1, v: (r) => (r.p.td ? r.l.td / r.p.td : 0), h: (r) => `<td class="num">${r.p.td ? (100 * r.l.td / r.p.td).toFixed(0) + '%' : ''}</td>` },
   ] };
 POS.forEach((p) => { p.td = p.lines.reduce((s, l) => s + l.td, 0); p.tm = p.lines.reduce((s, l) => s + l.tm, 0); });
+ITEMS.forEach((it) => { it.poList = []; }); POS.forEach((p) => p.lines.forEach((l) => ITEMS[l.i].poList.push(p.po))); ITEMS.forEach((it) => { it.poList = [...new Set(it.poList)]; it.poTxt = it.poList.join(' '); });
 const ROWS = { svc: () => ITEMS.map((it) => ({ it, g: it.tow })), po: () => POS.flatMap((p) => p.lines.map((l) => ({ it: ITEMS[l.i], p, l, g: p.po }))) };
 // ---------- filtering
-function passCol(c, r, f) { const v = c.v(r); if (c.num) { if (f.nz && !(Math.abs(v) >= 0.005)) return false; if (f.min !== '' && f.min !== undefined && v < +f.min) return false; if (f.max !== '' && f.max !== undefined && v > +f.max) return false; return true; } return !f.set || f.set.has(String(v)); }
+function passCol(c, r, f) { const v = c.v(r); if (c.num) { if (f.nz && !(Math.abs(v) >= 0.005)) return false; if (f.min !== '' && f.min !== undefined && v < +f.min) return false; if (f.max !== '' && f.max !== undefined && v > +f.max) return false; return true; } return !f.set || (Array.isArray(v) ? v.some((x) => f.set.has(String(x))) : f.set.has(String(v))); }
 function rowsOf(vw, skipCol) {
   const S = V[vw], q = S.q.trim().toLowerCase(), cols = COLS[vw];
   return ROWS[vw]().filter((r) => {
     const it = r.it;
     if (S.tow && (vw === 'po' ? r.p.tow : it.tow) !== S.tow) return false;
     if (S.st !== 'All' && statusOf(it) !== S.st) return false; if (!S.exc && it.inc === 'No') return false;
-    if (q && !(it.svc + ' ' + it.desc + ' ' + it.subs + ' ' + it.pkg + ' ' + it.ce + (r.p ? ' ' + r.p.po + ' ' + r.p.title + ' ' + r.p.sup : '')).toLowerCase().includes(q)) return false;
+    if (q && !(it.svc + ' ' + it.desc + ' ' + it.subs + ' ' + it.pkg + ' ' + it.ce + ' ' + it.poTxt + (r.p ? ' ' + r.p.po + ' ' + r.p.title + ' ' + r.p.sup : '')).toLowerCase().includes(q)) return false;
     for (const c of cols) { const f = S.f[c.k]; if (f && c.k !== skipCol && !passCol(c, r, f)) return false; }
     return true; });
 }
@@ -202,8 +205,9 @@ function render() {
     const folded = S.fold.has(g), its = [...new Set(rs.map((r) => r.it))], c = its.filter((x) => statusOf(x) === 'Coded'), gc = towCol(view === 'po' ? rs[0].p.tow : g);
     if (view === 'svc') { const td = rs.reduce((s, r) => s + r.it.td, 0), tdc = c.reduce((s, x) => s + x.td, 0);
       tb.push(`<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}"><span class="tg">${folded ? '+' : '−'}</span><span dir="rtl" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${rs.length} services · coded ${c.length}/${its.length} · to date ${fmt(td)}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span></td></tr>`); }
-    else { const p = rs[0].p, tdc = rs.filter((r) => statusOf(r.it) === 'Coded').reduce((s, r) => s + r.l.td, 0);
-      tb.push(`<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}"><span class="tg">${folded ? '+' : '−'}</span><b>${esc(p.po)}</b> <span dir="auto" style="unicode-bidi:isolate">${esc(p.title)}</span><span class="gm">· <span dir="auto" style="unicode-bidi:isolate">${esc(p.sup)}</span> · <span dir="rtl" style="unicode-bidi:isolate">${esc(p.tow)}</span> · ${esc(p.contract)} · ${p.lines.length} services · to date ${fmt(p.td)} · this month ${fmt(p.tm)} · coded ${p.td ? (100 * tdc / p.td).toFixed(0) : 0}%</span><span class="gb"><i style="width:${p.td ? (100 * tdc / p.td).toFixed(0) : 0}%"></i></span></td></tr>`); }
+    else { const p = rs[0].p, tdc = rs.filter((r) => statusOf(r.it) === 'Coded').reduce((s, r) => s + r.l.td, 0), pc = p.td ? (100 * tdc / p.td).toFixed(0) : 0, ci = (k) => cols.findIndex((x) => x.k === k) + 1;
+      const cells = Array(nc).fill(''); cells[ci('st')] = `<span class="gb" style="margin:0"><i style="width:${pc}%"></i></span> <span style="font-weight:400">${pc}%</span>`; cells[ci('td')] = fmt(rs.reduce((s, r) => s + r.l.td, 0)); cells[ci('tm')] = fmt(rs.reduce((s, r) => s + r.l.tm, 0));
+      const span = ci('ce') + 1; tb.push(`<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="tg">${folded ? '+' : '−'}</span><b>${esc(p.po)}</b> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(p.title)}</span><span class="gm" dir="auto" style="unicode-bidi:isolate">${esc(p.sup)}</span></td>${cells.slice(span).map((x, k) => `<td class="${['td', 'tm'].includes(cols[span + k - 1]?.k) ? 'num' : ''}">${x}</td>`).join('')}</tr>`); }
     if (folded) continue;
     for (const r of rs) { const it = r.it; tb.push(`<tr class="it${sel.has(it.i) ? ' sel' : ''}${it.inc === 'No' ? ' exc' : ''}" data-i="${it.i}" style="--gc:${gc}"><td><input type="checkbox" class="ck" ${sel.has(it.i) ? 'checked' : ''}></td>${cols.map((c) => c.h(r)).join('')}</tr>`); }
   }
@@ -229,7 +233,7 @@ function openPop(k, btn) {
   const S = V[view], c = COLS[view].find((x) => x.k === k), f = S.f[k] || {}, r = btn.getBoundingClientRect(), pop = $('pop'); popK = k;
   let html = `<div class="row"><button data-a="asc">${c.num ? 'Smallest → largest' : 'Sort A → Z'}</button><button data-a="desc">${c.num ? 'Largest → smallest' : 'Sort Z → A'}</button></div>`;
   if (c.num) html += `<div class="row"><input type="number" id="pMin" placeholder="min" value="${f.min ?? ''}"><input type="number" id="pMax" placeholder="max" value="${f.max ?? ''}"></div><label><input type="checkbox" id="pNz" ${f.nz ? 'checked' : ''}> non-zero only</label>`;
-  else { const cnt = new Map(); rowsOf(view, k).forEach((x) => { const v = String(c.v(x)); cnt.set(v, (cnt.get(v) || 0) + 1); }); const vals = [...cnt.keys()].sort((a, b) => a.localeCompare(b));
+  else { const cnt = new Map(); rowsOf(view, k).forEach((x) => { const vv = c.v(x); (Array.isArray(vv) ? vv : [vv]).forEach((v0) => { const v = String(v0); cnt.set(v, (cnt.get(v) || 0) + 1); }); }); const vals = [...cnt.keys()].sort((a, b) => a.localeCompare(b));
     html += `<input type="search" id="pS" placeholder="Search values"><div class="vals" id="pV"><label><input type="checkbox" id="pAll" ${!f.set ? 'checked' : ''}> <b>(Select all)</b></label>${vals.map((v) => `<label data-v="${esc(v.toLowerCase())}"><input type="checkbox" class="pv" value="${esc(v)}" ${!f.set || f.set.has(v) ? 'checked' : ''}> <span dir="auto">${esc(v)}</span><span class="cn">${cnt.get(v)}</span></label>`).join('')}</div>`; }
   html += `<div class="row" style="margin:6px 0 0"><button class="pri" data-a="ok">OK</button><button data-a="clr">Clear filter</button></div>`;
   pop.innerHTML = html; pop.classList.add('show'); pop.style.left = Math.min(window.innerWidth - 270, r.left - 200) + 'px'; pop.style.top = r.bottom + 4 + 'px';
@@ -239,7 +243,7 @@ function openPop(k, btn) {
 $('pop').addEventListener('click', (e) => { const a = e.target.dataset.a; if (!a) return; const S = V[view], c = COLS[view].find((x) => x.k === popK);
   if (a === 'asc' || a === 'desc') { S.sort = { k: popK, d: a === 'asc' ? 1 : -1 }; }
   if (a === 'clr') delete S.f[popK];
-  if (a === 'ok') { if (c.num) S.f[popK] = { min: $('pMin').value, max: $('pMax').value, nz: $('pNz').checked }; else { const boxes = [...document.querySelectorAll('#pop .pv')], on = boxes.filter((x) => x.checked).map((x) => x.value); S.f[popK] = on.length === boxes.length ? {} : { set: new Set(on) }; } }
+  if (a === 'ok') { if (c.num) S.f[popK] = { min: $('pMin').value, max: $('pMax').value, nz: $('pNz').checked }; else { const all = [...document.querySelectorAll('#pop .pv')], srch = ($('pS')?.value || '').trim(), boxes = srch ? all.filter((x) => x.closest('label').style.display !== 'none') : all, on = boxes.filter((x) => x.checked).map((x) => x.value); S.f[popK] = !srch && on.length === all.length ? {} : { set: new Set(on) }; } }
   $('pop').classList.remove('show'); render(); });
 document.addEventListener('mousedown', (e) => { if (!e.target.closest('#pop') && !e.target.closest('.fb')) $('pop').classList.remove('show'); });
 // ---------- events
