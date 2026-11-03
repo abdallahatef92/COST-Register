@@ -29,6 +29,10 @@ nav.tabs button.on{background:var(--bg);color:var(--navy)}
 table.t{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;min-width:100%}
 .t th{position:sticky;top:0;background:var(--navy);color:#fff;font-weight:600;font-size:12px;padding:6px 24px 6px 8px;text-align:left;z-index:3;white-space:nowrap;border-right:1px solid #33497a;overflow:hidden;text-overflow:ellipsis}
 .t th.code{background:var(--gold);border-right-color:#a67c00} .t th.num{text-align:right} .t th.cut{background:var(--gold)} .t th.pend{background:#C55A11}
+.t th{height:27px} .t thead tr.band th{background:#2B4677;text-align:center;padding:0 6px;font-size:11.5px;border-bottom:1px solid #4a6496} .t thead tr.band th.tog{cursor:pointer} .t thead tr.band th.tog:hover{background:#3b5a91}
+.t thead tr.band th.q{background:#37558a} .t thead tr.band th.y{background:#24406E} .t thead tr.band th.blank{background:var(--navy)}
+.t .fz{position:sticky;z-index:2} .t th.fz{z-index:5} .t td.fz{background:#fff} .t tr.it.sel td.fz{background:var(--sel)} .t tr.tot td.fz{background:var(--navy)}
+.t tr.grp td .gl{position:sticky;left:8px;display:inline-block} .t tr.grp td{overflow:visible}
 .t th .fb{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:4px;padding:0 5px;font-size:11px;line-height:17px}
 .t th .fb.act{background:#FFD966;color:#000} .t th .sa{font-size:10px}
 .t td input[type=checkbox]{margin:0;vertical-align:middle} .t td{border-bottom:1px solid var(--line);border-right:1px solid #eef0f4;padding:0 7px;white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;height:27px;max-height:27px}
@@ -235,6 +239,18 @@ function renderChecks() {
     return `<tr><td>${esc(n)}</td><td>${typeof v === 'number' && k !== 'zero' && Math.abs(v) >= 100 ? fmt2(v) : v}</td><td style="text-align:center">${ok === null ? '<span class="inf">info</span>' : ok ? '<span class="okc">OK</span>' : '<span class="chk">CHECK</span>'}</td><td style="text-align:left;color:#555">${esc(note)}</td></tr>`; }).join('')}</table></div>`;
 }
 // =====================================================================================  generic table pages (filters like Excel, groups that fold, selection, inline codes)
+// Per Month columns: Opening · months (folding into quarters and years) · Pending
+const PF = new Set();
+const MI = META.months.map((m, k) => { const y = 2000 + +m.slice(4, 6), mo = MON.indexOf(m.slice(0, 3)) + 1; return { idx: k + 1, label: m, y, q: Math.floor((mo - 1) / 3) + 1 }; });
+function slotsOf() {
+  const out = [{ label: 'Opening', idx: [0], kind: 'open' }];
+  for (const y of [...new Set(MI.map((m) => m.y))]) { const ym = MI.filter((m) => m.y === y);
+    if (PF.has('Y' + y)) { out.push({ label: y + ' total', idx: ym.map((m) => m.idx), kind: 'y', y }); continue; }
+    for (const q of [...new Set(ym.map((m) => m.q))]) { const qm = ym.filter((m) => m.q === q);
+      if (PF.has('Q' + y + '-' + q)) out.push({ label: 'Q' + q + '-' + String(y).slice(2) + ' total', idx: qm.map((m) => m.idx), kind: 'q', y, q });
+      else qm.forEach((m) => out.push({ label: m.label, idx: [m.idx], kind: 'm', y, q })); } }
+  out.push({ label: 'Pending', idx: [NP - 1], kind: 'pend' }); return out;
+}
 const VS = {}; const vs = () => { const k = ST.tab + ':' + (ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ST.bk); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
 const sel = new Set(); let lastClick = null;
 const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v ?? ''));
@@ -248,7 +264,7 @@ function pageDef() {
   const bi = ST.bk, b = BK[bi], rep = R.rep;
   if (ST.tab === 'cod') {
     const cols = [];
-    b.cols.forEach((lab, j) => { if (bi === MATI && j < 2) return; const w = Math.min(320, Math.max(70, lab === 'Description' || /name/i.test(lab) ? 300 : lab === 'Type of works' ? 170 : 96)); cols.push({ k: 'c' + j, l: lab, w: lab === 'Unit' ? 58 : w, v: (r) => r.it.vals[j], h: (r) => (lab === 'Unit' ? `<td>${r.it.vals[j] ? `<span class="u" style="background:${unitCol(r.it.vals[j])}">${esc(r.it.vals[j])}</span>` : ''}</td>` : j === (bi === MATI ? 3 : isSub(bi) ? 1 : 0) ? `<td title="${esc(r.it.vals[j])}"><a class="lk open">${esc(r.it.vals[j])}</a></td>` : `<td dir="auto" title="${esc(r.it.vals[j])}">${esc(r.it.vals[j])}</td>`) }); });
+    b.cols.forEach((lab, j) => { if (bi === MATI && j < 2) return; const w = Math.min(320, Math.max(70, lab === 'Description' || /name/i.test(lab) ? 300 : lab === 'Type of works' ? 170 : 96)); cols.push({ k: 'c' + j, l: lab, w: lab === 'Unit' ? 58 : w, v: (r) => r.it.vals[j], h: (r) => (lab === 'Unit' ? `<td>${r.it.vals[j] ? `<span class="u" style="background:${unitCol(r.it.vals[j])}">${esc(r.it.vals[j])}</span>` : ''}</td>` : j === (bi === MATI ? 3 : isSub(bi) ? 1 : 0) ? `<td title="${esc(r.it.vals[j])}"><a class="lk open">${esc(r.it.vals[j])}</a></td>` : `<td dir="auto" title="${esc(r.it.vals[j])}">${esc(r.it.vals[j])}</td>`), fz: j <= (bi === MATI ? 3 : isSub(bi) ? 1 : 0) ? 1 : 0 }); });
     codeF(bi).forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : f === 'div' ? 88 : f === 'mnl' ? 66 : 82, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) }));
     cols.push({ k: 'st', l: 'Status', w: 104, v: (r) => statusOf(r.it), h: (r) => stCell(r.it) }, { k: 'inc', l: 'Include', w: 66, v: (r) => r.it.inc, h: (r) => `<td><button class="incb ${r.it.inc === 'No' ? 'no' : ''}">${r.it.inc === 'No' ? 'No' : 'Yes'}</button></td>` });
     if (b.qty) cols.push(numC('qty', 'Qty to date', 96, (r) => r.it.qtd, { f: fq }), numC('rate', 'Rate', 84, (r) => (Math.abs(r.it.qtd) > 1e-9 ? r.it.td / r.it.qtd : 0), { f: fmt2 }));
@@ -258,23 +274,38 @@ function pageDef() {
       foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
   }
   if (ST.tab === 'pm') {
-    const mode = b.qty ? ST.pmMode : 'Amount', cols = [{ k: 'code', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 110, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` }];
-    if (itemDesc(b.items[0]) !== '' || bi === MATI || isSub(bi)) cols.push({ k: 'desc', l: 'Description', w: 260, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` });
-    ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 70, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` }));
-    const val = (it, p) => (mode === 'Qty' ? (p < 0 ? it.qtd : it.q[p]) : mode === 'Rate' ? (p < 0 ? (Math.abs(it.qtd) > 1e-9 ? it.td / it.qtd : 0) : Math.abs(it.q[p]) > 1e-9 ? it.p[p] / it.q[p] : 0) : p < 0 ? it.td : it.p[p]), f = mode === 'Qty' ? fq : mode === 'Rate' ? fmt2 : fmt;
-    PER.forEach((pl, p) => cols.push(numC('p' + p, pl, 96, (r) => val(r.it, p), { f, th: p === rep ? 'cut' : p === NP - 1 ? 'pend' : '', cls: () => (p === rep ? 'cutc' : p > 0 && p < NP - 1 && rep > 0 && p > rep ? 'after' : '') })));
-    cols.push(numC('td', mode === 'Amount' ? 'To date' : mode === 'Qty' ? 'Qty to date' : 'Rate to date', 110, (r) => val(r.it, -1), { f, h: (r) => `<td class="num"><b>${f(val(r.it, -1))}</b></td>` }));
+    const mode = b.qty ? ST.pmMode : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = slotsOf(), lead = [];
+    lead.push({ k: 'code', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 110, fz: 1, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` });
+    if (itemDesc(b.items[0]) !== '' || bi === MATI || isSub(bi)) lead.push({ k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` });
+    ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 66, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` }));
+    const agg = (it, idx, sub) => { let a = 0, q = 0; for (const p of idx) { a += it.p[p]; q += it.q[p]; } return sub === 'Qty' ? q : sub === 'Rate' ? (Math.abs(q) > 1e-9 ? a / q : 0) : a; };
+    const fmtOf = (sub) => (sub === 'Qty' ? fq : sub === 'Rate' ? fmt2 : fmt), tdIdx = PER.slice(0, NP - 1).map((x, k) => k), cols = [...lead];
+    slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub), { f: fmtOf(sub), th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
+      cls: () => (sl.idx.includes(rep) ? 'cutc' : sl.kind !== 'open' && sl.kind !== 'pend' && rep > 0 && Math.min(...sl.idx) > rep ? 'after' : ''), slot: si, sub }))));
+    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub), { f: fmtOf(sub), h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub))}</b></td>`, slot: 'td', sub })));
+    // header bands: years › quarters (› month when Qty · Rate · Amount)
+    const nL = lead.length, bands = [], yr = [], qr = [], mr = [];
+    const spanOf = (pred) => slots.filter(pred).length * subs.length;
+    yr.push({ l: '', span: nL, cls: 'blank' }); qr.push({ l: '', span: nL, cls: 'blank' }); mr.push({ l: '', span: nL, cls: 'blank' });
+    slots.forEach((sl, si) => { if (sl.kind === 'open' || sl.kind === 'pend') { yr.push({ l: '', span: subs.length, cls: 'blank' }); qr.push({ l: '', span: subs.length, cls: 'blank' }); }
+      else { if (si === 0 || slots[si - 1].y !== sl.y || slots[si - 1].kind === 'open') yr.push({ l: `${PF.has('Y' + sl.y) ? '+' : '−'} ${sl.y}`, span: spanOf((x) => x.y === sl.y && x.kind !== 'open' && x.kind !== 'pend'), cls: 'tog y', tog: 'Y' + sl.y });
+        if (sl.kind === 'y') qr.push({ l: 'year total', span: subs.length, cls: 'q' }); else if (si === 0 || slots[si - 1].q !== sl.q || slots[si - 1].y !== sl.y) qr.push({ l: `${PF.has('Q' + sl.y + '-' + sl.q) ? '+' : '−'} Q${sl.q}-${String(sl.y).slice(2)}`, span: spanOf((x) => x.y === sl.y && x.q === sl.q && (x.kind === 'm' || x.kind === 'q')), cls: 'tog q', tog: 'Q' + sl.y + '-' + sl.q }); }
+      mr.push({ l: sl.label, span: subs.length, cls: sl.idx.includes(rep) ? 'cutb' : '' }); });
+    [yr, qr, mr].forEach((row) => row.push({ l: mode === 'All' ? 'To date' : '', span: subs.length, cls: 'blank' }));
+    bands.push(yr, qr); if (mode === 'All') bands.push(mr);
     const rows = b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
-    return { cols, rows, groups: b.tree, gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${rs.length} items · to date ${fmt(rs.reduce((s, r) => s + r.it.td, 0))}</span>`,
-      foot: mode === 'Amount' ? (rs) => { const o = {}; PER.forEach((pl, p) => { o['p' + p] = fmt(rs.reduce((s, r) => s + r.it.p[p], 0)); }); o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); return o; } : null, extraTools: b.qty ? `<span class="seg">${['Amount', 'Qty', 'Rate'].map((m) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${m}</button>`).join('')}</span>` : '' };
+    const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.slot === 'td' ? tdIdx : slots[c.slot].idx; let a = 0, q = 0; rs.forEach((r) => idx.forEach((p) => { a += r.it.p[p]; q += r.it.q[p]; })); o[c.k] = c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
+    return { cols, rows, bands, groups: b.tree, gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${rs.length} items · to date ${fmt(rs.reduce((s, r) => s + r.it.td, 0))}</span>`,
+      foot: footF, extraTools: (b.qty ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '')
+        + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>` };
   }
   if (ST.tab === 'lines') {
     const idx = []; for (let i = 0; i < N; i++) if (L.b[i] === bi) idx.push(i);
     const it = (i) => b.items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
-    const cols = [{ k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
+    const cols = [{ k: 'item', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 106, fz: 1, v: (r) => itemCode(it(r.i)), h: (r) => `<td class="help" title="${esc(itemCode(it(r.i)))}"></td>` },
+      { k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
       { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` },
-      { k: 'item', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 106, v: (r) => itemCode(it(r.i)), h: (r) => `<td><a class="lk open">${esc(itemCode(it(r.i)))}</a></td>` },
-      { k: 'desc', l: 'Description', w: 250, v: (r) => S[L.desc[r.i]], h: (r) => `<td dir="auto" title="${esc(S[L.desc[r.i]])}">${esc(S[L.desc[r.i]])}</td>` }];
+      ...(bi === MATI ? [] : [{ k: 'desc', l: 'Line text', w: 250, v: (r) => S[L.desc[r.i]], h: (r) => `<td dir="auto" title="${esc(S[L.desc[r.i]])}">${esc(S[L.desc[r.i]])}</td>` }])];
     if (isSub(bi)) cols.push({ k: 'po', l: 'PO', w: 96, v: (r) => S[L.po[r.i]], h: (r) => `<td>${esc(S[L.po[r.i]])}</td>` }, { k: 'sup', l: 'Subcontractor', w: 170, v: (r) => S[L.sup[r.i]], h: (r) => `<td dir="auto">${esc(S[L.sup[r.i]])}</td>` }, { k: 'src', l: 'Source', w: 120, v: (r) => SRC[r.i], h: (r) => `<td>${esc(SRC[r.i])}</td>` });
     if (b.qty) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
     cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
@@ -282,13 +313,17 @@ function pageDef() {
     cols.push({ k: 'inc', l: 'Include', w: 66, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` },
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 52, v: (r) => S[L.ty[r.i]], h: (r) => `<td>${esc(S[L.ty[r.i]])}</td>` },
       { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` }, { k: 'wbs', l: 'WBS element', w: 150, v: (r) => S[L.wbs[r.i]], h: (r) => `<td>${esc(S[L.wbs[r.i]])}</td>` });
-    return { cols, rows: idx.map((i) => ({ i, it: it(i) })), virtual: true, lines: true, foot: (rs) => ({ amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
+    const lastLab = cols[cols.findIndex((c) => c.k === (b.qty ? 'qty' : 'amt')) - 1].k;
+    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: L.it[i] })), lines: true, groups: true, gSpanK: lastLab, gColor: () => '#EEF2F8',
+      gLabel: (g, rs) => { const x = b.items[g]; return `<a class="lk open2" data-ii="${g}">${esc(itemCode(x))}</a> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(itemDesc(x))}</span><span class="gm">${rs.length} lines${itemUnit(x) ? ' · ' + esc(itemUnit(x)) : ''}</span>`; },
+      gCells: (g, rs) => ({ qty: fq(rs.reduce((s, r) => s + (R.inc[r.i] ? L.qty[r.i] : 0), 0)), amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }),
+      foot: (rs) => ({ amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
   }
   if (ST.tab === 'exp') {
     const pkgs = [...new Set([...R.exp.values()].map((e) => e.pkg))].sort((a, b2) => (a === '') - (b2 === '') || a.localeCompare(b2)), pIx = new Map(pkgs.map((p, k) => [p, k]));
     const rows = [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) > 0.005)).map((e) => ({ e, it: BK[e.b].items[e.ii], g: (e.pkg || '(no PKG yet)'), g2: BK[e.b].id }))
       .sort((x, y) => pIx.get(x.e.pkg) - pIx.get(y.e.pkg) || x.e.b - y.e.b || x.e.ii - y.e.ii);
-    const cols = [{ k: 'b', l: 'Bucket', w: 150, v: (r) => r.g2, h: (r) => `<td>${esc(r.g2)}</td>` }, { k: 'code', l: 'Item', w: 120, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}">${esc(itemCode(r.it))}</td>` },
+    const cols = [{ k: 'b', l: 'Bucket', w: 150, fz: 1, v: (r) => r.g2, h: (r) => `<td>${esc(r.g2)}</td>` }, { k: 'code', l: 'Item', w: 120, fz: 1, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}">${esc(itemCode(r.it))}</td>` },
       { k: 'desc', l: 'Description', w: 260, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}${r.e.hand ? ' <span class="st Partly">hand-coded</span>' : ''}</td>` },
       { k: 'mnl', l: 'MNL', w: 64, code: 1, v: (r) => r.e.mnl || '(blank)', h: (r) => `<td><b>${esc(r.e.mnl)}</b></td>` }, { k: 'ce', l: 'Cost element', w: 100, code: 1, v: (r) => r.e.ce || '(blank)', h: (r) => `<td><b>${esc(r.e.ce)}</b></td>` }];
     PER.forEach((pl, p) => cols.push(numC('p' + p, pl, 96, (r) => r.e.p[p], { th: p === rep ? 'cut' : p === NP - 1 ? 'pend' : '', cls: () => (p === rep ? 'cutc' : p > 0 && p < NP - 1 && rep > 0 && p > rep ? 'after' : '') })));
@@ -307,7 +342,7 @@ function subDef() {
   const poTot = new Map(); for (const x of map.values()) { const t = poTot.get(x.po) || { td: 0, tm: 0, pe: 0, op: 0, n: 0 }; t.td += x.td; t.tm += x.tm; t.pe += x.pe; t.op += x.op; t.n++; poTot.set(x.po, t); }
   if (ST.sub === 'po') {
     const rows = [...map.values()].map((x) => ({ x, it: sb.items[x.ii], g: x.po })).sort((a, b) => poTot.get(b.x.po).td - poTot.get(a.x.po).td || b.x.td - a.x.td);
-    const cols = [{ k: 'po', l: 'PO', w: 96, v: (r) => r.x.po, h: (r) => `<td class="help">${esc(r.x.po)}</td>` }, { k: 'sup', l: 'Subcontractor', w: 160, v: (r) => SUB.supn[r.x.po] || '', h: (r) => `<td dir="auto" class="help">${esc(SUB.supn[r.x.po] || '')}</td>` },
+    const cols = [{ k: 'po', l: 'PO', w: 96, fz: 1, v: (r) => r.x.po, h: (r) => `<td class="help">${esc(r.x.po)}</td>` }, { k: 'sup', l: 'Subcontractor', w: 160, v: (r) => SUB.supn[r.x.po] || '', h: (r) => `<td dir="auto" class="help">${esc(SUB.supn[r.x.po] || '')}</td>` },
       { k: 'svc', l: 'Service', w: 96, v: (r) => r.it.vals[1], h: (r) => `<td><a class="lk open">${esc(r.it.vals[1])}</a></td>` }, { k: 'desc', l: 'Description', w: 260, v: (r) => r.it.vals[2], h: (r) => `<td dir="auto" title="${esc(r.it.vals[2])}">${esc(r.it.vals[2])}</td>` },
       ...['div', 'pkg', 'mnl', 'ce'].map((f) => ({ k: f, l: FN[f], w: f === 'ce' ? 100 : f === 'div' ? 88 : f === 'mnl' ? 66 : 80, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) })),
       { k: 'st', l: 'Status', w: 104, v: (r) => statusOf(r.it), h: (r) => stCell(r.it) }, numC('qty', 'Qty (PO)', 92, (r) => r.x.qty, { f: fq }), numC('td', 'To date (PO)', 112, (r) => r.x.td, { h: (r) => `<td class="num"><b>${fmt(r.x.td)}</b></td>` }), numC('tm', 'This month (PO)', 112, (r) => r.x.tm)];
@@ -318,7 +353,7 @@ function subDef() {
   if (ST.sub === 'reg') {
     const pos = new Set([...poTot.keys(), ...Object.keys(SUB.unpostedByPo)]);
     const rows = [...pos].map((po) => ({ po, t: poTot.get(po) || { td: 0, tm: 0, pe: 0, op: 0, n: 0 }, c: SUB.po[po] || {} })).sort((a, b) => b.t.td - a.t.td);
-    const cols = [{ k: 'po', l: 'PO', w: 100, v: (r) => r.po, h: (r) => `<td><a class="lk gopo" data-po="${esc(r.po)}">${esc(r.po)}</a></td>` }, { k: 'title', l: 'PO title', w: 260, v: (r) => SUB.title[r.po] || '', h: (r) => `<td dir="auto" title="${esc(SUB.title[r.po] || '')}">${esc(SUB.title[r.po] || '')}</td>` },
+    const cols = [{ k: 'po', l: 'PO', w: 100, fz: 1, v: (r) => r.po, h: (r) => `<td><a class="lk gopo" data-po="${esc(r.po)}">${esc(r.po)}</a></td>` }, { k: 'title', l: 'PO title', w: 260, v: (r) => SUB.title[r.po] || '', h: (r) => `<td dir="auto" title="${esc(SUB.title[r.po] || '')}">${esc(SUB.title[r.po] || '')}</td>` },
       { k: 'sup', l: 'Subcontractor', w: 200, v: (r) => SUB.supn[r.po] || '', h: (r) => `<td dir="auto">${esc(SUB.supn[r.po] || '')}</td>` }, { k: 'tow', l: 'Type of works', w: 170, v: (r) => SUB.type[r.po] || '', h: (r) => `<td dir="auto"><span class="u" style="background:${grpCol(SUB.type[r.po] || '')}">${esc(SUB.type[r.po] || '')}</span></td>` },
       { k: 'con', l: 'Contract', w: 110, v: (r) => (r.c.contract === 'A2' ? 'Incl. VAT (A2)' : r.c.contract === 'A1' ? 'Excl. VAT (A1)' : r.c.contract || ''), h: (r) => `<td>${r.c.contract === 'A2' ? 'Incl. VAT (A2)' : r.c.contract === 'A1' ? 'Excl. VAT (A1)' : esc(r.c.contract || '')}</td>` },
       numC('n', 'Certificates', 90, (r) => r.c.n || 0), { k: 'first', l: 'First cert.', w: 90, v: (r) => r.c.first || '', h: (r) => `<td>${esc(r.c.first || '')}</td>` }, { k: 'last', l: 'Last cert.', w: 90, v: (r) => r.c.last || '', h: (r) => `<td>${esc(r.c.last || '')}</td>` },
@@ -350,17 +385,21 @@ function renderTable() {
   if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
   R.rows = rows;
   $('cg').innerHTML = (D.sel ? '<col style="width:34px">' : '') + cols.map((c) => `<col style="width:${c.w}px">`).join('');
-  $('th').innerHTML = '<tr>' + (D.sel ? '<th style="padding-right:6px"><input type="checkbox" id="all"></th>' : '') + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''}" title="${esc(c.l)}">${esc(c.l)}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}</th>`).join('') + '</tr>';
+  // frozen columns: left offsets
+  let left = D.sel ? 34 : 0; const fzL = {}; cols.forEach((c) => { if (c.fz) { fzL[c.k] = left; left += c.w; } }); R.fzL = fzL;
+  const fz = (c) => (fzL[c.k] !== undefined ? ` fz" style="left:${fzL[c.k]}px` : ''), HH = 27, nb = (D.bands || []).length;
+  const bandH = (D.bands || []).map((row, ri) => '<tr class="band">' + (D.sel && ri === 0 ? `<th rowspan="${nb}" class="blank fz" style="left:0;top:0"></th>` : '') + row.map((x) => `<th colspan="${x.span}" class="${x.cls || ''}" style="top:${ri * HH}px" ${x.tog ? `data-tog="${x.tog}"` : ''}>${esc(x.l)}</th>`).join('') + '</tr>').join('');
+  $('th').innerHTML = bandH + '<tr>' + (D.sel ? `<th class="fz" style="left:0;top:${nb * HH}px;padding-right:6px"><input type="checkbox" id="all"></th>` : '') + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzL[c.k] !== undefined ? 'fz' : ''}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.l)}">${esc(c.l)}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}</th>`).join('') + '</tr>';
   const nc = cols.length + (D.sel ? 1 : 0), ft = D.foot ? D.foot(rows) : null;
-  $('tf').innerHTML = ft ? `<tr class="tot">${D.sel ? '<td></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}">${j === 0 ? 'TOTAL' : ft[c.k] ?? ''}</td>`).join('')}</tr>` : '';
+  $('tf').innerHTML = ft ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzL[c.k] !== undefined ? ' fz' : ''}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''}>${j === 0 ? 'TOTAL' : ft[c.k] ?? ''}</td>`).join('')}</tr>` : '';
   { const tb = [];
     if (D.groups) {
       const groups = new Map(); for (const r of rows) (groups.get(r.g) || groups.set(r.g, []).get(r.g)).push(r);
       for (const [g, rs] of groups) {
         const folded = S0.fold.has(g), gc = D.pkgColor ? D.pkgColor(g) : D.gColor ? D.gColor(g) : grpCol(g);
-        if (D.gCells) { const cells = D.gCells(g, rs), ci = (k) => cols.findIndex((x) => x.k === k) + (D.sel ? 1 : 0), span = ci('ce') + 1;
-          tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="tg">${folded ? '+' : '−'}</span>${D.gLabel(g, rs)}</td>${cols.slice(span - (D.sel ? 1 : 0)).map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`).join('')}</tr>`); }
-        else { const lab = D.gLabel(g, rs); tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}" dir="ltr"><span class="tg">${folded ? '+' : '−'}</span>${lab}</td></tr>`); }
+        if (D.gCells) { const cells = D.gCells(g, rs), ci = (k) => cols.findIndex((x) => x.k === k) + (D.sel ? 1 : 0), span = ci(D.gSpanK || 'ce') + 1, lab = D.gLabel(g, rs);
+          tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="gl"><span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td>${cols.slice(span - (D.sel ? 1 : 0)).map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`).join('')}</tr>`); }
+        else { const lab = D.gLabel(g, rs); tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}" dir="ltr"><span class="gl"><span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td></tr>`); }
         if (folded) continue;
         let lastB = null;
         for (const r of rs) { if (D.sub2 && r.g2 !== lastB) { const bs = rs.filter((x) => x.g2 === r.g2), t2 = fmt(bs.reduce((s, x) => s + x.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0)), g2 = r.g2; tb.push(() => `<tr class="grp" style="--gc:${gc}"><td colspan="${nc}" style="padding-left:30px;border-top:1px solid #9fb3d1;font-weight:600">${esc(g2)} <span class="gm">${bs.length} items · to date ${t2}</span></td></tr>`); lastB = r.g2; }
@@ -376,7 +415,7 @@ function renderTable() {
 }
 const selKey = (r) => (r.i !== undefined ? 'L' + r.i : r.it.bi + ':' + r.it.ii);
 function rowHtml(D, r, gc) { const it = r.it, exc = r.i !== undefined ? !R.inc[r.i] : it && it.inc === 'No', k = it ? selKey(r) : '';
-  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => c.h(r)).join('')}</tr>`; }
+  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`; }
 function renderVirtual() {   // only the rows on screen are drawn (fast with thousands of rows)
   const d = R.disp || [], nc = R.nc, w = $('wrap'), top = w.scrollTop, h = w.clientHeight || 600, a = Math.max(0, Math.floor(top / VROW) - 15), z = Math.min(d.length, a + Math.ceil(h / VROW) + 30);
   if (!d.length) { $('tb').innerHTML = `<tr><td colspan="${nc}" style="padding:20px;color:#6b7280">Nothing matches.</td></tr>`; return; }
@@ -391,7 +430,7 @@ $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it')
     if (r.i !== undefined) change([{ t: 'line', i: r.i, f, v: v === r.it[f] ? undefined : v }], 'Line ' + FN[f] + ' = ' + (v || '(blank)'));
     else { const k = selKey(r), tg = sel.has(k) && sel.size > 1 ? [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number)) : [[r.it.bi, r.it.ii]]; change(tg.map(([bi, ii]) => ({ t: 'item', bi, ii, f, v })), FN[f] + ' = ' + (v || '(blank)')); } }
   if (e.target.matches('.ck')) { const k = tr.dataset.k; e.target.checked ? sel.add(k) : sel.delete(k); render(); } });
-$('tb').addEventListener('click', (e) => { const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
+$('tb').addEventListener('click', (e) => { const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
   const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr); if (!r) return;
   if (e.target.matches('.incb')) { if (r.i !== undefined) { const cur = (OVR[L.id[r.i]] || {}).inc ?? r.it.inc, nv = cur === 'No' ? 'Yes' : 'No'; change([{ t: 'line', i: r.i, f: 'inc', v: nv === r.it.inc ? undefined : nv }], 'Line include'); } else change([{ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'inc', v: r.it.inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
   if (e.target.matches('.rst')) { change(['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i: r.i, f, v: undefined })), 'Line back to item codes'); return; }
@@ -399,11 +438,12 @@ $('tb').addEventListener('click', (e) => { const g = e.target.closest('tr.grp[da
   if (e.target.matches('.ck') && e.shiftKey && lastClick) { const ks = R.rows.map(selKey), a = ks.indexOf(lastClick), b = ks.indexOf(tr.dataset.k); ks.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((k) => sel.add(k)); render(); }
   if (e.target.matches('.ck')) lastClick = tr.dataset.k; });
 $('tb').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input[data-f]')) { e.preventDefault(); const f = e.target.dataset.f, all = [...document.querySelectorAll(`#tb input[data-f="${f}"]`)], k = all.indexOf(e.target); e.target.blur(); setTimeout(() => document.querySelectorAll(`#tb input[data-f="${f}"]`)[k + 1]?.focus(), 0); } });
-$('th').addEventListener('click', (e) => { const b = e.target.closest('.fb'); if (b) { e.stopPropagation(); openPop(b.dataset.k, b); } });
+$('th').addEventListener('click', (e) => { const b = e.target.closest('.fb'); if (b) { e.stopPropagation(); openPop(b.dataset.k, b); return; } const t = e.target.closest('[data-tog]'); if (t) { const k = t.dataset.tog; PF.has(k) ? PF.delete(k) : PF.add(k); render(); } });
 $('th').addEventListener('change', (e) => { if (e.target.id === 'all') { R.rows.forEach((r) => (e.target.checked ? sel.add(selKey(r)) : sel.delete(selKey(r)))); render(); } });
 $('bkbar').addEventListener('click', (e) => { const b = e.target.closest('[data-bk]'); if (b) { ST.bk = +b.dataset.bk; sel.clear(); render(); $('wrap').scrollTop = 0; } });
 $('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
-  if (t.dataset.st) { S0.st = t.dataset.st; render(); } if (t.dataset.pm) { ST.pmMode = t.dataset.pm; render(); } if (t.dataset.sv) { ST.sub = t.dataset.sv; sel.clear(); render(); }
+  if (t.dataset.st) { S0.st = t.dataset.st; render(); } if (t.dataset.pm) { ST.pmMode = t.dataset.pm; render(); }
+  if (t.dataset.pv) { PF.clear(); if (t.dataset.pv !== 'Months') MI.forEach((m) => PF.add(t.dataset.pv === 'Years' ? 'Y' + m.y : 'Q' + m.y + '-' + m.q)); render(); } if (t.dataset.sv) { ST.sub = t.dataset.sv; sel.clear(); render(); }
   if (t.id === 'bFold') { R.rows.forEach((r) => S0.fold.add(r.g)); render(); } if (t.id === 'bOpen') { S0.fold.clear(); render(); } if (t.id === 'bClr') { S0.f = {}; S0.sort = null; S0.q = ''; S0.st = 'All'; render(); } });
 $('tools').addEventListener('input', (e) => { if (e.target.id === 'q') { vs().q = e.target.value; render(); const q = $('q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
 $('tb').addEventListener('click', (e) => { const a = e.target.closest('.gopo'); if (a) { e.preventDefault(); ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); render(); } });
