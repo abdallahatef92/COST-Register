@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cost Register</title>
+<style>
+:root{--navy:#1F3864;--navy2:#2F5597;--gold:#BF8F00;--line:#DDE2EA;--bg:#F3F5F9;--txt:#1d2433;--mut:#6b7280;--ok:#E2EFDA;--okT:#2e6b1f;--part:#FFF2CC;--partT:#8a6500;--not:#FCE4D6;--notT:#a33a00;--sel:#DCE9F9;--code:#EEF3FB;--codeB:#C9D6EA;--miss:#FFF0E8;--missB:#F2B79A;--ovr:#F8CBAD}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.35 "Segoe UI",Arial,sans-serif;color:var(--txt);background:var(--bg);height:100vh;display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;color:var(--txt)}
+button:hover{border-color:var(--navy2)} button.pri{background:var(--navy);color:#fff;border-color:var(--navy)} button:disabled{opacity:.45;cursor:default}
+input,select{font:inherit}
+header.top{background:var(--navy);color:#fff;padding:7px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header.top h1{font-size:17px;margin:0;font-weight:600} .sub{opacity:.75;font-size:11.5px}
+.sp{flex:1} header.top button{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)} header.top button:hover{border-color:#fff}
+header.top select,header.top input{background:#fff;border:0;border-radius:5px;padding:4px 6px;color:var(--txt)} header.top label{font-size:12px;opacity:.9}
+nav.tabs{display:flex;gap:3px;background:var(--navy);padding:0 14px} nav.tabs button{border-radius:7px 7px 0 0;border:0;background:#2b4677;color:#dfe6f3;padding:7px 16px;font-weight:600}
+nav.tabs button.on{background:var(--bg);color:var(--navy)}
+#saved{font-size:11px;opacity:.8}
+.page{flex:1;display:none;flex-direction:column;min-height:0} .page.on{display:flex}
+.bar{display:flex;gap:8px;align-items:center;padding:7px 12px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.bar input[type=search]{width:240px;padding:5px 10px;border:1px solid var(--line);border-radius:6px}
+.chip{border-radius:14px;padding:3px 10px;font-size:12px;white-space:nowrap} .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip .pc{font-size:10px;opacity:.75;margin-left:4px}
+.bulk{display:none;gap:8px;align-items:center;padding:7px 12px;background:#EAF1FB;border-bottom:1px solid #b9cce8;flex-wrap:wrap}
+.bulk.show{display:flex} .bulk b{color:var(--navy)} .bulk input{width:96px;padding:4px 7px;border:1px solid var(--codeB);border-radius:5px;background:#fff}
+.wrap{flex:1;overflow:auto;background:#fff;position:relative}
+table.t{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;min-width:100%}
+.t th{position:sticky;top:0;background:var(--navy);color:#fff;font-weight:600;font-size:12px;padding:6px 24px 6px 8px;text-align:left;z-index:3;white-space:nowrap;border-right:1px solid #33497a;overflow:hidden;text-overflow:ellipsis}
+.t th.code{background:var(--gold);border-right-color:#a67c00} .t th.num{text-align:right} .t th.cut{background:var(--gold)} .t th.pend{background:#C55A11}
+.t th .fb{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:4px;padding:0 5px;font-size:11px;line-height:17px}
+.t th .fb.act{background:#FFD966;color:#000} .t th .sa{font-size:10px}
+.t td input[type=checkbox]{margin:0;vertical-align:middle} .t td{border-bottom:1px solid var(--line);border-right:1px solid #eef0f4;padding:0 7px;white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;height:27px;max-height:27px}
+.t tbody tr{height:27px}
+.t tr.grp td{background:var(--gc);font-weight:600;border-top:2px solid var(--navy);padding:0 8px;cursor:pointer}
+.t tr.grp .tg{display:inline-block;width:16px;font-weight:700;color:var(--navy)} .t tr.grp .gm{font-weight:400;color:#444;margin-left:8px}
+.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through}
+.t tr.tot td{background:var(--navy);color:#fff;font-weight:700;position:sticky;bottom:0}
+.t td.num{text-align:right;font-variant-numeric:tabular-nums} .t td.cutc{background:#FFF8E1} .t td.after{color:#c0c4cc}
+.t td.c{padding:0 4px} .t td.c input{width:100%;height:21px;border:1px solid var(--codeB);background:var(--code);border-radius:4px;padding:0 5px;font-weight:600;color:var(--navy);font-size:12px}
+.t td.c input:focus{outline:2px solid var(--navy2);background:#fff} .t td.c input.miss{background:var(--miss);border-color:var(--missB)} .t td.c input.ovr{background:var(--ovr);border-color:#e09a72;color:#8a3500}
+.st{border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600} .st.Fully{background:var(--ok);color:var(--okT)} .st.Partly{background:var(--part);color:var(--partT)} .st.Not{background:var(--not);color:var(--notT)}
+.u{border-radius:4px;padding:0 6px;font-size:11px;font-weight:600}
+.incb{border:0;background:none;font-size:12px;padding:0 6px;border-radius:4px;height:20px;line-height:20px} .incb.no{background:#eee;color:#888}
+.rst{border:0;background:none;color:#c55a11;font-size:12px;padding:0 4px}
+a.lk{color:var(--navy2);font-weight:600;text-decoration:none;cursor:pointer} a.lk:hover{text-decoration:underline}
+.gb{display:inline-block;width:70px;height:6px;background:rgba(255,255,255,.75);border-radius:3px;vertical-align:middle;overflow:hidden;margin-left:6px} .gb i{display:block;height:100%;background:#4c9a2a}
+/* summary */
+.dash{flex:1;overflow:auto;padding:14px 16px}
+.cards{display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px} .card span{font-size:10.5px;text-transform:uppercase;color:var(--mut);letter-spacing:.03em} .card b{display:block;font-size:21px;color:var(--navy);margin-top:2px}
+.card.gold{background:#FFF8E1;border-color:#f0d58a} .card.red b{color:#c00000} .card.green b{color:#2e6b1f}
+.panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px} .panel h2{font-size:14px;margin:0 0 8px;color:var(--navy)} .panel .note{font-size:11px;color:var(--mut);margin-left:8px;font-weight:400}
+.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:14px}
+table.s{border-collapse:collapse;width:100%} .s th{background:var(--navy);color:#fff;padding:5px 8px;font-size:12px;text-align:right} .s th:first-child{text-align:left}
+.s td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums} .s td:first-child{text-align:left} .s tr.tt td{background:#DDEBF7;font-weight:700} .s tr.cm td{background:#FFF8E1;font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;margin-top:6px} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.okc{background:var(--ok);color:var(--okT);font-weight:700;border-radius:4px;padding:1px 8px} .chk{background:#FFC7CE;color:#9C0006;font-weight:700;border-radius:4px;padding:1px 8px} .inf{color:var(--mut)}
+#pop{position:fixed;z-index:30;background:#fff;border:1px solid #c9d0db;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:270px;display:none;padding:8px;font-size:12px}
+#pop.show{display:block} #pop .row{display:flex;gap:6px;margin-bottom:6px} #pop .row button{flex:1} #pop input[type=search]{width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:5px}
+#pop .vals{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:5px;padding:4px 6px;margin:6px 0} #pop .vals label{display:flex;gap:6px;padding:2px 0;white-space:nowrap;overflow:hidden} #pop .vals .cn{color:var(--mut);margin-left:auto}
+#drawer{position:fixed;right:0;top:0;bottom:0;width:460px;background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.15);transform:translateX(105%);transition:transform .2s;z-index:10;display:flex;flex-direction:column}
+#drawer.open{transform:none} #drawer header{background:var(--navy2);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center} #drawer header h1{font-size:15px;margin:0} #drawer header button{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+#drawer .body{padding:12px 16px;overflow:auto}
+.bars{display:flex;align-items:flex-end;gap:3px;height:120px;margin:10px 0 4px;border-bottom:1px solid var(--line)} .bars div{flex:1;background:var(--navy2);border-radius:3px 3px 0 0;min-height:1px} .bars div.cut{background:var(--gold)}
+.blab{display:flex;gap:3px;font-size:9px;color:var(--mut)} .blab span{flex:1;text-align:center;overflow:hidden}
+dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{color:var(--mut)} dd{margin:0}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40;max-width:80vw}
+#toast.show{opacity:.95}
+.help{font-size:11px;color:var(--mut)} kbd{background:#f1f3f6;border:1px solid #d6d9de;border-radius:3px;padding:0 4px;font-size:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .seg button{border:0;border-radius:0;padding:4px 10px} .seg button.on{background:var(--navy);color:#fff}
+</style>
+</head>
+<body>
+<header class="top">
+  <div><h1>Cost Register</h1><div class="sub" id="hsub"></div></div>
+  <div class="sp"></div>
+  <label>Cut date <select id="cut"></select></label>
+  <label>VAT <select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select></label><input type="date" id="vatFrom" style="display:none">
+  <button id="bUndo" title="Ctrl+Z">↶</button><button id="bRedo" title="Ctrl+Y">↷</button>
+  <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪ Import codes</button>
+  <button id="bSave" title="Save all codes (and line overrides) as a small file">💾 Save codes</button>
+  <button id="bExport" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
+  <span id="saved"></span><input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden>
+</header>
+<nav class="tabs" id="tabs"></nav>
+<!-- Summary -->
+<div class="page" id="pg-sum"><div class="dash" id="sum"></div></div>
+<!-- Coding / Per Month / Lines / Expenses / Subcontractor: table pages -->
+<div class="page" id="pg-tbl">
+  <div class="bar" id="bkbar"></div>
+  <div class="bar" id="tools"></div>
+  <div class="bulk" id="bulk"><b id="bsel"></b><span id="bdiv">DIV <input id="bDIV" list="dl-div"></span>PKG <input id="bPKG" list="dl-pkg">MNL <input id="bMNL" list="dl-mnl">Cost element <input id="bCE" list="dl-ce">
+    <button class="pri" id="bApply">Apply to selected</button><button id="bClear">Clear codes</button><button id="bInc">Include</button><button id="bExc">Exclude</button><button id="bNone">✕ Clear selection</button><span class="help">empty box = leave as is</span></div>
+  <div class="wrap" id="wrap"><table class="t" id="tbl"><colgroup id="cg"></colgroup><thead id="th"></thead><tbody id="tb"></tbody><tfoot id="tf"></tfoot></table></div>
+</div>
+<!-- Checks -->
+<div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>
+<div id="pop"></div>
+<div id="drawer"><header><div><h1 id="dTitle"></h1><div class="sub" id="dSub"></div></div><div class="sp"></div><button id="dClose">✕</button></header><div class="body" id="dBody"></div></div>
+<div id="toast"></div>
+<datalist id="dl-div"></datalist><datalist id="dl-pkg"></datalist><datalist id="dl-mnl"></datalist><datalist id="dl-ce"></datalist>
+<script>/*__XLSX__*/</script>
+<script>/*__EXCELJS__*/</script>
+<script>/*__DATA__*/</script>
+<script>
+'use strict';
+// =====================================================================================  data + helpers
+const { META, S, BK, L, REV, SUB } = DATA, N = L.b.length;
+const PER = ['Opening', ...META.months, 'Pending'], NP = PER.length, NM = META.months.length;
+const $ = (id) => document.getElementById(id), esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const fmt = (v) => (Math.abs(v) < 0.5 ? '-' : Math.round(v).toLocaleString('en-US')), fmt2 = (v) => (Math.abs(v) < 0.005 ? '-' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const fmtM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : fmt(v)), fq = (v) => (Math.abs(v) < 1e-9 ? '-' : v.toLocaleString('en-US', { maximumFractionDigits: 3 })), pct = (a, b) => (b ? (100 * a / b).toFixed(1) + '%' : '-');
+const r2 = (v) => Math.round(v * 100) / 100;
+const SUBI = BK.findIndex((b) => b.id === 'Subcontractor'), MATI = BK.findIndex((b) => b.id === 'Material');
+BK.forEach((b, bi) => b.items.forEach((it, ii) => { it.bi = bi; it.ii = ii; it.vals = it.v.map((x) => S[x]); it.grp = S[it.g] || ''; }));
+const isSub = (bi) => bi === SUBI, codeF = (bi) => (isSub(bi) ? ['div', 'pkg', 'mnl', 'ce'] : ['pkg', 'mnl', 'ce']), FN = { div: 'DIV', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' };
+const itemCode = (it) => (it.bi === MATI ? it.vals[3] : isSub(it.bi) ? it.vals[1] : it.bi === BK.findIndex((b) => b.id === 'G&A') ? it.vals[0] + ' · ' + it.vals[1] : it.vals[0]);
+const itemDesc = (it) => (it.bi === MATI ? it.vals[4] : isSub(it.bi) ? it.vals[2] : it.vals.length > 1 && it.bi !== BK.findIndex((b) => b.id === 'G&A') ? it.vals[1] : '');
+const itemUnit = (it) => (it.bi === MATI ? it.vals[5] : isSub(it.bi) ? it.vals[3] : '');
+const statusOf = (it) => { if (isSub(it.bi)) { const n = ['div', 'pkg', 'mnl', 'ce'].filter((f) => it[f]).length; return n === 4 ? 'Fully coded' : n === 0 ? 'Not coded' : 'Partly coded'; } return it.pkg && it.mnl && it.ce ? 'Fully coded' : it.pkg || it.ce ? 'Partly coded' : 'Not coded'; };
+const PAL = ['#5B8DD6', '#E39B5B', '#6BAF6B', '#B37FCF', '#D8C24A', '#4FB3B3', '#E07A8F', '#8C9BB0', '#A4836A', '#77A8D6', '#C7A0E0', '#9DC183'];
+const SOFT = ['#CFE2F3', '#F4D6E2', '#D9EAD3', '#FCE5CD', '#E1D5F0', '#D0F0EA', '#F9E2C7', '#E6E0C8', '#D6E4F7', '#F2D5D0', '#DDEFC6', '#EAD7F2', '#CDEFF5', '#F7EBC1', '#E3E3E3'];
+const grpCols = new Map(); const grpCol = (k) => { if (!grpCols.has(k)) grpCols.set(k, SOFT[grpCols.size % SOFT.length]); return grpCols.get(k); };
+const UNC = ['#C9DAF8', '#D9EAD3', '#FCE5CD', '#EAD1DC', '#D0E0E3', '#FFF2CC', '#D9D2E9', '#F4CCCC', '#CFE2F3', '#E6D3C3'], unitCols = new Map(); const unitCol = (u) => { if (!unitCols.has(u)) unitCols.set(u, UNC[unitCols.size % UNC.length]); return unitCols.get(u); };
+let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3000); }
+// =====================================================================================  state: cut date, VAT, codes, line overrides, undo
+const LSK = 'cost-register:' + META.project, OVR = Object.assign({}, L.ovr);
+const ST = { cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
+let undo = [], redo = [];
+// a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
+function getC(c) { if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
+function setC(c, v) { if (c.t === 'item') { BK[c.bi].items[c.ii][c.f] = v; return; } const id = L.id[c.i]; const o = OVR[id] || (OVR[id] = {}); if (v === undefined || v === null) delete o[c.f]; else o[c.f] = v; if (!Object.keys(o).length) delete OVR[id]; }
+function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
+function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); after('Undone: ' + u.label); }
+function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); after('Redone: ' + u.label); }
+function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
+function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR }; }
+function persist() { try { localStorage.setItem(LSK, JSON.stringify(snapshot())); $('saved').textContent = 'Saved in this browser ' + new Date().toLocaleTimeString(); } catch (e) { $('saved').textContent = 'Not saved here – use Save codes'; } }
+function applySnap(s, replaceLines) { let n = 0; BK.forEach((b) => { const m = s.codes && s.codes[b.id]; if (!m) return; b.items.forEach((it) => { const c = m[it.k]; if (!c) return; n++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((f) => { if (c[f] !== undefined && (f !== 'div' || isSub(it.bi))) it[f] = c[f]; }); }); });
+  if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } return n; }
+function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; applySnap(s, true); if (s.cut && META.cuts.includes(s.cut)) ST.cut = s.cut; if (s.vat) { ST.vat = s.vat; ST.vatFrom = s.vatFrom || ''; } $('saved').textContent = 'Restored ' + new Date(s.at).toLocaleString(); } catch (e) {} }
+// =====================================================================================  the engine: everything from the lines, the codes and the cut date (no formulas)
+const R = {};   // results of compute()
+const SRC = L.src.map((x) => S[x]);
+function compute() {
+  const cutI = +ST.cut.replace(/-/g, ''), fromI = ST.vatFrom ? +ST.vatFrom.replace(/-/g, '') : 0, rep = PER.indexOf(monLab(ST.cut));
+  R.rep = rep; R.repLab = monLab(ST.cut); R.cutI = cutI;
+  const per = R.per = new Int16Array(N), amt = R.amt = new Float64Array(N), vin = R.vin = new Float64Array(N);
+  let openVin = 0, offRow = -1;
+  for (let i = 0; i < N; i++) {
+    const m = L.m[i]; per[i] = m === 0 ? 0 : m < 0 || !L.d[i] || L.d[i] > cutI ? NP - 1 : m;
+    let v = 0; if (L.b[i] === SUBI) { if (L.vat[i] === -1) offRow = i; else if (L.vat[i] && (SRC[i] === 'Certificate' || SRC[i] === 'Opening certificate')) { v = ST.vat === 'Include VAT' ? L.vat[i] : ST.vat === 'Include VAT before date' ? ((L.cd[i] ? fromI && L.cd[i] < fromI : SRC[i] === 'Opening certificate') ? L.vat[i] : 0) : 0; if (SRC[i] === 'Opening certificate') openVin += v; } }
+    vin[i] = v; amt[i] = L.amt[i] + v;
+  }
+  if (offRow >= 0) { vin[offRow] = -openVin; amt[offRow] = L.amt[offRow] - openVin; }
+  // effective codes per line + aggregates per item
+  const ek = R.ek = new Array(N); R.hand = new Uint8Array(N); R.inc = new Uint8Array(N);
+  BK.forEach((b) => b.items.forEach((it) => { it.p = new Float64Array(NP); it.q = new Float64Array(NP); it.exc = 0; it.n = 0; it.nh = 0; }));
+  R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.vatIn = 0; R.exp = new Map();
+  for (let i = 0; i < N; i++) {
+    const b = L.b[i], it = BK[b].items[L.it[i]], o = OVR[L.id[i]];
+    const pkg = o && o.pkg !== undefined ? o.pkg : it.pkg, mnl = o && o.mnl !== undefined ? o.mnl : it.mnl, ce = o && o.ce !== undefined ? o.ce : it.ce, inc = o && o.inc !== undefined ? o.inc : it.inc;
+    const hand = !!o && (pkg !== it.pkg || mnl !== it.mnl || ce !== it.ce); R.hand[i] = hand ? 1 : 0; it.n++; if (hand) it.nh++;
+    if (inc === 'No') { it.exc += amt[i]; R.bkExc[b] += amt[i]; R.inc[i] = 0; continue; } R.inc[i] = 1;
+    const p = per[i]; it.p[p] += amt[i]; it.q[p] += L.qty[i]; R.bkP[b][p] += amt[i]; R.vatIn += vin[i];
+    const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP) })); e.p[p] += amt[i]; if (hand) e.hand = true;
+  }
+  const td = (arr) => { let s = 0; for (let p = 0; p < NP - 1; p++) s += arr[p]; return s; };
+  BK.forEach((b) => b.items.forEach((it) => { it.td = r2(td(it.p)); it.tm = rep > 0 ? r2(it.p[rep]) : 0; it.qtd = td(it.q); it.pe = r2(it.p[NP - 1]); }));
+  R.tot = new Float64Array(NP); R.bkP.forEach((a) => a.forEach((v, p) => { R.tot[p] += v; }));
+  R.toDate = r2(td(R.tot)); R.thisM = rep > 0 ? r2(R.tot[rep]) : 0; R.pend = r2(R.tot[NP - 1]); R.excl = r2(R.bkExc.reduce((s, v) => s + v, 0));
+  R.rev4 = 0; R.cd = 0; R.revPend = 0; for (const [d, m, a, is4] of REV) { const p = m === 0 ? 0 : m < 0 || !d || d > cutI ? NP - 1 : m; if (p === NP - 1) { R.revPend += -a; continue; } if (is4) R.rev4 += -a; else R.cd += a; }
+  R.cdAll = REV.filter((x) => !x[3]).reduce((s, x) => s + x[2], 0);
+  R.diff = r2(META.cost - R.toDate - R.pend - R.excl - R.cdAll + R.vatIn);
+}
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
+// =====================================================================================  tabs
+const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['sub', 'Subcontractor'], ['chk', 'Checks']];
+$('tabs').innerHTML = TABS.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join('');
+$('tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) { ST.tab = b.dataset.t; sel.clear(); render(); $('wrap').scrollTop = 0; } };
+function render() {
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === ST.tab));
+  ['sum', 'tbl', 'chk'].forEach((p) => $('pg-' + p).classList.toggle('on', (p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'tbl' && !['sum', 'chk'].includes(ST.tab))));
+  $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
+  if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else renderTable();
+}
+function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };
+  BK.forEach((b) => b.items.forEach((it) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (it[f]) s[f].add(it[f]); }))); Object.values(OVR).forEach((o) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (o[f]) s[f].add(o[f]); }));
+  ['div', 'pkg', 'mnl', 'ce'].forEach((f) => { $('dl-' + f).innerHTML = [...s[f]].sort().map((x) => `<option value="${esc(x)}">`).join(''); }); R.pkgs = [...s.pkg].sort(); }
+// =====================================================================================  Summary
+const bkColor = (bi) => PAL[bi % PAL.length];
+function renderSummary() {
+  const rep = R.rep, prev = r2(R.toDate - R.thisM), cards = [['Previous (before this month)', fmt(prev)], ['This month · ' + R.repLab, fmt(R.thisM), 'gold'], ['To date (counted)', fmt(R.toDate)], ['Pending – after the cut date', fmt(R.pend)], ['Excluded by you', fmt(R.excl)], ['Difference to CJI3', fmt2(R.diff) === '-' ? '0.00' : fmt2(R.diff), Math.abs(R.diff) < 0.01 ? 'green' : 'red']];
+  // chart: stacked bars per month by bucket (months up to the cut date)
+  const mons = PER.slice(0, NP - 1).map((p, k) => k).filter((k) => k === 0 || k <= (rep > 0 ? rep : NM)), W = 860, H = 230, pad = 40, bw = (W - pad - 10) / mons.length * 0.72, mx = Math.max(1, ...mons.map((k) => R.bkP.reduce((s, a) => s + Math.max(0, a[k]), 0)));
+  let svg = `<svg viewBox="0 0 ${W} ${H + 30}" width="100%" style="max-width:${W}px">`;
+  for (let g = 0; g <= 4; g++) { const y = H - (H - 10) * g / 4; svg += `<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#eef0f4"/><text x="${pad - 4}" y="${y + 4}" font-size="10" fill="#6b7280" text-anchor="end">${fmtM(mx * g / 4)}</text>`; }
+  mons.forEach((k, j) => { const x = pad + 6 + j * (W - pad - 10) / mons.length; let y = H; BK.forEach((b, bi) => { const v = Math.max(0, R.bkP[bi][k]); if (!v) return; const h = (H - 10) * v / mx; y -= h; svg += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${bkColor(bi)}"><title>${PER[k]} · ${b.id}: ${fmt(v)}</title></rect>`; });
+    svg += `<text x="${x + bw / 2}" y="${H + 14}" font-size="10" text-anchor="middle" fill="${k === rep ? '#BF8F00' : '#6b7280'}" font-weight="${k === rep ? 700 : 400}">${PER[k]}</text>`; });
+  svg += '</svg>';
+  const bkRows = BK.map((b, bi) => { const a = R.bkP[bi], td = a.slice(0, NP - 1).reduce((s, v) => s + v, 0), tm = rep > 0 ? a[rep] : 0, its = b.items.filter((it) => it.inc !== 'No'), tdAll = its.reduce((s, it) => s + it.td, 0), tdF = its.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+    return `<tr><td><a class="lk" data-gob="${bi}"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${bkColor(bi)};margin-right:6px"></i>${esc(b.id)}</a></td><td>${fmt(a[0])}</td><td>${fmt(td - tm)}</td><td style="background:#FFF8E1">${fmt(tm)}</td><td><b>${fmt(td)}</b></td><td>${pct(td, R.toDate)}</td><td>${fmt(a[NP - 1])}</td><td>${pct(tdF, tdAll)}</td><td style="color:#6b7280">${fmt(R.bkExc[bi])}</td></tr>`; }).join('');
+  const monRows = PER.slice(0, NP - 1).map((p, k) => { if (k > 0 && rep > 0 && k > rep) return ''; const t = R.tot[k]; return `<tr class="${k === rep ? 'cm' : ''}"><td>${p}</td>${BK.map((b, bi) => `<td>${fmt(R.bkP[bi][k])}</td>`).join('')}<td><b>${fmt(t)}</b></td></tr>`; }).join('');
+  const stRows = BK.map((b, bi) => { const its = b.items, c = (s) => its.filter((it) => statusOf(it) === s).length, inc = its.filter((it) => it.inc !== 'No'), tdA = inc.reduce((s, it) => s + it.td, 0), tdF = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+    return `<tr><td><a class="lk" data-gob="${bi}">${esc(b.id)}</a></td><td>${its.length}</td><td>${c('Fully coded')}</td><td>${c('Partly coded')}</td><td>${c('Not coded')}</td><td>${pct(tdF, tdA)}</td><td>${its.filter((it) => it.inc === 'No').length}</td></tr>`; }).join('');
+  $('sum').innerHTML = `<div class="cards">${cards.map(([l, v, c]) => `<div class="card ${c || ''}"><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+   <div class="grid2"><div class="panel"><h2>Cost per month<span class="note">counted cost by bucket, up to the cut date · gold = this month</span></h2>${svg}<div class="legend">${BK.map((b, bi) => `<span><i style="background:${bkColor(bi)}"></i>${esc(b.id)}</span>`).join('')}</div></div>
+   <div class="panel"><h2>Reconciliation to CJI3<span class="note">CJI3 is the single source of truth</span></h2><table class="s">
+     <tr><td>CJI3 cost (all cost elements except 4xxxxxxx)</td><td>${fmt2(META.cost)}</td></tr><tr><td>– Counted to the cut date (To date)</td><td>${fmt2(R.toDate)}</td></tr><tr><td>– Pending (posted after the cut date)</td><td>${fmt2(R.pend)}</td></tr>
+     <tr><td>– Excluded by you</td><td>${fmt2(R.excl)}</td></tr><tr><td>– Client deductions (shown with revenue)</td><td>${fmt2(R.cdAll)}</td></tr><tr><td>+ VAT included in Subcontractor amounts (${esc(ST.vat)})</td><td>${fmt2(R.vatIn)}</td></tr>
+     <tr class="tt"><td>Difference (must be 0)</td><td>${fmt2(R.diff) === '-' ? '0.00' : fmt2(R.diff)}</td></tr></table>
+     <h2 style="margin-top:14px">Revenue<span class="note">kept apart, to the cut date</span></h2><table class="s"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr><tr class="tt"><td>Net revenue</td><td>${fmt(R.rev4 - R.cd)}</td></tr><tr><td class="inf">Revenue posted after the cut date</td><td class="inf">${fmt(R.revPend)}</td></tr></table></div></div>
+   <div class="panel"><h2>Cost by bucket<span class="note">click a bucket to code it</span></h2><table class="s"><tr><th>Bucket</th><th>Opening</th><th>Previous</th><th>This month</th><th>To date</th><th>% of to date</th><th>Pending</th><th>Coded share</th><th>Excluded</th></tr>${bkRows}
+     <tr class="tt"><td>Total</td><td>${fmt(R.tot[0])}</td><td>${fmt(prev)}</td><td>${fmt(R.thisM)}</td><td>${fmt(R.toDate)}</td><td>100%</td><td>${fmt(R.pend)}</td><td></td><td>${fmt(R.excl)}</td></tr></table></div>
+   <div class="grid2"><div class="panel"><h2>Cost per month by bucket</h2><div style="overflow:auto"><table class="s"><tr><th>Month</th>${BK.map((b) => `<th>${esc(b.short)}</th>`).join('')}<th>Total</th></tr>${monRows}</table></div></div>
+   <div class="panel"><h2>Coding status</h2><table class="s"><tr><th>Bucket</th><th>Items</th><th>Fully</th><th>Partly</th><th>Not coded</th><th>Coded share</th><th>Excluded</th></tr>${stRows}</table></div></div>`;
+  $('sum').querySelectorAll('[data-gob]').forEach((a) => { a.onclick = () => { ST.tab = 'cod'; ST.bk = +a.dataset.gob; render(); }; });
+}
+// =====================================================================================  Checks (live)
+function renderChecks() {
+  const rows = [], add = (name, v, kind, note) => rows.push([name, v, kind, note]);
+  add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + client deductions − VAT included − CJI3 cost.');
+  add('CJI3 lines vs the grand-total row of the file', r2(META.sum - META.grand), 'abs', 'Sum of all lines minus the file\'s own grand-total row.');
+  add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
+  add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule.');
+  const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
+  if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
+  BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Fully coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
+  add('Lines typed over (hand-coded)', [...R.hand].reduce((s, v) => s + v, 0), 'info', 'Lines coded differently from their item (Lines tab).');
+  add('ZY accrual-reversal lines paired to a bucket', META.zy, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
+  if (SUB) { add('Subcontractor: approved certificates not yet in CJI3', SUB.unposted, 'info', SUB.unpostedN + ' lines.'); add('Subcontractor: CJI3 documents explained by certificates', SUB.docs, 'info', 'of ' + SUB.cjiDocs + '.'); }
+  $('chk').innerHTML = `<div class="panel"><h2>Checks<span class="note">live – everything should read OK</span></h2><table class="s"><tr><th>Check</th><th>Value</th><th>Status</th><th style="text-align:left">What it means</th></tr>${rows.map(([n, v, k, note]) => { const ok = k === 'abs' ? Math.abs(v) < 0.01 : k === 'zero' ? v === 0 : null;
+    return `<tr><td>${esc(n)}</td><td>${typeof v === 'number' && k !== 'zero' && Math.abs(v) >= 100 ? fmt2(v) : v}</td><td style="text-align:center">${ok === null ? '<span class="inf">info</span>' : ok ? '<span class="okc">OK</span>' : '<span class="chk">CHECK</span>'}</td><td style="text-align:left;color:#555">${esc(note)}</td></tr>`; }).join('')}</table></div>`;
+}
+// =====================================================================================  generic table pages (filters like Excel, groups that fold, selection, inline codes)
+const VS = {}; const vs = () => { const k = ST.tab + ':' + (ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ST.bk); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
+const sel = new Set(); let lastClick = null;
+const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v ?? ''));
+const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));
+function passF(c, r, f) { if (!f || !f.set) return true; const v = c.v(r); return Array.isArray(v) ? v.some((x) => f.set.has(keyOf(c, x))) : f.set.has(keyOf(c, v)); }
+const codeInput = (it, f, ovrVal) => { const v = ovrVal !== undefined ? ovrVal : it[f]; return `<td class="c"><input data-f="${f}" value="${esc(v)}" list="dl-${f}" class="${v ? '' : 'miss'}${ovrVal !== undefined && ovrVal !== it[f] ? ' ovr' : ''}"></td>`; };
+const stCell = (it) => { const s = statusOf(it); return `<td><span class="st ${s.split(' ')[0]}">${s}</span></td>`; };
+const numC = (k, l, w, get, o = {}) => ({ k, l, w, num: 1, v: get, h: (r) => `<td class="num${o.cls ? ' ' + o.cls(r) : ''}">${o.f ? o.f(get(r)) : fmt(get(r))}</td>`, ...o });
+// ---- page definitions: rows, columns, groups
+function pageDef() {
+  const bi = ST.bk, b = BK[bi], rep = R.rep;
+  if (ST.tab === 'cod') {
+    const cols = [];
+    b.cols.forEach((lab, j) => { if (bi === MATI && j < 2) return; const w = Math.min(320, Math.max(70, lab === 'Description' || /name/i.test(lab) ? 300 : lab === 'Type of works' ? 170 : 96)); cols.push({ k: 'c' + j, l: lab, w: lab === 'Unit' ? 58 : w, v: (r) => r.it.vals[j], h: (r) => (lab === 'Unit' ? `<td>${r.it.vals[j] ? `<span class="u" style="background:${unitCol(r.it.vals[j])}">${esc(r.it.vals[j])}</span>` : ''}</td>` : j === (bi === MATI ? 3 : isSub(bi) ? 1 : 0) ? `<td title="${esc(r.it.vals[j])}"><a class="lk open">${esc(r.it.vals[j])}</a></td>` : `<td dir="auto" title="${esc(r.it.vals[j])}">${esc(r.it.vals[j])}</td>`) }); });
+    codeF(bi).forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : f === 'div' ? 88 : f === 'mnl' ? 66 : 82, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) }));
+    cols.push({ k: 'st', l: 'Status', w: 104, v: (r) => statusOf(r.it), h: (r) => stCell(r.it) }, { k: 'inc', l: 'Include', w: 66, v: (r) => r.it.inc, h: (r) => `<td><button class="incb ${r.it.inc === 'No' ? 'no' : ''}">${r.it.inc === 'No' ? 'No' : 'Yes'}</button></td>` });
+    if (b.qty) cols.push(numC('qty', 'Qty to date', 96, (r) => r.it.qtd, { f: fq }), numC('rate', 'Rate', 84, (r) => (Math.abs(r.it.qtd) > 1e-9 ? r.it.td / r.it.qtd : 0), { f: fmt2 }));
+    cols.push(numC('td', 'To date', 112, (r) => r.it.td, { h: (r) => `<td class="num"><b>${fmt(r.it.td)}</b></td>` }), numC('tm', 'This month · ' + R.repLab, 112, (r) => r.it.tm), numC('pe', 'Pending', 92, (r) => r.it.pe), numC('n', 'Lines', 62, (r) => r.it.n), { k: 'nw', l: 'New', w: 56, v: (r) => (r.it.nw ? 'New' : ''), h: (r) => `<td class="help">${r.it.nw ? 'New' : ''}</td>` });
+    const rows = b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
+    return { cols, rows, sel: true, status: true, groups: b.tree, gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Fully coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length} · to date ${fmt(td)}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
+      foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
+  }
+  if (ST.tab === 'pm') {
+    const mode = b.qty ? ST.pmMode : 'Amount', cols = [{ k: 'code', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 110, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` }];
+    if (itemDesc(b.items[0]) !== '' || bi === MATI || isSub(bi)) cols.push({ k: 'desc', l: 'Description', w: 260, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` });
+    ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 70, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` }));
+    const val = (it, p) => (mode === 'Qty' ? (p < 0 ? it.qtd : it.q[p]) : mode === 'Rate' ? (p < 0 ? (Math.abs(it.qtd) > 1e-9 ? it.td / it.qtd : 0) : Math.abs(it.q[p]) > 1e-9 ? it.p[p] / it.q[p] : 0) : p < 0 ? it.td : it.p[p]), f = mode === 'Qty' ? fq : mode === 'Rate' ? fmt2 : fmt;
+    PER.forEach((pl, p) => cols.push(numC('p' + p, pl, 96, (r) => val(r.it, p), { f, th: p === rep ? 'cut' : p === NP - 1 ? 'pend' : '', cls: () => (p === rep ? 'cutc' : p > 0 && p < NP - 1 && rep > 0 && p > rep ? 'after' : '') })));
+    cols.push(numC('td', mode === 'Amount' ? 'To date' : mode === 'Qty' ? 'Qty to date' : 'Rate to date', 110, (r) => val(r.it, -1), { f, h: (r) => `<td class="num"><b>${f(val(r.it, -1))}</b></td>` }));
+    const rows = b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
+    return { cols, rows, groups: b.tree, gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${rs.length} items · to date ${fmt(rs.reduce((s, r) => s + r.it.td, 0))}</span>`,
+      foot: mode === 'Amount' ? (rs) => { const o = {}; PER.forEach((pl, p) => { o['p' + p] = fmt(rs.reduce((s, r) => s + r.it.p[p], 0)); }); o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); return o; } : null, extraTools: b.qty ? `<span class="seg">${['Amount', 'Qty', 'Rate'].map((m) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${m}</button>`).join('')}</span>` : '' };
+  }
+  if (ST.tab === 'lines') {
+    const idx = []; for (let i = 0; i < N; i++) if (L.b[i] === bi) idx.push(i);
+    const it = (i) => b.items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
+    const cols = [{ k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
+      { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` },
+      { k: 'item', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 106, v: (r) => itemCode(it(r.i)), h: (r) => `<td><a class="lk open">${esc(itemCode(it(r.i)))}</a></td>` },
+      { k: 'desc', l: 'Description', w: 250, v: (r) => S[L.desc[r.i]], h: (r) => `<td dir="auto" title="${esc(S[L.desc[r.i]])}">${esc(S[L.desc[r.i]])}</td>` }];
+    if (isSub(bi)) cols.push({ k: 'po', l: 'PO', w: 96, v: (r) => S[L.po[r.i]], h: (r) => `<td>${esc(S[L.po[r.i]])}</td>` }, { k: 'sup', l: 'Subcontractor', w: 170, v: (r) => S[L.sup[r.i]], h: (r) => `<td dir="auto">${esc(S[L.sup[r.i]])}</td>` }, { k: 'src', l: 'Source', w: 120, v: (r) => SRC[r.i], h: (r) => `<td>${esc(SRC[r.i])}</td>` });
+    if (b.qty) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
+    cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
+    ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : 80, code: 1, v: (r) => ef(r.i, f) || '(blank)', h: (r) => { const o = OVR[L.id[r.i]]; return codeInput(it(r.i), f, o && o[f] !== undefined ? o[f] : undefined); } }));
+    cols.push({ k: 'inc', l: 'Include', w: 66, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` },
+      { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 52, v: (r) => S[L.ty[r.i]], h: (r) => `<td>${esc(S[L.ty[r.i]])}</td>` },
+      { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` }, { k: 'wbs', l: 'WBS element', w: 150, v: (r) => S[L.wbs[r.i]], h: (r) => `<td>${esc(S[L.wbs[r.i]])}</td>` });
+    return { cols, rows: idx.map((i) => ({ i, it: it(i) })), virtual: true, lines: true, foot: (rs) => ({ amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
+  }
+  if (ST.tab === 'exp') {
+    const pkgs = [...new Set([...R.exp.values()].map((e) => e.pkg))].sort((a, b2) => (a === '') - (b2 === '') || a.localeCompare(b2)), pIx = new Map(pkgs.map((p, k) => [p, k]));
+    const rows = [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) > 0.005)).map((e) => ({ e, it: BK[e.b].items[e.ii], g: (e.pkg || '(no PKG yet)'), g2: BK[e.b].id }))
+      .sort((x, y) => pIx.get(x.e.pkg) - pIx.get(y.e.pkg) || x.e.b - y.e.b || x.e.ii - y.e.ii);
+    const cols = [{ k: 'b', l: 'Bucket', w: 150, v: (r) => r.g2, h: (r) => `<td>${esc(r.g2)}</td>` }, { k: 'code', l: 'Item', w: 120, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}">${esc(itemCode(r.it))}</td>` },
+      { k: 'desc', l: 'Description', w: 260, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}${r.e.hand ? ' <span class="st Partly">hand-coded</span>' : ''}</td>` },
+      { k: 'mnl', l: 'MNL', w: 64, code: 1, v: (r) => r.e.mnl || '(blank)', h: (r) => `<td><b>${esc(r.e.mnl)}</b></td>` }, { k: 'ce', l: 'Cost element', w: 100, code: 1, v: (r) => r.e.ce || '(blank)', h: (r) => `<td><b>${esc(r.e.ce)}</b></td>` }];
+    PER.forEach((pl, p) => cols.push(numC('p' + p, pl, 96, (r) => r.e.p[p], { th: p === rep ? 'cut' : p === NP - 1 ? 'pend' : '', cls: () => (p === rep ? 'cutc' : p > 0 && p < NP - 1 && rep > 0 && p > rep ? 'after' : '') })));
+    cols.push(numC('td', 'To date', 112, (r) => r.e.p.slice(0, NP - 1).reduce((s, v) => s + v, 0), { h: (r) => `<td class="num"><b>${fmt(r.e.p.slice(0, NP - 1).reduce((s, v) => s + v, 0))}</b></td>` }));
+    return { cols, rows, groups: true, sub2: true, pkgColor: (g) => (g === '(no PKG yet)' ? '#FFE699' : SOFT[pIx.get(g) % SOFT.length]), gLabel: (g, rs) => `<b>${esc(g)}</b><span class="gm">${new Set(rs.map((r) => r.g2)).size} buckets · ${rs.length} items · to date ${fmt(rs.reduce((s, r) => s + r.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0))}</span>`,
+      foot: (rs) => { const o = {}; PER.forEach((pl, p) => { o['p' + p] = fmt(rs.reduce((s, r) => s + r.e.p[p], 0)); }); o.td = fmt(rs.reduce((s, r) => s + r.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0)); return o; } };
+  }
+  if (ST.tab === 'sub') return subDef();
+}
+// ---- Subcontractor views
+function subDef() {
+  const sb = BK[SUBI], tools = `<span class="seg">${[['po', 'PO view'], ['reg', 'PO Register'], ['bridge', 'Bridge']].map(([k, l]) => `<button data-sv="${k}" class="${ST.sub === k ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+  // PO × service from the lines (counted, to the cut date)
+  const map = new Map(); for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI || !R.inc[i]) continue; const po = S[L.po[i]], k = po + '|' + L.it[i]; let x = map.get(k); if (!x) map.set(k, (x = { po, ii: L.it[i], td: 0, tm: 0, pe: 0, qty: 0, op: 0, certs: new Set(), d0: 0, d1: 0 }));
+    const p = R.per[i]; if (p === NP - 1) x.pe += R.amt[i]; else { x.td += R.amt[i]; x.qty += L.qty[i]; if (p === 0) x.op += R.amt[i]; } if (p === R.rep) x.tm += R.amt[i]; if (S[L.cert[i]]) x.certs.add(S[L.cert[i]]); }
+  const poTot = new Map(); for (const x of map.values()) { const t = poTot.get(x.po) || { td: 0, tm: 0, pe: 0, op: 0, n: 0 }; t.td += x.td; t.tm += x.tm; t.pe += x.pe; t.op += x.op; t.n++; poTot.set(x.po, t); }
+  if (ST.sub === 'po') {
+    const rows = [...map.values()].map((x) => ({ x, it: sb.items[x.ii], g: x.po })).sort((a, b) => poTot.get(b.x.po).td - poTot.get(a.x.po).td || b.x.td - a.x.td);
+    const cols = [{ k: 'po', l: 'PO', w: 96, v: (r) => r.x.po, h: (r) => `<td class="help">${esc(r.x.po)}</td>` }, { k: 'sup', l: 'Subcontractor', w: 160, v: (r) => SUB.supn[r.x.po] || '', h: (r) => `<td dir="auto" class="help">${esc(SUB.supn[r.x.po] || '')}</td>` },
+      { k: 'svc', l: 'Service', w: 96, v: (r) => r.it.vals[1], h: (r) => `<td><a class="lk open">${esc(r.it.vals[1])}</a></td>` }, { k: 'desc', l: 'Description', w: 260, v: (r) => r.it.vals[2], h: (r) => `<td dir="auto" title="${esc(r.it.vals[2])}">${esc(r.it.vals[2])}</td>` },
+      ...['div', 'pkg', 'mnl', 'ce'].map((f) => ({ k: f, l: FN[f], w: f === 'ce' ? 100 : f === 'div' ? 88 : f === 'mnl' ? 66 : 80, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) })),
+      { k: 'st', l: 'Status', w: 104, v: (r) => statusOf(r.it), h: (r) => stCell(r.it) }, numC('qty', 'Qty (PO)', 92, (r) => r.x.qty, { f: fq }), numC('td', 'To date (PO)', 112, (r) => r.x.td, { h: (r) => `<td class="num"><b>${fmt(r.x.td)}</b></td>` }), numC('tm', 'This month (PO)', 112, (r) => r.x.tm)];
+    return { cols, rows, sel: true, groups: true, poGroup: true, extraTools: tools, gLabel: (g) => `<b>${esc(g)}</b> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(SUB.title[g] || '')}</span><span class="gm" dir="auto" style="unicode-bidi:isolate">${esc(SUB.supn[g] || '')}</span>`,
+      gCells: (g, rs) => ({ td: fmt(rs.reduce((s, r) => s + r.x.td, 0)), tm: fmt(rs.reduce((s, r) => s + r.x.tm, 0)), st: (() => { const t = rs.reduce((s, r) => s + r.x.td, 0), c = rs.filter((r) => statusOf(r.it) === 'Fully coded').reduce((s, r) => s + r.x.td, 0); return `<span class="gb" style="margin:0"><i style="width:${t ? (100 * c / t).toFixed(0) : 0}%"></i></span> ${t ? (100 * c / t).toFixed(0) : 0}%`; })() }),
+      gColor: (g) => grpCol(SUB.type[g] || '') };
+  }
+  if (ST.sub === 'reg') {
+    const pos = new Set([...poTot.keys(), ...Object.keys(SUB.unpostedByPo)]);
+    const rows = [...pos].map((po) => ({ po, t: poTot.get(po) || { td: 0, tm: 0, pe: 0, op: 0, n: 0 }, c: SUB.po[po] || {} })).sort((a, b) => b.t.td - a.t.td);
+    const cols = [{ k: 'po', l: 'PO', w: 100, v: (r) => r.po, h: (r) => `<td><a class="lk gopo" data-po="${esc(r.po)}">${esc(r.po)}</a></td>` }, { k: 'title', l: 'PO title', w: 260, v: (r) => SUB.title[r.po] || '', h: (r) => `<td dir="auto" title="${esc(SUB.title[r.po] || '')}">${esc(SUB.title[r.po] || '')}</td>` },
+      { k: 'sup', l: 'Subcontractor', w: 200, v: (r) => SUB.supn[r.po] || '', h: (r) => `<td dir="auto">${esc(SUB.supn[r.po] || '')}</td>` }, { k: 'tow', l: 'Type of works', w: 170, v: (r) => SUB.type[r.po] || '', h: (r) => `<td dir="auto"><span class="u" style="background:${grpCol(SUB.type[r.po] || '')}">${esc(SUB.type[r.po] || '')}</span></td>` },
+      { k: 'con', l: 'Contract', w: 110, v: (r) => (r.c.contract === 'A2' ? 'Incl. VAT (A2)' : r.c.contract === 'A1' ? 'Excl. VAT (A1)' : r.c.contract || ''), h: (r) => `<td>${r.c.contract === 'A2' ? 'Incl. VAT (A2)' : r.c.contract === 'A1' ? 'Excl. VAT (A1)' : esc(r.c.contract || '')}</td>` },
+      numC('n', 'Certificates', 90, (r) => r.c.n || 0), { k: 'first', l: 'First cert.', w: 90, v: (r) => r.c.first || '', h: (r) => `<td>${esc(r.c.first || '')}</td>` }, { k: 'last', l: 'Last cert.', w: 90, v: (r) => r.c.last || '', h: (r) => `<td>${esc(r.c.last || '')}</td>` },
+      numC('op', 'Opening', 104, (r) => r.t.op), numC('pv', 'Previous', 110, (r) => r.t.td - r.t.tm), numC('tm', 'This month', 108, (r) => r.t.tm, { cls: () => 'cutc' }), numC('td', 'To date', 112, (r) => r.t.td, { h: (r) => `<td class="num"><b>${fmt(r.t.td)}</b></td>` }), numC('pe', 'Pending', 96, (r) => r.t.pe), numC('un', 'Approved, not in CJI3', 120, (r) => SUB.unpostedByPo[r.po] || 0)];
+    return { cols, rows, extraTools: tools, foot: (rs) => ({ op: fmt(rs.reduce((s, r) => s + r.t.op, 0)), pv: fmt(rs.reduce((s, r) => s + r.t.td - r.t.tm, 0)), tm: fmt(rs.reduce((s, r) => s + r.t.tm, 0)), td: fmt(rs.reduce((s, r) => s + r.t.td, 0)), pe: fmt(rs.reduce((s, r) => s + r.t.pe, 0)), un: fmt(rs.reduce((s, r) => s + (SUB.unpostedByPo[r.po] || 0), 0)) }) };
+  }
+  // Bridge
+  const bySrc = new Map(); for (let i = 0; i < N; i++) if (L.b[i] === SUBI) { const k = SRC[i]; const x = bySrc.get(k) || { n: 0, a: 0 }; x.n++; x.a += R.amt[i]; bySrc.set(k, x); }
+  const order = [['Certificate', 'Certificate lines posted in CJI3'], ['Opening certificate', 'Opening certificates (flag X)'], ['Opening difference', '+ Opening difference to CJI3'], ['Document difference', '+ Documents that differ (1 EGP or more)'], ['Rounding', '+ Rounding (under 1 EGP per document)'], ['CJI3 only', '+ CJI3 lines no certificate explains']];
+  const rows = order.map(([k, l]) => ({ l, n: (bySrc.get(k) || {}).n || 0, a: (bySrc.get(k) || {}).a || 0 })); const reg = rows.reduce((s, r) => s + r.a, 0), vatC = R.vatIn;
+  rows.push({ l: '= Subcontractor bucket (register)', a: reg, n: rows.reduce((s, r) => s + r.n, 0), b: 1 }, { l: '– VAT included in the amounts', a: vatC }, { l: '= Register without VAT', a: reg - vatC, b: 1 }, { l: 'Subcontractor bucket in CJI3 (the file)', a: SUB.cjiTotal }, { l: 'Difference (must be 0)', a: r2(reg - vatC - SUB.cjiTotal), b: 1 },
+    { l: 'Approved certificates not yet in CJI3 (information)', a: SUB.unposted, n: SUB.unpostedN }, { l: 'Certificates not approved (information)', a: SUB.notApproved, n: SUB.notApprovedN }, { l: 'VAT on the certificates posted in CJI3', a: SUB.vatOnPosted }, { l: 'VAT on the opening certificates', a: SUB.vatOnOpening }, { l: 'WBS repeats removed', a: SUB.dupAmt, n: SUB.dupRows });
+  const cols = [{ k: 'l', l: 'Step', w: 380, v: (r) => r.l, h: (r) => `<td style="${r.b ? 'font-weight:700' : ''}">${esc(r.l)}</td>` }, numC('n', 'Lines', 90, (r) => r.n || 0), numC('a', 'EGP', 150, (r) => r.a, { f: fmt2 })];
+  return { cols, rows, extraTools: tools, noFilter: true };
+}
+// ---- the table renderer
+const VROW = 27;
+function renderTable() {
+  const D = pageDef(), S0 = vs(); R.D = D;
+  // bucket bar (not for Expenses / Subcontractor)
+  if (['cod', 'pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+    return `<button class="chip ${bi === ST.bk ? 'on' : ''}" data-bk="${bi}">${esc(b.short)}<span class="pc">${t ? (100 * f / t).toFixed(0) : 0}%</span></button>`; }).join(''); } else $('bkbar').style.display = 'none';
+  $('tools').innerHTML = `${D.noFilter ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Partly coded', 'Fully coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
+    ${D.extraTools || ''} ${D.groups ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : '<button id="bClr">✕ Clear filters</button>'} <span class="help" id="cnt"></span>`;
+  const cols = D.cols, q = S0.q.trim().toLowerCase();
+  let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && statusOf(r.it) !== S0.st) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
+    if (q) { const t = D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
+    return true; });
+  if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
+  R.rows = rows;
+  $('cg').innerHTML = (D.sel ? '<col style="width:34px">' : '') + cols.map((c) => `<col style="width:${c.w}px">`).join('');
+  $('th').innerHTML = '<tr>' + (D.sel ? '<th style="padding-right:6px"><input type="checkbox" id="all"></th>' : '') + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''}" title="${esc(c.l)}">${esc(c.l)}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}</th>`).join('') + '</tr>';
+  const nc = cols.length + (D.sel ? 1 : 0), ft = D.foot ? D.foot(rows) : null;
+  $('tf').innerHTML = ft ? `<tr class="tot">${D.sel ? '<td></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}">${j === 0 ? 'TOTAL' : ft[c.k] ?? ''}</td>`).join('')}</tr>` : '';
+  { const tb = [];
+    if (D.groups) {
+      const groups = new Map(); for (const r of rows) (groups.get(r.g) || groups.set(r.g, []).get(r.g)).push(r);
+      for (const [g, rs] of groups) {
+        const folded = S0.fold.has(g), gc = D.pkgColor ? D.pkgColor(g) : D.gColor ? D.gColor(g) : grpCol(g);
+        if (D.gCells) { const cells = D.gCells(g, rs), ci = (k) => cols.findIndex((x) => x.k === k) + (D.sel ? 1 : 0), span = ci('ce') + 1;
+          tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="tg">${folded ? '+' : '−'}</span>${D.gLabel(g, rs)}</td>${cols.slice(span - (D.sel ? 1 : 0)).map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`).join('')}</tr>`); }
+        else { const lab = D.gLabel(g, rs); tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}" dir="ltr"><span class="tg">${folded ? '+' : '−'}</span>${lab}</td></tr>`); }
+        if (folded) continue;
+        let lastB = null;
+        for (const r of rs) { if (D.sub2 && r.g2 !== lastB) { const bs = rs.filter((x) => x.g2 === r.g2), t2 = fmt(bs.reduce((s, x) => s + x.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0)), g2 = r.g2; tb.push(() => `<tr class="grp" style="--gc:${gc}"><td colspan="${nc}" style="padding-left:30px;border-top:1px solid #9fb3d1;font-weight:600">${esc(g2)} <span class="gm">${bs.length} items · to date ${t2}</span></td></tr>`); lastB = r.g2; }
+          tb.push(() => rowHtml(D, r, gc)); }
+      }
+    } else for (const r of rows) tb.push(() => rowHtml(D, r, '#fff'));
+    R.disp = tb; R.nc = nc; renderVirtual();
+  }
+  $('cnt').textContent = `${rows.length.toLocaleString('en-US')} rows`;
+  $('bulk').classList.toggle('show', !!D.sel && sel.size > 0); $('bdiv').style.display = (ST.tab === 'cod' && isSub(ST.bk)) || ST.tab === 'sub' ? '' : 'none';
+  $('bsel').textContent = sel.size + ' selected';
+  const a = $('all'); if (a) a.checked = rows.length > 0 && rows.every((r) => sel.has(selKey(r)));
+}
+const selKey = (r) => (r.i !== undefined ? 'L' + r.i : r.it.bi + ':' + r.it.ii);
+function rowHtml(D, r, gc) { const it = r.it, exc = r.i !== undefined ? !R.inc[r.i] : it && it.inc === 'No', k = it ? selKey(r) : '';
+  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => c.h(r)).join('')}</tr>`; }
+function renderVirtual() {   // only the rows on screen are drawn (fast with thousands of rows)
+  const d = R.disp || [], nc = R.nc, w = $('wrap'), top = w.scrollTop, h = w.clientHeight || 600, a = Math.max(0, Math.floor(top / VROW) - 15), z = Math.min(d.length, a + Math.ceil(h / VROW) + 30);
+  if (!d.length) { $('tb').innerHTML = `<tr><td colspan="${nc}" style="padding:20px;color:#6b7280">Nothing matches.</td></tr>`; return; }
+  let html = `<tr class="sp" style="height:${a * VROW}px"><td colspan="${nc}" style="border:0;padding:0;height:${a * VROW}px"></td></tr>`; for (let k = a; k < z; k++) html += d[k]();
+  $('tb').innerHTML = html + `<tr class="sp" style="height:${(d.length - z) * VROW}px"><td colspan="${nc}" style="border:0;padding:0;height:${(d.length - z) * VROW}px"></td></tr>`;
+}
+let vt = 0; $('wrap').addEventListener('scroll', () => { if (vt) return; vt = requestAnimationFrame(() => { vt = 0; renderVirtual(); }); });
+// ---- events on the table pages
+const rowOf = (tr) => { const k = tr.dataset.k; if (!k) return null; if (k[0] === 'L') return { i: +k.slice(1), it: BK[L.b[+k.slice(1)]].items[L.it[+k.slice(1)]] }; const [bi, ii] = k.split(':').map(Number); return { it: BK[bi].items[ii] }; };
+$('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr);
+  if (e.target.matches('input[data-f]')) { const f = e.target.dataset.f, v = e.target.value.trim();
+    if (r.i !== undefined) change([{ t: 'line', i: r.i, f, v: v === r.it[f] ? undefined : v }], 'Line ' + FN[f] + ' = ' + (v || '(blank)'));
+    else { const k = selKey(r), tg = sel.has(k) && sel.size > 1 ? [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number)) : [[r.it.bi, r.it.ii]]; change(tg.map(([bi, ii]) => ({ t: 'item', bi, ii, f, v })), FN[f] + ' = ' + (v || '(blank)')); } }
+  if (e.target.matches('.ck')) { const k = tr.dataset.k; e.target.checked ? sel.add(k) : sel.delete(k); render(); } });
+$('tb').addEventListener('click', (e) => { const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
+  const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr); if (!r) return;
+  if (e.target.matches('.incb')) { if (r.i !== undefined) { const cur = (OVR[L.id[r.i]] || {}).inc ?? r.it.inc, nv = cur === 'No' ? 'Yes' : 'No'; change([{ t: 'line', i: r.i, f: 'inc', v: nv === r.it.inc ? undefined : nv }], 'Line include'); } else change([{ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'inc', v: r.it.inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
+  if (e.target.matches('.rst')) { change(['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i: r.i, f, v: undefined })), 'Line back to item codes'); return; }
+  if (e.target.matches('a.open')) { e.preventDefault(); openDrawer(r.it); return; }
+  if (e.target.matches('.ck') && e.shiftKey && lastClick) { const ks = R.rows.map(selKey), a = ks.indexOf(lastClick), b = ks.indexOf(tr.dataset.k); ks.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((k) => sel.add(k)); render(); }
+  if (e.target.matches('.ck')) lastClick = tr.dataset.k; });
+$('tb').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input[data-f]')) { e.preventDefault(); const f = e.target.dataset.f, all = [...document.querySelectorAll(`#tb input[data-f="${f}"]`)], k = all.indexOf(e.target); e.target.blur(); setTimeout(() => document.querySelectorAll(`#tb input[data-f="${f}"]`)[k + 1]?.focus(), 0); } });
+$('th').addEventListener('click', (e) => { const b = e.target.closest('.fb'); if (b) { e.stopPropagation(); openPop(b.dataset.k, b); } });
+$('th').addEventListener('change', (e) => { if (e.target.id === 'all') { R.rows.forEach((r) => (e.target.checked ? sel.add(selKey(r)) : sel.delete(selKey(r)))); render(); } });
+$('bkbar').addEventListener('click', (e) => { const b = e.target.closest('[data-bk]'); if (b) { ST.bk = +b.dataset.bk; sel.clear(); render(); $('wrap').scrollTop = 0; } });
+$('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
+  if (t.dataset.st) { S0.st = t.dataset.st; render(); } if (t.dataset.pm) { ST.pmMode = t.dataset.pm; render(); } if (t.dataset.sv) { ST.sub = t.dataset.sv; sel.clear(); render(); }
+  if (t.id === 'bFold') { R.rows.forEach((r) => S0.fold.add(r.g)); render(); } if (t.id === 'bOpen') { S0.fold.clear(); render(); } if (t.id === 'bClr') { S0.f = {}; S0.sort = null; S0.q = ''; S0.st = 'All'; render(); } });
+$('tools').addEventListener('input', (e) => { if (e.target.id === 'q') { vs().q = e.target.value; render(); const q = $('q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
+$('tb').addEventListener('click', (e) => { const a = e.target.closest('.gopo'); if (a) { e.preventDefault(); ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); render(); } });
+// bulk coding
+const selItems = () => [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number));
+$('bApply').onclick = () => { const ch = []; [['div', 'bDIV'], ['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selItems().forEach(([bi, ii]) => { if (f !== 'div' || isSub(bi)) ch.push({ t: 'item', bi, ii, f, v }); }); }); if (!ch.length) return toast('Type at least one code in the bar'); change(ch, 'Bulk coding'); };
+$('bClear').onclick = () => { if (confirm('Clear the codes of ' + sel.size + ' items?')) change(selItems().flatMap(([bi, ii]) => codeF(bi).map((f) => ({ t: 'item', bi, ii, f, v: '' }))), 'Clear codes'); };
+$('bInc').onclick = () => change(selItems().map(([bi, ii]) => ({ t: 'item', bi, ii, f: 'inc', v: 'Yes' })), 'Include'); $('bExc').onclick = () => change(selItems().map(([bi, ii]) => ({ t: 'item', bi, ii, f: 'inc', v: 'No' })), 'Exclude');
+$('bNone').onclick = () => { sel.clear(); render(); };
+// ---- Excel-like filter popup (value list for every column)
+let popK = null;
+function openPop(k, btn) {
+  const D = R.D, S0 = vs(), c = D.cols.find((x) => x.k === k), f = S0.f[k] || {}, r = btn.getBoundingClientRect(), pop = $('pop'); popK = k;
+  const others = D.rows.filter((row) => D.cols.every((cc) => cc.k === k || passF(cc, row, S0.f[cc.k]))), cnt = new Map();
+  others.forEach((x) => { const vv = c.v(x); (Array.isArray(vv) ? vv : [vv]).forEach((v0) => { const v = keyOf(c, v0); cnt.set(v, (cnt.get(v) || 0) + 1); }); });
+  const vals = [...cnt.keys()].sort((a, b) => (c.num ? keyNum(a) - keyNum(b) : a.localeCompare(b))), shown = vals.slice(0, 2000);
+  pop.innerHTML = `<div class="row"><button data-a="asc">${c.num ? 'Smallest → largest' : 'Sort A → Z'}</button><button data-a="desc">${c.num ? 'Largest → smallest' : 'Sort Z → A'}</button></div><input type="search" id="pS" placeholder="Search values"><div class="vals"><label><input type="checkbox" id="pAll" ${!f.set ? 'checked' : ''}> <b>(Select all)</b></label>${shown.map((v) => `<label data-v="${esc(v.toLowerCase())}"><input type="checkbox" class="pv" value="${esc(v)}" ${!f.set || f.set.has(v) ? 'checked' : ''}> <span dir="auto">${esc(v)}</span><span class="cn">${cnt.get(v)}</span></label>`).join('')}${vals.length > shown.length ? `<div class="help">… ${vals.length - shown.length} more – use the search box</div>` : ''}</div><div class="row" style="margin:0"><button class="pri" data-a="ok">OK</button><button data-a="clr">Clear filter</button></div>`;
+  pop.classList.add('show'); pop.style.left = Math.max(4, Math.min(window.innerWidth - 280, r.left - 210)) + 'px'; pop.style.top = r.bottom + 4 + 'px';
+  const s = $('pS'); s.oninput = () => { const qq = s.value.toLowerCase(); pop.querySelectorAll('.vals label[data-v]').forEach((l) => { l.style.display = l.dataset.v.includes(qq) ? '' : 'none'; }); }; s.focus();
+  $('pAll').onchange = () => pop.querySelectorAll('.pv').forEach((x) => { if (x.closest('label').style.display !== 'none') x.checked = $('pAll').checked; });
+}
+$('pop').addEventListener('click', (e) => { const a = e.target.dataset.a; if (!a) return; const S0 = vs();
+  if (a === 'asc' || a === 'desc') S0.sort = { k: popK, d: a === 'asc' ? 1 : -1 }; if (a === 'clr') delete S0.f[popK];
+  if (a === 'ok') { const all = [...document.querySelectorAll('#pop .pv')], srch = $('pS').value.trim(), boxes = srch ? all.filter((x) => x.closest('label').style.display !== 'none') : all, on = boxes.filter((x) => x.checked).map((x) => x.value); S0.f[popK] = !srch && on.length === all.length ? {} : { set: new Set(on) }; }
+  $('pop').classList.remove('show'); render(); });
+document.addEventListener('mousedown', (e) => { if (!e.target.closest('#pop') && !e.target.closest('.fb')) $('pop').classList.remove('show'); });
+// ---- detail drawer (an item): months, lines, POs
+function openDrawer(it) {
+  const b = BK[it.bi], mx = Math.max(1, ...Array.from(it.p).slice(0, NP - 1).map(Math.abs));
+  $('dTitle').textContent = itemCode(it); $('dSub').textContent = b.id + (it.grp ? ' · ' + it.grp : '');
+  let pol = ''; if (isSub(it.bi)) { const m = new Map(); for (let i = 0; i < N; i++) if (L.b[i] === SUBI && L.it[i] === it.ii && R.inc[i] && R.per[i] !== NP - 1) { const po = S[L.po[i]]; m.set(po, (m.get(po) || 0) + R.amt[i]); }
+    pol = `<table class="s" style="margin-top:8px"><tr><th>PO</th><th>Subcontractor</th><th>To date</th></tr>${[...m].sort((a, b2) => b2[1] - a[1]).map(([po, v]) => `<tr><td><a class="lk gopo2" data-po="${esc(po)}">${esc(po)}</a></td><td dir="auto" style="text-align:right">${esc(SUB.supn[po] || '')}</td><td>${fmt(v)}</td></tr>`).join('')}</table>`; }
+  $('dBody').innerHTML = `<div dir="auto" style="font-size:14px;font-weight:600">${esc(itemDesc(it))}</div>
+    <div class="bars">${PER.slice(0, NP - 1).map((p, k) => `<div class="${k === R.rep ? 'cut' : ''}" style="height:${(100 * Math.abs(it.p[k]) / mx).toFixed(1)}%" title="${p}: ${fmt(it.p[k])}"></div>`).join('')}</div>
+    <div class="blab">${PER.slice(0, NP - 1).map((p) => `<span>${p.replace('-', ' ')}</span>`).join('')}</div>
+    <dl><dt>To date</dt><dd><b>${fmt(it.td)}</b></dd><dt>This month (${R.repLab})</dt><dd>${fmt(it.tm)}</dd><dt>Pending</dt><dd>${fmt(it.pe)}</dd>${b.qty ? `<dt>Qty to date</dt><dd>${fq(it.qtd)} ${esc(itemUnit(it))}</dd><dt>Rate</dt><dd>${Math.abs(it.qtd) > 1e-9 ? fmt2(it.td / it.qtd) : '-'}</dd>` : ''}
+    <dt>Lines</dt><dd>${it.n} (${it.nh} hand-coded) · <a class="lk golines">show lines</a></dd><dt>Excluded</dt><dd>${fmt(it.exc)}</dd><dt>Codes</dt><dd>${codeF(it.bi).map((f) => FN[f] + ': <b>' + (esc(it[f]) || '–') + '</b>').join(' · ')}</dd><dt>Status</dt><dd>${statusOf(it)}</dd></dl>${pol}`;
+  $('dBody').querySelector('.golines').onclick = () => { ST.tab = 'lines'; ST.bk = it.bi; const S0 = vs(); S0.f = { item: { set: new Set([keyOf({}, itemCode(it))]) } }; $('drawer').classList.remove('open'); render(); };
+  $('dBody').querySelectorAll('.gopo2').forEach((a) => { a.onclick = () => { ST.tab = 'sub'; ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); $('drawer').classList.remove('open'); render(); }; });
+  $('drawer').classList.add('open');
+}
+$('dClose').onclick = () => $('drawer').classList.remove('open');
+// =====================================================================================  top bar: cut date, VAT, undo, import / save / export
+$('cut').innerHTML = META.cuts.map((c) => `<option value="${c}">${new Date(c + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}</option>`).join('');
+$('cut').onchange = (e) => { ST.cut = e.target.value; after('Cut date ' + e.target.selectedOptions[0].text); };
+$('vat').onchange = (e) => { ST.vat = e.target.value; $('vatFrom').style.display = ST.vat === 'Include VAT before date' ? '' : 'none'; after('VAT: ' + ST.vat); };
+$('vatFrom').onchange = (e) => { ST.vatFrom = e.target.value; after('VAT date ' + ST.vatFrom); };
+$('bUndo').onclick = doUndo; $('bRedo').onclick = doRedo;
+document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.target.matches('input[type=search]')) { e.preventDefault(); doUndo(); } if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); doRedo(); }
+  if (e.key === '/' && !e.target.matches('input')) { e.preventDefault(); $('q')?.focus(); } if (e.key === 'Escape') { sel.clear(); $('drawer').classList.remove('open'); $('pop').classList.remove('show'); render(); } });
+const norm = (t) => String(t ?? '').replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s*([-+*/()])\s*/g, '$1').replace(/\s+/g, ' ').trim().toLowerCase();
+$('bImport').onclick = () => $('file').click();
+$('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    if (f.name.toLowerCase().endsWith('.json')) { const s = JSON.parse(await f.text()); const n = applySnap(s, true); undo = []; redo = []; after(`Loaded ${f.name}: codes of ${n} items`); return; }
+    const wb = XLSX.read(await f.arrayBuffer()), ch = []; let matched = 0, sheets = 0;
+    BK.forEach((b, bi) => { const name = wb.SheetNames.find((n) => n === b.short + ' Coding') || (isSub(bi) ? wb.SheetNames.find((n) => n === 'Coding') : null); if (!name) return; sheets++;
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' }), hi = rows.findIndex((r) => r.includes('PKG') && r.includes('MNL')); if (hi < 0) return;
+      const h = rows[hi], c = (n) => h.findIndex((x) => String(x).trim() === n), ce = c('Cost element code') >= 0 ? c('Cost element code') : c('Cost element'), byKey = new Map(), bySd = new Map();
+      for (const r of rows.slice(hi + 1)) { const o = { pkg: String(r[c('PKG')]).trim(), mnl: String(r[c('MNL')]).trim(), ce: String(r[ce] ?? '').trim(), inc: c('Include') >= 0 ? String(r[c('Include')]).trim() : '', div: c('DIV') >= 0 ? String(r[c('DIV')]).trim() : '' };
+        if (c('Item key') >= 0 && r[c('Item key')]) byKey.set(String(r[c('Item key')]), o); if (isSub(bi) && c('Service') >= 0) bySd.set(String(r[c('Service')]).trim() + '|' + norm(r[c('Description')]), o); }
+      b.items.forEach((it) => { const o = byKey.get(it.k) || (isSub(bi) ? bySd.get(it.vals[1] + '|' + norm(it.vals[2])) : null); if (!o) return; matched++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((fl) => { if (o[fl] && (fl !== 'div' || isSub(bi))) ch.push({ t: 'item', bi, ii: it.ii, f: fl, v: o[fl] }); }); }); });
+    const lo = wb.SheetNames.includes('Line overrides') ? XLSX.utils.sheet_to_json(wb.Sheets['Line overrides'], { defval: '' }) : []; const ix = new Map(L.id.map((id, i) => [id, i]));
+    lo.forEach((r) => { const i = ix.get(String(r['Line ID'])); if (i === undefined) return; [['PKG', 'pkg'], ['MNL', 'mnl'], ['Cost element code', 'ce'], ['Include', 'inc']].forEach(([n, fl]) => { if (String(r[n]).trim()) ch.push({ t: 'line', i, f: fl, v: String(r[n]).trim() }); }); });
+    if (!sheets) return toast('No Coding sheet found in ' + f.name);
+    change(ch, 'Imported ' + f.name); toast(`Imported ${f.name}: ${matched} items matched on ${sheets} Coding sheets${lo.length ? ', ' + lo.length + ' line overrides' : ''} (blank cells never wipe a code)`);
+  } catch (err) { toast('Could not read ' + f.name + ': ' + err.message); }
+};
+const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); };
+const stamp = () => new Date().toISOString().slice(0, 10);
+$('bSave').onclick = () => dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`);
+// ---- light Excel report (values, formatted)
+$('bExport').onclick = async () => {
+  toast('Building the Excel report…'); await new Promise((r) => setTimeout(r, 30));
+  const wb = new ExcelJS.Workbook(), NAVY = 'FF1F3864', GOLD = 'FFBF8F00', bd = { style: 'thin', color: { argb: 'FFD9D9D9' } }, box = { top: bd, bottom: bd, left: bd, right: bd }, A = 'Arial';
+  const fill = (c) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), hx = (c) => 'FF' + c.replace('#', '').toUpperCase(), NUM = '#,##0;[Red]-#,##0;"-"', NUM2 = '#,##0.00;[Red]-#,##0.00;"-"';
+  const title = (ws, t, n) => { ws.getCell('A1').value = t; ws.getCell('A1').font = { name: A, bold: true, size: 14, color: { argb: NAVY } }; ws.getCell('A2').value = n; ws.getCell('A2').font = { name: A, size: 9, color: { argb: 'FF7F7F7F' } }; };
+  const head = (ws, row, labels, gold = []) => { labels.forEach((l, i) => { const c = ws.getCell(row, i + 1); c.value = l; c.font = { name: A, bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = fill(gold.includes(l) ? GOLD : NAVY); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = box; }); ws.getRow(row).height = 30; };
+  const put = (ws, row, vals, fmts = {}, o = {}) => vals.forEach((v, i) => { const c = ws.getCell(row, i + 1); c.value = v === '' ? null : v; c.border = box; c.font = { name: A, size: 10, bold: !!o.bold, color: o.color ? { argb: o.color } : undefined }; if (fmts[i]) c.numFmt = fmts[i]; if (o.fill) c.fill = fill(o.fill); });
+  const note = `${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register app · values (not live)`;
+  // Summary
+  const ws = wb.addWorksheet('Summary', { properties: { tabColor: { argb: NAVY } } }); title(ws, 'Project Cost Register — ' + META.project, note);
+  [['Previous', R.toDate - R.thisM], ['This month · ' + R.repLab, R.thisM], ['To date', R.toDate], ['Pending', R.pend], ['Excluded', R.excl], ['Difference to CJI3', R.diff]].forEach(([l, v], i) => { const a = ws.getCell(4, i + 1), b2 = ws.getCell(5, i + 1); a.value = l; a.font = { name: A, bold: true, size: 9, color: { argb: 'FFFFFFFF' } }; a.fill = fill(i === 1 ? GOLD : i === 5 ? 'FFC00000' : NAVY); a.alignment = { horizontal: 'center', wrapText: true }; b2.value = r2(v); b2.numFmt = i === 5 ? NUM2 : NUM; b2.font = { name: A, bold: true, size: 13, color: { argb: NAVY } }; b2.alignment = { horizontal: 'center' }; b2.border = box; });
+  ws.getRow(4).height = 30; let r = 7; ws.getCell(r, 1).value = 'Cost by bucket'; ws.getCell(r, 1).font = { name: A, bold: true, size: 12, color: { argb: NAVY } }; r++;
+  head(ws, r, ['Bucket', 'Opening', 'Previous', 'This month', 'To date', '% of to date', 'Pending', 'Excluded']); r++;
+  BK.forEach((b, bi) => { const a = R.bkP[bi], td = a.slice(0, NP - 1).reduce((s, v) => s + v, 0), tm = R.rep > 0 ? a[R.rep] : 0; put(ws, r, [b.id, r2(a[0]), r2(td - tm), r2(tm), r2(td), R.toDate ? td / R.toDate : 0, r2(a[NP - 1]), r2(R.bkExc[bi])], { 1: NUM, 2: NUM, 3: NUM, 4: NUM, 5: '0.0%', 6: NUM, 7: NUM }); r++; });
+  put(ws, r, ['Total', r2(R.tot[0]), r2(R.toDate - R.thisM), R.thisM, R.toDate, 1, R.pend, R.excl], { 1: NUM, 2: NUM, 3: NUM, 4: NUM, 5: '0.0%', 6: NUM, 7: NUM }, { bold: true, fill: 'FFDDEBF7' }); r += 2;
+  ws.getCell(r, 1).value = 'Cost per month'; ws.getCell(r, 1).font = { name: A, bold: true, size: 12, color: { argb: NAVY } }; r++; head(ws, r, ['Month', ...BK.map((b) => b.short), 'Total']); r++;
+  PER.slice(0, NP - 1).forEach((p, k) => { if (k > 0 && R.rep > 0 && k > R.rep) return; put(ws, r, [p, ...BK.map((b, bi) => r2(R.bkP[bi][k])), r2(R.tot[k])], Object.fromEntries(BK.map((b, j) => [j + 1, NUM]).concat([[BK.length + 1, NUM]])), k === R.rep ? { fill: 'FFFFF2CC', bold: true } : {}); r++; });
+  r++; ws.getCell(r, 1).value = 'Reconciliation to CJI3'; ws.getCell(r, 1).font = { name: A, bold: true, size: 12, color: { argb: NAVY } }; r++;
+  [['CJI3 cost', META.cost], ['– Counted to the cut date', R.toDate], ['– Pending', R.pend], ['– Excluded', R.excl], ['– Client deductions', R.cdAll], ['+ VAT included', R.vatIn], ['Difference (must be 0)', R.diff]].forEach(([l, v], i) => { put(ws, r, [l, r2(v)], { 1: NUM2 }, i === 6 ? { bold: true } : {}); r++; });
+  ws.getColumn(1).width = 34; for (let c = 2; c <= BK.length + 2; c++) ws.getColumn(c).width = 15; ws.views = [{ showGridLines: false }];
+  // Expenses: PKG › Bucket › Item
+  const we = wb.addWorksheet('Expenses', { properties: { tabColor: { argb: NAVY }, outlineProperties: { summaryBelow: false } } }); title(we, 'Expenses — PKG › Bucket › Item', note);
+  head(we, 4, ['PKG / Bucket / Item', 'Description', 'MNL', 'Cost element code', ...PER, 'To date']); r = 5;
+  const er = [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) > 0.005)), pk = [...new Set(er.map((e) => e.pkg))].sort((a, b2) => (a === '') - (b2 === '') || a.localeCompare(b2)), nf = Object.fromEntries(PER.map((p, k) => [k + 4, NUM]).concat([[NP + 4, NUM]]));
+  const sumP = (es) => { const t = new Array(NP).fill(0); es.forEach((e) => e.p.forEach((v, k) => { t[k] += v; })); return t; };
+  pk.forEach((p, j) => { const es = er.filter((e) => e.pkg === p), col = p ? hx(SOFT[j % SOFT.length]) : 'FFFFE699', t = sumP(es); put(we, r, [p || '(no PKG yet)', '', '', '', ...t.map(r2), r2(t.slice(0, NP - 1).reduce((s, v) => s + v, 0))], nf, { bold: true, fill: col }); r++;
+    BK.forEach((b, bi) => { const eb = es.filter((e) => e.b === bi); if (!eb.length) return; const tb = sumP(eb); put(we, r, ['   ' + b.id, eb.length + ' items', '', '', ...tb.map(r2), r2(tb.slice(0, NP - 1).reduce((s, v) => s + v, 0))], nf, { bold: true }); we.getRow(r).outlineLevel = 1; r++;
+      eb.sort((x, y) => x.ii - y.ii).forEach((e) => { const it = b.items[e.ii]; put(we, r, ['      ' + itemCode(it), itemDesc(it) + (e.hand ? '  (hand-coded)' : ''), e.mnl, e.ce, ...Array.from(e.p).map(r2), r2(e.p.slice(0, NP - 1).reduce((s, v) => s + v, 0))], nf); we.getRow(r).outlineLevel = 2; r++; }); }); });
+  const tAll = sumP(er); put(we, r, ['TOTAL counted', '', '', '', ...tAll.map(r2), r2(tAll.slice(0, NP - 1).reduce((s, v) => s + v, 0))], nf, { bold: true, fill: 'FFDDEBF7' });
+  [30, 44, 8, 14].forEach((w, i) => { we.getColumn(i + 1).width = w; }); for (let c = 5; c <= NP + 5; c++) we.getColumn(c).width = 13; we.views = [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false }];
+  // one Coding sheet per bucket (readable as "last report" by the register build)
+  BK.forEach((b, bi) => { const wc = wb.addWorksheet(b.short + ' Coding', { properties: { tabColor: { argb: GOLD } } }); title(wc, b.id + ' Coding', note);
+    const cf = codeF(bi), labs = [...b.cols, ...cf.map((f) => (f === 'ce' ? (isSub(bi) ? 'Cost element' : 'Cost element code') : FN[f])), 'Status', 'Include', ...(b.qty ? ['Qty to date', 'Rate'] : []), 'To date', 'This month', 'Pending', 'Lines', 'Item key'];
+    head(wc, 4, labs, ['DIV', 'PKG', 'MNL', 'Cost element', 'Cost element code', 'Include']); let rr = 5, lastG = null;
+    b.items.forEach((it) => { const stt = statusOf(it), v = [...it.vals, ...cf.map((f) => it[f]), stt, it.inc, ...(b.qty ? [r2(it.qtd), Math.abs(it.qtd) > 1e-9 ? it.td / it.qtd : null] : []), it.td, it.tm, it.pe, it.n, it.k], k0 = b.cols.length;
+      const fm = {}; if (b.qty) { fm[k0 + cf.length + 2] = '#,##0.00'; fm[k0 + cf.length + 3] = '#,##0.00'; } const o = k0 + cf.length + 2 + (b.qty ? 2 : 0); fm[o] = NUM; fm[o + 1] = NUM; fm[o + 2] = NUM;
+      put(wc, rr, v, fm); if (b.tree) wc.getCell(rr, 1).fill = fill(hx(grpCol(it.grp))); wc.getCell(rr, k0 + cf.length + 1).fill = fill(stt === 'Fully coded' ? 'FFE2EFDA' : stt === 'Partly coded' ? 'FFFFF2CC' : 'FFFCE4D6');
+      cf.forEach((f, j) => { wc.getCell(rr, k0 + j + 1).fill = fill(it[f] ? 'FFEEF3FB' : 'FFFFF0E8'); wc.getCell(rr, k0 + j + 1).font = { name: A, size: 10, bold: true }; });
+      if (b.tree && it.grp !== lastG) { for (let c = 1; c <= labs.length; c++) wc.getCell(rr, c).border = { ...box, top: { style: 'medium', color: { argb: NAVY } } }; lastG = it.grp; }
+      wc.getCell(rr, labs.length).font = { name: A, size: 8, color: { argb: 'FF7F7F7F' } }; rr++; });
+    labs.forEach((l, i) => { wc.getColumn(i + 1).width = /Description|name|Name/.test(l) ? 40 : l === 'Type of works' ? 24 : l === 'Item key' ? 26 : 13; });
+    wc.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }]; wc.autoFilter = { from: { row: 4, column: 1 }, to: { row: rr - 1, column: labs.length } }; });
+  // Lines (all buckets) + line overrides
+  const wl = wb.addWorksheet('Lines', { properties: { tabColor: { argb: 'FF7F7F7F' } } }); title(wl, 'Lines — every CJI3 line with its codes', note);
+  const LH = ['Bucket', 'Posting date', 'Period', 'Item', 'Description', 'PO', 'Subcontractor', 'Qty', 'Amount', 'PKG', 'MNL', 'Cost element code', 'Include', 'Hand-coded', 'Document', 'Type', 'Cost element', 'Cost element name', 'WBS element', 'Line ID'];
+  head(wl, 4, LH); const rowsL = [];
+  for (let i = 0; i < N; i++) { const b = BK[L.b[i]], it = b.items[L.it[i]], o = OVR[L.id[i]] || {}, g = (f) => (o[f] !== undefined ? o[f] : it[f]); rowsL.push([b.id, L.d[i] ? String(L.d[i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : '', PER[R.per[i]], itemCode(it), S[L.desc[i]], S[L.po[i]], S[L.sup[i]], L.qty[i] || null, r2(R.amt[i]), g('pkg'), g('mnl'), g('ce'), g('inc'), R.hand[i] ? 'Yes' : '', S[L.doc[i]], S[L.ty[i]], S[L.ce[i]], S[L.cen[i]], S[L.wbs[i]], L.id[i]]); }
+  wl.addRows(rowsL); wl.getColumn(9).numFmt = NUM2; wl.getColumn(8).numFmt = '#,##0.###'; [16, 11, 8, 12, 40, 11, 24, 10, 14, 10, 7, 12, 8, 10, 11, 6, 11, 24, 20, 26].forEach((w, i) => { wl.getColumn(i + 1).width = w; });
+  wl.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }]; wl.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + N, column: LH.length } };
+  const wo = wb.addWorksheet('Line overrides', { properties: { tabColor: { argb: 'FFC55A11' } } }); wo.addRow(['Bucket', 'Line ID', 'PKG', 'MNL', 'Cost element code', 'Include']); const ix = new Map(L.id.map((id, i) => [id, i]));
+  Object.entries(OVR).forEach(([id, o]) => { const i = ix.get(id); if (i !== undefined) wo.addRow([BK[L.b[i]].id, id, o.pkg ?? '', o.mnl ?? '', o.ce ?? '', o.inc ?? '']); }); wo.getRow(1).font = { name: A, bold: true }; [18, 30, 10, 8, 14, 8].forEach((w, i) => { wo.getColumn(i + 1).width = w; });
+  // Checks
+  const wk = wb.addWorksheet('Checks'); title(wk, 'Checks', note); head(wk, 4, ['Check', 'Value']); [['Register vs CJI3 cost – difference', R.diff], ['Duplicate line keys', META.dupes], ['Lines with no bucket', META.unclassified], ['Lines typed over', [...R.hand].reduce((s, v) => s + v, 0)]].forEach(([l, v], i) => put(wk, 5 + i, [l, v], { 1: '#,##0.00' })); wk.getColumn(1).width = 44; wk.getColumn(2).width = 16;
+  const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Cost_Register_${META.project}_${R.repLab}_${stamp()}.xlsx`); toast('Excel report exported');
+};
+// =====================================================================================  start
+$('hsub').textContent = `${META.project} · CJI3 ${META.cji3} · ${N.toLocaleString('en-US')} lines · built ${META.built}`;
+restore(); $('cut').value = ST.cut; $('vat').value = ST.vat; $('vatFrom').value = ST.vatFrom; $('vatFrom').style.display = ST.vat === 'Include VAT before date' ? '' : 'none';
+compute(); render();
+</script>
+</body>
+</html>

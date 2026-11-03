@@ -11,7 +11,8 @@ const { poSheets } = require('./posheets');
 const { r2 } = require('./util');
 const { fitWidths } = require('./fit');
 
-async function build(opts) {
+// everything up to the model (no Excel): also used by the HTML app generator
+function prepare(opts) {
   const t0 = Date.now(), log = opts.log || (() => {});
   const cji = readCji3(opts.cji3); log(`CJI3: ${cji.lines.length} lines, ${cji.subtotals} subtotal rows skipped, grand total row ${cji.grand}`);
   const dupes = cji.lines.length - new Set(cji.lines.map((l) => l.id)).size;
@@ -35,6 +36,11 @@ async function build(opts) {
   const lastDate = lines.map((l) => l.date).filter(Boolean).sort().pop();
   const model = buildModel(lines, { groups: groups.map, prev, cut: monthEnd(opts.cut || lastDate) });
   log(`Cut date ${model.cut} (report month ${model.reportLabel})`);
+  return { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, serv, vatOpt, prev, model, lastDate, monthEnd };
+}
+
+async function build(opts) {
+  const { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, serv, prev, model, lastDate, monthEnd } = prepare(opts);
   const wb = new W.ExcelJS.Workbook(); wb.creator = 'Cost Register'; wb.calcProperties = { fullCalcOnLoad: !!process.env.NO_RESULT };   // every formula carries its verified result: Excel opens without a full recalculation
   [['Summary!$B$4', 'CutDate'], ['Summary!$B$5', 'VatMode'], ['Summary!$C$5', 'VatFrom']].forEach(([r, n]) => wb.definedNames.add(r, n));
   const wsS = wb.addWorksheet('Summary', { properties: { tabColor: { argb: 'FF' + W.NAVY } } });
@@ -59,4 +65,4 @@ async function build(opts) {
   log(`Written ${opts.out} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   return { model, infos, stats, ex };
 }
-module.exports = { build };
+module.exports = { build, prepare };

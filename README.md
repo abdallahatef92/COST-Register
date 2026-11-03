@@ -40,3 +40,6 @@ As in the Subcontract report, the Summary has a VAT switch (B5: Exclude VAT / In
 - **The list**: one dynamic formula (FILTER + SORTBY) that keeps itself in PKG › Bucket › Item order. Lines typed over on a Data sheet appear as `Hand-coded` rows under the PKG that was typed.
 - Behind it the hidden `_Stack` sheet: one row per item (from the per Month sheets) plus one spill per bucket for the hand-coded lines (room for 1,000 item × PKG × MNL × code combinations each; Checks flags an overflow).
 - Dynamic arrays are written by `src/dynarray.js` (cell metadata as Excel 365 stores it). Verification: LibreOffice 26.2 (`apt-get install -t noble-backports libreoffice-calc`) recalculates every formula, the dynamic lists included.
+
+### HTML app (prototype)
+`node tools/proto-app.js --cji3 … --mb52 … --zscprg01 … --zscsrv1 … [--prev last.xlsx] --out out/Cost_Register_App.html` writes the whole register as ONE offline HTML file (tabs: Summary, Coding, Per Month, Lines, Expenses, Subcontractor, Checks; cut date and VAT switch live; codes saved in the browser, Save/Import codes; Export Excel = a light formatted report of values). The exported Excel can be given back to the register build as `--prev` (Coding sheets + "Line overrides").

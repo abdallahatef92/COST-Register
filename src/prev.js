@@ -37,6 +37,10 @@ function readPrev(file) {
       }
     }
   }
+  // lines typed over in the HTML app (its export has a "Line overrides" sheet: Bucket, Line ID, PKG, MNL, Cost element code, Include)
+  const lo = wb.Sheets['Line overrides'];
+  if (lo) for (const r of XLSX.utils.sheet_to_json(lo, { defval: '' })) { const b = str(r.Bucket), id = str(r['Line ID']); if (!b || !id) continue; const m = over.get(b) || over.set(b, new Map()).get(b), o = m.get(id) || {};
+    [['PKG', 'pkg'], ['MNL', 'mnl'], ['Cost element code', 'ce'], ['Include', 'inc']].forEach(([n, f]) => { if (str(r[n]) !== '') o[f] = str(r[n]); }); m.set(id, o); typed++; }
   return { coding, over, items, typed, file };
 }
 module.exports = { readPrev, CODING_H, DATA_H };
