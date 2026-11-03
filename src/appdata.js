@@ -25,7 +25,10 @@ function toAppData(P, o) {
     if (l.typed && Object.keys(l.typed).length) { const ov = {}; if (l.typed.pkg) ov.pkg = l.pkg; if (l.typed.mnl) ov.mnl = l.mnl; if (l.typed.cec) ov.ce = l.cec; if (l.typed.inc) ov.inc = l.inc; L.ovr[l.id] = ov; }
   })));
   // revenue lines (for the Summary revenue block and the reconciliation)
-  const REV = M.lines.filter((l) => l.bucket === 'Revenue').map((l) => [isoInt(l.date), l.open ? 0 : l.ym ? monIx.get(l.ym) || 0 : -1, l.amt, l.ce[0] === '4' ? 1 : 0]);
+  const REV = M.lines.filter((l) => l.bucket === 'Revenue').map((l) => [isoInt(l.date), l.open ? 0 : l.ym ? monIx.get(l.ym) || 0 : -1, l.amt, l.ce[0] === '4' ? 1 : 0, s(l.ce), s(l.cen), s(l.wbs)]);
+  // WBS names (CO Object Name of the CJI3 lines – the most frequent per WBS element)
+  const wn = new Map(); for (const l of P.cji.lines) { if (!l.wbs || !l.wbsName) continue; const m = wn.get(l.wbs) || wn.set(l.wbs, new Map()).get(l.wbs); m.set(l.wbsName, (m.get(l.wbsName) || 0) + 1); }
+  const WBSN = {}; for (const [k, m] of wn) WBSN[k] = [...m].sort((x, y) => y[1] - x[1])[0][0];
   // cut dates: month ends from two months before the first posting to two months after the last
   const me = (y, m) => new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10), CUTS = [];
   { const f = M.months[0], z = M.months[M.months.length - 1]; let [y, m] = f.split('-').map(Number); m -= 2; while (m < 1) { m += 12; y--; } let [ey, em] = z.split('-').map(Number); em += 2; while (em > 12) { em -= 12; ey++; }
@@ -36,7 +39,7 @@ function toAppData(P, o) {
     po: Object.fromEntries([...st.certByPo].map(([k, v]) => [k, { n: v.n.size, first: v.first, last: v.last, contract: v.contract }])),
     title: serv ? Object.fromEntries(serv.poTitle) : {}, type: serv ? Object.fromEntries(serv.poType) : {}, supn: serv ? Object.fromEntries(serv.poSup) : {} } : null;
   const META = { buildId: new Date().toISOString() + '|' + [].concat(o.cji3).map(baseName).join('+') + '|' + L.b.length, project: o.project, cut: M.cut, cuts: CUTS, months, built: new Date().toISOString().slice(0, 16).replace('T', ' '), files: Object.fromEntries(['cji3', 'mb52', 'me2n', 'zscprg01', 'zscsrv1', 'prev'].map((k) => [k, [].concat(o[k] || []).map(baseName)])), cji3: [].concat(o.cji3).map(baseName).join(' + '), cjiFiles: P.cji.files, cjiDropped: P.cji.dropped, cjiConflicts: P.cji.conflicts.slice(0, 200), cjiConflictN: P.cji.conflicts.length, cost: P.costAll, grand: P.cji.grand, sum: P.cji.sum, dupes: P.dupes, zy: P.zyPaired,
-    unclassified: M.lines.filter((l) => l.bucket === 'Unclassified').length, vat: P.vatOpt };
+    unclassified: M.lines.filter((l) => l.bucket === 'Unclassified').length, wbsNames: WBSN, vat: P.vatOpt };
   return { META, S, BK, L, REV, SUB };
 }
 module.exports = { toAppData };

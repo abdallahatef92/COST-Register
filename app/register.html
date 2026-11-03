@@ -32,6 +32,8 @@ table.t{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-c
 .t th{height:27px} .t thead tr.band th{background:#2B4677;text-align:center;padding:0 6px;font-size:11.5px;border-bottom:1px solid #4a6496} .t thead tr.band th.tog{cursor:pointer} .t thead tr.band th.tog:hover{background:#3b5a91}
 .t thead tr.band th.q{background:#37558a} .t thead tr.band th.y{background:#24406E} .t thead tr.band th.blank{background:var(--navy)}
 .t .fz{position:sticky;z-index:2} .t th.fz{z-index:5} .t td.fz{background:#fff} .t tr.it.sel td.fz{background:var(--sel)} .t tr.tot td.fz{background:var(--navy)}
+.t tr.lv1 td{background:#DCE6F2;font-weight:700} .t tr.lv2 td{background:#E9EFF7;font-weight:600} .t tr.lv3 td{background:#F4F7FB} .t tr.lv1 td.fz{background:#DCE6F2} .t tr.lv2 td.fz{background:#E9EFF7} .t tr.lv3 td.fz{background:#F4F7FB}
+.tgl{display:inline-block;width:16px;text-align:center;font-weight:700;color:var(--navy);cursor:pointer;margin-right:4px;border:1px solid #c9d0db;border-radius:3px;line-height:14px;background:#fff} .tgl0{display:inline-block;width:20px}
 .t tr.grp td .gl{position:sticky;left:8px;display:inline-block} .t tr.grp td{overflow:visible}
 .t th .fb{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:4px;padding:0 5px;font-size:11px;line-height:17px}
 .t th .fb.act{background:#FFD966;color:#000} .t th .sa{font-size:10px}
@@ -139,7 +141,7 @@ const UNC = ['#C9DAF8', '#D9EAD3', '#FCE5CD', '#EAD1DC', '#D0E0E3', '#FFF2CC', '
 let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3000); }
 // =====================================================================================  state: cut date, VAT, codes, line overrides, undo
 const LSK = 'cost-register:' + META.project + ':' + (META.buildId || META.built), OVR = Object.assign({}, L.ovr);
-const ST = { cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
+const ST = { xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
 let undo = [], redo = [];
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) { if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
@@ -189,7 +191,7 @@ function compute() {
 }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
 // =====================================================================================  tabs
-const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['sub', 'Subcontractor'], ['chk', 'Checks']];
+const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ['chk', 'Checks']];
 $('tabs').innerHTML = TABS.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join('');
 $('tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) { ST.tab = b.dataset.t; sel.clear(); render(); $('wrap').scrollTop = 0; } };
 function render() {
@@ -260,7 +262,7 @@ function slotsOf() {
       else qm.forEach((m) => out.push({ label: m.label, idx: [m.idx], kind: 'm', y, q })); } }
   out.push({ label: 'Pending', idx: [NP - 1], kind: 'pend' }); return out;
 }
-const VS = {}; const vs = () => { const k = ST.tab + ':' + (ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ST.bk); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
+const VS = {}; const vs = () => { const k = ST.tab + ':' + (ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') : ST.bk); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
 const sel = new Set(); let lastClick = null;
 const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v ?? ''));
 const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));
@@ -328,6 +330,49 @@ function pageDef() {
       gCells: (g, rs) => ({ qty: fq(rs.reduce((s, r) => s + (R.inc[r.i] ? L.qty[r.i] : 0), 0)), amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }),
       foot: (rs) => ({ amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
   }
+  if (ST.tab === 'gl' || ST.tab === 'wbs') {
+    // month columns (Opening · months folding into quarters / years · Pending) + To date, amounts only
+    const slots = slotsOf(), tdIdx = PER.slice(0, NP - 1).map((x, k) => k), cols = [], nL = ST.tab === 'gl' ? (ST.glMode === 'bucket' ? 4 : 4) : 3;
+    const sumIdx = (p, idx) => { let a = 0; for (const k of idx) a += p[k]; return a; };
+    const slotCols = (getP) => { slots.forEach((sl, si) => cols.push(numC('s' + si, sl.label, 98, (r) => sumIdx(getP(r), sl.idx), { th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : ''), cls: () => (sl.idx.includes(rep) ? 'cutc' : sl.kind !== 'open' && sl.kind !== 'pend' && rep > 0 && Math.min(...sl.idx) > rep ? 'after' : '') })));
+      cols.push(numC('td', 'To date', 112, (r) => sumIdx(getP(r), tdIdx), { h: (r) => `<td class="num"><b>${fmt(sumIdx(getP(r), tdIdx))}</b></td>` })); };
+    const bandsOf = (lead) => { const yr = [{ l: '', span: lead, cls: 'blank' }], qr = [{ l: '', span: lead, cls: 'blank' }];
+      slots.forEach((sl, si) => { if (sl.kind === 'open' || sl.kind === 'pend') { yr.push({ l: '', span: 1, cls: 'blank' }); qr.push({ l: '', span: 1, cls: 'blank' }); return; }
+        if (si === 0 || slots[si - 1].y !== sl.y || slots[si - 1].kind === 'open') yr.push({ l: `${PF.has('Y' + sl.y) ? '+' : '−'} ${sl.y}`, span: slots.filter((x) => x.y === sl.y && x.kind !== 'open' && x.kind !== 'pend').length, cls: 'tog y', tog: 'Y' + sl.y });
+        if (sl.kind === 'y') qr.push({ l: 'year total', span: 1, cls: 'q' }); else if (si === 0 || slots[si - 1].q !== sl.q || slots[si - 1].y !== sl.y) qr.push({ l: `${PF.has('Q' + sl.y + '-' + sl.q) ? '+' : '−'} Q${sl.q}-${String(sl.y).slice(2)}`, span: slots.filter((x) => x.y === sl.y && x.q === sl.q && (x.kind === 'm' || x.kind === 'q')).length, cls: 'tog q', tog: 'Q' + sl.y + '-' + sl.q }); });
+      yr.push({ l: '', span: 1, cls: 'blank' }); qr.push({ l: '', span: 1, cls: 'blank' }); return [yr, qr]; };
+    const pv = ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>`, xb = ST.xbk;
+    const agg = (keyFn) => { const m = new Map(); for (let i = 0; i < N; i++) { if (!R.inc[i] || (xb >= 0 && L.b[i] !== xb) || xb === -2) continue; const k = keyFn(i); let x = m.get(k); if (!x) m.set(k, (x = { p: new Float64Array(NP), n: 0, bk: new Map(), name: '' })); x.p[R.per[i]] += R.amt[i]; x.n++; x.bk.set(L.b[i], (x.bk.get(L.b[i]) || 0) + R.amt[i]); x.name = x.name || S[L.cen[i]] || (S[L.ce[i]] ? '' : 'adjustment rows (certificate report vs CJI3)'); } return m; };
+    const revAgg = (keyFn) => { const m = new Map(); if (xb >= 0) return m; for (const e of REV) { const [d, mo, a] = e, p = mo === 0 ? 0 : mo < 0 || !d || d > R.cutI ? NP - 1 : mo, k = keyFn(e); let x = m.get(k); if (!x) m.set(k, (x = { p: new Float64Array(NP), n: 0, bk: new Map([[-1, 0]]), name: S[e[5]], rev: 1 })); x.p[p] += a; x.n++; x.bk.set(-1, x.bk.get(-1) + a); } return m; };
+    if (ST.tab === 'gl') {
+      const m = agg((i) => (ST.glMode === 'bucket' ? L.b[i] + '|' : '') + (S[L.ce[i]] || '(no cost element)')), rv = revAgg((e) => (ST.glMode === 'bucket' ? 'R|' : '') + S[e[4]]);
+      const rows = [...m].map(([k, x]) => ({ k, ce: k.split('|').pop(), x, g: ST.glMode === 'bucket' ? BK[+k.split('|')[0]].id : '' })).concat([...rv].map(([k, x]) => ({ k, ce: k.split('|').pop(), x, g: ST.glMode === 'bucket' ? 'Revenue' : '' })))
+        .sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : 0) || (a.x.rev || 0) - (b.x.rev || 0) || (a.ce < b.ce ? -1 : 1));
+      cols.push({ k: 'ce', l: 'Cost element', w: 104, fz: 1, v: (r) => r.ce, h: (r) => `<td><a class="lk" data-kind="ce" data-brk="${esc(r.ce)}">${esc(r.ce)}</a></td>` }, { k: 'name', l: 'Cost element name', w: 220, v: (r) => r.x.name, h: (r) => `<td title="${esc(r.x.name)}">${esc(r.x.name)}</td>` },
+        { k: 'bk', l: 'Bucket(s)', w: 200, v: (r) => (r.x.rev ? ['Revenue'] : [...r.x.bk.keys()].map((b) => BK[b].id)), h: (r) => `<td class="help" title="${esc(r.x.rev ? 'Revenue' : [...r.x.bk.keys()].map((b) => BK[b].id).join(', '))}">${esc(r.x.rev ? 'Revenue' : [...r.x.bk.keys()].map((b) => BK[b].short).join(', '))}</td>` }, numC('n', 'Lines', 70, (r) => r.x.n));
+      slotCols((r) => r.x.p);
+      const ft = (rs) => { const o = {}; slots.forEach((sl, si) => { o['s' + si] = fmt(rs.filter((r) => !r.x.rev).reduce((s0, r) => s0 + sumIdx(r.x.p, sl.idx), 0)); }); o.td = fmt(rs.filter((r) => !r.x.rev).reduce((s0, r) => s0 + sumIdx(r.x.p, tdIdx), 0)); o.n = fmt(rs.reduce((s0, r) => s0 + r.x.n, 0)); return o; };
+      return { cols, rows, bands: bandsOf(4), groups: ST.glMode === 'bucket', gColor: (g) => (g === 'Revenue' ? '#E2EFDA' : grpCol(g)), gLabel: (g, rs) => `<b>${esc(g)}</b><span class="gm">${rs.length} cost elements · to date ${fmt(rs.reduce((s0, r) => s0 + sumIdx(r.x.p, tdIdx), 0))}</span>`, foot: ft,
+        extraTools: `<span class="seg">${[['ce', 'By cost element'], ['bucket', 'By bucket']].map(([k, l]) => `<button data-gm="${k}" class="${ST.glMode === k ? 'on' : ''}">${l}</button>`).join('')}</span>` + pv + ' <span class="help">TOTAL = cost (revenue rows are listed but not added)</span>' };
+    }
+    // ---- WBS tree: every WBS level of the codes (I-SUTH › .01 › -01 › -1 › -06 › -GRS); a node's amounts include everything below it
+    const own = agg((i) => S[L.wbs[i]] || '(no WBS)'), nodes = new Map(), S0 = vs();
+    const anc = (code) => { const i = code.indexOf('.'); if (i < 0) return [code]; const out = [code.slice(0, i)], re = /[.\-]/g; re.lastIndex = i + 1; let mm; while ((mm = re.exec(code))) out.push(code.slice(0, mm.index)); out.push(code); return [...new Set(out)]; };
+    const node = (code, depth) => nodes.get(code) || nodes.set(code, { code, depth, p: new Float64Array(NP), n: 0, kids: new Set(), own: null, bk: new Map() }).get(code);
+    for (const [code, x] of own) { const a = anc(code); a.forEach((c, d) => { const nd = node(c, d + 1); x.p.forEach((v, k) => { nd.p[k] += v; }); nd.n += x.n; for (const [b, v] of x.bk) nd.bk.set(b, (nd.bk.get(b) || 0) + v); if (d) node(a[d - 1], d).kids.add(c); }); node(code, a.length).own = x; }
+    const all = [...nodes.values()]; R.treeNodes = all;
+    if (!S0.lv) { S0.fold = new Set(all.filter((n) => n.depth >= 3 && n.kids.size).map((n) => n.code)); S0.lv = 1; }
+    const q = S0.q.trim().toLowerCase(), nameOf = (c) => META.wbsNames[c] || '', hit = q ? new Set() : null;
+    if (q) for (const n of all) if ((n.code + ' ' + nameOf(n.code)).toLowerCase().includes(q)) anc(n.code).forEach((c) => hit.add(c));
+    const kidsOf = (n) => [...n.kids].sort().map((c) => nodes.get(c)), roots = all.filter((n) => n.depth === 1).sort((a, b) => (a.code < b.code ? -1 : 1)), rows = [];
+    const walk = (n) => { if (hit && !hit.has(n.code)) return; rows.push({ n }); if (!hit && S0.fold.has(n.code)) return; kidsOf(n).forEach(walk); }; roots.forEach(walk);
+    cols.push({ k: 'code', l: 'WBS element', w: 300, fz: 1, v: (r) => r.n.code, h: (r) => `<td title="${esc(r.n.code)}" style="padding-left:${6 + (r.n.depth - 1) * 16}px">${r.n.kids.size ? `<span class="tgl" data-node="${esc(r.n.code)}">${S0.fold.has(r.n.code) && !hit ? '+' : '−'}</span>` : '<span class="tgl0"></span>'}<a class="lk" data-kind="wbs" data-brk="${esc(r.n.code)}" style="${r.n.depth <= 2 ? 'font-weight:700' : ''}">${esc(r.n.code)}</a></td>` },
+      { k: 'name', l: 'Name', w: 260, v: (r) => nameOf(r.n.code), h: (r) => `<td dir="auto" title="${esc(nameOf(r.n.code))}" style="${r.n.depth <= 2 ? 'font-weight:600' : ''}">${esc(nameOf(r.n.code))}</td>` }, numC('n', 'Lines', 70, (r) => r.n.n));
+    slotCols((r) => r.n.p);
+    const lv = ` <span class="seg">${[1, 2, 3, 4, 5, 6, 7].map((k) => `<button data-lvl="${k}">L${k}</button>`).join('')}<button data-lvl="99">All</button></span>`;
+    return { cols, rows, bands: bandsOf(3), noFilter: true, search: true, tree: true, rowCls: (r) => 'lv' + Math.min(r.n.depth, 4), extraTools: '<span class="help">Levels</span>' + lv + pv,
+      foot: () => { const o = {}; const rs = roots; slots.forEach((sl, si) => { o['s' + si] = fmt(rs.reduce((s0, n) => s0 + sumIdx(n.p, sl.idx), 0)); }); o.td = fmt(rs.reduce((s0, n) => s0 + sumIdx(n.p, tdIdx), 0)); o.n = fmt(rs.reduce((s0, n) => s0 + n.n, 0)); return o; } };
+  }
   if (ST.tab === 'exp') {
     const pkgs = [...new Set([...R.exp.values()].map((e) => e.pkg))].sort((a, b2) => (a === '') - (b2 === '') || a.localeCompare(b2)), pIx = new Map(pkgs.map((p, k) => [p, k]));
     const rows = [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) > 0.005)).map((e) => ({ e, it: BK[e.b].items[e.ii], g: (e.pkg || '(no PKG yet)'), g2: BK[e.b].id }))
@@ -383,13 +428,14 @@ const VROW = 27;
 function renderTable() {
   const D = pageDef(), S0 = vs(); R.D = D;
   // bucket bar (not for Expenses / Subcontractor)
-  if (['cod', 'pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+  if (['gl', 'wbs'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = `<button class="chip ${ST.xbk === -1 ? 'on' : ''}" data-xbk="-1">All buckets</button>` + BK.map((b, bi) => `<button class="chip ${bi === ST.xbk ? 'on' : ''}" data-xbk="${bi}">${esc(b.short)}</button>`).join('') + (ST.tab === 'gl' ? `<button class="chip ${ST.xbk === -2 ? 'on' : ''}" data-xbk="-2">Revenue</button>` : ''); }
+  else if (['cod', 'pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
     return `<button class="chip ${bi === ST.bk ? 'on' : ''}" data-bk="${bi}">${esc(b.short)}<span class="pc">${t ? (100 * f / t).toFixed(0) : 0}%</span></button>`; }).join(''); } else $('bkbar').style.display = 'none';
-  $('tools').innerHTML = `${D.noFilter ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Partly coded', 'Fully coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
+  $('tools').innerHTML = `${D.noFilter && !D.search ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Partly coded', 'Fully coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
     ${D.extraTools || ''} ${D.groups ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : '<button id="bClr">✕ Clear filters</button>'} <span class="help" id="cnt"></span>`;
   const cols = D.cols, q = S0.q.trim().toLowerCase();
   let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && statusOf(r.it) !== S0.st) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
-    if (q) { const t = D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
+    if (q && !D.tree) { const t = D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.ce ? [r.ce, r.x.name].join(' ') : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
     return true; });
   if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
   R.rows = rows;
@@ -422,9 +468,9 @@ function renderTable() {
   $('bsel').textContent = sel.size + ' selected';
   const a = $('all'); if (a) a.checked = rows.length > 0 && rows.every((r) => sel.has(selKey(r)));
 }
-const selKey = (r) => (r.i !== undefined ? 'L' + r.i : r.it.bi + ':' + r.it.ii);
+const selKey = (r) => (r.i !== undefined ? 'L' + r.i : r.it ? r.it.bi + ':' + r.it.ii : '');
 function rowHtml(D, r, gc) { const it = r.it, exc = r.i !== undefined ? !R.inc[r.i] : it && it.inc === 'No', k = it ? selKey(r) : '';
-  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`; }
+  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}${D.rowCls ? ' ' + D.rowCls(r) : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`; }
 function renderVirtual() {   // only the rows on screen are drawn (fast with thousands of rows)
   const d = R.disp || [], nc = R.nc, w = $('wrap'), top = w.scrollTop, h = w.clientHeight || 600, a = Math.max(0, Math.floor(top / VROW) - 15), z = Math.min(d.length, a + Math.ceil(h / VROW) + 30);
   if (!d.length) { $('tb').innerHTML = `<tr><td colspan="${nc}" style="padding:20px;color:#6b7280">Nothing matches.</td></tr>`; return; }
@@ -439,7 +485,9 @@ $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it')
     if (r.i !== undefined) change([{ t: 'line', i: r.i, f, v: v === r.it[f] ? undefined : v }], 'Line ' + FN[f] + ' = ' + (v || '(blank)'));
     else { const k = selKey(r), tg = sel.has(k) && sel.size > 1 ? [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number)) : [[r.it.bi, r.it.ii]]; change(tg.map(([bi, ii]) => ({ t: 'item', bi, ii, f, v })), FN[f] + ' = ' + (v || '(blank)')); } }
   if (e.target.matches('.ck')) { const k = tr.dataset.k; e.target.checked ? sel.add(k) : sel.delete(k); render(); } });
-$('tb').addEventListener('click', (e) => { const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
+$('tb').addEventListener('click', (e) => { const nt = e.target.closest('[data-node]'); if (nt) { e.stopPropagation(); const S1 = vs(), k = nt.dataset.node; S1.fold.has(k) ? S1.fold.delete(k) : S1.fold.add(k); render(); return; }
+  const ob = e.target.closest('[data-brk]'); if (ob) { e.preventDefault(); openBreak(ob.dataset.kind, ob.dataset.brk); return; }
+  const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
   const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr); if (!r) return;
   if (e.target.matches('.incb')) { if (r.i !== undefined) { const cur = (OVR[L.id[r.i]] || {}).inc ?? r.it.inc, nv = cur === 'No' ? 'Yes' : 'No'; change([{ t: 'line', i: r.i, f: 'inc', v: nv === r.it.inc ? undefined : nv }], 'Line include'); } else change([{ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'inc', v: r.it.inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
   if (e.target.matches('.rst')) { change(['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i: r.i, f, v: undefined })), 'Line back to item codes'); return; }
@@ -449,9 +497,11 @@ $('tb').addEventListener('click', (e) => { const o2 = e.target.closest('.open2')
 $('tb').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input[data-f]')) { e.preventDefault(); const f = e.target.dataset.f, all = [...document.querySelectorAll(`#tb input[data-f="${f}"]`)], k = all.indexOf(e.target); e.target.blur(); setTimeout(() => document.querySelectorAll(`#tb input[data-f="${f}"]`)[k + 1]?.focus(), 0); } });
 $('th').addEventListener('click', (e) => { const b = e.target.closest('.fb'); if (b) { e.stopPropagation(); openPop(b.dataset.k, b); return; } const t = e.target.closest('[data-tog]'); if (t) { const k = t.dataset.tog; PF.has(k) ? PF.delete(k) : PF.add(k); render(); } });
 $('th').addEventListener('change', (e) => { if (e.target.id === 'all') { R.rows.forEach((r) => (e.target.checked ? sel.add(selKey(r)) : sel.delete(selKey(r)))); render(); } });
-$('bkbar').addEventListener('click', (e) => { const b = e.target.closest('[data-bk]'); if (b) { ST.bk = +b.dataset.bk; sel.clear(); render(); $('wrap').scrollTop = 0; } });
+$('bkbar').addEventListener('click', (e) => { const x = e.target.closest('[data-xbk]'); if (x) { ST.xbk = +x.dataset.xbk; render(); return; } const b = e.target.closest('[data-bk]'); if (b) { ST.bk = +b.dataset.bk; sel.clear(); render(); $('wrap').scrollTop = 0; } });
 $('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
   if (t.dataset.st) { S0.st = t.dataset.st; render(); } if (t.dataset.pm) { ST.pmMode = t.dataset.pm; render(); }
+  if (t.dataset.lvl) { const S1 = vs(); S1.fold = new Set(R.treeNodes.filter((n) => n.depth >= +t.dataset.lvl && n.kids.size).map((n) => n.code)); S1.lv = 1; render(); }
+  if (t.dataset.gm) { ST.glMode = t.dataset.gm; render(); }
   if (t.dataset.pv) { PF.clear(); if (t.dataset.pv !== 'Months') MI.forEach((m) => PF.add(t.dataset.pv === 'Years' ? 'Y' + m.y : 'Q' + m.y + '-' + m.q)); render(); } if (t.dataset.sv) { ST.sub = t.dataset.sv; sel.clear(); render(); }
   if (t.id === 'bFold') { R.rows.forEach((r) => S0.fold.add(r.g)); render(); } if (t.id === 'bOpen') { S0.fold.clear(); render(); } if (t.id === 'bClr') { S0.f = {}; S0.sort = null; S0.q = ''; S0.st = 'All'; render(); } });
 $('tools').addEventListener('input', (e) => { if (e.target.id === 'q') { vs().q = e.target.value; render(); const q = $('q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
@@ -480,6 +530,16 @@ $('pop').addEventListener('click', (e) => { const a = e.target.dataset.a; if (!a
   $('pop').classList.remove('show'); render(); });
 document.addEventListener('mousedown', (e) => { if (!e.target.closest('#pop') && !e.target.closest('.fb')) $('pop').classList.remove('show'); });
 // ---- detail drawer (an item): months, lines, POs
+function openBreak(kind, key) {
+  const inK = (i) => (kind === 'ce' ? S[L.ce[i]] === key : (S[L.wbs[i]] || '(no WBS)') === key || (S[L.wbs[i]] || '').startsWith(key + '.') || (S[L.wbs[i]] || '').startsWith(key + '-'));
+  const by = new Map(), by2 = new Map(), mon = new Float64Array(NP); let n = 0, t = 0;
+  for (let i = 0; i < N; i++) { if (!R.inc[i] || !inK(i) || R.per[i] === NP - 1) continue; const a = R.amt[i]; n++; t += a; mon[R.per[i]] += a; const b = BK[L.b[i]].id; by.set(b, (by.get(b) || 0) + a); const k2 = kind === 'ce' ? (S[L.wbs[i]] || '(no WBS)') : S[L.ce[i]] + ' · ' + S[L.cen[i]]; by2.set(k2, (by2.get(k2) || 0) + a); }
+  const mx = Math.max(1, ...Array.from(mon).slice(0, NP - 1).map(Math.abs)), tbl = (m, h) => `<table class="s" style="margin-top:8px"><tr><th>${h}</th><th>To date</th><th>%</th></tr>${[...m].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 25).map(([k, v]) => `<tr><td dir="auto">${esc(k)}</td><td>${fmt(v)}</td><td>${pct(v, t)}</td></tr>`).join('')}</table>`;
+  $('dTitle').textContent = key; $('dSub').textContent = kind === 'ce' ? 'Cost element · ' + ([...Array(N).keys()].map((i) => (S[L.ce[i]] === key ? S[L.cen[i]] : '')).find(Boolean) || '') : 'WBS · ' + (META.wbsNames[key] || '') + ' (incl. everything below)';
+  $('dBody').innerHTML = `<div class="bars">${PER.slice(0, NP - 1).map((p, k) => `<div class="${k === R.rep ? 'cut' : ''}" style="height:${(100 * Math.abs(mon[k]) / mx).toFixed(1)}%" title="${p}: ${fmt(mon[k])}"></div>`).join('')}</div><div class="blab">${PER.slice(0, NP - 1).map((p) => `<span>${p.replace('-', ' ')}</span>`).join('')}</div>
+    <dl><dt>To date</dt><dd><b>${fmt(t)}</b></dd><dt>Lines</dt><dd>${n.toLocaleString('en-US')}</dd></dl>${tbl(by, 'Bucket')}${tbl(by2, kind === 'ce' ? 'WBS element (top 25)' : 'Cost element (top 25)')}`;
+  $('drawer').classList.add('open');
+}
 function openDrawer(it) {
   const b = BK[it.bi], mx = Math.max(1, ...Array.from(it.p).slice(0, NP - 1).map(Math.abs));
   $('dTitle').textContent = itemCode(it); $('dSub').textContent = b.id + (it.grp ? ' · ' + it.grp : '');
@@ -559,6 +619,19 @@ $('bExport').onclick = async () => {
       eb.sort((x, y) => x.ii - y.ii).forEach((e) => { const it = b.items[e.ii]; put(we, r, ['      ' + itemCode(it), itemDesc(it) + (e.hand ? '  (hand-coded)' : ''), e.mnl, e.ce, ...Array.from(e.p).map(r2), r2(e.p.slice(0, NP - 1).reduce((s, v) => s + v, 0))], nf); we.getRow(r).outlineLevel = 2; r++; }); }); });
   const tAll = sumP(er); put(we, r, ['TOTAL counted', '', '', '', ...tAll.map(r2), r2(tAll.slice(0, NP - 1).reduce((s, v) => s + v, 0))], nf, { bold: true, fill: 'FFDDEBF7' });
   [30, 44, 8, 14].forEach((w, i) => { we.getColumn(i + 1).width = w; }); for (let c = 5; c <= NP + 5; c++) we.getColumn(c).width = 13; we.views = [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false }];
+  // GL and WBS (values, to the cut date)
+  { const sumP = (a, k0, k1) => { let x = 0; for (let k = k0; k <= k1; k++) x += a[k]; return x; }, cols = [...PER, 'To date'];
+    const g = new Map(); for (let i = 0; i < N; i++) { if (!R.inc[i]) continue; const k = S[L.ce[i]]; let x = g.get(k); if (!x) g.set(k, (x = { name: S[L.cen[i]], p: new Float64Array(NP), bk: new Set() })); x.p[R.per[i]] += R.amt[i]; x.bk.add(BK[L.b[i]].short); }
+    const wg = wb.addWorksheet('GL', { properties: { tabColor: { argb: NAVY } } }); title(wg, 'GL overview – cost by cost element', note); head(wg, 4, ['Cost element', 'Cost element name', 'Bucket(s)', ...cols]); let rr = 5;
+    [...g].sort((a, b) => (a[0] < b[0] ? -1 : 1)).forEach(([k, x]) => { put(wg, rr, [k, x.name, [...x.bk].join(', '), ...Array.from(x.p).map(r2), r2(sumP(x.p, 0, NP - 2))], Object.fromEntries(cols.map((c, j) => [j + 3, NUM]))); rr++; });
+    const tg = new Array(NP).fill(0); g.forEach((x) => x.p.forEach((v, k) => { tg[k] += v; })); put(wg, rr, ['TOTAL cost', '', '', ...tg.map(r2), r2(tg.slice(0, NP - 1).reduce((a, v) => a + v, 0))], Object.fromEntries(cols.map((c, j) => [j + 3, NUM])), { bold: true, fill: 'FFDDEBF7' });
+    [14, 30, 26].forEach((wd, i) => { wg.getColumn(i + 1).width = wd; }); for (let c = 4; c <= NP + 4; c++) wg.getColumn(c).width = 13; wg.views = [{ state: 'frozen', xSplit: 2, ySplit: 4, showGridLines: false }];
+    const anc = (code) => { const i = code.indexOf('.'); if (i < 0) return [code]; const out = [code.slice(0, i)], re = /[.\-]/g; re.lastIndex = i + 1; let mm; while ((mm = re.exec(code))) out.push(code.slice(0, mm.index)); out.push(code); return [...new Set(out)]; };
+    const nodes = new Map(); for (let i = 0; i < N; i++) { if (!R.inc[i]) continue; const a = anc(S[L.wbs[i]] || '(no WBS)'); a.forEach((c, d) => { let x = nodes.get(c); if (!x) nodes.set(c, (x = { d: d + 1, p: new Float64Array(NP), kids: new Set() })); x.p[R.per[i]] += R.amt[i]; if (d) nodes.get(a[d - 1]).kids.add(c); }); }
+    const ww = wb.addWorksheet('WBS', { properties: { tabColor: { argb: NAVY }, outlineProperties: { summaryBelow: false } } }); title(ww, 'WBS overview – cost by WBS element (each level includes everything below it)', note); head(ww, 4, ['WBS element', 'Name', ...cols]); rr = 5;
+    const walk = (c) => { const x = nodes.get(c); put(ww, rr, ['   '.repeat(x.d - 1) + c, META.wbsNames[c] || '', ...Array.from(x.p).map(r2), r2(sumP(x.p, 0, NP - 2))], Object.fromEntries(cols.map((cc, j) => [j + 2, NUM])), x.d <= 2 ? { bold: true, fill: x.d === 1 ? 'FFDCE6F2' : 'FFE9EFF7' } : {}); ww.getRow(rr).outlineLevel = Math.min(7, x.d - 1); rr++; [...x.kids].sort().forEach(walk); };
+    [...nodes].filter(([, x]) => x.d === 1).map(([c]) => c).sort().forEach(walk);
+    [34, 40].forEach((wd, i) => { ww.getColumn(i + 1).width = wd; }); for (let c = 3; c <= NP + 3; c++) ww.getColumn(c).width = 13; ww.views = [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false }]; }
   // one Coding sheet per bucket (readable as "last report" by the register build)
   BK.forEach((b, bi) => { const wc = wb.addWorksheet(b.short + ' Coding', { properties: { tabColor: { argb: GOLD } } }); title(wc, b.id + ' Coding', note);
     const cf = codeF(bi), labs = [...b.cols, ...cf.map((f) => (f === 'ce' ? (isSub(bi) ? 'Cost element' : 'Cost element code') : FN[f])), 'Status', 'Include', ...(b.qty ? ['Qty to date', 'Rate'] : []), 'To date', 'This month', 'Pending', 'Lines', 'Item key'];

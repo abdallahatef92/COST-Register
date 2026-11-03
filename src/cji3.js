@@ -23,7 +23,7 @@ function readOne(file) {
     lines.push({
       id: doc + '|' + str(g(r, 'Posting Row')) + '|' + str(g(r, 'Fiscal Year')), doc, row: str(g(r, 'Posting Row')), fy: str(g(r, 'Fiscal Year')),
       date, ym: date.slice(0, 7), type: str(g(r, 'Document Type')) || '(blank)', ce: str(g(r, 'Cost Element')), cen: str(g(r, 'Cost element name')),
-      amt: r2(num(g(r, 'Val/COArea Crcy'))), wbs: str(g(r, 'WBS Element')), mat: str(g(r, 'Material')), matDesc: str(g(r, 'Material Description')),
+      amt: r2(num(g(r, 'Val/COArea Crcy'))), wbs: str(g(r, 'WBS Element')), wbsName: str(g(r, 'CO Object Name')), mat: str(g(r, 'Material')), matDesc: str(g(r, 'Material Description')),
       qty: num(g(r, 'Total quantity')), unit: str(g(r, 'Unit of Measure')) || str(g(r, 'Posted unit of meas.')),
       name: str(g(r, 'Name')), header: str(g(r, 'Document Header Text')), poText: str(g(r, 'Purchase Order Text')), po: str(g(r, 'Purchasing Document')),
       order: str(g(r, 'Partner Object')), orderName: str(g(r, 'Partner object name')), offset: str(g(r, 'Name of offsetting account')),
