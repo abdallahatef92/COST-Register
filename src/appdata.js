@@ -16,12 +16,12 @@ function toAppData(P, o) {
     items: b.items.map((it) => ({ k: it.key, v: it.vals.map(s), pkg: it.pkg || '', mnl: it.mnl || '', ce: it.ce || '', inc: it.inc || 'Yes', div: it.div, nw: it.isNew ? 1 : 0,
       g: b.def.id === 'Material' ? s(it.headLabel || it.dk || '') : b.def.id === 'Subcontractor' ? s(it.vals[0]) : 0 })) }));
   // lines, column-wise
-  const L = { b: [], it: [], d: [], m: [], amt: [], qty: [], vat: [], cd: [], src: [], doc: [], ty: [], ce: [], cen: [], desc: [], wbs: [], po: [], sup: [], cert: [], id: [], name: [], ovr: {} };
+  const L = { hdr: [], pot: [], off: [], b: [], it: [], d: [], m: [], amt: [], qty: [], vat: [], cd: [], src: [], doc: [], ty: [], ce: [], cen: [], desc: [], wbs: [], po: [], sup: [], cert: [], id: [], name: [], ovr: {} };
   M.buckets.forEach((b, bi) => b.items.forEach((it, ii) => it.lines.forEach((l) => {
     L.b.push(bi); L.it.push(ii); L.d.push(isoInt(l.date)); L.m.push(l.open ? 0 : l.ym ? monIx.get(l.ym) || 0 : -1);
     L.amt.push(b.def.id === 'Subcontractor' ? Math.round((l.net !== undefined ? l.net : l.amt) * 100) / 100 : l.amt); L.qty.push(l.qty || 0);
     L.vat.push(l.offsetVat ? -1 : l.vat || 0); L.cd.push(isoInt(l.cdate)); L.src.push(s(l.source || '')); L.doc.push(s(l.doc)); L.ty.push(s(l.type)); L.ce.push(s(l.ce)); L.cen.push(s(l.cen));
-    L.desc.push(s(b.def.id === 'Material' ? l.matDesc : l.desc || l.poText || l.name || l.header)); L.wbs.push(s(l.wbs)); L.po.push(s(l.po)); L.sup.push(s(l.sup)); L.cert.push(s(l.cert)); L.id.push(l.id); L.name.push(s(l.name));
+    L.desc.push(s(b.def.id === 'Material' ? l.matDesc : l.desc || l.poText || l.name || l.header)); L.wbs.push(s(l.wbs)); L.po.push(s(l.po)); L.sup.push(s(l.sup)); L.cert.push(s(l.cert)); L.id.push(l.id); L.name.push(s(l.name)); L.hdr.push(s(l.header)); L.pot.push(s(l.poText)); L.off.push(s(l.offset));
     if (l.typed && Object.keys(l.typed).length) { const ov = {}; if (l.typed.pkg) ov.pkg = l.pkg; if (l.typed.mnl) ov.mnl = l.mnl; if (l.typed.cec) ov.ce = l.cec; if (l.typed.inc) ov.inc = l.inc; L.ovr[l.id] = ov; }
   })));
   // revenue lines (for the Summary revenue block and the reconciliation)
@@ -39,7 +39,11 @@ function toAppData(P, o) {
     po: Object.fromEntries([...st.certByPo].map(([k, v]) => [k, { n: v.n.size, first: v.first, last: v.last, contract: v.contract }])),
     title: serv ? Object.fromEntries(serv.poTitle) : {}, type: serv ? Object.fromEntries(serv.poType) : {}, supn: serv ? Object.fromEntries(serv.poSup) : {} } : null;
   const META = { buildId: new Date().toISOString() + '|' + [].concat(o.cji3).map(baseName).join('+') + '|' + L.b.length, project: o.project, cut: M.cut, cuts: CUTS, months, built: new Date().toISOString().slice(0, 16).replace('T', ' '), files: Object.fromEntries(['cji3', 'mb52', 'me2n', 'zscprg01', 'zscsrv1', 'prev'].map((k) => [k, [].concat(o[k] || []).map(baseName)])), cji3: [].concat(o.cji3).map(baseName).join(' + '), cjiFiles: P.cji.files, cjiDropped: P.cji.dropped, cjiConflicts: P.cji.conflicts.slice(0, 200), cjiConflictN: P.cji.conflicts.length, cost: P.costAll, grand: P.cji.grand, sum: P.cji.sum, dupes: P.dupes, zy: P.zyPaired,
-    unclassified: M.lines.filter((l) => l.bucket === 'Unclassified').length, wbsNames: WBSN, vat: P.vatOpt };
+    unclassified: M.lines.filter((l) => l.bucket === 'Unclassified').length, rules: P.rules || [], ruleTable: require('./rules').RULES, bucketIds: require('./rules').BUCKET_IDS,
+    gaSubs: Object.keys(require('./rules').GA).concat(['Other labour / payroll']),
+    unclass: (() => { const m = new Map(); for (const l of M.lines) { if (l.bucket !== 'Unclassified') continue; const k = l.ce + '|' + l.type; const x = m.get(k) || m.set(k, { ce: l.ce, cen: l.cen, type: l.type, n: 0, amt: 0, wbs: new Map() }).get(k); x.n++; x.amt += l.amt; x.wbs.set(l.wbs, (x.wbs.get(l.wbs) || 0) + 1); }
+      return [...m.values()].map((x) => ({ ce: x.ce, cen: x.cen, type: x.type, n: x.n, amt: Math.round(x.amt * 100) / 100, wbs: [...x.wbs].sort((a, b) => b[1] - a[1]).slice(0, 3).map((y) => y[0]) })).sort((a, b) => Math.abs(b.amt) - Math.abs(a.amt)); })(),
+    yours: M.lines.filter((l) => l.rule === 'yours').length, wbsNames: WBSN, vat: P.vatOpt };
   return { META, S, BK, L, REV, SUB };
 }
 module.exports = { toAppData };

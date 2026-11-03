@@ -13,7 +13,9 @@ function prepare(opts) {
   step('Reading CJI3');
   const cji = readCji3(opts.cji3); log(`CJI3: ${cji.files.length} file(s), ${cji.lines.length} lines (${cji.dropped} found in more than one file, ${cji.conflicts.length} conflicts), ${cji.subtotals} subtotal rows skipped`);
   const dupes = cji.within;   // the same key twice inside one file
-  const zyPaired = classify(cji.lines);
+  step('Last report');
+  const prev = opts.prevObj || readPrev(opts.prev), rules = opts.rules || (prev && prev.rules) || [];
+  const zyPaired = classify(cji.lines, rules); if (rules.length) log(`Your rules: ${rules.length}`);
   step('Material groups (MB52)');
   const groups = readGroups({ me2n: opts.me2n, mb52: opts.mb52 }); log(`Material groups: ${groups.map.size} materials (ME2N ${groups.src.me2n}, MB52 ${groups.src.mb52})`);
   const costAll = r2(cji.lines.filter((l) => l.ce[0] !== '4').reduce((x, l) => x + l.amt, 0));
@@ -30,13 +32,12 @@ function prepare(opts) {
     const st = subRes.stats; log(`Subcontractor: ${prog.lines.length} certificate lines; ${st.docs} of ${st.cjiDocs} CJI3 documents explained; certificates ${st.certPosted}; opening ${st.openRep} (CJI3 ${st.cjiOpen}, difference ${st.openDiff}); ${st.docAdjN} documents differ by 1 EGP or more (${st.docAdj}), ${st.roundN} by cents; ${st.cjiOnlyN} CJI3-only lines`);
   }
   for (const l of lines) if (l.bucket === 'Material') l.issue = l.amt === 0 && l.qty === 0 ? 'No value' : l.amt < 0 || l.qty < 0 ? 'Return' : l.amt === 0 ? 'No value' : 'Issue';
-  step('Last report');
-  const prev = opts.prevObj || readPrev(opts.prev); if (prev) log(`Last report: ${prev.items} coded items, ${prev.typed} typed-over lines carried over`);
+  if (prev) log(`Last report: ${prev.items} coded items, ${prev.typed} typed-over lines carried over`);
   const monthEnd = (iso) => { const [y, m] = iso.split('-'); return new Date(Date.UTC(+y, +m, 0)).toISOString().slice(0, 10); };
   const lastDate = lines.map((l) => l.date).filter(Boolean).sort().pop();
   const model = buildModel(lines, { groups: groups.map, prev, cut: monthEnd(opts.cut || lastDate) });
   log(`Cut date ${model.cut} (report month ${model.reportLabel})`);
-  return { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, serv, vatOpt, prev, model, lastDate, monthEnd };
+  return { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, serv, vatOpt, prev, model, lastDate, monthEnd, rules };
 }
 
 module.exports = { prepare };

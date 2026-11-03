@@ -47,6 +47,8 @@ function readPrev(file) {
   const lo = wb.Sheets['Line overrides'];
   if (lo) for (const r of XLSX.utils.sheet_to_json(lo, { defval: '' })) { const b = str(r.Bucket), id = str(r['Line ID']); if (!b || !id) continue; const m = over.get(b) || over.set(b, new Map()).get(b), o = m.get(id) || {};
     [['PKG', 'pkg'], ['MNL', 'mnl'], ['Cost element code', 'ce'], ['Include', 'inc']].forEach(([n, f]) => { if (str(r[n]) !== '') o[f] = str(r[n]); }); m.set(id, o); typed++; }
-  return { coding, over, items, typed, file };
+  const ru = wb.Sheets['Your rules'], rules = [];
+  if (ru) for (const r of XLSX.utils.sheet_to_json(ru, { defval: '' })) { const o = { ce: str(r['Cost element']), cen: str(r['Cost element name']), type: str(r['Document type']), wbs: str(r['WBS starts with']), bucket: str(r.Bucket), sub: str(r['G&A sub-group']) }; if (o.bucket && (o.ce || o.cen || o.type || o.wbs)) rules.push(o); }
+  return { coding, over, items, typed, file, rules };
 }
 module.exports = { readPrev, CODING_H, DATA_H };

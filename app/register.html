@@ -108,6 +108,7 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
 </div>
 <!-- Checks -->
 <div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>
+<div class="page" id="pg-rul"><div class="dash" id="rul"></div></div>
 <div id="pop"></div>
 <div id="drawer"><header><div><h1 id="dTitle"></h1><div class="sub" id="dSub"></div></div><div class="sp"></div><button id="dClose">✕</button></header><div class="body" id="dBody"></div></div>
 <div id="toast"></div>
@@ -141,7 +142,7 @@ const UNC = ['#C9DAF8', '#D9EAD3', '#FCE5CD', '#EAD1DC', '#D0E0E3', '#FFF2CC', '
 let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3000); }
 // =====================================================================================  state: cut date, VAT, codes, line overrides, undo
 const LSK = 'cost-register:' + META.project + ':' + (META.buildId || META.built), OVR = Object.assign({}, L.ovr);
-const ST = { xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
+const ST = { rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
 let undo = [], redo = [];
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) { if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
@@ -150,10 +151,10 @@ function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c)
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
-function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR }; }
+function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR, rules: ST.rules }; }
 function persist() { try { localStorage.setItem(LSK, JSON.stringify(snapshot())); $('saved').textContent = 'Saved in this browser ' + new Date().toLocaleTimeString(); } catch (e) { $('saved').textContent = 'Not saved here – use Save codes'; } }
 function applySnap(s, replaceLines) { let n = 0; BK.forEach((b) => { const m = s.codes && s.codes[b.id]; if (!m) return; b.items.forEach((it) => { const c = m[it.k]; if (!c) return; n++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((f) => { if (c[f] !== undefined && (f !== 'div' || isSub(it.bi))) it[f] = c[f]; }); }); });
-  if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } return n; }
+  if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } if (Array.isArray(s.rules)) ST.rules = s.rules.map((r) => ({ ...r })); return n; }
 function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; applySnap(s, true); if (s.cut && META.cuts.includes(s.cut)) ST.cut = s.cut; if (s.vat) { ST.vat = s.vat; ST.vatFrom = s.vatFrom || ''; } $('saved').textContent = 'Restored ' + new Date(s.at).toLocaleString(); } catch (e) {} }
 // =====================================================================================  the engine: everything from the lines, the codes and the cut date (no formulas)
 const R = {}; globalThis.R = R; globalThis.__BK = BK;   // results of compute() (also readable from the browser console)
@@ -191,14 +192,14 @@ function compute() {
 }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
 // =====================================================================================  tabs
-const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ['chk', 'Checks']];
+const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ['chk', 'Checks'], ['rules', 'Rules']];
 $('tabs').innerHTML = TABS.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join('');
 $('tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) { ST.tab = b.dataset.t; sel.clear(); render(); $('wrap').scrollTop = 0; } };
 function render() {
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === ST.tab));
-  ['sum', 'tbl', 'chk'].forEach((p) => $('pg-' + p).classList.toggle('on', (p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'tbl' && !['sum', 'chk'].includes(ST.tab))));
+  ['sum', 'tbl', 'chk', 'rul'].forEach((p) => $('pg-' + p).classList.toggle('on', (p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'rul' && ST.tab === 'rules') || (p === 'tbl' && !['sum', 'chk', 'rules'].includes(ST.tab))));
   $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
-  if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else renderTable();
+  if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else renderTable();
 }
 function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };
   BK.forEach((b) => b.items.forEach((it) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (it[f]) s[f].add(it[f]); }))); Object.values(OVR).forEach((o) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (o[f]) s[f].add(o[f]); }));
@@ -239,7 +240,7 @@ function renderChecks() {
   add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
   (META.cjiFiles || []).forEach((f) => add(`CJI3 file ${f.name} (${f.first} → ${f.last}, ${f.lines.toLocaleString('en-US')} lines): lines vs its grand-total row`, r2(f.sum - (f.grand || 0)), 'abs', f.dropped ? f.dropped.toLocaleString('en-US') + ' lines were already in an earlier file and are counted once.' : 'Sum of the file\'s lines minus its own grand-total row.'));
   if ((META.cjiFiles || []).length > 1) add('CJI3 lines with a different amount in two files', META.cjiConflictN || 0, 'zero', (META.cjiConflicts || []).slice(0, 3).map((c) => `${c.id}: ${c.wasFile} ${c.was} → ${c.nowFile} ${c.now}`).join(' · ') || 'The later download wins; none found.');
-  add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule.');
+  add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule – see the Rules tab: make a rule and apply it.');
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
   if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
   BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Fully coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
@@ -248,6 +249,41 @@ function renderChecks() {
   if (SUB) { add('Subcontractor: approved certificates not yet in CJI3', SUB.unposted, 'info', SUB.unpostedN + ' lines.'); add('Subcontractor: CJI3 documents explained by certificates', SUB.docs, 'info', 'of ' + SUB.cjiDocs + '.'); }
   $('chk').innerHTML = `<div class="panel"><h2>Checks<span class="note">live – everything should read OK</span></h2><table class="s"><tr><th>Check</th><th>Value</th><th>Status</th><th style="text-align:left">What it means</th></tr>${rows.map(([n, v, k, note]) => { const ok = k === 'abs' ? Math.abs(v) < 0.01 : k === 'zero' ? v === 0 : null;
     return `<tr><td>${esc(n)}</td><td>${typeof v === 'number' && k !== 'zero' && Math.abs(v) >= 100 ? fmt2(v) : v}</td><td style="text-align:center">${ok === null ? '<span class="inf">info</span>' : ok ? '<span class="okc">OK</span>' : '<span class="chk">CHECK</span>'}</td><td style="text-align:left;color:#555">${esc(note)}</td></tr>`; }).join('')}</table></div>`;
+}
+// =====================================================================================  Rules: the built-in rules (read-only), YOUR rules (editable), the unclassified lines
+const ruleMatch = (r, i) => { const n = (x) => String(x || '').trim().toLowerCase(); return (r.ce || r.cen || r.type || r.wbs) && (!r.ce || n(S[L.ce[i]]) === n(r.ce)) && (!r.cen || n(S[L.cen[i]]) === n(r.cen)) && (!r.type || n(S[L.ty[i]]) === n(r.type)) && (!r.wbs || n(S[L.wbs[i]]).startsWith(n(r.wbs))); };
+function renderRules() {
+  const BKS = META.bucketIds || BK.map((b) => b.id), ur = ST.rules;
+  // preview: lines (and amount) each of your rules catches now, and in which bucket those lines are today
+  const prev = ur.map((r) => { let n = 0, a = 0; const now = new Map(); for (let i = 0; i < N; i++) if (ruleMatch(r, i)) { n++; a += L.amt[i]; const b = BK[L.b[i]].short; now.set(b, (now.get(b) || 0) + 1); } return { n, a, now }; });
+  const inp = (i, f, w, list) => `<input data-r="${i}" data-f="${f}" value="${esc(ur[i][f] || '')}" style="width:${w}px" ${list ? `list="${list}"` : ''}>`;
+  const unc = META.unclass || [], uncN = unc.reduce((s0, x) => s0 + x.n, 0), uncA = unc.reduce((s0, x) => s0 + x.amt, 0);
+  $('rul').innerHTML = `<div class="cards" style="grid-template-columns:repeat(4,minmax(160px,1fr))"><div class="card ${uncN ? 'red' : 'green'}"><span>Unclassified lines</span><b>${uncN.toLocaleString('en-US')}</b></div><div class="card"><span>Unclassified amount</span><b>${fmt(uncA)}</b></div><div class="card"><span>Your rules</span><b>${ur.length}</b></div><div class="card"><span>Lines by your rules (this build)</span><b>${(META.yours || 0).toLocaleString('en-US')}</b></div></div>
+   <div class="panel"><h2>Your rules<span class="note">checked FIRST, before the built-in rules · fill only what must match (cost element exact, name, document type, WBS starts with) · first matching rule wins</span></h2>
+    <table class="s"><tr><th>#</th><th style="text-align:left">Cost element</th><th style="text-align:left">Cost element name</th><th style="text-align:left">Doc. type</th><th style="text-align:left">WBS starts with</th><th style="text-align:left">→ Bucket</th><th style="text-align:left">G&amp;A sub-group</th><th>Lines it catches</th><th>Amount</th><th style="text-align:left">Those lines are now in</th><th></th></tr>
+    ${ur.map((r, i) => `<tr><td>${i + 1}</td><td style="text-align:left">${inp(i, 'ce', 100)}</td><td style="text-align:left">${inp(i, 'cen', 170, 'dl-cen')}</td><td style="text-align:left">${inp(i, 'type', 50)}</td><td style="text-align:left">${inp(i, 'wbs', 140)}</td>
+      <td style="text-align:left"><select data-r="${i}" data-f="bucket"><option value="">– choose –</option>${BKS.map((b) => `<option ${r.bucket === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></td><td style="text-align:left">${r.bucket === 'G&A' ? inp(i, 'sub', 150, 'dl-gas') : ''}</td>
+      <td>${prev[i].n.toLocaleString('en-US')}</td><td>${fmt(prev[i].a)}</td><td style="text-align:left" class="help">${esc([...prev[i].now].map(([b, n]) => b + ' ' + n).join(' · '))}</td><td><button data-del="${i}">✕</button></td></tr>`).join('') || '<tr><td colspan="11" class="help" style="text-align:left">No rules yet – add one, or use "Make rule" on an unclassified line below.</td></tr>'}</table>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><button id="rAdd">+ Add rule</button><button class="pri" id="rApply">Apply rules – rebuild</button><span class="help" id="rMsg">Your rules are kept with your codes (Save codes, Excel export) and used by every next build.</span></div></div>
+   <div class="panel"><h2>Unclassified lines<span class="note">cost elements no rule catches – they show on Checks until a rule takes them</span></h2>
+    <table class="s"><tr><th style="text-align:left">Cost element</th><th style="text-align:left">Name</th><th>Doc. type</th><th>Lines</th><th>Amount</th><th style="text-align:left">Main WBS</th><th></th></tr>
+    ${unc.map((x, k) => `<tr><td style="text-align:left">${esc(x.ce)}</td><td style="text-align:left">${esc(x.cen)}</td><td>${esc(x.type)}</td><td>${x.n}</td><td>${fmt(x.amt)}</td><td style="text-align:left" class="help">${esc(x.wbs.join(' · '))}</td><td><button data-mk="${k}">Make rule</button></td></tr>`).join('') || '<tr><td colspan="7" class="help" style="text-align:left">None – every line has a bucket.</td></tr>'}</table></div>
+   <div class="panel"><h2>Built-in rules<span class="note">in this order, after your rules · first match wins</span></h2><table class="s"><tr><th>#</th><th style="text-align:left">When the line…</th><th style="text-align:left">It goes to</th><th style="text-align:left">Note</th></tr>
+    ${(META.ruleTable || []).map((r) => `<tr><td>${esc(r[0])}</td><td style="text-align:left">${esc(r[1])}</td><td style="text-align:left"><b>${esc(r[2])}</b></td><td style="text-align:left" class="help">${esc(r[3])}</td></tr>`).join('')}</table></div>
+   <datalist id="dl-cen">${[...new Set(L.cen.map((x) => S[x]))].sort().map((x) => `<option value="${esc(x)}">`).join('')}</datalist><datalist id="dl-gas">${(META.gaSubs || []).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>`;
+  const save = () => { persist(); };
+  $('rul').querySelectorAll('[data-r]').forEach((el) => { el.onchange = () => { ur[+el.dataset.r][el.dataset.f] = el.value.trim(); save(); renderRules(); }; });
+  $('rul').querySelectorAll('[data-del]').forEach((el) => { el.onclick = () => { ur.splice(+el.dataset.del, 1); save(); renderRules(); }; });
+  $('rul').querySelectorAll('[data-mk]').forEach((el) => { el.onclick = () => { const x = unc[+el.dataset.mk]; ur.push({ ce: x.ce, cen: '', type: '', wbs: '', bucket: '', sub: '' }); save(); renderRules(); }; });
+  $('rAdd').onclick = () => { ur.push({ ce: '', cen: '', type: '', wbs: '', bucket: '', sub: '' }); save(); renderRules(); };
+  $('rApply').onclick = async () => { const m = $('rMsg'), bad = ur.filter((r) => !r.bucket || !(r.ce || r.cen || r.type || r.wbs)); if (bad.length) { m.innerHTML = '<span style="color:#c00000">Every rule needs a bucket and at least one field to match.</span>'; return; }
+    let files = null; try { files = await idbGet('lastFiles'); } catch (e) { /* none */ }
+    if (!files || !files.length) { m.innerHTML = '<span style="color:#c55a11">The SAP files of this build are not kept in this browser (a ready-made App). Your rules are saved – they apply at the next build in the Tool.</span>'; return; }
+    m.textContent = 'Rebuilding with your rules… (about 30 seconds)'; await new Promise((r) => setTimeout(r, 50));
+    try { const by = (k) => files.filter((f) => f.kind === k), snap = snapshot(), fl = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), mb52: by('mb52'), me2n: by('me2n'), prev: { name: 'codes.json', data: new TextEncoder().encode(JSON.stringify(snap)) } };
+      for (const k of ['zscprg01', 'zscsrv1', 'mb52', 'me2n']) if (!fl[k].length) delete fl[k];
+      const data = Engine.build(fl, { project: META.project, rules: ur }); await idbSet('lastBuild', data); location.reload(); }
+    catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not rebuild: ' + esc(err.message || err) + '</span>'; } };
 }
 // =====================================================================================  generic table pages (filters like Excel, groups that fold, selection, inline codes)
 // Per Month columns: Opening · months (folding into quarters and years) · Pending
@@ -272,7 +308,8 @@ const stCell = (it) => { const s = statusOf(it); return `<td><span class="st ${s
 const numC = (k, l, w, get, o = {}) => ({ k, l, w, num: 1, v: get, h: (r) => `<td class="num${o.cls ? ' ' + o.cls(r) : ''}">${o.f ? o.f(get(r)) : fmt(get(r))}</td>`, ...o });
 // ---- page definitions: rows, columns, groups
 function pageDef() {
-  const bi = ST.bk, b = BK[bi], rep = R.rep;
+  if (ST.tab !== 'lines' && ST.bk < 0) ST.bk = Math.max(0, MATI);
+  const bi = ST.bk, b = bi >= 0 ? BK[bi] : null, rep = R.rep;
   if (ST.tab === 'cod') {
     const cols = [];
     b.cols.forEach((lab, j) => { if (bi === MATI && j < 2) return; const w = Math.min(320, Math.max(70, lab === 'Description' || /name/i.test(lab) ? 300 : lab === 'Type of works' ? 170 : 96)); cols.push({ k: 'c' + j, l: lab, w: lab === 'Unit' ? 58 : w, v: (r) => r.it.vals[j], h: (r) => (lab === 'Unit' ? `<td>${r.it.vals[j] ? `<span class="u" style="background:${unitCol(r.it.vals[j])}">${esc(r.it.vals[j])}</span>` : ''}</td>` : j === (bi === MATI ? 3 : isSub(bi) ? 1 : 0) ? `<td title="${esc(r.it.vals[j])}"><a class="lk open">${esc(r.it.vals[j])}</a></td>` : `<td dir="auto" title="${esc(r.it.vals[j])}">${esc(r.it.vals[j])}</td>`), fz: j <= (bi === MATI ? 3 : isSub(bi) ? 1 : 0) ? 1 : 0 }); });
@@ -311,24 +348,31 @@ function pageDef() {
         + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>` };
   }
   if (ST.tab === 'lines') {
-    const idx = []; for (let i = 0; i < N; i++) if (L.b[i] === bi) idx.push(i);
-    const it = (i) => b.items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
-    const cols = [{ k: 'item', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 106, fz: 1, v: (r) => itemCode(it(r.i)), h: (r) => `<td class="help" title="${esc(itemCode(it(r.i)))}"></td>` },
-      { k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
-      { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` },
-      ...(bi === MATI ? [] : [{ k: 'desc', l: 'Line text', w: 250, v: (r) => S[L.desc[r.i]], h: (r) => `<td dir="auto" title="${esc(S[L.desc[r.i]])}">${esc(S[L.desc[r.i]])}</td>` }])];
-    if (isSub(bi)) cols.push({ k: 'po', l: 'PO', w: 96, v: (r) => S[L.po[r.i]], h: (r) => `<td>${esc(S[L.po[r.i]])}</td>` }, { k: 'sup', l: 'Subcontractor', w: 170, v: (r) => S[L.sup[r.i]], h: (r) => `<td dir="auto">${esc(S[L.sup[r.i]])}</td>` }, { k: 'src', l: 'Source', w: 120, v: (r) => SRC[r.i], h: (r) => `<td>${esc(SRC[r.i])}</td>` });
-    if (b.qty) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
+    // one bucket, or every line of every bucket (bi = -1); grouped by item; tick lines (header ☐ = all lines that pass the filters) and code them
+    const all = bi < 0, idx = []; for (let i = 0; i < N; i++) if (all || L.b[i] === bi) idx.push(i);
+    const it = (i) => BK[L.b[i]].items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
+    const anyQ = all ? true : b.qty, isMat = !all && bi === MATI, isS = !all && isSub(bi);
+    const tx = (k, l, w, arr) => ({ k, l, w, v: (r) => S[arr[r.i]], h: (r) => `<td dir="auto" title="${esc(S[arr[r.i]])}">${esc(S[arr[r.i]])}</td>` });
+    const cols = [{ k: 'item', l: all ? 'Item' : b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 106, fz: 1, v: (r) => itemCode(it(r.i)), h: (r) => `<td class="help" title="${esc(itemCode(it(r.i)))}"></td>` }];
+    if (all) cols.push({ k: 'bk', l: 'Bucket', w: 130, v: (r) => BK[L.b[r.i]].id, h: (r) => `<td class="help">${esc(BK[L.b[r.i]].short)}</td>` });
+    cols.push({ k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
+      { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` });
+    if (!isMat) cols.push(tx('desc', 'Line text', 220, L.desc));
+    if (isS || all) cols.push({ k: 'po', l: 'PO', w: 96, v: (r) => S[L.po[r.i]], h: (r) => `<td>${esc(S[L.po[r.i]])}</td>` }, { k: 'sup', l: 'Subcontractor', w: 160, v: (r) => S[L.sup[r.i]], h: (r) => `<td dir="auto">${esc(S[L.sup[r.i]])}</td>` });
+    if (isS) cols.push({ k: 'src', l: 'Source', w: 120, v: (r) => SRC[r.i], h: (r) => `<td>${esc(SRC[r.i])}</td>` });
+    if (anyQ) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
     cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
     ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : 80, code: 1, v: (r) => ef(r.i, f) || '(blank)', h: (r) => { const o = OVR[L.id[r.i]]; return codeInput(it(r.i), f, o && o[f] !== undefined ? o[f] : undefined); } }));
-    cols.push({ k: 'inc', l: 'Include', w: 66, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` },
+    cols.push({ k: 'inc', l: 'Include', w: 70, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` },
+      // the CJI3 text columns – the allocation information (as on the Excel Data sheets)
+      tx('name', 'Name (CJI3)', 220, L.name), tx('hdr', 'Document header text', 200, L.hdr), tx('pot', 'Purchase order text', 200, L.pot), tx('off', 'Offsetting account', 180, L.off),
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 52, v: (r) => S[L.ty[r.i]], h: (r) => `<td>${esc(S[L.ty[r.i]])}</td>` },
       { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` }, { k: 'wbs', l: 'WBS element', w: 150, v: (r) => S[L.wbs[r.i]], h: (r) => `<td>${esc(S[L.wbs[r.i]])}</td>` });
-    const lastLab = cols[cols.findIndex((c) => c.k === (b.qty ? 'qty' : 'amt')) - 1].k;
-    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: L.it[i] })), lines: true, groups: true, gSpanK: lastLab, gColor: () => '#EEF2F8',
-      gLabel: (g, rs) => { const x = b.items[g]; return `<a class="lk open2" data-ii="${g}">${esc(itemCode(x))}</a> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(itemDesc(x))}</span><span class="gm">${rs.length} lines${itemUnit(x) ? ' · ' + esc(itemUnit(x)) : ''}</span>`; },
-      gCells: (g, rs) => ({ qty: fq(rs.reduce((s, r) => s + (R.inc[r.i] ? L.qty[r.i] : 0), 0)), amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }),
-      foot: (rs) => ({ amt: fmt2(rs.reduce((s, r) => s + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
+    const lastLab = cols[cols.findIndex((c) => c.k === (anyQ ? 'qty' : 'amt')) - 1].k;
+    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: L.b[i] + ':' + L.it[i] })), lines: true, sel: true, groups: true, gSpanK: lastLab, gColor: () => '#EEF2F8',
+      gLabel: (g, rs) => { const [gb, gi] = g.split(':').map(Number), x = BK[gb].items[gi]; return `${all ? `<span class="u" style="background:#DDE5EE">${esc(BK[gb].short)}</span> ` : ''}<a class="lk open2" data-bi="${gb}" data-ii="${gi}">${esc(itemCode(x))}</a> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(itemDesc(x))}</span><span class="gm">${rs.length} lines${itemUnit(x) ? ' · ' + esc(itemUnit(x)) : ''}</span>`; },
+      gCells: (g, rs) => ({ qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)), amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }),
+      foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
   }
   if (ST.tab === 'gl' || ST.tab === 'wbs') {
     // month columns (Opening · months folding into quarters / years · Pending) + To date, amounts only
@@ -429,7 +473,7 @@ function renderTable() {
   const D = pageDef(), S0 = vs(); R.D = D;
   // bucket bar (not for Expenses / Subcontractor)
   if (['gl', 'wbs'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = `<button class="chip ${ST.xbk === -1 ? 'on' : ''}" data-xbk="-1">All buckets</button>` + BK.map((b, bi) => `<button class="chip ${bi === ST.xbk ? 'on' : ''}" data-xbk="${bi}">${esc(b.short)}</button>`).join('') + (ST.tab === 'gl' ? `<button class="chip ${ST.xbk === -2 ? 'on' : ''}" data-xbk="-2">Revenue</button>` : ''); }
-  else if (['cod', 'pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+  else if (['cod', 'pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = (ST.tab === 'lines' ? `<button class="chip ${ST.bk === -1 ? 'on' : ''}" data-bk="-1">All buckets</button>` : '') + BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
     return `<button class="chip ${bi === ST.bk ? 'on' : ''}" data-bk="${bi}">${esc(b.short)}<span class="pc">${t ? (100 * f / t).toFixed(0) : 0}%</span></button>`; }).join(''); } else $('bkbar').style.display = 'none';
   $('tools').innerHTML = `${D.noFilter && !D.search ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Partly coded', 'Fully coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
     ${D.extraTools || ''} ${D.groups ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : '<button id="bClr">✕ Clear filters</button>'} <span class="help" id="cnt"></span>`;
@@ -464,8 +508,8 @@ function renderTable() {
     R.disp = tb; R.nc = nc; renderVirtual();
   }
   $('cnt').textContent = `${rows.length.toLocaleString('en-US')} rows`;
-  $('bulk').classList.toggle('show', !!D.sel && sel.size > 0); $('bdiv').style.display = (ST.tab === 'cod' && isSub(ST.bk)) || ST.tab === 'sub' ? '' : 'none';
-  $('bsel').textContent = sel.size + ' selected';
+  $('bulk').classList.toggle('show', !!D.sel && sel.size > 0); $('bdiv').style.display = (ST.tab === 'cod' && isSub(ST.bk)) || ST.tab === 'sub' ? '' : 'none'; $('bInc').textContent = ST.tab === 'lines' ? 'Include' : 'Include'; $('bClear').textContent = ST.tab === 'lines' ? 'Back to item codes' : 'Clear codes';
+  $('bsel').textContent = (selLines().length ? selLines().length.toLocaleString('en-US') + ' lines selected · ' + fmt2(selLines().reduce((s0, i) => s0 + R.amt[i], 0)) : sel.size + ' selected');
   const a = $('all'); if (a) a.checked = rows.length > 0 && rows.every((r) => sel.has(selKey(r)));
 }
 const selKey = (r) => (r.i !== undefined ? 'L' + r.i : r.it ? r.it.bi + ':' + r.it.ii : '');
@@ -482,12 +526,12 @@ let vt = 0; $('wrap').addEventListener('scroll', () => { if (vt) return; vt = re
 const rowOf = (tr) => { const k = tr.dataset.k; if (!k) return null; if (k[0] === 'L') return { i: +k.slice(1), it: BK[L.b[+k.slice(1)]].items[L.it[+k.slice(1)]] }; const [bi, ii] = k.split(':').map(Number); return { it: BK[bi].items[ii] }; };
 $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr);
   if (e.target.matches('input[data-f]')) { const f = e.target.dataset.f, v = e.target.value.trim();
-    if (r.i !== undefined) change([{ t: 'line', i: r.i, f, v: v === r.it[f] ? undefined : v }], 'Line ' + FN[f] + ' = ' + (v || '(blank)'));
+    if (r.i !== undefined) { const tg = sel.has('L' + r.i) && selLines().length > 1 ? selLines() : [r.i]; change(tg.map((i) => lineCh(i, f, v)), (tg.length > 1 ? tg.length + ' lines ' : 'Line ') + FN[f] + ' = ' + (v || '(blank)')); }
     else { const k = selKey(r), tg = sel.has(k) && sel.size > 1 ? [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number)) : [[r.it.bi, r.it.ii]]; change(tg.map(([bi, ii]) => ({ t: 'item', bi, ii, f, v })), FN[f] + ' = ' + (v || '(blank)')); } }
   if (e.target.matches('.ck')) { const k = tr.dataset.k; e.target.checked ? sel.add(k) : sel.delete(k); render(); } });
 $('tb').addEventListener('click', (e) => { const nt = e.target.closest('[data-node]'); if (nt) { e.stopPropagation(); const S1 = vs(), k = nt.dataset.node; S1.fold.has(k) ? S1.fold.delete(k) : S1.fold.add(k); render(); return; }
   const ob = e.target.closest('[data-brk]'); if (ob) { e.preventDefault(); openBreak(ob.dataset.kind, ob.dataset.brk); return; }
-  const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
+  const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[o2.dataset.bi !== undefined ? +o2.dataset.bi : ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
   const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr); if (!r) return;
   if (e.target.matches('.incb')) { if (r.i !== undefined) { const cur = (OVR[L.id[r.i]] || {}).inc ?? r.it.inc, nv = cur === 'No' ? 'Yes' : 'No'; change([{ t: 'line', i: r.i, f: 'inc', v: nv === r.it.inc ? undefined : nv }], 'Line include'); } else change([{ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'inc', v: r.it.inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
   if (e.target.matches('.rst')) { change(['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i: r.i, f, v: undefined })), 'Line back to item codes'); return; }
@@ -508,9 +552,12 @@ $('tools').addEventListener('input', (e) => { if (e.target.id === 'q') { vs().q 
 $('tb').addEventListener('click', (e) => { const a = e.target.closest('.gopo'); if (a) { e.preventDefault(); ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); render(); } });
 // bulk coding
 const selItems = () => [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number));
-$('bApply').onclick = () => { const ch = []; [['div', 'bDIV'], ['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selItems().forEach(([bi, ii]) => { if (f !== 'div' || isSub(bi)) ch.push({ t: 'item', bi, ii, f, v }); }); }); if (!ch.length) return toast('Type at least one code in the bar'); change(ch, 'Bulk coding'); };
-$('bClear').onclick = () => { if (confirm('Clear the codes of ' + sel.size + ' items?')) change(selItems().flatMap(([bi, ii]) => codeF(bi).map((f) => ({ t: 'item', bi, ii, f, v: '' }))), 'Clear codes'); };
-$('bInc').onclick = () => change(selItems().map(([bi, ii]) => ({ t: 'item', bi, ii, f: 'inc', v: 'Yes' })), 'Include'); $('bExc').onclick = () => change(selItems().map(([bi, ii]) => ({ t: 'item', bi, ii, f: 'inc', v: 'No' })), 'Exclude');
+const selLines = () => [...sel].filter((x) => x[0] === 'L').map((x) => +x.slice(1));
+const lineCh = (i, f, v) => ({ t: 'line', i, f, v: v === BK[L.b[i]].items[L.it[i]][f] ? undefined : v });
+$('bApply').onclick = () => { if (selLines().length) { const ch = []; [['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selLines().forEach((i) => ch.push(lineCh(i, f, v))); }); if (!ch.length) return toast('Type at least one code in the bar'); return change(ch, 'Lines coded'); }
+  const ch = []; [['div', 'bDIV'], ['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selItems().forEach(([bi, ii]) => { if (f !== 'div' || isSub(bi)) ch.push({ t: 'item', bi, ii, f, v }); }); }); if (!ch.length) return toast('Type at least one code in the bar'); change(ch, 'Bulk coding'); };
+$('bClear').onclick = () => { if (selLines().length) { if (confirm('Put ' + selLines().length + ' lines back on their item\'s codes?')) change(selLines().flatMap((i) => ['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i, f, v: undefined }))), 'Lines back to item codes'); return; } if (confirm('Clear the codes of ' + sel.size + ' items?')) change(selItems().flatMap(([bi, ii]) => codeF(bi).map((f) => ({ t: 'item', bi, ii, f, v: '' }))), 'Clear codes'); };
+$('bInc').onclick = () => (selLines().length ? change(selLines().map((i) => lineCh(i, 'inc', 'Yes')), 'Lines included') : change(selItems().map(([bi, ii]) => ({ t: 'item', bi, ii, f: 'inc', v: 'Yes' })), 'Include')); $('bExc').onclick = () => (selLines().length ? change(selLines().map((i) => lineCh(i, 'inc', 'No')), 'Lines excluded') : change(selItems().map(([bi, ii]) => ({ t: 'item', bi, ii, f: 'inc', v: 'No' })), 'Exclude'));
 $('bNone').onclick = () => { sel.clear(); render(); };
 // ---- Excel-like filter popup (value list for every column)
 let popK = null;
@@ -632,6 +679,7 @@ $('bExport').onclick = async () => {
     const walk = (c) => { const x = nodes.get(c); put(ww, rr, ['   '.repeat(x.d - 1) + c, META.wbsNames[c] || '', ...Array.from(x.p).map(r2), r2(sumP(x.p, 0, NP - 2))], Object.fromEntries(cols.map((cc, j) => [j + 2, NUM])), x.d <= 2 ? { bold: true, fill: x.d === 1 ? 'FFDCE6F2' : 'FFE9EFF7' } : {}); ww.getRow(rr).outlineLevel = Math.min(7, x.d - 1); rr++; [...x.kids].sort().forEach(walk); };
     [...nodes].filter(([, x]) => x.d === 1).map(([c]) => c).sort().forEach(walk);
     [34, 40].forEach((wd, i) => { ww.getColumn(i + 1).width = wd; }); for (let c = 3; c <= NP + 3; c++) ww.getColumn(c).width = 13; ww.views = [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false }]; }
+  { const wr = wb.addWorksheet('Your rules', { properties: { tabColor: { argb: 'FFC55A11' } } }); wr.addRow(['Cost element', 'Cost element name', 'Document type', 'WBS starts with', 'Bucket', 'G&A sub-group']); ST.rules.forEach((x) => wr.addRow([x.ce || '', x.cen || '', x.type || '', x.wbs || '', x.bucket || '', x.sub || ''])); wr.getRow(1).font = { name: A, bold: true }; [14, 26, 12, 18, 22, 22].forEach((wd, i) => { wr.getColumn(i + 1).width = wd; }); }
   // one Coding sheet per bucket (readable as "last report" by the register build)
   BK.forEach((b, bi) => { const wc = wb.addWorksheet(b.short + ' Coding', { properties: { tabColor: { argb: GOLD } } }); title(wc, b.id + ' Coding', note);
     const cf = codeF(bi), labs = [...b.cols, ...cf.map((f) => (f === 'ce' ? (isSub(bi) ? 'Cost element' : 'Cost element code') : FN[f])), 'Status', 'Include', ...(b.qty ? ['Qty to date', 'Rate'] : []), 'To date', 'This month', 'Pending', 'Lines', 'Item key'];
@@ -688,7 +736,7 @@ function showStart(canCancel) {
       m.textContent = 'Building… (about 20–30 seconds)'; await new Promise((r) => setTimeout(r, 50));
       try { const t0 = Date.now(), files = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), mb52: by('mb52'), me2n: by('me2n'), prev: by('prev')[0] };
         for (const k of ['zscprg01', 'zscsrv1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
-        const data = Engine.build(files, { project: 'SUTH' }); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`; await idbSet('lastBuild', data); location.reload(); }
+        const data = Engine.build(files, { project: 'SUTH' }); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`; await idbSet('lastBuild', data); try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
       catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
   };
   draw();

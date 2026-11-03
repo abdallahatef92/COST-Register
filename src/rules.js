@@ -35,8 +35,15 @@ function classifyOne(l) {
   return ['Unclassified', ''];
 }
 
-function classify(lines) {
-  for (const l of lines) { const [b, s] = classifyOne(l); l.bucket = b; l.sub = s; l.open = OPENING_TYPES.has(l.type); }
+// YOUR rules (edited in the app, carried in the codes file / Excel export): checked BEFORE the built-in rules.
+// A rule: { ce, cen, type, wbs, bucket, sub } – every field you fill must match (cost element exact, name case-insensitive,
+// document type exact, WBS = starts with); empty fields are ignored. First matching rule wins.
+const BUCKET_IDS = ['Material', 'Subcontractor', 'Subcontractor deductions', 'Other direct cost', 'Labor', 'Equipment / fuel', 'Fleet / transportation', 'House rent', 'Asset depreciation', 'G&A', 'Revenue', 'Unclassified'];
+const norm = (x) => String(x || '').trim().toLowerCase();
+const userMatch = (r, l) => (r.ce || r.cen || r.type || r.wbs) && (!r.ce || norm(l.ce) === norm(r.ce)) && (!r.cen || norm(l.cen) === norm(r.cen)) && (!r.type || norm(l.type) === norm(r.type)) && (!r.wbs || norm(l.wbs).startsWith(norm(r.wbs)));
+function classify(lines, userRules = []) {
+  const ur = (userRules || []).filter((r) => r && BUCKET_IDS.includes(r.bucket));
+  for (const l of lines) { const u = ur.find((r) => userMatch(r, l)); const [b, s] = u ? [u.bucket, u.sub || ''] : classifyOne(l); l.bucket = b; l.sub = s; l.rule = u ? 'yours' : ''; l.open = OPENING_TYPES.has(l.type); }
   // ZY (accrual reversal) lines take the bucket of the equal-and-opposite line in the same cost element and month
   const pool = new Map();
   lines.forEach((l, i) => { if (l.type !== 'ZY') { const k = l.ce + '|' + l.ym; (pool.get(k) || pool.set(k, []).get(k)).push(i); } });
@@ -70,4 +77,4 @@ const RULES = [
   ['17', 'Document type ZY (accrual reversal)', 'Same bucket as the equal-and-opposite line (same cost element, same month)', 'Pairs net to zero.'],
   ['18', 'Anything else', 'Unclassified', 'Shows on Checks – add a rule.'],
 ];
-module.exports = { classify, RULES, GA, OPENING_TYPES };
+module.exports = { classify, RULES, GA, OPENING_TYPES, BUCKET_IDS };
