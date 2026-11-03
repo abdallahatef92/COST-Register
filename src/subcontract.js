@@ -2,7 +2,7 @@
 // Subcontractor bucket from the certificate report (ZSCPRG01) and the PO service list (ZSCSRV1).
 // CJI3 stays the truth: every CJI3 subcontractor line that a certificate explains is replaced by the certificate lines (net of VAT, month = CJI3 posting month);
 // what the certificates do not explain stays visible – one adjustment row per document, one for the opening, and the CJI3 lines no certificate covers.
-const XLSX = require('xlsx');
+const { XLSX, readBook } = require('./io');
 const { str, num, r2, r3, isoDate } = require('./util');
 const { indexHeader } = require('./cji3');
 
@@ -18,7 +18,7 @@ const normTow = (t) => str(t).replace(/\s+/g, ' ').replace(/\s*-\s*/, '-');
 const top = (m) => { let b = '', n = 0; if (m) for (const [k, v] of m) if (v > n) { n = v; b = k; } return b; };
 const tally = (m, k, w = 1) => m.set(k, (m.get(k) || 0) + w);
 
-function sheetRows(file) { const wb = XLSX.readFile(file, { cellDates: true }); return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null }); }
+function sheetRows(file) { const wb = readBook(file, { cellDates: true }); return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null }); }
 
 function readProg(file) {
   const sh = sheetRows(file), h = sh.findIndex((r) => r.some((c) => str(c) === 'SC Work Current Cost')); if (h < 0) throw new Error('ZSCPRG01: column "SC Work Current Cost" not found.');

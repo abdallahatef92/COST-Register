@@ -69,7 +69,7 @@ function buildModel(lines, { groups = new Map(), prev = null, cut = '' } = {}) {
     } else items.sort((a, b) => Math.abs(b.total) - Math.abs(a.total) || (a.key < b.key ? -1 : 1));
     items.forEach((it, i) => { it.id = i + 1; const p = prev && prev.coding.get(def.id); const c = p && p.get(it.key); it.isNew = !!prev && !c;
       it.pkg = c ? c.pkg : ''; it.mnl = c && c.mnl ? c.mnl : def.mnl; it.ce = c ? c.ce : ''; it.inc = c && c.inc ? c.inc : 'Yes';
-      if (def.id === 'Subcontractor') it.div = c && c.div !== undefined ? c.div : require('./workbook').divOfService(it.vals[1]); });
+      if (def.id === 'Subcontractor') it.div = c && c.div !== undefined ? c.div : require('./codes').divOfService(it.vals[1]); });
     buckets.push({ def, items, count: bl.length, total: r2(bl.reduce((s, l) => s + l.amt, 0)) });
   }
   return { buckets, months, periods, reportLabel, cut, lines };

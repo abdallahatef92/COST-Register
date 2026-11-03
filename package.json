@@ -11,7 +11,10 @@
   },
   "dependencies": {
     "exceljs": "^4.4.0",
-    "xlsx": "^0.18.5",
-    "jszip": "^3.10.2"
+    "jszip": "^3.10.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
   }
 }

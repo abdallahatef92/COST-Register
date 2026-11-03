@@ -3,46 +3,12 @@
 // Prototype: the whole Cost Register as ONE offline HTML app, with the data of a register build.
 // usage: node tools/proto-app.js --cji3 f --mb52 f --zscprg01 f --zscsrv1 f [--prev lastReport.xlsx] [--out out/Cost_Register_App.html]
 const fs = require('fs'), path = require('path');
-const { prepare } = require('../src/build');
-const W = require('../src/workbook');
-const { ymLabel } = require('../src/util');
+const { prepare } = require('../src/prepare');
+const { toAppData } = require('../src/appdata');
 const a = process.argv.slice(2), o = { project: 'SUTH', out: 'out/Cost_Register_App.html', log: console.log };
 for (let i = 0; i < a.length; i += 2) o[a[i].replace(/^--/, '')] = a[i + 1];
-const P = prepare(o), M = P.model;
-for (const b of M.buckets) W.applyCodes(b, P.prev && P.prev.over);
-// string dictionary (keeps the file small)
-const S = [], SI = new Map(), s = (v) => { v = v === null || v === undefined ? '' : String(v); let i = SI.get(v); if (i === undefined) { i = S.length; S.push(v); SI.set(v, i); } return i; };
-const months = M.months.map(ymLabel), monIx = new Map(M.months.map((m, i) => [m, i + 1]));
-const isoInt = (d) => (d ? +d.replace(/-/g, '') : 0);
-// buckets + items
-const BK = M.buckets.map((b) => ({ id: b.def.id, short: b.def.short, mnl: b.def.mnl, qty: !!b.def.qty, tree: !!b.def.tree, cols: b.def.cols.map((c) => c[0]),
-  items: b.items.map((it) => ({ k: it.key, v: it.vals.map(s), pkg: it.pkg || '', mnl: it.mnl || '', ce: it.ce || '', inc: it.inc || 'Yes', div: it.div, nw: it.isNew ? 1 : 0,
-    g: b.def.id === 'Material' ? s(it.headLabel || it.dk || '') : b.def.id === 'Subcontractor' ? s(it.vals[0]) : 0 })) }));
-// lines, column-wise
-const L = { b: [], it: [], d: [], m: [], amt: [], qty: [], vat: [], cd: [], src: [], doc: [], ty: [], ce: [], cen: [], desc: [], wbs: [], po: [], sup: [], cert: [], id: [], name: [], ovr: {} };
-M.buckets.forEach((b, bi) => b.items.forEach((it, ii) => it.lines.forEach((l) => {
-  L.b.push(bi); L.it.push(ii); L.d.push(isoInt(l.date)); L.m.push(l.open ? 0 : l.ym ? monIx.get(l.ym) || 0 : -1);
-  L.amt.push(b.def.id === 'Subcontractor' ? Math.round((l.net !== undefined ? l.net : l.amt) * 100) / 100 : l.amt); L.qty.push(l.qty || 0);
-  L.vat.push(l.offsetVat ? -1 : l.vat || 0); L.cd.push(isoInt(l.cdate)); L.src.push(s(l.source || '')); L.doc.push(s(l.doc)); L.ty.push(s(l.type)); L.ce.push(s(l.ce)); L.cen.push(s(l.cen));
-  L.desc.push(s(b.def.id === 'Material' ? l.matDesc : l.desc || l.poText || l.name || l.header)); L.wbs.push(s(l.wbs)); L.po.push(s(l.po)); L.sup.push(s(l.sup)); L.cert.push(s(l.cert)); L.id.push(l.id); L.name.push(s(l.name));
-  if (l.typed && Object.keys(l.typed).length) { const ov = {}; if (l.typed.pkg) ov.pkg = l.pkg; if (l.typed.mnl) ov.mnl = l.mnl; if (l.typed.cec) ov.ce = l.cec; if (l.typed.inc) ov.inc = l.inc; L.ovr[l.id] = ov; }
-})));
-// revenue lines (for the Summary revenue block and the reconciliation)
-const REV = M.lines.filter((l) => l.bucket === 'Revenue').map((l) => [isoInt(l.date), l.open ? 0 : l.ym ? monIx.get(l.ym) || 0 : -1, l.amt, l.ce[0] === '4' ? 1 : 0]);
-// cut dates: month ends from two months before the first posting to two months after the last
-const me = (y, m) => new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10), CUTS = [];
-{ const f = M.months[0], z = M.months[M.months.length - 1]; let [y, m] = f.split('-').map(Number); m -= 2; while (m < 1) { m += 12; y--; } let [ey, em] = z.split('-').map(Number); em += 2; while (em > 12) { em -= 12; ey++; }
-  for (; y < ey || (y === ey && m <= em);) { CUTS.push(me(y, m)); m++; if (m > 12) { m = 1; y++; } } }
-const st = P.subRes ? P.subRes.stats : null, serv = P.serv;
-const SUB = st ? { cjiTotal: st.cjiTotal, cjiOpen: st.cjiOpen, roundN: st.roundN, unposted: st.unposted, unpostedN: st.unpostedN, notApproved: st.notApproved, notApprovedN: st.notApprovedN, vatOnPosted: st.vatOnPosted, vatOnOpening: st.vatOnOpening,
-  dupRows: st.dup.rows, dupAmt: st.dup.amt, zero: st.zero, cjiDocs: st.cjiDocs, docs: st.docs, unpostedByPo: Object.fromEntries(st.unpostedByPo),
-  po: Object.fromEntries([...st.certByPo].map(([k, v]) => [k, { n: v.n.size, first: v.first, last: v.last, contract: v.contract }])),
-  title: serv ? Object.fromEntries(serv.poTitle) : {}, type: serv ? Object.fromEntries(serv.poType) : {}, supn: serv ? Object.fromEntries(serv.poSup) : {} } : null;
-const META = { project: o.project, cut: M.cut, cuts: CUTS, months, built: new Date().toISOString().slice(0, 16).replace('T', ' '), cji3: path.basename(o.cji3), cost: P.costAll, grand: P.cji.grand, sum: P.cji.sum, dupes: P.dupes, zy: P.zyPaired,
-  unclassified: M.lines.filter((l) => l.bucket === 'Unclassified').length, vat: P.vatOpt };
-const DATA = { META, S, BK, L, REV, SUB };
-const tpl = fs.readFileSync(path.join(__dirname, '..', 'app', 'register.html'), 'utf8');
-const lib = fs.readFileSync(require.resolve('xlsx/dist/xlsx.mini.min.js'), 'utf8'), xl = fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'), 'utf8');
-const html = tpl.replace('/*__XLSX__*/', () => lib).replace('/*__EXCELJS__*/', () => xl).replace('/*__DATA__*/', () => 'const DATA=' + JSON.stringify(DATA) + ';');
+const P = prepare(o), DATA = toAppData(P, o);
+
+const html = require('./build-app').page('const DATA0=' + JSON.stringify(DATA) + ';');
 fs.mkdirSync(path.dirname(o.out), { recursive: true }); fs.writeFileSync(o.out, html);
-console.log(`${o.out}: ${L.b.length} lines, ${BK.reduce((x, b) => x + b.items.length, 0)} items, ${S.length} strings, ${(html.length / 1e6).toFixed(2)} MB`);
+console.log(`${o.out}: ${DATA.L.b.length} lines, ${DATA.BK.reduce((x, b) => x + b.items.length, 0)} items, ${DATA.S.length} strings, ${(html.length / 1e6).toFixed(2)} MB`);

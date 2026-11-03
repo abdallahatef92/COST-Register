@@ -1,13 +1,13 @@
 'use strict';
 // Last month's register: the codes (Coding sheets, by item key) and the codes/include typed over on Data sheets (by line id) carry over.
-const XLSX = require('xlsx');
+const { XLSX, readBook } = require('./io');
 const { str } = require('./util');
 const { BUCKETS } = require('./model');
 const CODING_H = 6, DATA_H = 4;
 
 function readPrev(file) {
   if (!file) return null;
-  const wb = XLSX.readFile(file, { cellFormula: true });
+  const wb = readBook(file, { cellFormula: true });
   const coding = new Map(), over = new Map(); let items = 0, typed = 0;
   for (const b of BUCKETS) {
     const sc = wb.Sheets[b.short + ' Coding'];
@@ -37,6 +37,12 @@ function readPrev(file) {
       }
     }
   }
+  const ls = wb.Sheets.Lines;
+  if (ls) { const rows = XLSX.utils.sheet_to_json(ls, { header: 1, raw: true, defval: '' }), hi = rows.findIndex((r) => r.includes('Line ID') && r.includes('Item PKG'));
+    if (hi >= 0) { const h = rows[hi], c = (n) => h.indexOf(n);
+      for (const r of rows.slice(hi + 1)) { const b = str(r[c('Bucket')]), id = str(r[c('Line ID')]); if (!b || !id) continue; const o = {};
+        [['PKG', 'Item PKG', 'pkg'], ['MNL', 'Item MNL', 'mnl'], ['Cost element code', 'Item CE', 'ce'], ['Include', 'Item Include', 'inc']].forEach(([n, ni, f]) => { if (str(r[c(n)]) !== str(r[c(ni)])) o[f] = str(r[c(n)]); });
+        if (Object.keys(o).length) { const m = over.get(b) || over.set(b, new Map()).get(b); m.set(id, { ...(m.get(id) || {}), ...o }); typed++; } } } }
   // lines typed over in the HTML app (its export has a "Line overrides" sheet: Bucket, Line ID, PKG, MNL, Cost element code, Include)
   const lo = wb.Sheets['Line overrides'];
   if (lo) for (const r of XLSX.utils.sheet_to_json(lo, { defval: '' })) { const b = str(r.Bucket), id = str(r['Line ID']); if (!b || !id) continue; const m = over.get(b) || over.set(b, new Map()).get(b), o = m.get(id) || {};

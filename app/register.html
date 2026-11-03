@@ -73,16 +73,21 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40;max-width:80vw}
 #toast.show{opacity:.95}
 .help{font-size:11px;color:var(--mut)} kbd{background:#f1f3f6;border:1px solid #d6d9de;border-radius:3px;padding:0 4px;font-size:10px}
+.start{position:fixed;inset:0;background:rgba(20,30,50,.55);z-index:50;align-items:center;justify-content:center}
+.sbox{background:#fff;border-radius:12px;padding:22px 26px;width:min(760px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)} .sbox h1{margin:0 0 4px;color:var(--navy);font-size:20px}
+.drop{border:2px dashed #9fb3d1;border-radius:10px;padding:18px;text-align:center;color:var(--mut);margin:12px 0} .drop.on{background:#EAF1FB;border-color:var(--navy2)}
+.frow{display:grid;grid-template-columns:330px 1fr;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #f0f2f5} .frow label{font-weight:600} .fn{grid-column:2;color:#2e6b1f;font-size:12px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .seg button{border:0;border-radius:0;padding:4px 10px} .seg button.on{background:var(--navy);color:#fff}
 </style>
 </head>
 <body>
+<div id="start" class="start" style="display:none"></div>
 <header class="top">
   <div><h1>Cost Register</h1><div class="sub" id="hsub"></div></div>
   <div class="sp"></div>
   <label>Cut date <select id="cut"></select></label>
   <label>VAT <select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select></label><input type="date" id="vatFrom" style="display:none">
-  <button id="bUndo" title="Ctrl+Z">↶</button><button id="bRedo" title="Ctrl+Y">↷</button>
+  <button id="bNew" title="Build from new SAP files">⟳ New build</button><button id="bUndo" title="Ctrl+Z">↶</button><button id="bRedo" title="Ctrl+Y">↷</button>
   <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪ Import codes</button>
   <button id="bSave" title="Save all codes (and line overrides) as a small file">💾 Save codes</button>
   <button id="bExport" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
@@ -107,9 +112,12 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
 <datalist id="dl-div"></datalist><datalist id="dl-pkg"></datalist><datalist id="dl-mnl"></datalist><datalist id="dl-ce"></datalist>
 <script>/*__XLSX__*/</script>
 <script>/*__EXCELJS__*/</script>
+<script>/*__ENGINE__*/</script>
 <script>/*__DATA__*/</script>
 <script>
 'use strict';
+function boot(DATA) {
+document.getElementById('start').style.display = 'none';
 // =====================================================================================  data + helpers
 const { META, S, BK, L, REV, SUB } = DATA, N = L.b.length;
 const PER = ['Opening', ...META.months, 'Pending'], NP = PER.length, NM = META.months.length;
@@ -130,7 +138,7 @@ const grpCols = new Map(); const grpCol = (k) => { if (!grpCols.has(k)) grpCols.
 const UNC = ['#C9DAF8', '#D9EAD3', '#FCE5CD', '#EAD1DC', '#D0E0E3', '#FFF2CC', '#D9D2E9', '#F4CCCC', '#CFE2F3', '#E6D3C3'], unitCols = new Map(); const unitCol = (u) => { if (!unitCols.has(u)) unitCols.set(u, UNC[unitCols.size % UNC.length]); return unitCols.get(u); };
 let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3000); }
 // =====================================================================================  state: cut date, VAT, codes, line overrides, undo
-const LSK = 'cost-register:' + META.project, OVR = Object.assign({}, L.ovr);
+const LSK = 'cost-register:' + META.project + ':' + (META.buildId || META.built), OVR = Object.assign({}, L.ovr);
 const ST = { cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
 let undo = [], redo = [];
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
@@ -146,7 +154,7 @@ function applySnap(s, replaceLines) { let n = 0; BK.forEach((b) => { const m = s
   if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } return n; }
 function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; applySnap(s, true); if (s.cut && META.cuts.includes(s.cut)) ST.cut = s.cut; if (s.vat) { ST.vat = s.vat; ST.vatFrom = s.vatFrom || ''; } $('saved').textContent = 'Restored ' + new Date(s.at).toLocaleString(); } catch (e) {} }
 // =====================================================================================  the engine: everything from the lines, the codes and the cut date (no formulas)
-const R = {};   // results of compute()
+const R = {}; globalThis.R = R; globalThis.__BK = BK;   // results of compute() (also readable from the browser console)
 const SRC = L.src.map((x) => S[x]);
 function compute() {
   const cutI = +ST.cut.replace(/-/g, ''), fromI = ST.vatFrom ? +ST.vatFrom.replace(/-/g, '') : 0, rep = PER.indexOf(monLab(ST.cut));
@@ -506,6 +514,10 @@ $('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value 
       for (const r of rows.slice(hi + 1)) { const o = { pkg: String(r[c('PKG')]).trim(), mnl: String(r[c('MNL')]).trim(), ce: String(r[ce] ?? '').trim(), inc: c('Include') >= 0 ? String(r[c('Include')]).trim() : '', div: c('DIV') >= 0 ? String(r[c('DIV')]).trim() : '' };
         if (c('Item key') >= 0 && r[c('Item key')]) byKey.set(String(r[c('Item key')]), o); if (isSub(bi) && c('Service') >= 0) bySd.set(String(r[c('Service')]).trim() + '|' + norm(r[c('Description')]), o); }
       b.items.forEach((it) => { const o = byKey.get(it.k) || (isSub(bi) ? bySd.get(it.vals[1] + '|' + norm(it.vals[2])) : null); if (!o) return; matched++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((fl) => { if (o[fl] && (fl !== 'div' || isSub(bi))) ch.push({ t: 'item', bi, ii: it.ii, f: fl, v: o[fl] }); }); }); });
+    if (wb.SheetNames.includes('Lines')) { const rows = XLSX.utils.sheet_to_json(wb.Sheets.Lines, { header: 1, defval: '' }), hi = rows.findIndex((r) => r.includes('Line ID') && r.includes('Item PKG'));
+      if (hi >= 0) { const h = rows[hi], c = (n) => h.indexOf(n), ix2 = new Map(L.id.map((id, i) => [id, i]));
+        for (const r of rows.slice(hi + 1)) { const i = ix2.get(String(r[c('Line ID')])); if (i === undefined) continue;
+          [['PKG', 'Item PKG', 'pkg'], ['MNL', 'Item MNL', 'mnl'], ['Cost element code', 'Item CE', 'ce'], ['Include', 'Item Include', 'inc']].forEach(([n, ni, fl]) => { const v = String(r[c(n)]).trim(), was = String(r[c(ni)]).trim(); if (v !== was) ch.push({ t: 'line', i, f: fl, v }); }); } } }
     const lo = wb.SheetNames.includes('Line overrides') ? XLSX.utils.sheet_to_json(wb.Sheets['Line overrides'], { defval: '' }) : []; const ix = new Map(L.id.map((id, i) => [id, i]));
     lo.forEach((r) => { const i = ix.get(String(r['Line ID'])); if (i === undefined) return; [['PKG', 'pkg'], ['MNL', 'mnl'], ['Cost element code', 'ce'], ['Include', 'inc']].forEach(([n, fl]) => { if (String(r[n]).trim()) ch.push({ t: 'line', i, f: fl, v: String(r[n]).trim() }); }); });
     if (!sheets) return toast('No Coding sheet found in ' + f.name);
@@ -523,7 +535,7 @@ $('bExport').onclick = async () => {
   const title = (ws, t, n) => { ws.getCell('A1').value = t; ws.getCell('A1').font = { name: A, bold: true, size: 14, color: { argb: NAVY } }; ws.getCell('A2').value = n; ws.getCell('A2').font = { name: A, size: 9, color: { argb: 'FF7F7F7F' } }; };
   const head = (ws, row, labels, gold = []) => { labels.forEach((l, i) => { const c = ws.getCell(row, i + 1); c.value = l; c.font = { name: A, bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = fill(gold.includes(l) ? GOLD : NAVY); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = box; }); ws.getRow(row).height = 30; };
   const put = (ws, row, vals, fmts = {}, o = {}) => vals.forEach((v, i) => { const c = ws.getCell(row, i + 1); c.value = v === '' ? null : v; c.border = box; c.font = { name: A, size: 10, bold: !!o.bold, color: o.color ? { argb: o.color } : undefined }; if (fmts[i]) c.numFmt = fmts[i]; if (o.fill) c.fill = fill(o.fill); });
-  const note = `${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register app · values (not live)`;
+  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register app · values (not live)`;
   // Summary
   const ws = wb.addWorksheet('Summary', { properties: { tabColor: { argb: NAVY } } }); title(ws, 'Project Cost Register — ' + META.project, note);
   [['Previous', R.toDate - R.thisM], ['This month · ' + R.repLab, R.thisM], ['To date', R.toDate], ['Pending', R.pend], ['Excluded', R.excl], ['Difference to CJI3', R.diff]].forEach(([l, v], i) => { const a = ws.getCell(4, i + 1), b2 = ws.getCell(5, i + 1); a.value = l; a.font = { name: A, bold: true, size: 9, color: { argb: 'FFFFFFFF' } }; a.fill = fill(i === 1 ? GOLD : i === 5 ? 'FFC00000' : NAVY); a.alignment = { horizontal: 'center', wrapText: true }; b2.value = r2(v); b2.numFmt = i === 5 ? NUM2 : NUM; b2.font = { name: A, bold: true, size: 13, color: { argb: NAVY } }; b2.alignment = { horizontal: 'center' }; b2.border = box; });
@@ -560,10 +572,10 @@ $('bExport').onclick = async () => {
     wc.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }]; wc.autoFilter = { from: { row: 4, column: 1 }, to: { row: rr - 1, column: labs.length } }; });
   // Lines (all buckets) + line overrides
   const wl = wb.addWorksheet('Lines', { properties: { tabColor: { argb: 'FF7F7F7F' } } }); title(wl, 'Lines — every CJI3 line with its codes', note);
-  const LH = ['Bucket', 'Posting date', 'Period', 'Item', 'Description', 'PO', 'Subcontractor', 'Qty', 'Amount', 'PKG', 'MNL', 'Cost element code', 'Include', 'Hand-coded', 'Document', 'Type', 'Cost element', 'Cost element name', 'WBS element', 'Line ID'];
+  const LH = ['Bucket', 'Posting date', 'Period', 'Item', 'Description', 'PO', 'Subcontractor', 'Qty', 'Amount', 'PKG', 'MNL', 'Cost element code', 'Include', 'Hand-coded', 'Document', 'Type', 'Cost element', 'Cost element name', 'WBS element', 'Line ID', 'Item PKG', 'Item MNL', 'Item CE', 'Item Include'];
   head(wl, 4, LH); const rowsL = [];
-  for (let i = 0; i < N; i++) { const b = BK[L.b[i]], it = b.items[L.it[i]], o = OVR[L.id[i]] || {}, g = (f) => (o[f] !== undefined ? o[f] : it[f]); rowsL.push([b.id, L.d[i] ? String(L.d[i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : '', PER[R.per[i]], itemCode(it), S[L.desc[i]], S[L.po[i]], S[L.sup[i]], L.qty[i] || null, r2(R.amt[i]), g('pkg'), g('mnl'), g('ce'), g('inc'), R.hand[i] ? 'Yes' : '', S[L.doc[i]], S[L.ty[i]], S[L.ce[i]], S[L.cen[i]], S[L.wbs[i]], L.id[i]]); }
-  wl.addRows(rowsL); wl.getColumn(9).numFmt = NUM2; wl.getColumn(8).numFmt = '#,##0.###'; [16, 11, 8, 12, 40, 11, 24, 10, 14, 10, 7, 12, 8, 10, 11, 6, 11, 24, 20, 26].forEach((w, i) => { wl.getColumn(i + 1).width = w; });
+  for (let i = 0; i < N; i++) { const b = BK[L.b[i]], it = b.items[L.it[i]], o = OVR[L.id[i]] || {}, g = (f) => (o[f] !== undefined ? o[f] : it[f]); rowsL.push([b.id, L.d[i] ? String(L.d[i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : '', PER[R.per[i]], itemCode(it), S[L.desc[i]], S[L.po[i]], S[L.sup[i]], L.qty[i] || null, r2(R.amt[i]), g('pkg'), g('mnl'), g('ce'), g('inc'), R.hand[i] ? 'Yes' : '', S[L.doc[i]], S[L.ty[i]], S[L.ce[i]], S[L.cen[i]], S[L.wbs[i]], L.id[i], it.pkg, it.mnl, it.ce, it.inc]); }
+  wl.addRows(rowsL); wl.getColumn(9).numFmt = NUM2; wl.getColumn(8).numFmt = '#,##0.###'; [16, 11, 8, 12, 40, 11, 24, 10, 14, 10, 7, 12, 8, 10, 11, 6, 11, 24, 20, 26, 9, 8, 9, 8].forEach((w, i) => { wl.getColumn(i + 1).width = w; }); for (let c = 21; c <= 24; c++) { wl.getColumn(c).font = { name: A, size: 8, color: { argb: 'FFA6A6A6' } }; } [10, 11, 12, 13].forEach((c) => { wl.getColumn(c).fill = fill('FFEEF3FB'); });
   wl.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }]; wl.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + N, column: LH.length } };
   const wo = wb.addWorksheet('Line overrides', { properties: { tabColor: { argb: 'FFC55A11' } } }); wo.addRow(['Bucket', 'Line ID', 'PKG', 'MNL', 'Cost element code', 'Include']); const ix = new Map(L.id.map((id, i) => [id, i]));
   Object.entries(OVR).forEach(([id, o]) => { const i = ix.get(id); if (i !== undefined) wo.addRow([BK[L.b[i]].id, id, o.pkg ?? '', o.mnl ?? '', o.ce ?? '', o.inc ?? '']); }); wo.getRow(1).font = { name: A, bold: true }; [18, 30, 10, 8, 14, 8].forEach((w, i) => { wo.getColumn(i + 1).width = w; });
@@ -575,6 +587,36 @@ $('bExport').onclick = async () => {
 $('hsub').textContent = `${META.project} · CJI3 ${META.cji3} · ${N.toLocaleString('en-US')} lines · built ${META.built}`;
 restore(); $('cut').value = ST.cut; $('vat').value = ST.vat; $('vatFrom').value = ST.vatFrom; $('vatFrom').style.display = ST.vat === 'Include VAT before date' ? '' : 'none';
 compute(); render();
+$('bNew').onclick = () => showStart(true);
+}
+
+// =====================================================================================  start: embedded data, the last build saved in this browser, or build from SAP files
+const idb = (mode, fn) => new Promise((res, rej) => { const rq = indexedDB.open('cost-register', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onerror = () => rej(rq.error);
+  rq.onsuccess = () => { const tx = rq.result.transaction('kv', mode), st = tx.objectStore('kv'), r = fn(st); tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }; });
+const idbGet = (k) => idb('readonly', (st) => st.get(k)), idbSet = (k, v) => idb('readwrite', (st) => st.put(v, k));
+const FILES = [['cji3', 'CJI3 – actual cost line items', true, /cji3/i], ['mb52', 'MB52 – material groups', false, /mb52|me2n/i], ['zscprg01', 'ZSCPRG01 – subcontract certificates', false, /zscprg01|prg01/i], ['zscsrv1', 'ZSCSRV1 – PO services', false, /zscsrv1|srv1/i], ['prev', 'Last report – Excel from this tool / the register, or a codes .json', false, /./]];
+const picked = {};
+function showStart(canCancel) {
+  const el = document.getElementById('start'); el.style.display = 'flex';
+  el.innerHTML = `<div class="sbox"><h1>Cost Register · new build</h1><p class="help">Drop the SAP downloads here (or pick each one). Everything runs in this browser – nothing is uploaded.</p>
+    <div id="drop" class="drop">Drop files here</div>
+    ${FILES.map(([k, l, req]) => `<div class="frow"><label>${l}${req ? ' <b style="color:#c00000">*</b>' : ''}</label><input type="file" data-k="${k}" accept="${k === 'prev' ? '.xlsx,.xlsm,.json' : '.xlsx,.xls,.xlsm'}"><span class="fn" id="fn-${k}">${picked[k] ? '✓ ' + picked[k].name : ''}</span></div>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="pri" id="sBuild">Build</button>${canCancel ? '<button id="sCancel">Cancel</button>' : ''}<span class="help" id="sMsg"></span></div></div>`;
+  const setF = async (k, f) => { picked[k] = { name: f.name, data: new Uint8Array(await f.arrayBuffer()) }; document.getElementById('fn-' + k).textContent = '✓ ' + f.name; };
+  el.querySelectorAll('input[type=file]').forEach((i) => { i.onchange = () => i.files[0] && setF(i.dataset.k, i.files[0]); });
+  const dz = document.getElementById('drop'); dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on');
+  dz.ondrop = async (e) => { e.preventDefault(); dz.classList.remove('on'); for (const f of e.dataTransfer.files) { const k = (FILES.slice(0, 4).find(([, , , re]) => re.test(f.name)) || ['prev'])[0]; await setF(k, f); } };
+  if (canCancel) document.getElementById('sCancel').onclick = () => { el.style.display = 'none'; };
+  document.getElementById('sBuild').onclick = async () => { const m = document.getElementById('sMsg');
+    if (!picked.cji3) { m.textContent = 'CJI3 is required.'; return; }
+    m.textContent = 'Building… (about 10–20 seconds)'; await new Promise((r) => setTimeout(r, 50));
+    try { const t0 = Date.now(), data = Engine.build({ ...picked }, { project: 'SUTH' }); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`;
+      await idbSet('lastBuild', data); location.reload(); }
+    catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
+}
+(async () => { if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0); let d = null; try { d = await idbGet('lastBuild'); } catch (e) { /* no saved build */ }
+  if (d) { try { return boot(d); } catch (e) { console.error(e); showStart(false); document.getElementById('sMsg').innerHTML = '<span style="color:#c00000">The saved build could not be opened (' + String(e.message).replace(/</g, '&lt;') + ') – build again.</span>'; return; } }
+  showStart(false); })();
 </script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 const ExcelJS = require('exceljs');
 const { r2, r3, colL, ymLabel } = require('./util');
 const { famOf, FAMILY } = require('./groups');
+const { applyCodes, divOfService, DIVS } = require('./codes');
 
 const NAVY = '1F3864', GOLD = 'BF8F00', GREY = '7F7F7F', YELLOW = 'FFFFCC', ORANGE = 'F8CBAD', RED = 'C00000';
 const BAND = ['CBF6CB', 'F6CBD7', 'CBE4F6', 'FFF2CC', 'D8CBF6', 'C1F6E2', 'F6D2C1', 'EBADEB'];
@@ -65,21 +66,6 @@ function header(ws, row, labels, gold = []) {
 const itemOf = (def, it) => (def.id === 'Material' ? it.vals[3] : def.id === 'Subcontractor' ? it.vals[1] : def.id === 'G&A' ? it.vals[0] + ' · ' + it.vals[1] : it.vals[0]);
 const descOf = (def, it) => (def.id === 'Material' ? it.vals[4] : def.id === 'Subcontractor' ? it.vals[2] : def.id === 'G&A' ? '' : it.vals.length > 1 ? it.vals[1] : '');
 const bandOf = (def, it) => (def.id === 'Material' ? BAND[Math.max(0, FAMILY.findIndex(([f]) => f === famOf(it.group))) % BAND.length] : null);
-
-// the code and include every line ends up with: its item's, unless it was typed over last month
-function applyCodes(bucket, over) {
-  const m = over && over.get(bucket.def.id);
-  for (const it of bucket.items) for (const l of it.lines) {
-    l.pkg = it.pkg; l.mnl = it.mnl; l.cec = it.ce; l.inc = it.inc === 'No' ? 'No' : 'Yes'; l.typed = {};
-    const o = m && m.get(l.id); if (!o) continue;
-    if (o.pkg !== undefined && o.pkg !== it.pkg) { l.pkg = o.pkg; l.typed.pkg = 1; }
-    if (o.mnl !== undefined && o.mnl !== it.mnl) { l.mnl = o.mnl; l.typed.mnl = 1; }
-    if (o.ce !== undefined && o.ce !== it.ce) { l.cec = o.ce; l.typed.cec = 1; }
-    if (o.inc !== undefined && o.inc !== l.inc) { l.inc = o.inc === 'No' ? 'No' : 'Yes'; l.typed.inc = 1; }
-    l.s = 0;
-  }
-  for (const it of bucket.items) for (const l of it.lines) l.s = l.pkg !== it.pkg || l.mnl !== it.mnl || l.cec !== it.ce ? 1 : 0;
-}
 
 function bucketSheets(wb, b, model, opts) {
   const def = b.def, isMat = def.id === 'Material', isQ = !!def.qty, isTree = !!def.tree, k = def.cols.length, n = b.items.length, N = b.count, np = model.periods.length, periods = model.periods;
@@ -295,8 +281,6 @@ function revenueSheet(wb, model, opts) {
 }
 
 // ---- Subcontractor Coding exactly as the Subcontract report's Coding sheet
-const DIVS = ['03', '04', '05', '06', '07', '08', '09', '10', '21', '22', '23', '26', '27', '31', '32', '33'];
-const divOfService = (svc) => { const m = /^S(\d\d)/i.exec(String(svc || '')); return m && DIVS.includes(m[1]) ? 'DIV ' + m[1] : String(svc || '').startsWith('(') ? '' : 'INDIRECT'; };
 const hashBand = (t) => { let h = 0; for (const ch of String(t)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return BAND[h % BAND.length]; };
 const monLab = (iso) => (iso ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4) : '');
 function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) {

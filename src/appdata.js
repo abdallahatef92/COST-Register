@@ -1,0 +1,42 @@
+'use strict';
+// The HTML app's data: the model of a register build, packed column-wise with a string dictionary.
+// Used by tools/proto-app.js (Node) and by the app itself when it builds from SAP files in the browser.
+const { applyCodes } = require('./codes');
+const { ymLabel } = require('./util');
+const { baseName } = require('./io');
+function toAppData(P, o) {
+  const M = P.model;
+  for (const b of M.buckets) applyCodes(b, P.prev && P.prev.over);
+  // string dictionary (keeps the file small)
+  const S = [], SI = new Map(), s = (v) => { v = v === null || v === undefined ? '' : String(v); let i = SI.get(v); if (i === undefined) { i = S.length; S.push(v); SI.set(v, i); } return i; };
+  const months = M.months.map(ymLabel), monIx = new Map(M.months.map((m, i) => [m, i + 1]));
+  const isoInt = (d) => (d ? +d.replace(/-/g, '') : 0);
+  // buckets + items
+  const BK = M.buckets.map((b) => ({ id: b.def.id, short: b.def.short, mnl: b.def.mnl, qty: !!b.def.qty, tree: !!b.def.tree, cols: b.def.cols.map((c) => c[0]),
+    items: b.items.map((it) => ({ k: it.key, v: it.vals.map(s), pkg: it.pkg || '', mnl: it.mnl || '', ce: it.ce || '', inc: it.inc || 'Yes', div: it.div, nw: it.isNew ? 1 : 0,
+      g: b.def.id === 'Material' ? s(it.headLabel || it.dk || '') : b.def.id === 'Subcontractor' ? s(it.vals[0]) : 0 })) }));
+  // lines, column-wise
+  const L = { b: [], it: [], d: [], m: [], amt: [], qty: [], vat: [], cd: [], src: [], doc: [], ty: [], ce: [], cen: [], desc: [], wbs: [], po: [], sup: [], cert: [], id: [], name: [], ovr: {} };
+  M.buckets.forEach((b, bi) => b.items.forEach((it, ii) => it.lines.forEach((l) => {
+    L.b.push(bi); L.it.push(ii); L.d.push(isoInt(l.date)); L.m.push(l.open ? 0 : l.ym ? monIx.get(l.ym) || 0 : -1);
+    L.amt.push(b.def.id === 'Subcontractor' ? Math.round((l.net !== undefined ? l.net : l.amt) * 100) / 100 : l.amt); L.qty.push(l.qty || 0);
+    L.vat.push(l.offsetVat ? -1 : l.vat || 0); L.cd.push(isoInt(l.cdate)); L.src.push(s(l.source || '')); L.doc.push(s(l.doc)); L.ty.push(s(l.type)); L.ce.push(s(l.ce)); L.cen.push(s(l.cen));
+    L.desc.push(s(b.def.id === 'Material' ? l.matDesc : l.desc || l.poText || l.name || l.header)); L.wbs.push(s(l.wbs)); L.po.push(s(l.po)); L.sup.push(s(l.sup)); L.cert.push(s(l.cert)); L.id.push(l.id); L.name.push(s(l.name));
+    if (l.typed && Object.keys(l.typed).length) { const ov = {}; if (l.typed.pkg) ov.pkg = l.pkg; if (l.typed.mnl) ov.mnl = l.mnl; if (l.typed.cec) ov.ce = l.cec; if (l.typed.inc) ov.inc = l.inc; L.ovr[l.id] = ov; }
+  })));
+  // revenue lines (for the Summary revenue block and the reconciliation)
+  const REV = M.lines.filter((l) => l.bucket === 'Revenue').map((l) => [isoInt(l.date), l.open ? 0 : l.ym ? monIx.get(l.ym) || 0 : -1, l.amt, l.ce[0] === '4' ? 1 : 0]);
+  // cut dates: month ends from two months before the first posting to two months after the last
+  const me = (y, m) => new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10), CUTS = [];
+  { const f = M.months[0], z = M.months[M.months.length - 1]; let [y, m] = f.split('-').map(Number); m -= 2; while (m < 1) { m += 12; y--; } let [ey, em] = z.split('-').map(Number); em += 2; while (em > 12) { em -= 12; ey++; }
+    for (; y < ey || (y === ey && m <= em);) { CUTS.push(me(y, m)); m++; if (m > 12) { m = 1; y++; } } }
+  const st = P.subRes ? P.subRes.stats : null, serv = P.serv;
+  const SUB = st ? { cjiTotal: st.cjiTotal, cjiOpen: st.cjiOpen, roundN: st.roundN, unposted: st.unposted, unpostedN: st.unpostedN, notApproved: st.notApproved, notApprovedN: st.notApprovedN, vatOnPosted: st.vatOnPosted, vatOnOpening: st.vatOnOpening,
+    dupRows: st.dup.rows, dupAmt: st.dup.amt, zero: st.zero, cjiDocs: st.cjiDocs, docs: st.docs, unpostedByPo: Object.fromEntries(st.unpostedByPo),
+    po: Object.fromEntries([...st.certByPo].map(([k, v]) => [k, { n: v.n.size, first: v.first, last: v.last, contract: v.contract }])),
+    title: serv ? Object.fromEntries(serv.poTitle) : {}, type: serv ? Object.fromEntries(serv.poType) : {}, supn: serv ? Object.fromEntries(serv.poSup) : {} } : null;
+  const META = { buildId: new Date().toISOString() + '|' + baseName(o.cji3) + '|' + L.b.length, project: o.project, cut: M.cut, cuts: CUTS, months, built: new Date().toISOString().slice(0, 16).replace('T', ' '), files: { cji3: baseName(o.cji3), mb52: baseName(o.mb52), zscprg01: baseName(o.zscprg01), zscsrv1: baseName(o.zscsrv1), prev: baseName(o.prev) }, cji3: baseName(o.cji3), cost: P.costAll, grand: P.cji.grand, sum: P.cji.sum, dupes: P.dupes, zy: P.zyPaired,
+    unclassified: M.lines.filter((l) => l.bucket === 'Unclassified').length, vat: P.vatOpt };
+  return { META, S, BK, L, REV, SUB };
+}
+module.exports = { toAppData };

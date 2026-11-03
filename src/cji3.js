@@ -1,12 +1,12 @@
 'use strict';
 // Reads a CJI3 export (actual cost line items). Subtotal rows (blank Document Number) are skipped; the grand-total row is kept as a control.
-const XLSX = require('xlsx');
+const { XLSX, readBook } = require('./io');
 const { r2, str, num, isoDate } = require('./util');
 
 function indexHeader(row) { const ix = new Map(); row.forEach((h, i) => { const k = str(h); if (k && !ix.has(k)) ix.set(k, i); }); return ix; }
 
 function readCji3(file) {
-  const wb = XLSX.readFile(file, { cellDates: true });
+  const wb = readBook(file, { cellDates: true });
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
   const h = rows.findIndex((r) => r.some((c) => str(c) === 'Document Number'));
   if (h < 0) throw new Error('CJI3: no "Document Number" column found – is this a CJI3 export?');
