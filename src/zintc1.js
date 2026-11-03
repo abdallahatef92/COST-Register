@@ -13,7 +13,7 @@ const COLS = { order: 'Order', odesc: 'Order Description', otype: 'Order Type', 
   wbs: 'WBS', actDesc: 'Activity Type Descripti', uom: 'Activity type UOM', qty: 'Total Qty', act: 'Activity Type', zce: 'Cost Element', zcen: 'Cost Element Descriptio', bp: 'Business Partner', bpn: 'Business Partner De', cat: 'Category' };
 const TYPE_BUCKET = { ZE01: 'Equipment / fuel', ZFU1: 'Equipment / fuel', DCRM: 'Equipment / fuel', ZF01: 'Fleet / transportation', ZTM1: 'Fleet / transportation', HOUS: 'House rent' };
 const TYPE_GROUP = { ZE01: 'Equipment charges (ZE01)', ZFU1: 'Fuel orders (ZFU1)', DCRM: 'Corrective maintenance (DCRM)', ZF01: 'Fleet orders (ZF01)', ZTM1: 'Trips (ZTM1)', HOUS: 'House rent orders (HOUS)' };
-const G_CJI = 'CJI3 lines (no ZINTC1 detail)', G_ADJ = '~ Differences between CJI3 and ZINTC1', G_UNS = '~ Not yet settled in CJI3 (excluded unless you include them)';
+const G_CJI = 'CJI3 lines (no ZINTC1 detail)', G_ADJ = '~ Differences between CJI3 and ZINTC1', G_UNS = '~ Not yet settled in CJI3 (include them on the Unsettled tab)';
 const GROUP_RANK = [...Object.values(TYPE_GROUP), G_CJI, G_ADJ, G_UNS];
 
 function readOne(src) {

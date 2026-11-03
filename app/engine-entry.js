@@ -8,7 +8,7 @@ const { sniff, KINDS } = require('../src/sniff');
 function prevFromJson(s) {
   const coding = new Map(), lines = new Map(Object.entries(s.lines || {})); let items = 0;
   for (const [b, m] of Object.entries(s.codes || {})) { const mm = new Map(); for (const [k, c] of Object.entries(m)) { mm.set(k, { pkg: c.pkg || '', mnl: c.mnl || '', ce: c.ce || '', inc: c.inc || '', ...(c.div !== undefined ? { div: c.div } : {}) }); items++; } coding.set(b, mm); }
-  return { coding, over: new Map(BUCKETS.map((b) => [b.id, lines])), items, typed: lines.size, file: 'codes', rules: s.rules || [] };
+  return { coding, over: new Map(BUCKETS.map((b) => [b.id, lines])), items, typed: lines.size, file: 'codes', rules: s.rules || [], uns: s.uns || null };
 }
 globalThis.Engine = {
   KINDS, sniff(f) { try { return sniff(f); } catch (e) { return 'ignore'; } },
