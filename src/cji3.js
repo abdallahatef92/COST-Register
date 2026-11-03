@@ -5,7 +5,7 @@ const { r2, str, num, isoDate } = require('./util');
 
 function indexHeader(row) { const ix = new Map(); row.forEach((h, i) => { const k = str(h); if (k && !ix.has(k)) ix.set(k, i); }); return ix; }
 
-function readCji3(file) {
+function readOne(file) {
   const wb = readBook(file, { cellDates: true });
   const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
   const h = rows.findIndex((r) => r.some((c) => str(c) === 'Document Number'));
@@ -32,5 +32,20 @@ function readCji3(file) {
   }
   const sum = r2(lines.reduce((s, l) => s + l.amt, 0));
   return { lines, grand, sum, subtotals, file };
+}
+// one or several CJI3 files (split by period and/or overlapping downloads): merged on Document | Posting row | Fiscal year.
+// A line found in two files is counted once; if the amounts differ, the file with the later postings wins and the line is listed as a conflict.
+function readCji3(files) {
+  const { baseName } = require('./io');
+  const parts = [].concat(files).filter(Boolean).map(readOne).map((p) => ({ ...p, last: p.lines.reduce((m, l) => (l.date > m ? l.date : m), '') }));
+  parts.sort((a, b) => (a.last < b.last ? -1 : a.last > b.last ? 1 : 0));
+  const byId = new Map(), conflicts = []; let dropped = 0, within = 0;
+  parts.forEach((p, k) => { p.name = baseName(p.file); p.dropped = 0; p.conflicts = 0; const seen = new Set();
+    for (const l of p.lines) { if (seen.has(l.id)) within++; seen.add(l.id); const o = byId.get(l.id);
+      if (o && o.k !== k) { if (r2(o.l.amt) === r2(l.amt)) { p.dropped++; dropped++; continue; } conflicts.push({ id: l.id, was: o.l.amt, now: l.amt, wasFile: parts[o.k].name, nowFile: p.name }); p.conflicts++; }
+      byId.set(l.id, { l, k }); } });
+  const lines = [...byId.values()].map((x) => x.l);
+  return { lines, grand: r2(parts.reduce((s, p) => s + (p.grand || 0), 0)), sum: r2(parts.reduce((s, p) => s + p.sum, 0)), subtotals: parts.reduce((s, p) => s + p.subtotals, 0), dropped, within, conflicts,
+    files: parts.map((p) => ({ name: p.name, lines: p.lines.length, sum: p.sum, grand: p.grand, first: p.lines.reduce((m, l) => (l.date && (!m || l.date < m) ? l.date : m), ''), last: p.last, dropped: p.dropped, conflicts: p.conflicts })) };
 }
 module.exports = { readCji3, indexHeader };

@@ -234,8 +234,9 @@ function renderSummary() {
 function renderChecks() {
   const rows = [], add = (name, v, kind, note) => rows.push([name, v, kind, note]);
   add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + client deductions − VAT included − CJI3 cost.');
-  add('CJI3 lines vs the grand-total row of the file', r2(META.sum - META.grand), 'abs', 'Sum of all lines minus the file\'s own grand-total row.');
   add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
+  (META.cjiFiles || []).forEach((f) => add(`CJI3 file ${f.name} (${f.first} → ${f.last}, ${f.lines.toLocaleString('en-US')} lines): lines vs its grand-total row`, r2(f.sum - (f.grand || 0)), 'abs', f.dropped ? f.dropped.toLocaleString('en-US') + ' lines were already in an earlier file and are counted once.' : 'Sum of the file\'s lines minus its own grand-total row.'));
+  if ((META.cjiFiles || []).length > 1) add('CJI3 lines with a different amount in two files', META.cjiConflictN || 0, 'zero', (META.cjiConflicts || []).slice(0, 3).map((c) => `${c.id}: ${c.wasFile} ${c.was} → ${c.nowFile} ${c.now}`).join(' · ') || 'The later download wins; none found.');
   add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule.');
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
   if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
@@ -594,25 +595,30 @@ $('bNew').onclick = () => showStart(true);
 const idb = (mode, fn) => new Promise((res, rej) => { const rq = indexedDB.open('cost-register', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onerror = () => rej(rq.error);
   rq.onsuccess = () => { const tx = rq.result.transaction('kv', mode), st = tx.objectStore('kv'), r = fn(st); tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }; });
 const idbGet = (k) => idb('readonly', (st) => st.get(k)), idbSet = (k, v) => idb('readwrite', (st) => st.put(v, k));
-const FILES = [['cji3', 'CJI3 – actual cost line items', true, /cji3/i], ['mb52', 'MB52 – material groups', false, /mb52|me2n/i], ['zscprg01', 'ZSCPRG01 – subcontract certificates', false, /zscprg01|prg01/i], ['zscsrv1', 'ZSCSRV1 – PO services', false, /zscsrv1|srv1/i], ['prev', 'Last report – Excel from this tool / the register, or a codes .json', false, /./]];
-const picked = {};
+// files are recognised by their content (column headers), not by their names; several CJI3 / ZSCPRG01 / ZSCSRV1 / MB52 files are merged
+const KIND_ORDER = ['cji3', 'zscprg01', 'zscsrv1', 'mb52', 'me2n', 'prev', 'ignore'], picked = [];
 function showStart(canCancel) {
-  const el = document.getElementById('start'); el.style.display = 'flex';
-  el.innerHTML = `<div class="sbox"><h1>Cost Register · new build</h1><p class="help">Drop the SAP downloads here (or pick each one). Everything runs in this browser – nothing is uploaded.</p>
-    <div id="drop" class="drop">Drop files here</div>
-    ${FILES.map(([k, l, req]) => `<div class="frow"><label>${l}${req ? ' <b style="color:#c00000">*</b>' : ''}</label><input type="file" data-k="${k}" accept="${k === 'prev' ? '.xlsx,.xlsm,.json' : '.xlsx,.xls,.xlsm'}"><span class="fn" id="fn-${k}">${picked[k] ? '✓ ' + picked[k].name : ''}</span></div>`).join('')}
-    <div style="display:flex;gap:8px;margin-top:12px"><button class="pri" id="sBuild">Build</button>${canCancel ? '<button id="sCancel">Cancel</button>' : ''}<span class="help" id="sMsg"></span></div></div>`;
-  const setF = async (k, f) => { picked[k] = { name: f.name, data: new Uint8Array(await f.arrayBuffer()) }; document.getElementById('fn-' + k).textContent = '✓ ' + f.name; };
-  el.querySelectorAll('input[type=file]').forEach((i) => { i.onchange = () => i.files[0] && setF(i.dataset.k, i.files[0]); });
-  const dz = document.getElementById('drop'); dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on');
-  dz.ondrop = async (e) => { e.preventDefault(); dz.classList.remove('on'); for (const f of e.dataTransfer.files) { const k = (FILES.slice(0, 4).find(([, , , re]) => re.test(f.name)) || ['prev'])[0]; await setF(k, f); } };
-  if (canCancel) document.getElementById('sCancel').onclick = () => { el.style.display = 'none'; };
-  document.getElementById('sBuild').onclick = async () => { const m = document.getElementById('sMsg');
-    if (!picked.cji3) { m.textContent = 'CJI3 is required.'; return; }
-    m.textContent = 'Building… (about 10–20 seconds)'; await new Promise((r) => setTimeout(r, 50));
-    try { const t0 = Date.now(), data = Engine.build({ ...picked }, { project: 'SUTH' }); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`;
-      await idbSet('lastBuild', data); location.reload(); }
-    catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
+  const el = document.getElementById('start'); el.style.display = 'flex'; const K = Engine.KINDS;
+  const draw = () => { el.innerHTML = `<div class="sbox"><h1>Cost Register · new build</h1><p class="help">Drop all the SAP downloads here – any names, several CJI3 files are fine (split by period or overlapping). Each file is recognised by its columns; correct the type if needed. Nothing is uploaded.</p>
+    <div id="drop" class="drop">Drop files here, or <label style="color:#2F5597;text-decoration:underline;cursor:pointer">choose files<input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm,.json" hidden></label></div>
+    <table class="s" style="margin-bottom:6px"><tr><th>File</th><th style="text-align:left">Recognised as</th><th></th></tr>${picked.length ? picked.map((f, i) => `<tr><td style="text-align:left">${f.name.replace(/</g, '&lt;')}</td><td style="text-align:left"><select data-i="${i}">${KIND_ORDER.map((k) => `<option value="${k}" ${f.kind === k ? 'selected' : ''}>${K[k]}</option>`).join('')}</select>${f.kind === 'ignore' ? ' <span style="color:#c55a11">not recognised</span>' : ''}</td><td><button data-x="${i}">✕</button></td></tr>`).join('') : '<tr><td colspan="3" class="help" style="text-align:left">No files yet. CJI3 is required; ZSCPRG01 + ZSCSRV1 give the subcontract detail, MB52 the material groups, last month\'s Excel (or codes .json) brings your codes back.</td></tr>'}</table>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><button class="pri" id="sBuild">Build</button>${canCancel ? '<button id="sCancel">Cancel</button>' : ''}<span class="help" id="sMsg"></span></div></div>`;
+    el.querySelectorAll('select[data-i]').forEach((x) => { x.onchange = () => { picked[+x.dataset.i].kind = x.value; draw(); }; });
+    el.querySelectorAll('button[data-x]').forEach((x) => { x.onclick = () => { picked.splice(+x.dataset.x, 1); draw(); }; });
+    const add = async (list) => { document.getElementById('sMsg').textContent = 'Reading…'; for (const f of list) { const data = new Uint8Array(await f.arrayBuffer()), o = { name: f.name, data }; o.kind = Engine.sniff(o); picked.push(o); } draw(); };
+    document.getElementById('pick').onchange = (e) => add([...e.target.files]);
+    const dz = document.getElementById('drop'); dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on'); dz.ondrop = (e) => { e.preventDefault(); dz.classList.remove('on'); add([...e.dataTransfer.files]); };
+    if (canCancel) document.getElementById('sCancel').onclick = () => { el.style.display = 'none'; };
+    document.getElementById('sBuild').onclick = async () => { const m = document.getElementById('sMsg'), by = (k) => picked.filter((f) => f.kind === k);
+      if (!by('cji3').length) { m.innerHTML = '<span style="color:#c00000">At least one CJI3 file is needed.</span>'; return; }
+      if (by('prev').length > 1) { m.innerHTML = '<span style="color:#c00000">Only one last report, please.</span>'; return; }
+      m.textContent = 'Building… (about 20–30 seconds)'; await new Promise((r) => setTimeout(r, 50));
+      try { const t0 = Date.now(), files = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), mb52: by('mb52'), me2n: by('me2n'), prev: by('prev')[0] };
+        for (const k of ['zscprg01', 'zscsrv1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
+        const data = Engine.build(files, { project: 'SUTH' }); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`; await idbSet('lastBuild', data); location.reload(); }
+      catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
+  };
+  draw();
 }
 (async () => { if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0); let d = null; try { d = await idbGet('lastBuild'); } catch (e) { /* no saved build */ }
   if (d) { try { return boot(d); } catch (e) { console.error(e); showStart(false); document.getElementById('sMsg').innerHTML = '<span style="color:#c00000">The saved build could not be opened (' + String(e.message).replace(/</g, '&lt;') + ') – build again.</span>'; return; } }

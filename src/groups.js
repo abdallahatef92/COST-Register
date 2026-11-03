@@ -32,8 +32,8 @@ function readGroups({ me2n, mb52 }) {
     const ix = indexHeader(rows[h]);
     for (const r of rows.slice(h + 1)) { const m = str(r[ix.get(mCol)]); const gr = str(r[ix.get(gCol)]); if (!m || !gr) continue; if (!map.has(m)) { map.set(m, { group: gr, unit: uCol && ix.has(uCol) ? str(r[ix.get(uCol)]) : '', src: tag }); src[tag.toLowerCase()]++; } }
   };
-  read(me2n, 'Material', 'Material Group', 'Order Unit', 'ME2N');
-  read(mb52, 'Material', 'Material Group', 'Base Unit of Measure', 'MB52');
+  [].concat(me2n || []).forEach((f) => read(f, 'Material', 'Material Group', 'Order Unit', 'ME2N'));
+  [].concat(mb52 || []).forEach((f) => read(f, 'Material', 'Material Group', 'Base Unit of Measure', 'MB52'));
   return { map, src };
 }
 module.exports = { FAMILY, FAM_RANK, famOf, divOf, famLabel, divLabel, grpLabel, divKey, treeCmp, readGroups, NO_GRP };

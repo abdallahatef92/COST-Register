@@ -11,8 +11,8 @@ const { r2 } = require('./util');
 function prepare(opts) {
   const t0 = Date.now(), log = opts.log || (() => {}), step = opts.step || (() => {});
   step('Reading CJI3');
-  const cji = readCji3(opts.cji3); log(`CJI3: ${cji.lines.length} lines, ${cji.subtotals} subtotal rows skipped, grand total row ${cji.grand}`);
-  const dupes = cji.lines.length - new Set(cji.lines.map((l) => l.id)).size;
+  const cji = readCji3(opts.cji3); log(`CJI3: ${cji.files.length} file(s), ${cji.lines.length} lines (${cji.dropped} found in more than one file, ${cji.conflicts.length} conflicts), ${cji.subtotals} subtotal rows skipped`);
+  const dupes = cji.within;   // the same key twice inside one file
   const zyPaired = classify(cji.lines);
   step('Material groups (MB52)');
   const groups = readGroups({ me2n: opts.me2n, mb52: opts.mb52 }); log(`Material groups: ${groups.map.size} materials (ME2N ${groups.src.me2n}, MB52 ${groups.src.mb52})`);

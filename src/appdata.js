@@ -35,7 +35,7 @@ function toAppData(P, o) {
     dupRows: st.dup.rows, dupAmt: st.dup.amt, zero: st.zero, cjiDocs: st.cjiDocs, docs: st.docs, unpostedByPo: Object.fromEntries(st.unpostedByPo),
     po: Object.fromEntries([...st.certByPo].map(([k, v]) => [k, { n: v.n.size, first: v.first, last: v.last, contract: v.contract }])),
     title: serv ? Object.fromEntries(serv.poTitle) : {}, type: serv ? Object.fromEntries(serv.poType) : {}, supn: serv ? Object.fromEntries(serv.poSup) : {} } : null;
-  const META = { buildId: new Date().toISOString() + '|' + baseName(o.cji3) + '|' + L.b.length, project: o.project, cut: M.cut, cuts: CUTS, months, built: new Date().toISOString().slice(0, 16).replace('T', ' '), files: { cji3: baseName(o.cji3), mb52: baseName(o.mb52), zscprg01: baseName(o.zscprg01), zscsrv1: baseName(o.zscsrv1), prev: baseName(o.prev) }, cji3: baseName(o.cji3), cost: P.costAll, grand: P.cji.grand, sum: P.cji.sum, dupes: P.dupes, zy: P.zyPaired,
+  const META = { buildId: new Date().toISOString() + '|' + [].concat(o.cji3).map(baseName).join('+') + '|' + L.b.length, project: o.project, cut: M.cut, cuts: CUTS, months, built: new Date().toISOString().slice(0, 16).replace('T', ' '), files: Object.fromEntries(['cji3', 'mb52', 'me2n', 'zscprg01', 'zscsrv1', 'prev'].map((k) => [k, [].concat(o[k] || []).map(baseName)])), cji3: [].concat(o.cji3).map(baseName).join(' + '), cjiFiles: P.cji.files, cjiDropped: P.cji.dropped, cjiConflicts: P.cji.conflicts.slice(0, 200), cjiConflictN: P.cji.conflicts.length, cost: P.costAll, grand: P.cji.grand, sum: P.cji.sum, dupes: P.dupes, zy: P.zyPaired,
     unclassified: M.lines.filter((l) => l.bucket === 'Unclassified').length, vat: P.vatOpt };
   return { META, S, BK, L, REV, SUB };
 }

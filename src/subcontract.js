@@ -20,7 +20,13 @@ const tally = (m, k, w = 1) => m.set(k, (m.get(k) || 0) + w);
 
 function sheetRows(file) { const wb = readBook(file, { cellDates: true }); return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null }); }
 
-function readProg(file) {
+// several downloads: a certificate line (PO | serial | item | number | line) is taken from the latest file that has it
+function readProg(files) {
+  const all = [].concat(files).filter(Boolean).map(progRows), latest = new Map();
+  all.forEach((rows, k) => { for (const x of rows) latest.set([x.po, x.serial, x.item, x.pkg, x.line].join('|'), k); });
+  return progLines(all.flatMap((rows, k) => rows.filter((x) => latest.get([x.po, x.serial, x.item, x.pkg, x.line].join('|')) === k)));
+}
+function progRows(file) {
   const sh = sheetRows(file), h = sh.findIndex((r) => r.some((c) => str(c) === 'SC Work Current Cost')); if (h < 0) throw new Error('ZSCPRG01: column "SC Work Current Cost" not found.');
   const ix = indexHeader(sh[h]), C = {}; for (const [k, n] of Object.entries(PROG)) { if (ix.has(n)) C[k] = ix.get(n); else if (!['gl', 'wbs', 'certText', 'docNo'].includes(k)) throw new Error('ZSCPRG01: column "' + n + '" is missing.'); }
   const g = (r, k) => (C[k] === undefined ? null : r[C[k]]), rows = [];
@@ -30,6 +36,9 @@ function readProg(file) {
       docNo: str(g(r, 'docNo')).replace(/\.0+$/, ''), item: str(g(r, 'item')), pkg: str(g(r, 'pkg')), line: str(g(r, 'line')), price: num(g(r, 'price')), svc: str(g(r, 'svc')), text: str(g(r, 'text')).replace(/\s+/g, ' '),
       tax: str(g(r, 'tax')).toUpperCase(), ctype: str(g(r, 'ctype')).toUpperCase(), qty: num(g(r, 'qty')), vat: num(g(r, 'vat')), amt: num(g(r, 'amt')), certText: str(g(r, 'certText')), wbs: str(g(r, 'wbs')), gl: str(g(r, 'gl')) });
   }
+  return rows;
+}
+function progLines(rows) {
   // WBS repeats: one certificate line shown on several WBS rows with the full amount on each -> keep the first (same rule as the Subcontract report)
   const byId = new Map(); for (const x of rows) { x.lid = [x.po, x.serial, x.item, x.pkg, x.line].join('|'); (byId.get(x.lid) || byId.set(x.lid, []).get(x.lid)).push(x); }
   const lines = []; let dupRows = 0, dupAmt = 0;
@@ -49,7 +58,11 @@ function readProg(file) {
   return { lines: lines.filter((l) => l.amt !== 0), allLines: lines.length, rawRows: rows.length, dupRows, dupAmt: r2(dupAmt), vat };
 }
 
-function readServ(file) {
+function readServ(files) {
+  const parts = [].concat(files).filter(Boolean).map(servOne), m = (k) => new Map(parts.flatMap((p) => [...p[k]]));
+  return { unit: m('unit'), poType: m('poType'), poTitle: m('poTitle'), poSup: m('poSup') };
+}
+function servOne(file) {
   const sh = sheetRows(file), h = sh.findIndex((r) => r.some((c) => str(c) === 'PO Service Code')); if (h < 0) throw new Error('ZSCSRV1: column "PO Service Code" not found.');
   const ix = indexHeader(sh[h]), g = (r, k) => (ix.has(SERV[k]) ? str(r[ix.get(SERV[k])]) : ''), unit = new Map(), poType = new Map(), poTitle = new Map(), poSup = new Map();
   for (const r of sh.slice(h + 1)) { const po = g(r, 'po'); if (!po) continue; const t = normTow(g(r, 'type')); if (t && !poType.has(po)) poType.set(po, t); const sn = g(r, 'supName'); if (sn && !poSup.has(po)) poSup.set(po, sn);
@@ -84,13 +97,19 @@ function buildSubcontractor(cjiSub, prog, serv, ceNames, vatOpt) {
   for (const l of opening) out.push(mk(l, { type: 'UE', open: true, date: l.date || openDate, ym: (l.date || openDate).slice(0, 7), source: 'Opening certificate', ce: l.gl || '' }));
   // 3. what the certificates do not explain stays visible
   let docAdj = 0, docAdjN = 0, roundN = 0, roundAmt = 0; const adjDocs = [], rnd = new Map();   // differences under 1 EGP on a document are cents of rounding: one row per month
-  for (const [d, ls] of scDocs) {
-    if (!certDoc.has(d)) continue; const diff = r2(ls.reduce((s, l) => s + l.amt, 0) - certDoc.get(d)); if (Math.abs(diff) < 0.005) continue;
-    const f = ls[0], cert = posted.find((x) => x.docNo === d);
-    if (Math.abs(diff) < 1) { rnd.set(f.ym, r2((rnd.get(f.ym) || 0) + diff)); roundN++; roundAmt += diff; continue; }
-    out.push({ id: 'ADJ|' + d, doc: d, row: '', fy: '', date: f.date, ym: f.ym, type: 'SC', ce: f.ce, cen: f.cen, amt: diff, wbs: '', mat: '', matDesc: '', qty: 0, unit: '', name: '', header: '', poText: 'CJI3 and the certificate differ on this document', po: cert ? cert.po : f.po || '',
-      order: '', orderName: '', offset: '', refDoc: d, bucket: 'Subcontractor', sub: '', open: false, svc: '(adjustment)', desc: 'Difference between CJI3 and the certificate report', tow: '', sup: cert ? cert.supName : '', cert: '', cdate: '', ikey: 'ADJ', source: 'Document difference' });
-    docAdj += diff; docAdjN++; adjDocs.push([d, diff]);
+  // per document AND month: the CJI3 lines of the month against the certificates booked in that month (all on the document's first posting date),
+  // so every month ties to CJI3 and the result does not depend on the order of the lines in the file(s)
+  const byDate = (x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : x.id < y.id ? -1 : x.id > y.id ? 1 : 0);
+  for (const [d, ls0] of scDocs) {
+    if (!certDoc.has(d)) continue; const ls = ls0.slice().sort(byDate), dd = docDate.get(d), dym = dd.slice(0, 7), byM = new Map();
+    for (const l of ls) byM.set(l.ym, r2((byM.get(l.ym) || 0) + l.amt)); byM.set(dym, r2((byM.get(dym) || 0) - certDoc.get(d)));
+    const cert = posted.find((x) => x.docNo === d);
+    for (const ym of [...byM.keys()].sort()) { const diff = byM.get(ym); if (Math.abs(diff) < 0.005) continue;
+      if (Math.abs(diff) < 1) { rnd.set(ym, r2((rnd.get(ym) || 0) + diff)); roundN++; roundAmt += diff; continue; }
+      const f = ls.find((l) => l.ym === ym) || ls[0];
+      out.push({ id: 'ADJ|' + d + (ym === dym ? '' : '|' + ym), doc: d, row: '', fy: '', date: ym === dym ? dd : f.date, ym, type: 'SC', ce: f.ce, cen: f.cen, amt: diff, wbs: '', mat: '', matDesc: '', qty: 0, unit: '', name: '', header: '', poText: 'CJI3 and the certificate report differ on this document', po: cert ? cert.po : f.po || '',
+        order: '', orderName: '', offset: '', refDoc: d, bucket: 'Subcontractor', sub: '', open: false, svc: '(adjustment)', desc: 'Difference between CJI3 and the certificate report', tow: '', sup: cert ? cert.supName : '', cert: '', cdate: '', ikey: 'ADJ', source: 'Document difference' });
+      docAdj += diff; docAdjN++; adjDocs.push([d, diff]); }
   }
   for (const [ym, v] of rnd) { if (Math.abs(v) < 0.005) continue; const [y, mo] = ym.split('-'), last = new Date(Date.UTC(+y, +mo, 0)).toISOString().slice(0, 10);
     out.push({ id: 'ADJ|ROUND|' + ym, doc: '', row: '', fy: '', date: last, ym, type: 'SC', ce: '', cen: '', amt: v, wbs: '', mat: '', matDesc: '', qty: 0, unit: '', name: '', header: '', poText: 'Rounding: documents where CJI3 and the certificates differ by under 1 EGP', po: '', order: '', orderName: '',

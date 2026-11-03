@@ -22,7 +22,7 @@ async function build(opts) {
     if (b.def.id === 'Subcontractor' && subRes) poInfo = poSheets(wb, inf, model, opts, { stats: subRes.stats, serv }); }
   const revInfo = W.revenueSheet(wb, model, opts);
   const wsR = wb.addWorksheet('Rules', { properties: { tabColor: { argb: 'FF' + W.GREY } } }), wsC = wb.addWorksheet('Checks', { properties: { tabColor: { argb: 'FF' + W.GREY } } });
-  const stats = { file: require('./io').baseName(opts.cji3), grand: cji.grand, sum: cji.sum, dupes, zyPaired, cost: costAll, sub: subRes ? subRes.stats : null, poInfo: null,
+  const stats = { file: [].concat(opts.cji3).map(require('./io').baseName).join(' + '), grand: cji.grand, sum: cji.sum, dupes, zyPaired, cost: costAll, sub: subRes ? subRes.stats : null, poInfo: null,
     noGroup: model.buckets.find((b) => b.def.id === 'Material') ? model.buckets.find((b) => b.def.id === 'Material').items.filter((it) => !it.group).length : undefined };
   const ex = null;   // Expenses sheet removed for now (src/expenses.js kept for later)
   stats.poInfo = poInfo; stats.diffRef = O.writeSummary(wsS, model, infos, ex, opts, revInfo, stats).diffRef; O.writeChecks(wsC, model, infos, ex, opts, stats); O.writeRules(wsR, opts);
