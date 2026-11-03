@@ -177,7 +177,9 @@ POS.forEach((p) => { p.td = p.lines.reduce((s, l) => s + l.td, 0); p.tm = p.line
 ITEMS.forEach((it) => { it.poList = []; }); POS.forEach((p) => p.lines.forEach((l) => ITEMS[l.i].poList.push(p.po))); ITEMS.forEach((it) => { it.poList = [...new Set(it.poList)]; it.poTxt = it.poList.join(' '); });
 const ROWS = { svc: () => ITEMS.map((it) => ({ it, g: it.tow })), po: () => POS.flatMap((p) => p.lines.map((l) => ({ it: ITEMS[l.i], p, l, g: p.po }))) };
 // ---------- filtering
-function passCol(c, r, f) { const v = c.v(r); if (c.num) { if (f.nz && !(Math.abs(v) >= 0.005)) return false; if (f.min !== '' && f.min !== undefined && v < +f.min) return false; if (f.max !== '' && f.max !== undefined && v > +f.max) return false; return true; } return !f.set || (Array.isArray(v) ? v.some((x) => f.set.has(String(x))) : f.set.has(String(v))); }
+const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v));
+const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));
+function passCol(c, r, f) { if (!f.set) return true; const v = c.v(r); return Array.isArray(v) ? v.some((x) => f.set.has(keyOf(c, x))) : f.set.has(keyOf(c, v)); }
 function rowsOf(vw, skipCol) {
   const S = V[vw], q = S.q.trim().toLowerCase(), cols = COLS[vw];
   return ROWS[vw]().filter((r) => {
@@ -188,7 +190,7 @@ function rowsOf(vw, skipCol) {
     for (const c of cols) { const f = S.f[c.k]; if (f && c.k !== skipCol && !passCol(c, r, f)) return false; }
     return true; });
 }
-const active = (f) => f && (f.set || f.nz || (f.min !== undefined && f.min !== '') || (f.max !== undefined && f.max !== ''));
+const active = (f) => f && f.set;
 // ---------- render
 function render() {
   countUse(); const all = { div: new Set(DIVS), pkg: new Set(), mnl: new Set(MNLS), ce: new Set() }; ITEMS.forEach((it) => F.forEach((f) => { if (it[f]) all[f].add(it[f]); }));
@@ -232,8 +234,7 @@ let popK = null;
 function openPop(k, btn) {
   const S = V[view], c = COLS[view].find((x) => x.k === k), f = S.f[k] || {}, r = btn.getBoundingClientRect(), pop = $('pop'); popK = k;
   let html = `<div class="row"><button data-a="asc">${c.num ? 'Smallest → largest' : 'Sort A → Z'}</button><button data-a="desc">${c.num ? 'Largest → smallest' : 'Sort Z → A'}</button></div>`;
-  if (c.num) html += `<div class="row"><input type="number" id="pMin" placeholder="min" value="${f.min ?? ''}"><input type="number" id="pMax" placeholder="max" value="${f.max ?? ''}"></div><label><input type="checkbox" id="pNz" ${f.nz ? 'checked' : ''}> non-zero only</label>`;
-  else { const cnt = new Map(); rowsOf(view, k).forEach((x) => { const vv = c.v(x); (Array.isArray(vv) ? vv : [vv]).forEach((v0) => { const v = String(v0); cnt.set(v, (cnt.get(v) || 0) + 1); }); }); const vals = [...cnt.keys()].sort((a, b) => a.localeCompare(b));
+  { const cnt = new Map(); rowsOf(view, k).forEach((x) => { const vv = c.v(x); (Array.isArray(vv) ? vv : [vv]).forEach((v0) => { const v = keyOf(c, v0); cnt.set(v, (cnt.get(v) || 0) + 1); }); }); const vals = [...cnt.keys()].sort((a, b) => (c.num ? keyNum(a) - keyNum(b) : a.localeCompare(b)));
     html += `<input type="search" id="pS" placeholder="Search values"><div class="vals" id="pV"><label><input type="checkbox" id="pAll" ${!f.set ? 'checked' : ''}> <b>(Select all)</b></label>${vals.map((v) => `<label data-v="${esc(v.toLowerCase())}"><input type="checkbox" class="pv" value="${esc(v)}" ${!f.set || f.set.has(v) ? 'checked' : ''}> <span dir="auto">${esc(v)}</span><span class="cn">${cnt.get(v)}</span></label>`).join('')}</div>`; }
   html += `<div class="row" style="margin:6px 0 0"><button class="pri" data-a="ok">OK</button><button data-a="clr">Clear filter</button></div>`;
   pop.innerHTML = html; pop.classList.add('show'); pop.style.left = Math.min(window.innerWidth - 270, r.left - 200) + 'px'; pop.style.top = r.bottom + 4 + 'px';
@@ -243,7 +244,7 @@ function openPop(k, btn) {
 $('pop').addEventListener('click', (e) => { const a = e.target.dataset.a; if (!a) return; const S = V[view], c = COLS[view].find((x) => x.k === popK);
   if (a === 'asc' || a === 'desc') { S.sort = { k: popK, d: a === 'asc' ? 1 : -1 }; }
   if (a === 'clr') delete S.f[popK];
-  if (a === 'ok') { if (c.num) S.f[popK] = { min: $('pMin').value, max: $('pMax').value, nz: $('pNz').checked }; else { const all = [...document.querySelectorAll('#pop .pv')], srch = ($('pS')?.value || '').trim(), boxes = srch ? all.filter((x) => x.closest('label').style.display !== 'none') : all, on = boxes.filter((x) => x.checked).map((x) => x.value); S.f[popK] = !srch && on.length === all.length ? {} : { set: new Set(on) }; } }
+  if (a === 'ok') { { const all = [...document.querySelectorAll('#pop .pv')], srch = ($('pS')?.value || '').trim(), boxes = srch ? all.filter((x) => x.closest('label').style.display !== 'none') : all, on = boxes.filter((x) => x.checked).map((x) => x.value); S.f[popK] = !srch && on.length === all.length ? {} : { set: new Set(on) }; } }
   $('pop').classList.remove('show'); render(); });
 document.addEventListener('mousedown', (e) => { if (!e.target.closest('#pop') && !e.target.closest('.fb')) $('pop').classList.remove('show'); });
 // ---------- events
