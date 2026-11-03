@@ -32,8 +32,9 @@ function dlayout(def) {
   add('item', mat ? 'Material' : sub ? 'Service' : 'Item', mat ? 10 : sub ? 11 : 14); add('desc', 'Description', mat ? 36 : 44);
   if (mat) { add('name', 'Name', 24); add('issue', 'Issue', 8); }
   if (sub) { add('po', 'PO', 11); add('sup', 'Subcontractor', 24); add('cert', 'Cert.', 6); add('cdate', 'Cert. date', 10); add('source', 'Source', 16); }
+  if (def.zint) add('source', 'Source', 16);
   if (!mat && !sub) add('wbs', 'WBS element', 18);
-  add('qty', 'Qty', 9); add('unit', 'Unit', 5); if (mat || sub) add('rate', 'Rate', 10); add('amt', 'Amount', 13); if (sub) { add('net', 'Net amount', 13); add('vatin', 'VAT in amount', 13); }
+  add('qty', 'Qty', 9); add('unit', 'Unit', 5); if (mat || sub || def.zint) add('rate', 'Rate', 10); add('amt', 'Amount', 13); if (sub) { add('net', 'Net amount', 13); add('vatin', 'VAT in amount', 13); }
   add('pkg', 'PKG', 9); add('mnl', 'MNL', 7); add('cec', 'Cost element code', 12); add('inc', 'Include', 7);
   if (mat) { add('wbs', 'WBS element', 18); add('stock', 'Stock account', 20); }
   if (sub) add('wbs', 'WBS element', 18);

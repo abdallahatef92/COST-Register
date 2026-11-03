@@ -13,6 +13,7 @@ const { r2 } = require('./util');
 const { fitWidths } = require('./fit');
 
 async function build(opts) {
+  if (opts.unsettled === undefined) opts.unsettled = false;   // the Excel register holds what CJI3 settled; unsettled ZINTC1 charges are in the app
   const { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, serv, prev, model, lastDate, monthEnd } = prepare(opts);
   const wb = new W.ExcelJS.Workbook(); wb.creator = 'Cost Register'; wb.calcProperties = { fullCalcOnLoad: !!process.env.NO_RESULT };   // every formula carries its verified result: Excel opens without a full recalculation
   [['Summary!$B$4', 'CutDate'], ['Summary!$B$5', 'VatMode'], ['Summary!$C$5', 'VatFrom']].forEach(([r, n]) => wb.definedNames.add(r, n));

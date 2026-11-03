@@ -42,7 +42,7 @@ table.t{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .t tbody tr{height:27px}
 .t tr.grp td{background:var(--gc);font-weight:600;border-top:2px solid var(--navy);padding:0 8px;cursor:pointer}
 .t tr.grp .tg{display:inline-block;width:16px;font-weight:700;color:var(--navy)} .t tr.grp .gm{font-weight:400;color:#444;margin-left:8px}
-.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through}
+.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through} .t tr.it.exc.uns td{text-decoration:none;font-style:italic;color:#8a8f98}
 .t tr.tot td{background:var(--navy);color:#fff;font-weight:700;position:sticky;bottom:0}
 .t td.num{text-align:right;font-variant-numeric:tabular-nums} .t td.cutc{background:#FFF8E1} .t td.after{color:#c0c4cc}
 .t td.c{padding:0 4px} .t td.c input{width:100%;height:21px;border:1px solid var(--codeB);background:var(--code);border-radius:4px;padding:0 5px;font-weight:600;color:var(--navy);font-size:12px}
@@ -129,12 +129,13 @@ const $ = (id) => document.getElementById(id), esc = (s) => String(s ?? '').repl
 const fmt = (v) => (Math.abs(v) < 0.5 ? '-' : Math.round(v).toLocaleString('en-US')), fmt2 = (v) => (Math.abs(v) < 0.005 ? '-' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const fmtM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : fmt(v)), fq = (v) => (Math.abs(v) < 1e-9 ? '-' : v.toLocaleString('en-US', { maximumFractionDigits: 3 })), pct = (a, b) => (b ? (100 * a / b).toFixed(1) + '%' : '-');
 const r2 = (v) => Math.round(v * 100) / 100;
+const UNS = L.uns || [], ZI = META.zint || null;   // ZINTC1 charges not yet settled in CJI3 (excluded unless included)
 const SUBI = BK.findIndex((b) => b.id === 'Subcontractor'), MATI = BK.findIndex((b) => b.id === 'Material');
 BK.forEach((b, bi) => b.items.forEach((it, ii) => { it.bi = bi; it.ii = ii; it.vals = it.v.map((x) => S[x]); it.grp = S[it.g] || ''; }));
 const isSub = (bi) => bi === SUBI, codeF = (bi) => (isSub(bi) ? ['div', 'pkg', 'mnl', 'ce'] : ['pkg', 'mnl', 'ce']), FN = { div: 'DIV', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' };
 const itemCode = (it) => (it.bi === MATI ? it.vals[3] : isSub(it.bi) ? it.vals[1] : it.bi === BK.findIndex((b) => b.id === 'G&A') ? it.vals[0] + ' · ' + it.vals[1] : it.vals[0]);
 const itemDesc = (it) => (it.bi === MATI ? it.vals[4] : isSub(it.bi) ? it.vals[2] : it.vals.length > 1 && it.bi !== BK.findIndex((b) => b.id === 'G&A') ? it.vals[1] : '');
-const itemUnit = (it) => (it.bi === MATI ? it.vals[5] : isSub(it.bi) ? it.vals[3] : '');
+const itemUnit = (it) => (it.bi === MATI ? it.vals[5] : isSub(it.bi) ? it.vals[3] : BK[it.bi].cols.indexOf('Unit') >= 0 ? it.vals[BK[it.bi].cols.indexOf('Unit')] : '');
 const statusOf = (it) => { if (isSub(it.bi)) { const n = ['div', 'pkg', 'mnl', 'ce'].filter((f) => it[f]).length; return n === 4 ? 'Fully coded' : n === 0 ? 'Not coded' : 'Partly coded'; } return it.pkg && it.mnl && it.ce ? 'Fully coded' : it.pkg || it.ce ? 'Partly coded' : 'Not coded'; };
 const PAL = ['#5B8DD6', '#E39B5B', '#6BAF6B', '#B37FCF', '#D8C24A', '#4FB3B3', '#E07A8F', '#8C9BB0', '#A4836A', '#77A8D6', '#C7A0E0', '#9DC183'];
 const SOFT = ['#CFE2F3', '#F4D6E2', '#D9EAD3', '#FCE5CD', '#E1D5F0', '#D0F0EA', '#F9E2C7', '#E6E0C8', '#D6E4F7', '#F2D5D0', '#DDEFC6', '#EAD7F2', '#CDEFF5', '#F7EBC1', '#E3E3E3'];
@@ -174,12 +175,12 @@ function compute() {
   // effective codes per line + aggregates per item
   const ek = R.ek = new Array(N); R.hand = new Uint8Array(N); R.inc = new Uint8Array(N);
   BK.forEach((b) => b.items.forEach((it) => { it.p = new Float64Array(NP); it.q = new Float64Array(NP); it.exc = 0; it.n = 0; it.nh = 0; }));
-  R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.vatIn = 0; R.exp = new Map();
+  R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.bkUns = BK.map(() => 0); R.vatIn = 0; R.unsIn = 0; R.unsExc = 0; R.exp = new Map();
   for (let i = 0; i < N; i++) {
     const b = L.b[i], it = BK[b].items[L.it[i]], o = OVR[L.id[i]];
     const pkg = o && o.pkg !== undefined ? o.pkg : it.pkg, mnl = o && o.mnl !== undefined ? o.mnl : it.mnl, ce = o && o.ce !== undefined ? o.ce : it.ce, inc = o && o.inc !== undefined ? o.inc : it.inc;
     const hand = !!o && (pkg !== it.pkg || mnl !== it.mnl || ce !== it.ce); R.hand[i] = hand ? 1 : 0; it.n++; if (hand) it.nh++;
-    if (inc === 'No') { it.exc += amt[i]; R.bkExc[b] += amt[i]; R.inc[i] = 0; continue; } R.inc[i] = 1;
+    if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; if (UNS[i]) R.unsExc += amt[i]; else R.bkExc[b] += amt[i]; continue; } R.inc[i] = 1; if (UNS[i]) { R.unsIn += amt[i]; R.bkUns[b] += amt[i]; }
     const p = per[i]; it.p[p] += amt[i]; it.q[p] += L.qty[i]; R.bkP[b][p] += amt[i]; R.vatIn += vin[i];
     const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP) })); e.p[p] += amt[i]; if (hand) e.hand = true;
   }
@@ -189,7 +190,7 @@ function compute() {
   R.toDate = r2(td(R.tot)); R.thisM = rep > 0 ? r2(R.tot[rep]) : 0; R.pend = r2(R.tot[NP - 1]); R.excl = r2(R.bkExc.reduce((s, v) => s + v, 0));
   R.rev4 = 0; R.cd = 0; R.revPend = 0; for (const [d, m, a, is4] of REV) { const p = m === 0 ? 0 : m < 0 || !d || d > cutI ? NP - 1 : m; if (p === NP - 1) { R.revPend += -a; continue; } if (is4) R.rev4 += -a; else R.cd += a; }
   R.cdAll = REV.filter((x) => !x[3]).reduce((s, x) => s + x[2], 0);
-  R.diff = r2(META.cost - R.toDate - R.pend - R.excl - R.cdAll + R.vatIn);
+  R.unsIn = r2(R.unsIn); R.unsExc = r2(R.unsExc); R.diff = r2(META.cost - R.toDate - R.pend - R.excl - R.cdAll + R.vatIn + R.unsIn);
 }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
 // =====================================================================================  tabs
@@ -225,8 +226,8 @@ function renderSummary() {
    <div class="grid2"><div class="panel"><h2>Cost per month<span class="note">counted cost by bucket, up to the cut date · gold = this month</span></h2>${svg}<div class="legend">${BK.map((b, bi) => `<span><i style="background:${bkColor(bi)}"></i>${esc(b.id)}</span>`).join('')}</div></div>
    <div class="panel"><h2>Reconciliation to CJI3<span class="note">CJI3 is the single source of truth</span></h2><table class="s">
      <tr><td>CJI3 cost (all cost elements except 4xxxxxxx)</td><td>${fmt2(META.cost)}</td></tr><tr><td>– Counted to the cut date (To date)</td><td>${fmt2(R.toDate)}</td></tr><tr><td>– Pending (posted after the cut date)</td><td>${fmt2(R.pend)}</td></tr>
-     <tr><td>– Excluded by you</td><td>${fmt2(R.excl)}</td></tr><tr><td>– Client deductions (shown with revenue)</td><td>${fmt2(R.cdAll)}</td></tr><tr><td>+ VAT included in Subcontractor amounts (${esc(ST.vat)})</td><td>${fmt2(R.vatIn)}</td></tr>
-     <tr class="tt"><td>Difference (must be 0)</td><td>${fmt2(R.diff) === '-' ? '0.00' : fmt2(R.diff)}</td></tr></table>
+     <tr><td>– Excluded by you</td><td>${fmt2(R.excl)}</td></tr><tr><td>– Client deductions (shown with revenue)</td><td>${fmt2(R.cdAll)}</td></tr><tr><td>+ VAT included in Subcontractor amounts (${esc(ST.vat)})</td><td>${fmt2(R.vatIn)}</td></tr>${ZI ? `<tr><td>+ Included, not yet settled in CJI3 (ZINTC1)</td><td>${fmt2(R.unsIn)}</td></tr>` : ''}
+     <tr class="tt"><td>Difference (must be 0)</td><td>${fmt2(R.diff) === '-' ? '0.00' : fmt2(R.diff)}</td></tr>${ZI ? `<tr><td class="inf">ZINTC1 charges not yet settled in CJI3 – left out (not in CJI3, not counted)</td><td class="inf">${fmt2(R.unsExc)}</td></tr>` : ''}</table>
      <h2 style="margin-top:14px">Revenue<span class="note">kept apart, to the cut date</span></h2><table class="s"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr><tr class="tt"><td>Net revenue</td><td>${fmt(R.rev4 - R.cd)}</td></tr><tr><td class="inf">Revenue posted after the cut date</td><td class="inf">${fmt(R.revPend)}</td></tr></table></div></div>
    <div class="panel"><h2>Cost by bucket<span class="note">click a bucket to code it</span></h2><table class="s"><tr><th>Bucket</th><th>Opening</th><th>Previous</th><th>This month</th><th>To date</th><th>% of to date</th><th>Pending</th><th>Coded share</th><th>Excluded</th></tr>${bkRows}
      <tr class="tt"><td>Total</td><td>${fmt(R.tot[0])}</td><td>${fmt(prev)}</td><td>${fmt(R.thisM)}</td><td>${fmt(R.toDate)}</td><td>100%</td><td>${fmt(R.pend)}</td><td></td><td>${fmt(R.excl)}</td></tr></table></div>
@@ -237,7 +238,7 @@ function renderSummary() {
 // =====================================================================================  Checks (live)
 function renderChecks() {
   const rows = [], add = (name, v, kind, note) => rows.push([name, v, kind, note]);
-  add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + client deductions − VAT included − CJI3 cost.');
+  add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + client deductions − VAT included − included unsettled ZINTC1 − CJI3 cost.');
   add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
   (META.cjiFiles || []).forEach((f) => add(`CJI3 file ${f.name} (${f.first} → ${f.last}, ${f.lines.toLocaleString('en-US')} lines): lines vs its grand-total row`, r2(f.sum - (f.grand || 0)), 'abs', f.dropped ? f.dropped.toLocaleString('en-US') + ' lines were already in an earlier file and are counted once.' : 'Sum of the file\'s lines minus its own grand-total row.'));
   if ((META.cjiFiles || []).length > 1) add('CJI3 lines with a different amount in two files', META.cjiConflictN || 0, 'zero', (META.cjiConflicts || []).slice(0, 3).map((c) => `${c.id}: ${c.wasFile} ${c.was} → ${c.nowFile} ${c.now}`).join(' · ') || 'The later download wins; none found.');
@@ -247,6 +248,10 @@ function renderChecks() {
   BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Fully coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
   add('Lines typed over (hand-coded)', [...R.hand].reduce((s, v) => s + v, 0), 'info', 'Lines coded differently from their item (Lines tab).');
   add('ZY accrual-reversal lines paired to a bucket', META.zy, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
+  if (ZI) { const T = { HOUS: 'house rent', ZF01: 'fleet orders', ZFU1: 'fuel orders', ZE01: 'equipment', ZTM1: 'trips', DCRM: 'corrective maintenance' };
+    add('ZINTC1: CJI3 order settlements not explained by ZINTC1', r2(ZI.cjiSettle - ZI.explained), 'abs', `${(ZI.ordersSettled || 0).toLocaleString('en-US')} settled orders; ${fmt2(ZI.explained)} of ${fmt2(ZI.cjiSettle)} replaced by ZINTC1 detail${ZI.shifted ? ` (${fmt2(ZI.shifted)} charged in one month, settled in a later one)` : ''}.`);
+    add('ZINTC1: settlements that differ from their ZINTC1 rows', ZI.adjN, 'info', ZI.adjN ? `${fmt2(ZI.adj)} kept as "Settlement difference" rows.` : 'Every settlement equals its ZINTC1 rows.');
+    add('ZINTC1: charges not yet settled in CJI3', ZI.uns, 'info', Object.entries(ZI.unsByType || {}).filter(([, v]) => Math.abs(v) >= 1).map(([k, v]) => `${k} ${T[k] || ''} ${fmt(v)}`).join(' · ') + (ZI.unsAfter ? ` · of which after the CJI3 data ${fmt(ZI.unsAfter)}` : '') + ` · included by you: ${fmt2(R.unsIn)}`); }
   if (SUB) { add('Subcontractor: approved certificates not yet in CJI3', SUB.unposted, 'info', SUB.unpostedN + ' lines.'); add('Subcontractor: CJI3 documents explained by certificates', SUB.docs, 'info', 'of ' + SUB.cjiDocs + '.'); }
   $('chk').innerHTML = `<div class="panel"><h2>Checks<span class="note">live – everything should read OK</span></h2><table class="s"><tr><th>Check</th><th>Value</th><th>Status</th><th style="text-align:left">What it means</th></tr>${rows.map(([n, v, k, note]) => { const ok = k === 'abs' ? Math.abs(v) < 0.01 : k === 'zero' ? v === 0 : null;
     return `<tr><td>${esc(n)}</td><td>${typeof v === 'number' && k !== 'zero' && Math.abs(v) >= 100 ? fmt2(v) : v}</td><td style="text-align:center">${ok === null ? '<span class="inf">info</span>' : ok ? '<span class="okc">OK</span>' : '<span class="chk">CHECK</span>'}</td><td style="text-align:left;color:#555">${esc(note)}</td></tr>`; }).join('')}</table></div>`;
@@ -281,8 +286,8 @@ function renderRules() {
     let files = null; try { files = await idbGet('lastFiles'); } catch (e) { /* none */ }
     if (!files || !files.length) { m.innerHTML = '<span style="color:#c55a11">The SAP files of this build are not kept in this browser (a ready-made App). Your rules are saved – they apply at the next build in the Tool.</span>'; return; }
     m.textContent = 'Rebuilding with your rules… (about 30 seconds)'; await new Promise((r) => setTimeout(r, 50));
-    try { const by = (k) => files.filter((f) => f.kind === k), snap = snapshot(), fl = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), mb52: by('mb52'), me2n: by('me2n'), prev: { name: 'codes.json', data: new TextEncoder().encode(JSON.stringify(snap)) } };
-      for (const k of ['zscprg01', 'zscsrv1', 'mb52', 'me2n']) if (!fl[k].length) delete fl[k];
+    try { const by = (k) => files.filter((f) => f.kind === k), snap = snapshot(), fl = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), zintc1: by('zintc1'), mb52: by('mb52'), me2n: by('me2n'), prev: { name: 'codes.json', data: new TextEncoder().encode(JSON.stringify(snap)) } };
+      for (const k of ['zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n']) if (!fl[k].length) delete fl[k];
       const data = Engine.build(fl, { project: META.project, rules: ur }); await idbSet('lastBuild', data); location.reload(); }
     catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not rebuild: ' + esc(err.message || err) + '</span>'; } };
 }
@@ -317,9 +322,9 @@ function pageDef() {
     codeF(bi).forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : f === 'div' ? 88 : f === 'mnl' ? 66 : 82, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) }));
     cols.push({ k: 'st', l: 'Status', w: 104, v: (r) => statusOf(r.it), h: (r) => stCell(r.it) }, { k: 'inc', l: 'Include', w: 66, v: (r) => r.it.inc, h: (r) => `<td><button class="incb ${r.it.inc === 'No' ? 'no' : ''}">${r.it.inc === 'No' ? 'No' : 'Yes'}</button></td>` });
     if (b.qty) cols.push(numC('qty', 'Qty to date', 96, (r) => r.it.qtd, { f: fq }), numC('rate', 'Rate', 84, (r) => (Math.abs(r.it.qtd) > 1e-9 ? r.it.td / r.it.qtd : 0), { f: fmt2 }));
-    cols.push(numC('td', 'To date', 112, (r) => r.it.td, { h: (r) => `<td class="num"><b>${fmt(r.it.td)}</b></td>` }), numC('tm', 'This month · ' + R.repLab, 112, (r) => r.it.tm), numC('pe', 'Pending', 92, (r) => r.it.pe), numC('n', 'Lines', 62, (r) => r.it.n), { k: 'nw', l: 'New', w: 56, v: (r) => (r.it.nw ? 'New' : ''), h: (r) => `<td class="help">${r.it.nw ? 'New' : ''}</td>` });
+    cols.push(numC('td', 'To date', 112, (r) => r.it.td || (r.it.uns ? r.it.exc : 0), { h: (r) => (r.it.uns && r.it.inc === 'No' ? `<td class="num" title="Not yet settled in CJI3 – excluded, not counted. Include it to count it.">${fmt(r.it.exc)}</td>` : `<td class="num"><b>${fmt(r.it.td)}</b></td>`) }), numC('tm', 'This month · ' + R.repLab, 112, (r) => r.it.tm), numC('pe', 'Pending', 92, (r) => r.it.pe), numC('n', 'Lines', 62, (r) => r.it.n), { k: 'nw', l: 'New', w: 56, v: (r) => (r.it.nw ? 'New' : ''), h: (r) => `<td class="help">${r.it.nw ? 'New' : ''}</td>` });
     const rows = b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
-    return { cols, rows, sel: true, status: true, groups: b.tree, gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Fully coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length} · to date ${fmt(td)}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
+    return { cols, rows, sel: true, status: true, groups: b.tree, rowCls: (r) => (r.it.uns ? 'uns' : ''), gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Fully coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0), un = its.filter((x) => x.uns), unx = un.filter((x) => x.inc === 'No').reduce((s, x) => s + x.exc, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length} · to date ${fmt(td)}${un.length ? ` · not settled, left out ${fmt(unx)}` : ''}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
       foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
   }
   if (ST.tab === 'pm') {
@@ -360,7 +365,7 @@ function pageDef() {
       { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` });
     if (!isMat) cols.push(tx('desc', 'Line text', 220, L.desc));
     if (isS || all) cols.push({ k: 'po', l: 'PO', w: 96, v: (r) => S[L.po[r.i]], h: (r) => `<td>${esc(S[L.po[r.i]])}</td>` }, { k: 'sup', l: 'Subcontractor', w: 160, v: (r) => S[L.sup[r.i]], h: (r) => `<td dir="auto">${esc(S[L.sup[r.i]])}</td>` });
-    if (isS) cols.push({ k: 'src', l: 'Source', w: 120, v: (r) => SRC[r.i], h: (r) => `<td>${esc(SRC[r.i])}</td>` });
+    if (isS || (!all && BK[bi].zint)) cols.push({ k: 'src', l: 'Source', w: 120, v: (r) => SRC[r.i], h: (r) => `<td>${esc(SRC[r.i])}</td>` });
     if (anyQ) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
     cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
     ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : 80, code: 1, v: (r) => ef(r.i, f) || '(blank)', h: (r) => { const o = OVR[L.id[r.i]]; return codeInput(it(r.i), f, o && o[f] !== undefined ? o[f] : undefined); } }));
@@ -721,12 +726,12 @@ const idb = (mode, fn) => new Promise((res, rej) => { const rq = indexedDB.open(
   rq.onsuccess = () => { const tx = rq.result.transaction('kv', mode), st = tx.objectStore('kv'), r = fn(st); tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }; });
 const idbGet = (k) => idb('readonly', (st) => st.get(k)), idbSet = (k, v) => idb('readwrite', (st) => st.put(v, k));
 // files are recognised by their content (column headers), not by their names; several CJI3 / ZSCPRG01 / ZSCSRV1 / MB52 files are merged
-const KIND_ORDER = ['cji3', 'zscprg01', 'zscsrv1', 'mb52', 'me2n', 'prev', 'ignore'], picked = [];
+const KIND_ORDER = ['cji3', 'zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n', 'prev', 'ignore'], picked = [];
 function showStart(canCancel) {
   const el = document.getElementById('start'); el.style.display = 'flex'; const K = Engine.KINDS;
   const draw = () => { el.innerHTML = `<div class="sbox"><h1>Cost Register · new build</h1><p class="help">Drop all the SAP downloads here – any names, several CJI3 files are fine (split by period or overlapping). Each file is recognised by its columns; correct the type if needed. Nothing is uploaded.</p>
     <div id="drop" class="drop">Drop files here, or <label style="color:#2F5597;text-decoration:underline;cursor:pointer">choose files<input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm,.json" hidden></label></div>
-    <table class="s" style="margin-bottom:6px"><tr><th>File</th><th style="text-align:left">Recognised as</th><th></th></tr>${picked.length ? picked.map((f, i) => `<tr><td style="text-align:left">${f.name.replace(/</g, '&lt;')}</td><td style="text-align:left"><select data-i="${i}">${KIND_ORDER.map((k) => `<option value="${k}" ${f.kind === k ? 'selected' : ''}>${K[k]}</option>`).join('')}</select>${f.kind === 'ignore' ? ' <span style="color:#c55a11">not recognised</span>' : ''}</td><td><button data-x="${i}">✕</button></td></tr>`).join('') : '<tr><td colspan="3" class="help" style="text-align:left">No files yet. CJI3 is required; ZSCPRG01 + ZSCSRV1 give the subcontract detail, MB52 the material groups, last month\'s Excel (or codes .json) brings your codes back.</td></tr>'}</table>
+    <table class="s" style="margin-bottom:6px"><tr><th>File</th><th style="text-align:left">Recognised as</th><th></th></tr>${picked.length ? picked.map((f, i) => `<tr><td style="text-align:left">${f.name.replace(/</g, '&lt;')}</td><td style="text-align:left"><select data-i="${i}">${KIND_ORDER.map((k) => `<option value="${k}" ${f.kind === k ? 'selected' : ''}>${K[k]}</option>`).join('')}</select>${f.kind === 'ignore' ? ' <span style="color:#c55a11">not recognised</span>' : ''}</td><td><button data-x="${i}">✕</button></td></tr>`).join('') : '<tr><td colspan="3" class="help" style="text-align:left">No files yet. CJI3 is required; ZSCPRG01 + ZSCSRV1 give the subcontract detail, ZINTC1 the equipment, fuel, fleet and house-rent detail, MB52 the material groups, last month\'s Excel (or codes .json) brings your codes back.</td></tr>'}</table>
     <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><button class="pri" id="sBuild">Build</button>${canCancel ? '<button id="sCancel">Cancel</button>' : ''}<span class="help" id="sMsg"></span></div></div>`;
     el.querySelectorAll('select[data-i]').forEach((x) => { x.onchange = () => { picked[+x.dataset.i].kind = x.value; draw(); }; });
     el.querySelectorAll('button[data-x]').forEach((x) => { x.onclick = () => { picked.splice(+x.dataset.x, 1); draw(); }; });
@@ -738,8 +743,8 @@ function showStart(canCancel) {
       if (!by('cji3').length) { m.innerHTML = '<span style="color:#c00000">At least one CJI3 file is needed.</span>'; return; }
       if (by('prev').length > 1) { m.innerHTML = '<span style="color:#c00000">Only one last report, please.</span>'; return; }
       m.textContent = 'Building… (about 20–30 seconds)'; await new Promise((r) => setTimeout(r, 50));
-      try { const t0 = Date.now(), files = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), mb52: by('mb52'), me2n: by('me2n'), prev: by('prev')[0] };
-        for (const k of ['zscprg01', 'zscsrv1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
+      try { const t0 = Date.now(), files = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), zintc1: by('zintc1'), mb52: by('mb52'), me2n: by('me2n'), prev: by('prev')[0] };
+        for (const k of ['zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
         const data = Engine.build(files, {}); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`; await idbSet('lastBuild', data); try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
       catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
   };

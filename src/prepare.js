@@ -8,6 +8,7 @@ const projectOf = (lines) => { const m = new Map(); for (const l of lines) { con
 const { readGroups } = require('./groups');
 const { readPrev } = require('./prev');
 const SC = require('./subcontract');
+const ZI = require('./zintc1');
 const { r2 } = require('./util');
 
 // everything up to the model (no Excel): also used by the HTML app generator
@@ -15,7 +16,8 @@ function prepare(opts) {
   const t0 = Date.now(), log = opts.log || (() => {}), step = opts.step || (() => {});
   step('Reading CJI3');
   const cji = readCji3(opts.cji3);
-  if (!opts.project) opts.project = projectOf(cji.lines);   // the project code from the WBS elements (I-SUTH.01 → SUTH), never hard coded log(`CJI3: ${cji.files.length} file(s), ${cji.lines.length} lines (${cji.dropped} found in more than one file, ${cji.conflicts.length} conflicts), ${cji.subtotals} subtotal rows skipped`);
+  if (!opts.project) opts.project = projectOf(cji.lines);   // the project code from the WBS elements (I-SUTH.01 → SUTH), never hard coded
+  log(`CJI3: ${cji.files.length} file(s), ${cji.lines.length} lines (${cji.dropped} found in more than one file, ${cji.conflicts.length} conflicts), ${cji.subtotals} subtotal rows skipped`);
   const dupes = cji.within;   // the same key twice inside one file
   step('Last report');
   const prev = opts.prevObj || readPrev(opts.prev), rules = opts.rules || (prev && prev.rules) || [];
@@ -35,13 +37,20 @@ function prepare(opts) {
     lines = cji.lines.filter((l) => l.bucket !== 'Subcontractor').concat(subRes.lines);
     const st = subRes.stats; log(`Subcontractor: ${prog.lines.length} certificate lines; ${st.docs} of ${st.cjiDocs} CJI3 documents explained; certificates ${st.certPosted}; opening ${st.openRep} (CJI3 ${st.cjiOpen}, difference ${st.openDiff}); ${st.docAdjN} documents differ by 1 EGP or more (${st.docAdj}), ${st.roundN} by cents; ${st.cjiOnlyN} CJI3-only lines`);
   }
+  let zRes = null;
+  if (opts.zintc1 && [].concat(opts.zintc1).filter(Boolean).length) {
+    step('Order charges (ZINTC1)');
+    const Z = ZI.readZint(opts.zintc1), lastYm = lines.map((l) => l.ym).filter(Boolean).sort().pop();
+    zRes = ZI.applyZint(lines, Z, { lastYm }); lines = opts.unsettled === false ? zRes.lines.filter((l) => !l.uns) : zRes.lines;
+    const zs = zRes.stats; log(`ZINTC1: ${Z.files.length} file(s), ${Z.rows.length} rows, ${zs.orders} orders (${zs.ordersSettled} settled in CJI3); CJI3 settlements ${zs.cjiSettle}, explained ${zs.explained}; differences ${zs.adjN} (${zs.adj}), rounding ${zs.roundN} (${zs.round}); CJI3-only ${zs.cjiOnlyN} (${zs.cjiOnly}); not yet settled ${zs.unsN} rows (${zs.uns}, of which after the CJI3 data ${zs.unsAfter})${opts.unsettled === false ? ' – left out' : ''}`);
+  }
   for (const l of lines) if (l.bucket === 'Material') l.issue = l.amt === 0 && l.qty === 0 ? 'No value' : l.amt < 0 || l.qty < 0 ? 'Return' : l.amt === 0 ? 'No value' : 'Issue';
   if (prev) log(`Last report: ${prev.items} coded items, ${prev.typed} typed-over lines carried over`);
   const monthEnd = (iso) => { const [y, m] = iso.split('-'); return new Date(Date.UTC(+y, +m, 0)).toISOString().slice(0, 10); };
-  const lastDate = lines.map((l) => l.date).filter(Boolean).sort().pop();
+  const lastDate = lines.filter((l) => !l.uns).map((l) => l.date).filter(Boolean).sort().pop();   // unsettled ZINTC1 charges never move the cut date
   const model = buildModel(lines, { groups: groups.map, prev, cut: monthEnd(opts.cut || lastDate) });
   log(`Cut date ${model.cut} (report month ${model.reportLabel})`);
-  return { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, serv, vatOpt, prev, model, lastDate, monthEnd, rules };
+  return { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, zRes, serv, vatOpt, prev, model, lastDate, monthEnd, rules };
 }
 
 module.exports = { prepare };
