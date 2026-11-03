@@ -27,7 +27,7 @@ nav.tabs button.on{background:var(--bg);color:var(--navy)}
 .bulk{display:none;gap:8px;align-items:center;padding:7px 12px;background:#EAF1FB;border-bottom:1px solid #b9cce8;flex-wrap:wrap}
 .bulk.show{display:flex} .bulk b{color:var(--navy)} .bulk input{width:96px;padding:4px 7px;border:1px solid var(--codeB);border-radius:5px;background:#fff}
 .wrap{flex:1;overflow:auto;background:#fff;position:relative}
-table.t{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;min-width:100%}
+table.t{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .t th{position:sticky;top:0;background:var(--navy);color:#fff;font-weight:600;font-size:12px;padding:6px 24px 6px 8px;text-align:left;z-index:3;white-space:nowrap;border-right:1px solid #33497a;overflow:hidden;text-overflow:ellipsis}
 .t th.code{background:var(--gold);border-right-color:#a67c00} .t th.num{text-align:right} .t th.cut{background:var(--gold)} .t th.pend{background:#C55A11}
 .t th{height:27px} .t thead tr.band th{background:#2B4677;text-align:center;padding:0 6px;font-size:11.5px;border-bottom:1px solid #4a6496} .t thead tr.band th.tog{cursor:pointer} .t thead tr.band th.tog:hover{background:#3b5a91}
@@ -486,10 +486,11 @@ function renderTable() {
   if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
   R.rows = rows;
   $('cg').innerHTML = (D.sel ? '<col style="width:34px">' : '') + cols.map((c) => `<col style="width:${c.w}px">`).join('');
+  $('tbl').style.width = (D.sel ? 34 : 0) + cols.reduce((t, c) => t + c.w, 0) + 'px';   // exact width: keeps the fixed layout, so columns never move and frozen columns line up
   // frozen columns: left offsets
   let left = D.sel ? 34 : 0; const fzL = {}; cols.forEach((c) => { if (c.fz) { fzL[c.k] = left; left += c.w; } }); R.fzL = fzL;
   const fz = (c) => (fzL[c.k] !== undefined ? ` fz" style="left:${fzL[c.k]}px` : ''), HH = 27, nb = (D.bands || []).length;
-  const bandH = (D.bands || []).map((row, ri) => '<tr class="band">' + (D.sel && ri === 0 ? `<th rowspan="${nb}" class="blank fz" style="left:0;top:0"></th>` : '') + row.map((x) => `<th colspan="${x.span}" class="${x.cls || ''}" style="top:${ri * HH}px" ${x.tog ? `data-tog="${x.tog}"` : ''}>${esc(x.l)}</th>`).join('') + '</tr>').join('');
+  const bandH = (D.bands || []).map((row, ri) => '<tr class="band">' + (D.sel && ri === 0 ? `<th rowspan="${nb}" class="blank fz" style="left:0;top:0"></th>` : '') + (() => { let ci = 0; return row.flatMap((x) => { let nf = 0; while (nf < x.span && cols[ci + nf] && fzL[cols[ci + nf].k] !== undefined) nf++; ci += x.span; return nf && nf < x.span ? [{ ...x, span: nf, fzc: cols[ci - x.span] }, { ...x, span: x.span - nf, l: '', tog: '' }] : [{ ...x, fzc: nf ? cols[ci - x.span] : null }]; }).map((x) => { const c0 = x.fzc, st = !!c0; return `<th colspan="${x.span}" class="${x.cls || ''}${st ? ' fz' : ''}" style="top:${ri * HH}px${st ? `;left:${fzL[c0.k]}px` : ''}" ${x.tog ? `data-tog="${x.tog}"` : ''}>${esc(x.l)}</th>`; }).join(''); })() + '</tr>').join('');
   $('th').innerHTML = bandH + '<tr>' + (D.sel ? `<th class="fz" style="left:0;top:${nb * HH}px;padding-right:6px"><input type="checkbox" id="all"></th>` : '') + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzL[c.k] !== undefined ? 'fz' : ''}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.l)}">${esc(c.l)}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}</th>`).join('') + '</tr>';
   const nc = cols.length + (D.sel ? 1 : 0), ft = D.foot ? D.foot(rows) : null;
   $('tf').innerHTML = ft ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzL[c.k] !== undefined ? ' fz' : ''}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''}>${j === 0 ? 'TOTAL' : ft[c.k] ?? ''}</td>`).join('')}</tr>` : '';
@@ -524,7 +525,7 @@ function renderVirtual() {   // only the rows on screen are drawn (fast with tho
   let html = `<tr class="sp" style="height:${a * VROW}px"><td colspan="${nc}" style="border:0;padding:0;height:${a * VROW}px"></td></tr>`; for (let k = a; k < z; k++) html += d[k]();
   $('tb').innerHTML = html + `<tr class="sp" style="height:${(d.length - z) * VROW}px"><td colspan="${nc}" style="border:0;padding:0;height:${(d.length - z) * VROW}px"></td></tr>`;
 }
-let vt = 0; $('wrap').addEventListener('scroll', () => { if (vt) return; vt = requestAnimationFrame(() => { vt = 0; renderVirtual(); }); });
+let vt = 0, lastTop = -1; $('wrap').addEventListener('scroll', () => { if (vt || $('wrap').scrollTop === lastTop) return; lastTop = $('wrap').scrollTop; vt = requestAnimationFrame(() => { vt = 0; renderVirtual(); }); });
 // ---- events on the table pages
 const rowOf = (tr) => { const k = tr.dataset.k; if (!k) return null; if (k[0] === 'L') return { i: +k.slice(1), it: BK[L.b[+k.slice(1)]].items[L.it[+k.slice(1)]] }; const [bi, ii] = k.split(':').map(Number); return { it: BK[bi].items[ii] }; };
 $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr);
