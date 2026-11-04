@@ -42,7 +42,7 @@ table.t{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .t tbody tr{height:27px}
 .t tr.grp td{background:var(--gc);font-weight:600;border-top:2px solid var(--navy);padding:0 8px;cursor:pointer}
 .t tr.grp .tg{display:inline-block;width:16px;font-weight:700;color:var(--navy)} .t tr.grp .gm{font-weight:400;color:#444;margin-left:8px}
-.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through} .t tr.uchild td{background:#FAFBFD;font-size:12px} .t tr.uord td{border-top:1px solid #d5dce8} .t th.uon{background:#375623} .t thead tr.band th.umon{background:#548235;cursor:pointer} .t thead tr.band th.umoff{background:#7f8fa9;cursor:pointer} .t td.uin{background:#E2EFDA} .t tr.it.exc.uns td{text-decoration:none;font-style:italic;color:#8a8f98}
+.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through} .t tr.uchild td{background:#FAFBFD;font-size:12px} .t tr.uord td{border-top:1px solid #d5dce8} .t thead tr.band th.dmon{background:#1F3864;cursor:pointer} .t thead tr.band th.dmoff{background:#C00000;cursor:pointer} .t th.doff{background:#9C2B2B} .t td.dout{color:#a6a6a6;text-decoration:line-through} .t th.uon{background:#375623} .t thead tr.band th.umon{background:#548235;cursor:pointer} .t thead tr.band th.umoff{background:#7f8fa9;cursor:pointer} .t td.uin{background:#E2EFDA} .t tr.it.exc.uns td{text-decoration:none;font-style:italic;color:#8a8f98}
 .t tr.tot td{background:var(--navy);color:#fff;font-weight:700;position:sticky;bottom:0}
 .t td.num{text-align:right;font-variant-numeric:tabular-nums} .t td.cutc{background:#FFF8E1} .t td.after{color:#c0c4cc}
 .t td.c{padding:0 4px} .t td.c input{width:100%;height:21px;border:1px solid var(--codeB);background:var(--code);border-radius:4px;padding:0 5px;font-weight:600;color:var(--navy);font-size:12px}
@@ -129,7 +129,7 @@ const $ = (id) => document.getElementById(id), esc = (s) => String(s ?? '').repl
 const fmt = (v) => (Math.abs(v) < 0.5 ? '-' : Math.round(v).toLocaleString('en-US')), fmt2 = (v) => (Math.abs(v) < 0.005 ? '-' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const fmtM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : fmt(v)), fq = (v) => (Math.abs(v) < 1e-9 ? '-' : v.toLocaleString('en-US', { maximumFractionDigits: 3 })), pct = (a, b) => (b ? (100 * a / b).toFixed(1) + '%' : '-');
 const r2 = (v) => Math.round(v * 100) / 100;
-const UNS = L.uns || [], ZI = META.zint || null;   // ZINTC1 charges not yet settled in CJI3 (excluded unless included)
+const UNS = L.uns || [], ZI = META.zint || null, DEPI = BK.findIndex((b) => b.id === 'Asset depreciation');   // ZINTC1 charges not yet settled in CJI3 (excluded unless included)
 const SUBI = BK.findIndex((b) => b.id === 'Subcontractor'), MATI = BK.findIndex((b) => b.id === 'Material');
 BK.forEach((b, bi) => b.items.forEach((it, ii) => { it.bi = bi; it.ii = ii; it.vals = it.v.map((x) => S[x]); it.grp = S[it.g] || ''; }));
 const isSub = (bi) => bi === SUBI, codeF = (bi) => (isSub(bi) ? ['div', 'pkg', 'mnl', 'ce'] : ['pkg', 'mnl', 'ce']), FN = { div: 'DIV', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' };
@@ -144,19 +144,19 @@ const UNC = ['#C9DAF8', '#D9EAD3', '#FCE5CD', '#EAD1DC', '#D0E0E3', '#FFF2CC', '
 let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3000); }
 // =====================================================================================  state: cut date, VAT, codes, line overrides, undo
 const LSK = 'cost-register:' + META.project + ':' + (META.buildId || META.built), OVR = Object.assign({}, L.ovr);
-const ST = { uns: META.unsState || { mode: 'none', pick: [] }, rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
+const ST = { depx: META.depState || { mode: 'none', pick: [] }, uns: META.unsState || { mode: 'none', pick: [] }, rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
 let undo = [], redo = [];
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
-function getC(c) { if (c.t === 'uns') return JSON.stringify(ST.uns); if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
-function setC(c, v) { if (c.t === 'uns') { ST.uns = JSON.parse(v); return; } if (c.t === 'item') { BK[c.bi].items[c.ii][c.f] = v; return; } const id = L.id[c.i]; const o = OVR[id] || (OVR[id] = {}); if (v === undefined || v === null) delete o[c.f]; else o[c.f] = v; if (!Object.keys(o).length) delete OVR[id]; }
+function getC(c) { if (c.t === 'uns') return JSON.stringify(ST.uns); if (c.t === 'depx') return JSON.stringify(ST.depx); if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
+function setC(c, v) { if (c.t === 'uns') { ST.uns = JSON.parse(v); return; } if (c.t === 'depx') { ST.depx = JSON.parse(v); return; } if (c.t === 'item') { BK[c.bi].items[c.ii][c.f] = v; return; } const id = L.id[c.i]; const o = OVR[id] || (OVR[id] = {}); if (v === undefined || v === null) delete o[c.f]; else o[c.f] = v; if (!Object.keys(o).length) delete OVR[id]; }
 function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
-function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR, rules: ST.rules, uns: ST.uns }; }
+function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR, rules: ST.rules, uns: ST.uns, depx: ST.depx }; }
 function persist() { try { localStorage.setItem(LSK, JSON.stringify(snapshot())); $('saved').textContent = 'Saved in this browser ' + new Date().toLocaleTimeString(); } catch (e) { $('saved').textContent = 'Not saved here – use Save codes'; } }
 function applySnap(s, replaceLines) { let n = 0; BK.forEach((b) => { const m = s.codes && s.codes[b.id]; if (!m) return; b.items.forEach((it) => { const c = m[it.k]; if (!c) return; n++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((f) => { if (c[f] !== undefined && (f !== 'div' || isSub(it.bi))) it[f] = c[f]; }); }); });
-  if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } if (Array.isArray(s.rules)) ST.rules = s.rules.map((r) => ({ ...r })); if (s.uns && s.uns.mode) ST.uns = { mode: s.uns.mode, pick: (s.uns.pick || []).map(String) }; return n; }
+  if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } if (Array.isArray(s.rules)) ST.rules = s.rules.map((r) => ({ ...r })); if (s.uns && s.uns.mode) ST.uns = { mode: s.uns.mode, pick: (s.uns.pick || []).map(String) }; if (s.depx && s.depx.mode) ST.depx = { mode: s.depx.mode, pick: (s.depx.pick || []).map(String) }; return n; }
 function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; applySnap(s, true); if (s.cut && META.cuts.includes(s.cut)) ST.cut = s.cut; if (s.vat) { ST.vat = s.vat; ST.vatFrom = s.vatFrom || ''; } $('saved').textContent = 'Restored ' + new Date(s.at).toLocaleString(); } catch (e) {} }
 // =====================================================================================  the engine: everything from the lines, the codes and the cut date (no formulas)
 const R = {}; globalThis.R = R; globalThis.__BK = BK;   // results of compute() (also readable from the browser console)
@@ -174,8 +174,9 @@ function compute() {
   if (offRow >= 0) { vin[offRow] = -openVin; amt[offRow] = L.amt[offRow] - openVin; }
   // effective codes per line + aggregates per item
   const ek = R.ek = new Array(N); R.hand = new Uint8Array(N); R.inc = new Uint8Array(N);
-  BK.forEach((b) => b.items.forEach((it) => { it.p = new Float64Array(NP); it.q = new Float64Array(NP); it.exc = 0; it.n = 0; it.nh = 0; it.ua = null; }));
-  R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.bkUns = BK.map(() => 0); R.vatIn = 0; R.unsIn = 0; R.unsExc = 0; R.unsM = new Map();
+  BK.forEach((b) => b.items.forEach((it) => { it.p = new Float64Array(NP); it.q = new Float64Array(NP); it.exc = 0; it.n = 0; it.nh = 0; it.ua = null; it.da = null; }));
+  R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.bkUns = BK.map(() => 0); R.vatIn = 0; R.unsIn = 0; R.unsExc = 0; R.unsM = new Map(); R.depExc = 0; R.depM = new Map();
+  const dpk = new Set(ST.depx.pick || []), depOff = (k) => ST.depx.mode === 'all' || (ST.depx.mode === 'pick' && dpk.has(k)); R.depOff = depOff;
   const pk = new Set(ST.uns.pick || []), mStart = (k) => { const [mn, yy] = PER[+k].split('-'); return (2000 + +yy) * 10000 + (MON.indexOf(mn) + 1) * 100 + 1; },
     keyOn = (k) => (ST.uns.mode === 'cut' ? k !== 'a' && mStart(k) <= cutI : ST.uns.mode === 'pick' ? pk.has(String(k)) : false); R.keyOn = keyOn; R.exp = new Map();
   for (let i = 0; i < N; i++) {
@@ -186,6 +187,10 @@ function compute() {
       const k = L.m[i] > 0 ? String(L.m[i]) : 'a', on = keyOn(k) && inc !== 'No'; let e = R.unsM.get(k); if (!e) R.unsM.set(k, (e = { all: 0, on: 0 })); e.all += amt[i]; if (on) e.on += amt[i];
       if (!it.ua) it.ua = new Map(); it.ua.set(k, (it.ua.get(k) || 0) + amt[i]);
       if (!on) { it.exc += amt[i]; R.inc[i] = 0; R.unsExc += amt[i]; continue; } R.unsIn += amt[i]; R.bkUns[b] += amt[i]; }
+    else if (b === DEPI) {   // depreciation in CJI3: the Depreciation tab can take whole months out (shown on the Summary as its own line)
+      const k = L.m[i] >= 0 ? String(L.m[i]) : 'a'; let e = R.depM.get(k); if (!e) R.depM.set(k, (e = { all: 0, off: 0 })); e.all += amt[i]; if (!it.da) it.da = new Map(); it.da.set(k, (it.da.get(k) || 0) + amt[i]);
+      if (depOff(k)) { e.off += amt[i]; it.exc += amt[i]; R.inc[i] = 0; R.depExc += amt[i]; continue; }
+      if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } }
     else if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } R.inc[i] = 1;
     const p = per[i]; it.p[p] += amt[i]; it.q[p] += L.qty[i]; R.bkP[b][p] += amt[i]; R.vatIn += vin[i];
     const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP) })); e.p[p] += amt[i]; if (hand) e.hand = true;
@@ -196,11 +201,11 @@ function compute() {
   R.toDate = r2(td(R.tot)); R.thisM = rep > 0 ? r2(R.tot[rep]) : 0; R.pend = r2(R.tot[NP - 1]); R.excl = r2(R.bkExc.reduce((s, v) => s + v, 0));
   R.rev4 = 0; R.cd = 0; R.revPend = 0; for (const [d, m, a, is4] of REV) { const p = m === 0 ? 0 : m < 0 || !d || d > cutI ? NP - 1 : m; if (p === NP - 1) { R.revPend += -a; continue; } if (is4) R.rev4 += -a; else R.cd += a; }
   R.cdAll = REV.filter((x) => !x[3]).reduce((s, x) => s + x[2], 0);
-  R.unsIn = r2(R.unsIn); R.unsExc = r2(R.unsExc); R.diff = r2(META.cost - R.toDate - R.pend - R.excl - R.cdAll + R.vatIn + R.unsIn);
+  R.unsIn = r2(R.unsIn); R.unsExc = r2(R.unsExc); R.depExc = r2(R.depExc); R.diff = r2(META.cost - R.toDate - R.pend - R.excl - R.depExc - R.cdAll + R.vatIn + R.unsIn);
 }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
 // =====================================================================================  tabs
-const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ...(ZI ? [['uns', 'Unsettled']] : []), ['chk', 'Checks'], ['rules', 'Rules']];
+const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ...(ZI ? [['uns', 'Unsettled']] : []), ...(DEPI >= 0 ? [['dep', 'Depreciation']] : []), ['chk', 'Checks'], ['rules', 'Rules']];
 $('tabs').innerHTML = TABS.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join('');
 $('tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) { ST.tab = b.dataset.t; sel.clear(); render(); $('wrap').scrollTop = 0; } };
 function render() {
@@ -232,7 +237,7 @@ function renderSummary() {
    <div class="grid2"><div class="panel"><h2>Cost per month<span class="note">counted cost by bucket, up to the cut date · gold = this month</span></h2>${svg}<div class="legend">${BK.map((b, bi) => `<span><i style="background:${bkColor(bi)}"></i>${esc(b.id)}</span>`).join('')}</div></div>
    <div class="panel"><h2>Reconciliation to CJI3<span class="note">CJI3 is the single source of truth</span></h2><table class="s">
      <tr><td>CJI3 cost (all cost elements except 4xxxxxxx)</td><td>${fmt2(META.cost)}</td></tr><tr><td>– Counted to the cut date (To date)</td><td>${fmt2(R.toDate)}</td></tr><tr><td>– Pending (posted after the cut date)</td><td>${fmt2(R.pend)}</td></tr>
-     <tr><td>– Excluded by you</td><td>${fmt2(R.excl)}</td></tr><tr><td>– Client deductions (shown with revenue)</td><td>${fmt2(R.cdAll)}</td></tr><tr><td>+ VAT included in Subcontractor amounts (${esc(ST.vat)})</td><td>${fmt2(R.vatIn)}</td></tr>${ZI ? `<tr><td>+ CJI3 difference: ZINTC1 charges not yet settled, included by you (<a class="lk" data-gotab="uns">Unsettled</a>)</td><td>${fmt2(R.unsIn)}</td></tr>` : ''}
+     <tr><td>– Excluded by you</td><td>${fmt2(R.excl)}</td></tr>${DEPI >= 0 ? `<tr><td>– Depreciation excluded by you (<a class="lk" data-gotab="dep">Depreciation</a>)</td><td>${fmt2(R.depExc)}</td></tr>` : ''}<tr><td>– Client deductions (shown with revenue)</td><td>${fmt2(R.cdAll)}</td></tr><tr><td>+ VAT included in Subcontractor amounts (${esc(ST.vat)})</td><td>${fmt2(R.vatIn)}</td></tr>${ZI ? `<tr><td>+ CJI3 difference: ZINTC1 charges not yet settled, included by you (<a class="lk" data-gotab="uns">Unsettled</a>)</td><td>${fmt2(R.unsIn)}</td></tr>` : ''}
      <tr class="tt"><td>Difference (must be 0)</td><td>${fmt2(R.diff) === '-' ? '0.00' : fmt2(R.diff)}</td></tr>${ZI ? `<tr><td class="inf">ZINTC1 charges not yet settled in CJI3 – left out (not counted)</td><td class="inf">${fmt2(R.unsExc)}</td></tr>` : ''}</table>
      <h2 style="margin-top:14px">Revenue<span class="note">kept apart, to the cut date</span></h2><table class="s"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr><tr class="tt"><td>Net revenue</td><td>${fmt(R.rev4 - R.cd)}</td></tr><tr><td class="inf">Revenue posted after the cut date</td><td class="inf">${fmt(R.revPend)}</td></tr></table></div></div>
    <div class="panel"><h2>Cost by bucket<span class="note">click a bucket to code it</span></h2><table class="s"><tr><th>Bucket</th><th>Opening</th><th>Previous</th><th>This month</th><th>To date</th><th>% of to date</th><th>Pending</th><th>Coded share</th><th>Excluded</th></tr>${bkRows}
@@ -245,7 +250,7 @@ function renderSummary() {
 // =====================================================================================  Checks (live)
 function renderChecks() {
   const rows = [], add = (name, v, kind, note) => rows.push([name, v, kind, note]);
-  add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + client deductions − VAT included − included unsettled ZINTC1 − CJI3 cost.');
+  add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + depreciation excluded + client deductions − VAT included − included unsettled ZINTC1 − CJI3 cost.');
   add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
   (META.cjiFiles || []).forEach((f) => add(`CJI3 file ${f.name} (${f.first} → ${f.last}, ${f.lines.toLocaleString('en-US')} lines): lines vs its grand-total row`, r2(f.sum - (f.grand || 0)), 'abs', f.dropped ? f.dropped.toLocaleString('en-US') + ' lines were already in an earlier file and are counted once.' : 'Sum of the file\'s lines minus its own grand-total row.'));
   if ((META.cjiFiles || []).length > 1) add('CJI3 lines with a different amount in two files', META.cjiConflictN || 0, 'zero', (META.cjiConflicts || []).slice(0, 3).map((c) => `${c.id}: ${c.wasFile} ${c.was} → ${c.nowFile} ${c.now}`).join(' · ') || 'The later download wins; none found.');
@@ -445,6 +450,7 @@ function pageDef() {
   }
   if (ST.tab === 'sub') return subDef();
   if (ST.tab === 'uns') return unsDef();
+  if (ST.tab === 'dep') return depDef();
 }
 // ---- Subcontractor views
 function subDef() {
@@ -521,6 +527,25 @@ document.addEventListener('click', (e) => { const b = e.target.closest('.ordb');
 document.addEventListener('click', (e) => { const t = e.target.closest('[data-uo],#uOpenAll,#uCloseAll'); if (!t || ST.tab !== 'uns') return; e.stopPropagation(); const op = ST.unsOpen || (ST.unsOpen = new Set());
   if (t.id === 'uOpenAll') R.unsRows.forEach((r, k) => op.add(k)); else if (t.id === 'uCloseAll') op.clear(); else op.has(t.dataset.uo) ? op.delete(t.dataset.uo) : op.add(t.dataset.uo); render(); }, true);
 document.addEventListener('click', (e) => { const t = e.target.closest('#uNone,#uCut'); if (!t) return; if (t.id === 'uNone') unsSet('none', [], 'Unsettled: all left out'); else unsSet('cut', [], 'Unsettled: included up to the cut date'); });
+// ---- Depreciation: the CJI3 depreciation per cost element × month; one click (or month by month) takes it out of the counted cost
+const depLab = (k) => (k === 'a' ? 'No month' : PER[+k]);
+function depSet(mode, pick, label) { change([{ t: 'depx', v: JSON.stringify({ mode, pick: [...(pick || [])].map(String) }) }], label); }
+function depToggle(k) { const keys = [...R.depM.keys()], off = new Set(keys.filter((x) => R.depOff(x))); off.has(k) ? off.delete(k) : off.add(k); depSet(off.size ? 'pick' : 'none', off, (off.has(k) ? 'Excluded depreciation ' : 'Counted depreciation ') + depLab(k)); }
+function depDef() {
+  const keys = [...R.depM.keys()].sort((a, b) => (a === 'a' ? 1 : b === 'a' ? -1 : +a - +b)), off = (k) => R.depOff(k), b = BK[DEPI];
+  const rows = b.items.filter((it) => it.da).map((it) => ({ it, g: '' })), tot = (it) => [...it.da.values()].reduce((s, v) => s + v, 0), cnt = (it) => (it.inc === 'No' ? 0 : keys.reduce((s, k) => s + (off(k) ? 0 : it.da.get(k) || 0), 0));
+  const cols = [{ k: 'code', l: 'Cost element name', w: 190, fz: 1, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` },
+    { k: 'inc', l: 'Item', w: 62, v: (r) => r.it.inc, h: (r) => `<td title="No = never count this cost element"><button class="incb ${r.it.inc === 'No' ? 'no' : ''}">${r.it.inc === 'No' ? 'No' : 'Yes'}</button></td>` }];
+  keys.forEach((k) => cols.push(numC('m' + k, depLab(k), 104, (r) => r.it.da.get(k) || 0, { th: off(k) ? 'doff' : '', cls: (r) => (off(k) || r.it.inc === 'No' ? 'dout' : '') })));
+  cols.push(numC('tot', 'In CJI3', 112, (r) => tot(r.it), { h: (r) => `<td class="num"><b>${fmt(tot(r.it))}</b></td>` }), numC('cn', 'Counted', 112, (r) => cnt(r.it), { h: (r) => `<td class="num" style="color:#1F3864"><b>${fmt(cnt(r.it))}</b></td>` }));
+  const sw = keys.map((k) => ({ l: off(k) ? '✕ excluded' : '✓ counted', span: 1, cls: 'tog ' + (off(k) ? 'dmoff' : 'dmon'), dm: k }));
+  const bands = [[{ l: 'click a month to exclude / count it →', span: 2, cls: 'blank' }, ...sw, { l: '', span: 2, cls: 'blank' }]];
+  const foot = (rs) => { const o = { code: '' }; keys.forEach((k) => { o['m' + k] = fmt(rs.reduce((s, r) => s + (r.it.da.get(k) || 0), 0)); }); o.tot = fmt(rs.reduce((s, r) => s + tot(r.it), 0)); o.cn = fmt(rs.reduce((s, r) => s + cnt(r.it), 0)); return o; };
+  const m = ST.depx.mode, all = [...R.depM.values()].reduce((s, e) => s + e.all, 0), tools = `<span class="seg"><button class="${m === 'none' ? 'on' : ''}" id="dNone">Count all depreciation</button><button class="${m === 'all' ? 'on' : ''}" id="dAll">Exclude all depreciation</button><button class="${m === 'pick' ? 'on' : ''}" disabled>Month by month</button></span>
+    <span class="help">Excluded <b style="color:#C00000">${fmt2(R.depExc)}</b> of ${fmt2(all)} in CJI3 · shown on the Summary as "Depreciation excluded by you"</span>`;
+  return { cols, rows, bands, groups: false, sel: false, extraTools: tools, foot };
+}
+document.addEventListener('click', (e) => { const t = e.target.closest('#dNone,#dAll'); if (!t) return; if (t.id === 'dNone') depSet('none', [], 'Depreciation: all counted'); else depSet('all', [], 'Depreciation: all excluded'); });
 // ---- the table renderer
 const VROW = 27;
 function renderTable() {
@@ -542,7 +567,7 @@ function renderTable() {
   // frozen columns: left offsets
   let left = D.sel ? 34 : 0; const fzL = {}; cols.forEach((c) => { if (c.fz) { fzL[c.k] = left; left += c.w; } }); R.fzL = fzL;
   const fz = (c) => (fzL[c.k] !== undefined ? ` fz" style="left:${fzL[c.k]}px` : ''), HH = 27, nb = (D.bands || []).length;
-  const bandH = (D.bands || []).map((row, ri) => '<tr class="band">' + (D.sel && ri === 0 ? `<th rowspan="${nb}" class="blank fz" style="left:0;top:0"></th>` : '') + (() => { let ci = 0; return row.flatMap((x) => { let nf = 0; while (nf < x.span && cols[ci + nf] && fzL[cols[ci + nf].k] !== undefined) nf++; ci += x.span; return nf && nf < x.span ? [{ ...x, span: nf, fzc: cols[ci - x.span] }, { ...x, span: x.span - nf, l: '', tog: '' }] : [{ ...x, fzc: nf ? cols[ci - x.span] : null }]; }).map((x) => { const c0 = x.fzc, st = !!c0; return `<th colspan="${x.span}" class="${x.cls || ''}${st ? ' fz' : ''}" style="top:${ri * HH}px${st ? `;left:${fzL[c0.k]}px` : ''}" ${x.tog ? `data-tog="${x.tog}"` : ''}${x.um !== undefined ? ` data-um="${x.um}" title="Click to include / leave out this month"` : ''}>${esc(x.l)}</th>`; }).join(''); })() + '</tr>').join('');
+  const bandH = (D.bands || []).map((row, ri) => '<tr class="band">' + (D.sel && ri === 0 ? `<th rowspan="${nb}" class="blank fz" style="left:0;top:0"></th>` : '') + (() => { let ci = 0; return row.flatMap((x) => { let nf = 0; while (nf < x.span && cols[ci + nf] && fzL[cols[ci + nf].k] !== undefined) nf++; ci += x.span; return nf && nf < x.span ? [{ ...x, span: nf, fzc: cols[ci - x.span] }, { ...x, span: x.span - nf, l: '', tog: '' }] : [{ ...x, fzc: nf ? cols[ci - x.span] : null }]; }).map((x) => { const c0 = x.fzc, st = !!c0; return `<th colspan="${x.span}" class="${x.cls || ''}${st ? ' fz' : ''}" style="top:${ri * HH}px${st ? `;left:${fzL[c0.k]}px` : ''}" ${x.tog ? `data-tog="${x.tog}"` : ''}${x.um !== undefined ? ` data-um="${x.um}" title="Click to include / leave out this month"` : ''}${x.dm !== undefined ? ` data-dm="${x.dm}" title="Click to count / exclude this month"` : ''}>${esc(x.l)}</th>`; }).join(''); })() + '</tr>').join('');
   $('th').innerHTML = bandH + '<tr>' + (D.sel ? `<th class="fz" style="left:0;top:${nb * HH}px;padding-right:6px"><input type="checkbox" id="all"></th>` : '') + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzL[c.k] !== undefined ? 'fz' : ''}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.l)}">${esc(c.l)}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}</th>`).join('') + '</tr>';
   const nc = cols.length + (D.sel ? 1 : 0), ft = D.foot ? D.foot(rows) : null;
   $('tf').innerHTML = ft ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzL[c.k] !== undefined ? ' fz' : ''}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''}>${j === 0 ? 'TOTAL' : ft[c.k] ?? ''}</td>`).join('')}</tr>` : '';
@@ -595,7 +620,7 @@ $('tb').addEventListener('click', (e) => { const nt = e.target.closest('[data-no
   if (e.target.matches('.ck') && e.shiftKey && lastClick) { const ks = R.rows.map(selKey), a = ks.indexOf(lastClick), b = ks.indexOf(tr.dataset.k); ks.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((k) => sel.add(k)); render(); }
   if (e.target.matches('.ck')) lastClick = tr.dataset.k; });
 $('tb').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input[data-f]')) { e.preventDefault(); const f = e.target.dataset.f, all = [...document.querySelectorAll(`#tb input[data-f="${f}"]`)], k = all.indexOf(e.target); e.target.blur(); setTimeout(() => document.querySelectorAll(`#tb input[data-f="${f}"]`)[k + 1]?.focus(), 0); } });
-$('th').addEventListener('click', (e) => { const b = e.target.closest('.fb'); if (b) { e.stopPropagation(); openPop(b.dataset.k, b); return; } const um = e.target.closest('[data-um]'); if (um) { unsToggle(um.dataset.um); return; } const t = e.target.closest('[data-tog]'); if (t) { const k = t.dataset.tog; PF.has(k) ? PF.delete(k) : PF.add(k); render(); } });
+$('th').addEventListener('click', (e) => { const b = e.target.closest('.fb'); if (b) { e.stopPropagation(); openPop(b.dataset.k, b); return; } const um = e.target.closest('[data-um]'); if (um) { unsToggle(um.dataset.um); return; } const dm = e.target.closest('[data-dm]'); if (dm) { depToggle(dm.dataset.dm); return; } const t = e.target.closest('[data-tog]'); if (t) { const k = t.dataset.tog; PF.has(k) ? PF.delete(k) : PF.add(k); render(); } });
 $('th').addEventListener('change', (e) => { if (e.target.id === 'all') { R.rows.forEach((r) => (e.target.checked ? sel.add(selKey(r)) : sel.delete(selKey(r)))); render(); } });
 $('bkbar').addEventListener('click', (e) => { const x = e.target.closest('[data-xbk]'); if (x) { ST.xbk = +x.dataset.xbk; render(); return; } const b = e.target.closest('[data-bk]'); if (b) { ST.bk = +b.dataset.bk; sel.clear(); render(); $('wrap').scrollTop = 0; } });
 $('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
@@ -710,7 +735,7 @@ $('bExport').onclick = async () => {
   ws.getCell(r, 1).value = 'Cost per month'; ws.getCell(r, 1).font = { name: A, bold: true, size: 12, color: { argb: NAVY } }; r++; head(ws, r, ['Month', ...BK.map((b) => b.short), 'Total']); r++;
   PER.slice(0, NP - 1).forEach((p, k) => { if (k > 0 && R.rep > 0 && k > R.rep) return; put(ws, r, [p, ...BK.map((b, bi) => r2(R.bkP[bi][k])), r2(R.tot[k])], Object.fromEntries(BK.map((b, j) => [j + 1, NUM]).concat([[BK.length + 1, NUM]])), k === R.rep ? { fill: 'FFFFF2CC', bold: true } : {}); r++; });
   r++; ws.getCell(r, 1).value = 'Reconciliation to CJI3'; ws.getCell(r, 1).font = { name: A, bold: true, size: 12, color: { argb: NAVY } }; r++;
-  [['CJI3 cost', META.cost], ['– Counted to the cut date', R.toDate], ['– Pending', R.pend], ['– Excluded', R.excl], ['– Client deductions', R.cdAll], ['+ VAT included', R.vatIn], ...(ZI ? [['+ CJI3 difference: unsettled ZINTC1 charges included', R.unsIn]] : []), ['Difference (must be 0)', R.diff]].forEach(([l, v], i, arr) => { put(ws, r, [l, r2(v)], { 1: NUM2 }, i === arr.length - 1 ? { bold: true } : {}); r++; });
+  [['CJI3 cost', META.cost], ['– Counted to the cut date', R.toDate], ['– Pending', R.pend], ['– Excluded', R.excl], ...(DEPI >= 0 ? [['– Depreciation excluded', R.depExc]] : []), ['– Client deductions', R.cdAll], ['+ VAT included', R.vatIn], ...(ZI ? [['+ CJI3 difference: unsettled ZINTC1 charges included', R.unsIn]] : []), ['Difference (must be 0)', R.diff]].forEach(([l, v], i, arr) => { put(ws, r, [l, r2(v)], { 1: NUM2 }, i === arr.length - 1 ? { bold: true } : {}); r++; });
   ws.getColumn(1).width = 34; for (let c = 2; c <= BK.length + 2; c++) ws.getColumn(c).width = 15; ws.views = [{ showGridLines: false }];
   // Expenses: PKG › Bucket › Item
   const we = wb.addWorksheet('Expenses', { properties: { tabColor: { argb: NAVY }, outlineProperties: { summaryBelow: false } } }); title(we, 'Expenses — PKG › Bucket › Item', note);

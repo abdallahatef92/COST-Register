@@ -39,6 +39,9 @@ Give the internal-order charges report ZINTC1 (`--zintc1 f`, repeat for 2025 + 2
 
 ZINTC1 charges CJI3 has **not settled yet** (house rent since Feb-26, the duplicate Jan-26 fleet timesheets, a fuel order's April, everything after the CJI3 data) are left out by default. The app's **Unsettled** tab shows them per month (one row per SAP order, its component – equipment type, trip charge – in a column); one click includes them – "Include all up to the cut date" (follows the cut date) or month by month by clicking the month switch; the Order switch leaves one order out whatever the month. Included charges are counted in their buckets and shown on the Summary as "+ CJI3 difference: ZINTC1 charges not yet settled, included by you", so the difference to CJI3 stays 0. The choice is saved with your codes. The Excel register leaves them out. Checks list them by order type.
 
+### Depreciation switch (app)
+The **Depreciation** tab shows the CJI3 depreciation per cost element × month (Opening, Sep-25 …). One click excludes all of it, or click a month to exclude / count that month; the Item switch excludes one cost element. What is excluded leaves the counted cost and shows on the Summary as "– Depreciation excluded by you", so the difference to CJI3 stays 0. No estimates are added for months the depreciation run was not done. The choice is saved with your codes.
+
 ### Expenses (dynamic list, Excel 365)
 - **PKG list** (top of the sheet): type PKG code and name once (20 rows, yellow). Each PKG takes the colour of its row; totals per PKG (items, opening, previous, this month, to date, % of total, pending), `(no PKG yet)`, `Not in the list` (a PKG typed on a Coding/Data sheet but missing from the list – turns red) and the TOTAL = counted cost. The list carries over to next month with `--prev`.
 - **Choices** (▼): PKG, Bucket, Lines (all / hand-coded / not fully coded / moved this month) and Sort (PKG › Bucket › Item, To date or This month largest first).
