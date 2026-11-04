@@ -16,9 +16,9 @@ function toAppData(P, o) {
     items: b.items.map((it) => ({ k: it.key, v: it.vals.map(s), pkg: it.pkg || '', mnl: it.mnl || '', ce: it.ce || '', inc: it.inc || 'Yes', div: it.div, nw: it.isNew ? 1 : 0,
       g: b.def.id === 'Material' || b.def.zint ? s(it.headLabel || it.dk || '') : b.def.id === 'Subcontractor' ? s(it.vals[0]) : 0, ...(it.uns ? { uns: 1 } : {}) })) }));
   // lines, column-wise
-  const L = { uns: [], hdr: [], pot: [], off: [], b: [], it: [], d: [], m: [], amt: [], qty: [], vat: [], cd: [], src: [], doc: [], ty: [], ce: [], cen: [], desc: [], wbs: [], po: [], sup: [], cert: [], id: [], name: [], ovr: {} };
+  const L = { ord: [], uns: [], hdr: [], pot: [], off: [], b: [], it: [], d: [], m: [], amt: [], qty: [], vat: [], cd: [], src: [], doc: [], ty: [], ce: [], cen: [], desc: [], wbs: [], po: [], sup: [], cert: [], id: [], name: [], ovr: {} };
   M.buckets.forEach((b, bi) => b.items.forEach((it, ii) => it.lines.forEach((l) => {
-    L.b.push(bi); L.it.push(ii); L.d.push(isoInt(l.date)); L.m.push(l.open ? 0 : l.ym && monIx.has(l.ym) ? monIx.get(l.ym) : -1); L.uns.push(l.uns ? 1 : 0);
+    L.b.push(bi); L.it.push(ii); L.d.push(isoInt(l.date)); L.m.push(l.open ? 0 : l.ym && monIx.has(l.ym) ? monIx.get(l.ym) : -1); L.uns.push(l.uns ? 1 : 0); L.ord.push(s(l.order || ''));
     L.amt.push(b.def.id === 'Subcontractor' ? Math.round((l.net !== undefined ? l.net : l.amt) * 100) / 100 : l.amt); L.qty.push(l.qty || 0);
     L.vat.push(l.offsetVat ? -1 : l.vat || 0); L.cd.push(isoInt(l.cdate)); L.src.push(s(l.source || '')); L.doc.push(s(l.doc)); L.ty.push(s(l.type)); L.ce.push(s(l.ce)); L.cen.push(s(l.cen));
     L.desc.push(s(b.def.id === 'Material' ? l.matDesc : l.desc || l.poText || l.name || l.header)); L.wbs.push(s(l.wbs)); L.po.push(s(l.po)); L.sup.push(s(l.sup)); L.cert.push(s(l.cert)); L.id.push(l.id); L.name.push(s(l.name)); L.hdr.push(s(l.header)); L.pot.push(s(l.poText)); L.off.push(s(l.offset));
