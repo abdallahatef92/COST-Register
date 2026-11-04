@@ -95,6 +95,9 @@ function buildSubcontractor(cjiSub, prog, serv, ceNames, vatOpt) {
   // 2. opening invoices (flag X): the report's detail of the CJI3 opening balance
   const openDate = cjiOpen.map((l) => l.date).sort()[0] || '';
   for (const l of opening) out.push(mk(l, { type: 'UE', open: true, date: l.date || openDate, ym: (l.date || openDate).slice(0, 7), source: 'Opening certificate', ce: l.gl || '' }));
+  // 2b. certificates not in CJI3 – approved but not posted, and not approved: kept as 'not yet in CJI3' lines (uns), net of VAT, month = certificate date
+  for (const [ls, src] of [[unposted, 'Approved, not in CJI3'], [notApproved, 'Not approved']]) for (const l of ls) { if (!l.amt) continue;
+    out.push(mk(l, { doc: l.docNo || '', date: l.date || '', ym: (l.date || '').slice(0, 7), source: src, uns: 1, vin: 0, amt: r2(l.amt) })); }
   // 3. what the certificates do not explain stays visible
   let docAdj = 0, docAdjN = 0, roundN = 0, roundAmt = 0; const adjDocs = [], rnd = new Map();   // differences under 1 EGP on a document are cents of rounding: one row per month
   // per document AND month: the CJI3 lines of the month against the certificates booked in that month (all on the document's first posting date),

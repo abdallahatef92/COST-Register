@@ -129,7 +129,7 @@ const $ = (id) => document.getElementById(id), esc = (s) => String(s ?? '').repl
 const fmt = (v) => (Math.abs(v) < 0.5 ? '-' : Math.round(v).toLocaleString('en-US')), fmt2 = (v) => (Math.abs(v) < 0.005 ? '-' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const fmtM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : fmt(v)), fq = (v) => (Math.abs(v) < 1e-9 ? '-' : v.toLocaleString('en-US', { maximumFractionDigits: 3 })), pct = (a, b) => (b ? (100 * a / b).toFixed(1) + '%' : '-');
 const r2 = (v) => Math.round(v * 100) / 100;
-const UNS = L.uns || [], ZI = META.zint || null, DEPI = BK.findIndex((b) => b.id === 'Asset depreciation');   // ZINTC1 charges not yet settled in CJI3 (excluded unless included)
+const UNS = L.uns || [], HASUNS = UNS.some((v) => v), ZI = META.zint || null, DEPI = BK.findIndex((b) => b.id === 'Asset depreciation');   // ZINTC1 charges not yet settled in CJI3 (excluded unless included)
 const SUBI = BK.findIndex((b) => b.id === 'Subcontractor'), MATI = BK.findIndex((b) => b.id === 'Material');
 BK.forEach((b, bi) => b.items.forEach((it, ii) => { it.bi = bi; it.ii = ii; it.vals = it.v.map((x) => S[x]); it.grp = S[it.g] || ''; }));
 const isSub = (bi) => bi === SUBI, codeF = (bi) => (isSub(bi) ? ['div', 'pkg', 'mnl', 'ce'] : ['pkg', 'mnl', 'ce']), FN = { div: 'DIV', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' };
@@ -205,7 +205,7 @@ function compute() {
 }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
 // =====================================================================================  tabs
-const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ...(ZI ? [['uns', 'Unsettled']] : []), ...(DEPI >= 0 ? [['dep', 'Depreciation']] : []), ['chk', 'Checks'], ['rules', 'Rules']];
+const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ...(HASUNS ? [['uns', 'Unsettled']] : []), ...(DEPI >= 0 ? [['dep', 'Depreciation']] : []), ['chk', 'Checks'], ['rules', 'Rules']];
 $('tabs').innerHTML = TABS.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join('');
 $('tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) { ST.tab = b.dataset.t; sel.clear(); render(); $('wrap').scrollTop = 0; } };
 function render() {
@@ -237,8 +237,8 @@ function renderSummary() {
    <div class="grid2"><div class="panel"><h2>Cost per month<span class="note">counted cost by bucket, up to the cut date · gold = this month</span></h2>${svg}<div class="legend">${BK.map((b, bi) => `<span><i style="background:${bkColor(bi)}"></i>${esc(b.id)}</span>`).join('')}</div></div>
    <div class="panel"><h2>Reconciliation to CJI3<span class="note">CJI3 is the single source of truth</span></h2><table class="s">
      <tr><td>CJI3 cost (all cost elements except 4xxxxxxx)</td><td>${fmt2(META.cost)}</td></tr><tr><td>– Counted to the cut date (To date)</td><td>${fmt2(R.toDate)}</td></tr><tr><td>– Pending (posted after the cut date)</td><td>${fmt2(R.pend)}</td></tr>
-     <tr><td>– Excluded by you</td><td>${fmt2(R.excl)}</td></tr>${DEPI >= 0 ? `<tr><td>– Depreciation excluded by you (<a class="lk" data-gotab="dep">Depreciation</a>)</td><td>${fmt2(R.depExc)}</td></tr>` : ''}<tr><td>– Client deductions (shown with revenue)</td><td>${fmt2(R.cdAll)}</td></tr><tr><td>+ VAT included in Subcontractor amounts (${esc(ST.vat)})</td><td>${fmt2(R.vatIn)}</td></tr>${ZI ? `<tr><td>+ CJI3 difference: ZINTC1 charges not yet settled, included by you (<a class="lk" data-gotab="uns">Unsettled</a>)</td><td>${fmt2(R.unsIn)}</td></tr>` : ''}
-     <tr class="tt"><td>Difference (must be 0)</td><td>${fmt2(R.diff) === '-' ? '0.00' : fmt2(R.diff)}</td></tr>${ZI ? `<tr><td class="inf">ZINTC1 charges not yet settled in CJI3 – left out (not counted)</td><td class="inf">${fmt2(R.unsExc)}</td></tr>` : ''}</table>
+     <tr><td>– Excluded by you</td><td>${fmt2(R.excl)}</td></tr>${DEPI >= 0 ? `<tr><td>– Depreciation excluded by you (<a class="lk" data-gotab="dep">Depreciation</a>)</td><td>${fmt2(R.depExc)}</td></tr>` : ''}<tr><td>– Client deductions (shown with revenue)</td><td>${fmt2(R.cdAll)}</td></tr><tr><td>+ VAT included in Subcontractor amounts (${esc(ST.vat)})</td><td>${fmt2(R.vatIn)}</td></tr>${HASUNS ? `<tr><td>+ CJI3 difference: charges not yet in CJI3, included by you (<a class="lk" data-gotab="uns">Unsettled</a>)</td><td>${fmt2(R.unsIn)}</td></tr>` : ''}
+     <tr class="tt"><td>Difference (must be 0)</td><td>${fmt2(R.diff) === '-' ? '0.00' : fmt2(R.diff)}</td></tr>${HASUNS ? `<tr><td class="inf">Charges not yet in CJI3 (ZINTC1, certificates) – left out (not counted)</td><td class="inf">${fmt2(R.unsExc)}</td></tr>` : ''}</table>
      <h2 style="margin-top:14px">Revenue<span class="note">kept apart, to the cut date</span></h2><table class="s"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr><tr class="tt"><td>Net revenue</td><td>${fmt(R.rev4 - R.cd)}</td></tr><tr><td class="inf">Revenue posted after the cut date</td><td class="inf">${fmt(R.revPend)}</td></tr></table></div></div>
    <div class="panel"><h2>Cost by bucket<span class="note">click a bucket to code it</span></h2><table class="s"><tr><th>Bucket</th><th>Opening</th><th>Previous</th><th>This month</th><th>To date</th><th>% of to date</th><th>Pending</th><th>Coded share</th><th>Excluded</th></tr>${bkRows}
      <tr class="tt"><td>Total</td><td>${fmt(R.tot[0])}</td><td>${fmt(prev)}</td><td>${fmt(R.thisM)}</td><td>${fmt(R.toDate)}</td><td>100%</td><td>${fmt(R.pend)}</td><td></td><td>${fmt(R.excl)}</td></tr></table></div>
@@ -250,13 +250,13 @@ function renderSummary() {
 // =====================================================================================  Checks (live)
 function renderChecks() {
   const rows = [], add = (name, v, kind, note) => rows.push([name, v, kind, note]);
-  add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + depreciation excluded + client deductions − VAT included − included unsettled ZINTC1 − CJI3 cost.');
+  add('Register vs CJI3 cost – difference', R.diff, 'abs', 'Counted + pending + excluded + depreciation excluded + client deductions − VAT included − included charges not yet in CJI3 − CJI3 cost.');
   add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
   (META.cjiFiles || []).forEach((f) => add(`CJI3 file ${f.name} (${f.first} → ${f.last}, ${f.lines.toLocaleString('en-US')} lines): lines vs its grand-total row`, r2(f.sum - (f.grand || 0)), 'abs', f.dropped ? f.dropped.toLocaleString('en-US') + ' lines were already in an earlier file and are counted once.' : 'Sum of the file\'s lines minus its own grand-total row.'));
   if ((META.cjiFiles || []).length > 1) add('CJI3 lines with a different amount in two files', META.cjiConflictN || 0, 'zero', (META.cjiConflicts || []).slice(0, 3).map((c) => `${c.id}: ${c.wasFile} ${c.was} → ${c.nowFile} ${c.now}`).join(' · ') || 'The later download wins; none found.');
   add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule – see the Rules tab: make a rule and apply it.');
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
-  if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
+  if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - R.bkUns[SUBI] - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
   BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Fully coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
   add('Lines typed over (hand-coded)', [...R.hand].reduce((s, v) => s + v, 0), 'info', 'Lines coded differently from their item (Lines tab).');
   add('ZY accrual-reversal lines paired to a bucket', META.zy, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
@@ -495,19 +495,19 @@ const unsLab = (k) => (k === 'a' ? 'After the CJI3 data' : PER[+k]);
 function unsDef() {   // one row per SAP order; its component (equipment type, trip charge, apartment) in a column
   const it = (i) => BK[L.b[i]].items[L.it[i]];
   const keys = [...R.unsM.keys()].sort((a, b) => (a === 'a' ? 1 : b === 'a' ? -1 : +a - +b)), on = (k) => R.keyOn(k), ORD = L.ord || [];
-  const byO = new Map(); for (let i = 0; i < N; i++) { if (!UNS[i]) continue; const o = S[ORD[i]] || itemCode(it(i)), k = L.b[i] + '|' + o; let r = byO.get(k);
-    if (!r) byO.set(k, (r = { o, g: BK[L.b[i]].id, idx: [], comps: new Map(), ua: new Map(), desc: S[L.hdr[i]] || '' })); r.idx.push(i); const c = itemCode(it(i)); r.comps.set(c, itemDesc(it(i)));
+  const byO = new Map(); for (let i = 0; i < N; i++) { if (!UNS[i]) continue; const sc = L.b[i] === SUBI, o = sc ? S[L.po[i]] + ' / ' + S[L.cert[i]] : S[ORD[i]] || itemCode(it(i)), g = sc ? 'Subcontractor – ' + SRC[i] : BK[L.b[i]].id, k = g + '|' + o; let r = byO.get(k);
+    if (!r) byO.set(k, (r = { o, g, idx: [], comps: new Map(), ua: new Map(), desc: sc ? S[L.sup[i]] : S[L.hdr[i]] || '' })); r.idx.push(i); const c = itemCode(it(i)); r.comps.set(c, itemDesc(it(i)));
     const mk = L.m[i] > 0 ? String(L.m[i]) : 'a'; r.ua.set(mk, (r.ua.get(mk) || 0) + R.amt[i]); }
   const top = [...byO.values()]; top.forEach((r) => { r.tot = [...r.ua.values()].reduce((s, v) => s + v, 0); r.compL = r.comps.size === 1 ? [...r.comps].map(([c, d]) => (c === r.o ? '(the order itself)' : c + ' · ' + d))[0] : r.comps.size + ' components: ' + [...r.comps.keys()].join(', ');
     r.sq = [r.o, r.desc, r.compL].join(' '); }); top.sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : 0) || Math.abs(b.tot) - Math.abs(a.tot));
   const open = ST.unsOpen || (ST.unsOpen = new Set()), rows = [];
   for (const r of top) { rows.push(r); if (!open.has(r.g + '|' + r.o)) continue;   // the order's lines, one level under it
     r.idx.slice().sort((a, b) => L.m[a] - L.m[b] || L.d[a] - L.d[b]).forEach((i) => { const mk = L.m[i] > 0 ? String(L.m[i]) : 'a';
-      rows.push({ child: 1, i, it: it(i), o: r.o, g: r.g, idx: [i], ua: new Map([[mk, R.amt[i]]]), tot: R.amt[i], desc: [S[L.name[i]], L.qty[i] ? fq(L.qty[i]) + ' ' + (itemUnit(it(i)) || '') : ''].filter(Boolean).join(' · ') || S[L.desc[i]], compL: itemCode(it(i)) === r.o ? S[L.cen[i]] : itemCode(it(i)) + ' · ' + itemDesc(it(i)), sq: r.sq + ' ' + S[L.name[i]] }); }); }
+      rows.push({ child: 1, i, it: it(i), o: r.o, g: r.g, idx: [i], ua: new Map([[mk, R.amt[i]]]), tot: R.amt[i], desc: L.b[i] === SUBI ? [S[L.desc[i]], L.qty[i] ? fq(L.qty[i]) + ' ' + (itemUnit(it(i)) || '') : ''].filter(Boolean).join(' · ') : [S[L.name[i]], L.qty[i] ? fq(L.qty[i]) + ' ' + (itemUnit(it(i)) || '') : ''].filter(Boolean).join(' · ') || S[L.desc[i]], compL: itemCode(it(i)) === r.o ? S[L.cen[i]] : itemCode(it(i)) + ' · ' + itemDesc(it(i)), sq: r.sq + ' ' + S[L.name[i]] }); }); }
   const st = (r) => { const n = r.idx.filter((i) => (OVR[L.id[i]] || {}).inc === 'No' || it(i).inc === 'No').length; return n === 0 ? 'Yes' : n === r.idx.length ? 'No' : 'Part'; };
   const incOf = (r) => r.idx.reduce((s, i) => s + (R.inc[i] ? R.amt[i] : 0), 0);
-  const cols = [{ k: 'o', l: 'Order', w: 124, fz: 1, v: (r) => r.o, h: (r) => (r.child ? `<td style="padding-left:26px;color:#6b7280">${esc(PER[L.m[r.i]] || 'after data')}</td>` : `<td><span class="tgl" data-uo="${esc(r.g + '|' + r.o)}">${open.has(r.g + '|' + r.o) ? '−' : '+'}</span> <b>${esc(r.o)}</b> <span class="help">${r.idx.length}</span></td>`) },
-    { k: 'desc', l: 'Order description / line', w: 260, v: (r) => r.desc, h: (r) => `<td dir="auto" title="${esc(r.desc)}"${r.child ? ' style="color:#4b5563"' : ''}>${esc(r.desc)}</td>` },
+  const cols = [{ k: 'o', l: 'Order / PO · cert.', w: 190, fz: 1, v: (r) => r.o, h: (r) => (r.child ? `<td style="padding-left:26px;color:#6b7280">${esc(PER[L.m[r.i]] || 'after data')}</td>` : `<td><span class="tgl" data-uo="${esc(r.g + '|' + r.o)}">${open.has(r.g + '|' + r.o) ? '−' : '+'}</span> <b>${esc(r.o)}</b> <span class="help">${r.idx.length}</span></td>`) },
+    { k: 'desc', l: 'Description / subcontractor / line', w: 260, v: (r) => r.desc, h: (r) => `<td dir="auto" title="${esc(r.desc)}"${r.child ? ' style="color:#4b5563"' : ''}>${esc(r.desc)}</td>` },
     { k: 'comp', l: 'Component', w: 210, v: (r) => r.compL, h: (r) => `<td title="${esc(r.compL)}">${esc(r.compL)}</td>` },
     { k: 'inc', l: 'Order', w: 66, v: (r) => st(r), h: (r) => { const x = st(r); return r.child ? `<td title="No = never count this line"><button class="incb ${x === 'No' ? 'no' : ''}">${x}</button></td>` : `<td title="No = never count this order, whatever the month switch"><button class="incb ordb ${x === 'No' ? 'no' : ''}" data-o="${esc(r.g + '|' + r.o)}">${x}</button></td>`; } }];
   keys.forEach((k) => cols.push(numC('m' + k, unsLab(k), k === 'a' ? 118 : 96, (r) => r.ua.get(k) || 0, { th: on(k) ? 'uon' : '', cls: (r) => (on(k) && st(r) !== 'No' ? 'uin' : '') })));
@@ -519,7 +519,7 @@ function unsDef() {   // one row per SAP order; its component (equipment type, t
   const m = ST.uns.mode, tools = `<span class="seg"><button class="${m === 'none' ? 'on' : ''}" id="uNone">Leave all out</button><button class="${m === 'cut' ? 'on' : ''}" id="uCut">Include all up to the cut date (${esc(R.repLab)})</button><button class="${m === 'pick' ? 'on' : ''}" id="uPick" disabled>Month by month</button></span> <button id="uOpenAll">+ All order lines</button><button id="uCloseAll">− Orders only</button>
     <span class="help">Included <b style="color:#375623">${fmt2(R.unsIn)}</b> of ${fmt2(R.unsIn + R.unsExc)} · shown on the Summary as a CJI3 difference</span>`;
   return { cols, rows, bands, groups: true, sel: false, extraTools: tools, foot, rowCls: (r) => (r.child ? 'uchild ' : 'uord ') + (st(r) === 'No' ? 'exc' : ''),
-    gLabel: (g, rs0) => { const rs = rs0.filter((r) => !r.child); return `${esc(g)}<span class="gm">${rs.length} orders · not settled ${fmt(rs.reduce((s, r) => s + r.tot, 0))} · included ${fmt(rs.reduce((s, r) => s + incOf(r), 0))}</span>`; } };
+    gLabel: (g, rs0) => { const rs = rs0.filter((r) => !r.child); const sc = /^Subcontractor/.test(g); return `${esc(g)}<span class="gm">${rs.length} ${sc ? 'certificates' : 'orders'} · ${sc ? 'not in CJI3' : 'not settled'} ${fmt(rs.reduce((s, r) => s + r.tot, 0))} · included ${fmt(rs.reduce((s, r) => s + incOf(r), 0))}</span>`; } };
 }
 // the Order switch: all lines of the order left out (line Include = No) or back to their item
 document.addEventListener('click', (e) => { const b = e.target.closest('.ordb'); if (!b || !R.unsRows) return; e.stopPropagation(); const r = R.unsRows.get(b.dataset.o); if (!r) return;
@@ -735,7 +735,7 @@ $('bExport').onclick = async () => {
   ws.getCell(r, 1).value = 'Cost per month'; ws.getCell(r, 1).font = { name: A, bold: true, size: 12, color: { argb: NAVY } }; r++; head(ws, r, ['Month', ...BK.map((b) => b.short), 'Total']); r++;
   PER.slice(0, NP - 1).forEach((p, k) => { if (k > 0 && R.rep > 0 && k > R.rep) return; put(ws, r, [p, ...BK.map((b, bi) => r2(R.bkP[bi][k])), r2(R.tot[k])], Object.fromEntries(BK.map((b, j) => [j + 1, NUM]).concat([[BK.length + 1, NUM]])), k === R.rep ? { fill: 'FFFFF2CC', bold: true } : {}); r++; });
   r++; ws.getCell(r, 1).value = 'Reconciliation to CJI3'; ws.getCell(r, 1).font = { name: A, bold: true, size: 12, color: { argb: NAVY } }; r++;
-  [['CJI3 cost', META.cost], ['– Counted to the cut date', R.toDate], ['– Pending', R.pend], ['– Excluded', R.excl], ...(DEPI >= 0 ? [['– Depreciation excluded', R.depExc]] : []), ['– Client deductions', R.cdAll], ['+ VAT included', R.vatIn], ...(ZI ? [['+ CJI3 difference: unsettled ZINTC1 charges included', R.unsIn]] : []), ['Difference (must be 0)', R.diff]].forEach(([l, v], i, arr) => { put(ws, r, [l, r2(v)], { 1: NUM2 }, i === arr.length - 1 ? { bold: true } : {}); r++; });
+  [['CJI3 cost', META.cost], ['– Counted to the cut date', R.toDate], ['– Pending', R.pend], ['– Excluded', R.excl], ...(DEPI >= 0 ? [['– Depreciation excluded', R.depExc]] : []), ['– Client deductions', R.cdAll], ['+ VAT included', R.vatIn], ...(HASUNS ? [['+ CJI3 difference: charges not yet in CJI3, included', R.unsIn]] : []), ['Difference (must be 0)', R.diff]].forEach(([l, v], i, arr) => { put(ws, r, [l, r2(v)], { 1: NUM2 }, i === arr.length - 1 ? { bold: true } : {}); r++; });
   ws.getColumn(1).width = 34; for (let c = 2; c <= BK.length + 2; c++) ws.getColumn(c).width = 15; ws.views = [{ showGridLines: false }];
   // Expenses: PKG › Bucket › Item
   const we = wb.addWorksheet('Expenses', { properties: { tabColor: { argb: NAVY }, outlineProperties: { summaryBelow: false } } }); title(we, 'Expenses — PKG › Bucket › Item', note);
