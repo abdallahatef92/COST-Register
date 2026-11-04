@@ -1,0 +1,131 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cost Register – design example</title>
+<style>
+:root{--navy:#1F3864;--navy2:#2F5597;--green:#548235;--gold:#BF8F00;--line:#e5e7eb;--muted:#6b7280;--bg:#f4f6fa}
+*{box-sizing:border-box} body{margin:0;font:13px Inter,Segoe UI,Arial,sans-serif;color:#1f2937;background:var(--bg);height:100vh;display:grid;grid-template-columns:268px 1fr;grid-template-rows:1fr 34px}
+.num{text-align:right;font-variant-numeric:tabular-nums} table{border-collapse:collapse;width:100%} th,td{padding:6px 9px;white-space:nowrap}
+.tag{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px} .new{background:#E2EFDA;color:#375623} .chg{background:#FFF2CC;color:#7f6000}
+/* sidebar = the month close + the buckets */
+.side{background:#fff;border-right:1px solid var(--line);padding:14px 12px;overflow:auto;grid-row:1/3}
+.logo{font-weight:700;color:var(--navy);font-size:16px;padding:0 6px} .proj{font-size:11.5px;color:var(--muted);padding:2px 6px 12px}
+.close{background:#F3F6FB;border-radius:10px;padding:9px 11px;margin-bottom:8px} .close b{color:var(--navy)} .close small{display:block;color:var(--muted);font-size:11.5px}
+.pb{height:6px;background:#dde3ee;border-radius:4px;margin-top:6px} .pb i{display:block;height:6px;background:var(--green);border-radius:4px}
+.step{display:flex;gap:9px;padding:7px 8px;border-radius:9px;margin:1px 0;cursor:pointer} .step:hover{background:#f3f4f6} .step.on{background:var(--navy);color:#fff}
+.dot{width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;background:#e5e7eb;color:var(--muted)}
+.done .dot{background:var(--green);color:#fff} .step.on .dot{background:#fff;color:var(--navy)} .step b{display:block;font-size:12.5px} .step span{font-size:11px;color:var(--muted)} .step.on span{color:#c7d2fe}
+.sec{font-size:10.5px;letter-spacing:.06em;color:#9ca3af;margin:14px 8px 4px;text-transform:uppercase}
+.bk{display:flex;justify-content:space-between;padding:5px 10px;border-radius:7px;cursor:pointer;font-size:12.5px} .bk:hover{background:#f3f4f6} .bk.on{background:#EEF2F8;color:var(--navy);font-weight:600} .bk small{color:#9ca3af}
+/* main */
+.main{overflow:auto;min-width:0} .scr{display:none;padding:16px 20px} .scr.on{display:block}
+.head{display:flex;align-items:center;gap:10px;margin-bottom:12px} .head h1{margin:0;font-size:18px;color:var(--navy)} .head .s{color:var(--muted)}
+.pill{border:1px solid #d1d5db;border-radius:7px;padding:5px 10px;background:#fff;font-size:12.5px;cursor:pointer} .pill.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+.seg{display:inline-flex;border:1px solid #d1d5db;border-radius:7px;overflow:hidden} .seg span{padding:5px 11px;background:#fff;cursor:pointer} .seg span.on{background:var(--navy);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px} .k{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.k span{font-size:11.5px;color:var(--muted)} .k b{display:block;font-size:20px;color:var(--navy);margin:2px 0} .k i{font-style:normal;font-size:11.5px}
+.ok{color:var(--green)} .warn{color:#C55A11}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px} .c{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.c h3{margin:0;font-size:14px;color:var(--navy);display:flex;justify-content:space-between;align-items:center} .c .n{font-size:21px;font-weight:700;margin:6px 0 0} .c .s{font-size:11.5px;color:var(--muted)}
+.btn{display:inline-block;margin-top:10px;background:var(--navy);color:#fff;border-radius:7px;padding:6px 12px;font-size:12px;cursor:pointer} .btn.l{background:#fff;color:var(--navy);border:1px solid #c7d2e8}
+.c.att{background:#FFF8EC;border-color:#F6C77A}
+/* queue */
+.q3{display:grid;grid-template-columns:300px 1fr 320px;gap:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:600px}
+.ql{border-right:1px solid var(--line)} .qh{padding:9px 14px;font-size:11.5px;color:var(--muted);border-bottom:1px solid #f1f5f9}
+.qi{display:flex;justify-content:space-between;gap:8px;padding:8px 14px;border-bottom:1px solid #f1f5f9} .qi.on{background:#EEF2F8;box-shadow:inset 3px 0 0 var(--navy)} .qi b{font-size:12.5px} .qi small{display:block;color:var(--muted);font-size:11.5px} .qi .num{font-weight:600}
+.qm{padding:14px 18px;background:var(--bg)} .qm h2{margin:0;color:var(--navy);font-size:20px} .qm .d{font-size:16px;margin:2px 0} .qm .m{color:var(--muted);font-size:12px}
+.box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-top:12px}
+.bars{display:flex;align-items:flex-end;gap:5px;height:80px} .bars div{flex:1;text-align:center;font-size:10px;color:#9ca3af} .bars i{display:block;background:#8EA9DB;border-radius:3px 3px 0 0;margin-bottom:3px} .bars .cut i{background:var(--gold)}
+.lt td{border-bottom:1px solid #f1f5f9;font-size:12px}
+.qc{padding:14px 16px} .qc h3{margin:0 0 10px;color:var(--navy);font-size:14px} .f{margin-bottom:11px} .f label{font-size:11.5px;color:var(--muted)}
+.f .in{border:2px solid #F6C77A;background:#FFF8EC;border-radius:7px;padding:7px 10px;font-size:14px;margin-top:3px} .sg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px} .sg span{background:#EEF2F8;color:var(--navy);border-radius:12px;padding:3px 9px;font-size:11.5px}
+.big{display:block;text-align:center;border-radius:8px;padding:9px;margin-top:8px;font-weight:600} .big.p{background:var(--navy);color:#fff} .big.s{border:1px solid #c7d2e8;color:var(--navy)}
+kbd{background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:0 5px;font-size:10.5px} .kh{font-size:11px;color:#9ca3af;margin-top:10px;line-height:1.8}
+/* grid + review */
+.t{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden} .t th{background:var(--navy);color:#fff;font-size:12px;text-align:left;font-weight:600} .t th.num{text-align:right} .t th.code{background:var(--gold)}
+.t td{border-bottom:1px solid #f1f5f9} .g td{background:#EEF2F8;font-weight:600;color:var(--navy)} .sub td:first-child{padding-left:28px} .cutc{background:#FFF8E1}
+.ci{display:inline-block;width:70px;height:20px;border:1px solid #F6C77A;background:#FFF8EC;border-radius:5px;vertical-align:middle}
+.up{color:#C00000} .dn{color:var(--green)} .rv{display:grid;grid-template-columns:1fr 330px;gap:14px}
+.mv{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:5px 0;border-bottom:1px solid #f1f5f9} .hb{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:12px} .hb i{display:block;height:12px;background:#8EA9DB;border-radius:3px} .hb span{width:52px} .hb b{margin-left:auto}
+.ex{background:#FFF2CC;color:#7f6000;border-radius:8px;padding:6px 10px;font-size:12px;margin-bottom:10px}
+/* status bar */
+.status{grid-column:2;background:#fff;border-top:1px solid var(--line);display:flex;gap:20px;align-items:center;padding:0 20px;font-size:12px;color:#374151}
+</style></head><body>
+<nav class="side">
+  <div class="logo">Cost Register</div><div class="proj">SUTH · EGP · CJI3 to 30-Sep-26</div>
+  <div class="close"><b>Sep-26 month close</b><small>2 of 6 steps done</small><div class="pb"><i style="width:33%"></i></div></div>
+  <div class="step done" data-go="cockpit"><div class="dot">✓</div><div><b>Load SAP files</b><span>6 files · 46,206 CJI3 lines</span></div></div>
+  <div class="step done" data-go="cockpit"><div class="dot">✓</div><div><b>Reconcile to CJI3</b><span>difference 0.00 · 0 unclassified</span></div></div>
+  <div class="step on" data-go="cockpit"><div class="dot">3</div><div><b>Code new &amp; changed</b><span>611 items have Sep-26 cost</span></div></div>
+  <div class="step" data-go="cockpit"><div class="dot">4</div><div><b>Decide not in CJI3</b><span>unsettled 29.0M · depreciation 9.3M</span></div></div>
+  <div class="step" data-go="review"><div class="dot">5</div><div><b>Review the month</b><span>by PKG · movers</span></div></div>
+  <div class="step" data-go="review"><div class="dot">6</div><div><b>Export &amp; save codes</b><span>report · codes for Oct-26</span></div></div>
+  <div class="sec">Buckets · Sep-26</div>
+  <div class="bk on" data-go="queue">Material <small>19.1M</small></div><div class="bk" data-go="queue">Subcontractor <small>33.8M</small></div><div class="bk">G&amp;A <small>12.5M</small></div>
+  <div class="bk">Equipment / fuel <small>2.0M</small></div><div class="bk">Labor <small>1.0M</small></div><div class="bk">Fleet <small>0.8M</small></div><div class="bk">Other direct <small>0.4M</small></div><div class="bk">House rent <small>–</small></div><div class="bk">Depreciation <small>–</small></div>
+  <div class="sec">Not in CJI3</div><div class="bk">Unsettled <small>29.0M</small></div><div class="bk">Depreciation switch <small>9.3M</small></div>
+  <div class="sec">Analysis</div><div class="bk">GL</div><div class="bk">WBS</div><div class="bk">Rules</div><div class="bk">Checks <small class="ok">all OK</small></div>
+</nav>
+<main class="main">
+<!-- 1. cockpit (Summary) -->
+<section class="scr on" id="cockpit"><div class="head"><h1>Sep-26 month close</h1><span class="s">step 3 of 6 · code what moves this month's numbers</span><div style="flex:1"></div><span class="pill">Cut 30-Sep-26 ▾</span><span class="pill">Exclude VAT ▾</span><span class="pill">Import codes</span><span class="pill pri">Export Excel</span></div>
+<div class="kpis"><div class="k"><span>CJI3 cost</span><b>700,197,301</b><i class="ok">difference 0.00 ✓</i></div><div class="k"><span>Counted to date</span><b>699,214,225</b><i>previous 630,899,460</i></div><div class="k"><span>This month · Sep-26</span><b>68,314,765</b><i>Aug-26 75,253,680</i></div><div class="k"><span>Coded share of Sep-26</span><b>0%</b><i class="warn">first month – nothing coded yet</i></div></div>
+<div class="cards">
+<div class="c"><h3>Material <span class="tag new">new 36</span></h3><div class="n">374 items</div><div class="s">with Sep-26 cost · 19.1M · 1,942 items in total</div><span class="btn" data-go="queue">Start coding queue ›</span> <span class="btn l" data-go="grid">Grid</span></div>
+<div class="c"><h3>Subcontractor <span class="tag new">new 43</span></h3><div class="n">193 services</div><div class="s">with Sep-26 cost · 33.8M · 629 services in total</div><span class="btn">Start coding queue ›</span> <span class="btn l">Grid</span></div>
+<div class="c"><h3>G&amp;A <span class="tag new">new 1</span></h3><div class="n">13 items</div><div class="s">with Sep-26 cost · 12.5M</div><span class="btn">Start coding queue ›</span></div>
+<div class="c"><h3>Equipment / fuel <span class="tag new">new 3</span></h3><div class="n">16 units</div><div class="s">with Sep-26 cost · 2.0M (ZINTC1 detail)</div><span class="btn">Start coding queue ›</span></div>
+<div class="c"><h3>Fleet · Labor · Other</h3><div class="n">13 items</div><div class="s">with Sep-26 cost · 2.2M</div><span class="btn l">Open ›</span></div>
+<div class="c att"><h3>Step 4 · Not in CJI3</h3><div class="n">29.0M</div><div class="s">orders 12.1M · certificates 16.9M · nothing included yet</div><span class="btn l">Unsettled ›</span> <span class="btn l">Depreciation ›</span></div>
+</div></section>
+<!-- 2. coding queue -->
+<section class="scr" id="queue"><div class="head"><h1>Material</h1><span class="s">374 items with Sep-26 cost · 19,085,271</span><div style="flex:1"></div><span class="seg"><span class="on">Queue</span><span data-go="grid">Grid</span></span><span class="pill">Per month</span><span class="pill">Lines</span></div>
+<div class="q3"><div class="ql"><div class="qh">To code · largest Sep-26 first · <b>New</b> marked</div>
+<div class="qi on"><div><b>13000040</b><small>حديد تسليح 10مم مشرشر · TO</small></div><div class="num">4,325,596</div></div>
+<div class="qi"><div><b>13000042</b><small>حديد تسليح 16مم مشرشر · TO</small></div><div class="num">3,432,446</div></div>
+<div class="qi"><div><b>13000041</b><small>حديد تسليح 12مم مشرشر · TO</small></div><div class="num">1,829,361</div></div>
+<div class="qi"><div><b>26000252</b><small>خرسانة · M3</small></div><div class="num">716,646</div></div>
+<div class="qi"><div><b>26000601</b><small>حديد · TON</small></div><div class="num">677,966</div></div>
+<div class="qi"><div><b>… <span class="tag new">New</span></b><small>36 new items this month</small></div><div class="num"></div></div>
+<div class="qi" style="color:#9ca3af">… 368 more</div></div>
+<div class="qm"><h2>13000040</h2><div class="d">حديد تسليح 10مم مشرشر</div><div class="m">M · Materials › M03 · CONCRETE › M030201 · TO · 1,247 lines · to date 54,867,625 · qty 1,594.422 TO · rate 34,412</div>
+<div class="box"><div class="m" style="margin-bottom:6px">Per month · gold = Sep-26</div><div class="bars">
+<div><i style="height:66px"></i>Sep</div><div><i style="height:46px"></i>Oct</div><div><i style="height:33px"></i>Nov</div><div><i style="height:31px"></i>Dec</div><div><i style="height:35px"></i>Jan</div><div><i style="height:33px"></i>Feb</div><div><i style="height:37px"></i>Mar</div><div><i style="height:67px"></i>Apr</div><div><i style="height:35px"></i>May</div><div><i style="height:37px"></i>Jun</div><div><i style="height:33px"></i>Jul</div><div><i style="height:46px"></i>Aug</div><div class="cut"><i style="height:43px"></i>Sep</div></div></div>
+<div class="box"><div class="m" style="margin-bottom:4px">Largest Sep-26 lines – WBS and the CJI3 name help you allocate</div><table class="lt">
+<tr><td>2026-09-17</td><td>I-SUTH.01-03-2-01-T01</td><td dir="rtl">خالد عبدالغني</td><td class="num">6.828 TO</td><td class="num">236,584</td></tr>
+<tr><td>2026-09-01</td><td>I-SUTH.01-03-3-04-T01</td><td dir="rtl">محمد عبداللطيف</td><td class="num">6.184 TO</td><td class="num">214,270</td></tr>
+<tr><td>2026-09-16</td><td>I-SUTH.01-03-3-04-T01</td><td dir="rtl">امين العليمي</td><td class="num">6.117 TO</td><td class="num">211,949</td></tr>
+<tr><td>2026-09-26</td><td>I-SUTH.01-03-3-04-S1A</td><td dir="rtl">احمد زغلول</td><td class="num">5.245 TO</td><td class="num">181,735</td></tr></table></div></div>
+<div class="qc"><h3>Code this item</h3>
+<div class="f"><label>PKG</label><div class="in">P02 ▏</div><div class="sg"><span>P02 · last used in M03</span><span>P01</span><span>P07</span></div></div>
+<div class="f"><label>MNL</label><div class="in">MAT</div></div>
+<div class="f"><label>Cost element code</label><div class="in" style="color:#9ca3af">CE-…</div><div class="sg"><span>CE-120 · steel</span><span>CE-121</span></div></div>
+<span class="big p">Apply &amp; next ›</span><span class="big s">Apply to all 28 in M03 · CONCRETE</span><span class="big" style="color:var(--muted)">Skip · Exclude</span>
+<div class="kh"><kbd>Enter</kbd> apply &amp; next · <kbd>Tab</kbd> next field · <kbd>↓</kbd> skip · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo<br>Suggestions come from codes you already typed (same group, same service prefix, last month).</div></div></div></section>
+<!-- 3. grid (today's screen, inside the new shell) -->
+<section class="scr" id="grid"><div class="head"><h1>Material</h1><span class="s">1,942 items · to date 250,905,090</span><div style="flex:1"></div><span class="seg"><span data-go="queue">Queue</span><span class="on">Grid</span></span><span class="pill">Per month</span><span class="pill">Lines</span></div>
+<div class="t"><table><tr><th>Material</th><th>Description</th><th>Unit</th><th class="code">PKG</th><th class="code">MNL</th><th class="code">Cost element</th><th>Status</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">To date</th><th class="num">Sep-26</th></tr>
+<tr class="g"><td colspan="11">− M · Materials › M03 · CONCRETE · 28 items</td></tr>
+<tr><td>13000040</td><td dir="rtl">حديد تسليح 10مم مشرشر</td><td>TO</td><td><span class="ci"></span></td><td>MAT</td><td><span class="ci" style="width:90px"></span></td><td><span class="tag" style="background:#FCE4D6">Not coded</span></td><td class="num">1,594.422</td><td class="num">34,412</td><td class="num"><b>54,867,625</b></td><td class="num cutc">4,325,596</td></tr>
+<tr><td>13000042</td><td dir="rtl">حديد تسليح 16مم مشرشر</td><td>TO</td><td><span class="ci"></span></td><td>MAT</td><td><span class="ci" style="width:90px"></span></td><td><span class="tag" style="background:#FCE4D6">Not coded</span></td><td class="num"></td><td class="num"></td><td class="num"><b>37,848,050</b></td><td class="num cutc">3,432,446</td></tr>
+<tr><td>13000041</td><td dir="rtl">حديد تسليح 12مم مشرشر</td><td>TO</td><td><span class="ci"></span></td><td>MAT</td><td><span class="ci" style="width:90px"></span></td><td><span class="tag" style="background:#FCE4D6">Not coded</span></td><td class="num"></td><td class="num"></td><td class="num"><b>25,549,546</b></td><td class="num cutc">1,829,361</td></tr>
+<tr class="g"><td colspan="11">+ M · Materials › M09 …</td></tr></table></div></section>
+<!-- 4. review by PKG (F) -->
+<section class="scr" id="review"><div class="head"><h1>Sep-26 review</h1><span class="s">counted cost · cut 30-Sep-26 · Exclude VAT</span><div style="flex:1"></div><span class="seg"><span class="on">PKG › Bucket</span><span>Bucket › PKG</span></span><span class="pill pri">Export Excel report</span><span class="pill">Save codes for Oct-26</span></div>
+<div class="ex">Example coding: the PKG codes and their split are illustrative (nothing is coded yet). Totals, buckets and movers are your real Sep-26 figures.</div>
+<div class="rv"><div class="t"><table><tr><th>PKG / bucket</th><th class="num">Previous</th><th class="num">Sep-26</th><th class="num">To date</th><th class="num">Aug-26</th><th class="num">vs Aug</th><th class="num">% of total</th></tr>
+<tr class="g"><td>− P02 · Concrete &amp; steel</td><td class="num">256,400,000</td><td class="num cutc">28,700,000</td><td class="num">285,100,000</td><td class="num">31,900,000</td><td class="num dn">−10.0%</td><td class="num">40.8%</td></tr>
+<tr class="sub"><td>Material</td><td class="num">152,000,000</td><td class="num cutc">13,100,000</td><td class="num">165,100,000</td><td class="num">22,300,000</td><td class="num dn">−41.3%</td><td class="num">23.6%</td></tr>
+<tr class="sub"><td>Subcontractor</td><td class="num">104,400,000</td><td class="num cutc">15,600,000</td><td class="num">120,000,000</td><td class="num">9,600,000</td><td class="num up">+62.5%</td><td class="num">17.2%</td></tr>
+<tr class="g"><td>+ P01 · Earthworks &amp; soil replacement</td><td class="num">96,500,000</td><td class="num cutc">9,800,000</td><td class="num">106,300,000</td><td class="num">8,900,000</td><td class="num up">+10.1%</td><td class="num">15.2%</td></tr>
+<tr class="g"><td>+ P10 · Site overheads (G&amp;A, labor)</td><td class="num">108,200,000</td><td class="num cutc">13,500,000</td><td class="num">121,700,000</td><td class="num">10,200,000</td><td class="num up">+32.4%</td><td class="num">17.4%</td></tr>
+<tr class="g"><td>+ P11 · Equipment, fleet, housing</td><td class="num">39,900,000</td><td class="num cutc">2,800,000</td><td class="num">42,700,000</td><td class="num">3,100,000</td><td class="num dn">−9.7%</td><td class="num">6.1%</td></tr>
+<tr class="g"><td style="color:#C55A11">+ (no PKG yet)</td><td class="num">129,899,460</td><td class="num cutc">13,514,765</td><td class="num">143,414,225</td><td class="num">21,153,680</td><td class="num"></td><td class="num">20.5%</td></tr>
+<tr style="font-weight:700"><td>Total counted</td><td class="num">630,899,460</td><td class="num cutc">68,314,765</td><td class="num">699,214,225</td><td class="num">75,253,680</td><td class="num dn">−9.2%</td><td class="num">100%</td></tr></table></div>
+<div><div class="t" style="padding:10px 14px;margin-bottom:12px"><b style="color:var(--navy)">Sep-26 by bucket</b>
+<div class="hb"><span>Sub</span><i style="width:170px"></i><b>33.8M</b></div><div class="hb"><span>Material</span><i style="width:96px"></i><b>19.1M</b></div><div class="hb"><span>G&amp;A</span><i style="width:63px"></i><b>12.5M</b></div><div class="hb"><span>Equip.</span><i style="width:10px"></i><b>2.0M</b></div><div class="hb"><span>Other</span><i style="width:5px"></i><b>0.9M</b></div></div>
+<div class="t" style="padding:10px 14px;margin-bottom:12px"><b style="color:var(--navy)">Top movers vs Aug-26</b>
+<div class="mv"><span>G&amp;A · Social insurance and levy</span><b class="up">+2.85M</b></div><div class="mv"><span dir="rtl">S0302 · خ م محتوي 370 جهد300</span><b class="up">+1.86M</b></div><div class="mv"><span>13000171 · أسمنت أسود سائب 42.5</span><b class="dn">−3.98M</b></div><div class="mv"><span>S0302 · خ م 400 جهد350 بدون اسمنت</span><b class="dn">−1.89M</b></div></div>
+<div class="t" style="padding:10px 14px"><b style="color:var(--navy)">Notes for the report</b><div style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.6">Unsettled included: 0 · Depreciation excluded: 0 · Hand-coded lines: 0<br>VAT: excluded · 0 unclassified lines</div></div></div></div></section>
+</main>
+<footer class="status"><span>CJI3 700,197,301</span><span>Counted 699,214,225</span><b class="ok">Difference 0.00 ✓</b><span>Sep-26 68,314,765</span><span>Coded 0% of Sep-26</span><span style="flex:1"></span><span>Saved in this browser</span></footer>
+<script>
+document.addEventListener('click', (e) => { const g = e.target.closest('[data-go]'); if (!g) return; document.querySelectorAll('.scr').forEach((s) => s.classList.toggle('on', s.id === g.dataset.go)); });
+</script></body></html>
