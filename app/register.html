@@ -42,7 +42,7 @@ table.t{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .t tbody tr{height:27px}
 .t tr.grp td{background:var(--gc);font-weight:600;border-top:2px solid var(--navy);padding:0 8px;cursor:pointer}
 .t tr.grp .tg{display:inline-block;width:16px;font-weight:700;color:var(--navy)} .t tr.grp .gm{font-weight:400;color:#444;margin-left:8px}
-.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through} .t th.uon{background:#375623} .t thead tr.band th.umon{background:#548235;cursor:pointer} .t thead tr.band th.umoff{background:#7f8fa9;cursor:pointer} .t td.uin{background:#E2EFDA} .t tr.it.exc.uns td{text-decoration:none;font-style:italic;color:#8a8f98}
+.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through} .t tr.uchild td{background:#FAFBFD;font-size:12px} .t tr.uord td{border-top:1px solid #d5dce8} .t th.uon{background:#375623} .t thead tr.band th.umon{background:#548235;cursor:pointer} .t thead tr.band th.umoff{background:#7f8fa9;cursor:pointer} .t td.uin{background:#E2EFDA} .t tr.it.exc.uns td{text-decoration:none;font-style:italic;color:#8a8f98}
 .t tr.tot td{background:var(--navy);color:#fff;font-weight:700;position:sticky;bottom:0}
 .t td.num{text-align:right;font-variant-numeric:tabular-nums} .t td.cutc{background:#FFF8E1} .t td.after{color:#c0c4cc}
 .t td.c{padding:0 4px} .t td.c input{width:100%;height:21px;border:1px solid var(--codeB);background:var(--code);border-radius:4px;padding:0 5px;font-weight:600;color:var(--navy);font-size:12px}
@@ -491,28 +491,34 @@ function unsDef() {   // one row per SAP order; its component (equipment type, t
   const byO = new Map(); for (let i = 0; i < N; i++) { if (!UNS[i]) continue; const o = S[ORD[i]] || itemCode(it(i)), k = L.b[i] + '|' + o; let r = byO.get(k);
     if (!r) byO.set(k, (r = { o, g: BK[L.b[i]].id, idx: [], comps: new Map(), ua: new Map(), desc: S[L.hdr[i]] || '' })); r.idx.push(i); const c = itemCode(it(i)); r.comps.set(c, itemDesc(it(i)));
     const mk = L.m[i] > 0 ? String(L.m[i]) : 'a'; r.ua.set(mk, (r.ua.get(mk) || 0) + R.amt[i]); }
-  const rows = [...byO.values()]; rows.forEach((r) => { r.tot = [...r.ua.values()].reduce((s, v) => s + v, 0); r.compL = r.comps.size === 1 ? [...r.comps].map(([c, d]) => (c === r.o ? '(the order itself)' : c + ' · ' + d))[0] : r.comps.size + ' components: ' + [...r.comps.keys()].join(', ');
-    r.sq = [r.o, r.desc, r.compL].join(' '); }); rows.sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : 0) || Math.abs(b.tot) - Math.abs(a.tot));
+  const top = [...byO.values()]; top.forEach((r) => { r.tot = [...r.ua.values()].reduce((s, v) => s + v, 0); r.compL = r.comps.size === 1 ? [...r.comps].map(([c, d]) => (c === r.o ? '(the order itself)' : c + ' · ' + d))[0] : r.comps.size + ' components: ' + [...r.comps.keys()].join(', ');
+    r.sq = [r.o, r.desc, r.compL].join(' '); }); top.sort((a, b) => (a.g < b.g ? -1 : a.g > b.g ? 1 : 0) || Math.abs(b.tot) - Math.abs(a.tot));
+  const open = ST.unsOpen || (ST.unsOpen = new Set()), rows = [];
+  for (const r of top) { rows.push(r); if (!open.has(r.g + '|' + r.o)) continue;   // the order's lines, one level under it
+    r.idx.slice().sort((a, b) => L.m[a] - L.m[b] || L.d[a] - L.d[b]).forEach((i) => { const mk = L.m[i] > 0 ? String(L.m[i]) : 'a';
+      rows.push({ child: 1, i, it: it(i), o: r.o, g: r.g, idx: [i], ua: new Map([[mk, R.amt[i]]]), tot: R.amt[i], desc: [S[L.name[i]], L.qty[i] ? fq(L.qty[i]) + ' ' + (itemUnit(it(i)) || '') : ''].filter(Boolean).join(' · ') || S[L.desc[i]], compL: itemCode(it(i)) === r.o ? S[L.cen[i]] : itemCode(it(i)) + ' · ' + itemDesc(it(i)), sq: r.sq + ' ' + S[L.name[i]] }); }); }
   const st = (r) => { const n = r.idx.filter((i) => (OVR[L.id[i]] || {}).inc === 'No' || it(i).inc === 'No').length; return n === 0 ? 'Yes' : n === r.idx.length ? 'No' : 'Part'; };
   const incOf = (r) => r.idx.reduce((s, i) => s + (R.inc[i] ? R.amt[i] : 0), 0);
-  const cols = [{ k: 'o', l: 'Order', w: 104, fz: 1, v: (r) => r.o, h: (r) => `<td><b>${esc(r.o)}</b></td>` },
-    { k: 'desc', l: 'Order description', w: 230, v: (r) => r.desc, h: (r) => `<td dir="auto" title="${esc(r.desc)}">${esc(r.desc)}</td>` },
+  const cols = [{ k: 'o', l: 'Order', w: 124, fz: 1, v: (r) => r.o, h: (r) => (r.child ? `<td style="padding-left:26px;color:#6b7280">${esc(PER[L.m[r.i]] || 'after data')}</td>` : `<td><span class="tgl" data-uo="${esc(r.g + '|' + r.o)}">${open.has(r.g + '|' + r.o) ? '−' : '+'}</span> <b>${esc(r.o)}</b> <span class="help">${r.idx.length}</span></td>`) },
+    { k: 'desc', l: 'Order description / line', w: 260, v: (r) => r.desc, h: (r) => `<td dir="auto" title="${esc(r.desc)}"${r.child ? ' style="color:#4b5563"' : ''}>${esc(r.desc)}</td>` },
     { k: 'comp', l: 'Component', w: 210, v: (r) => r.compL, h: (r) => `<td title="${esc(r.compL)}">${esc(r.compL)}</td>` },
-    { k: 'inc', l: 'Order', w: 66, v: (r) => st(r), h: (r) => { const x = st(r); return `<td title="No = never count this order, whatever the month switch"><button class="incb ordb ${x === 'No' ? 'no' : ''}" data-o="${esc(r.g + '|' + r.o)}">${x}</button></td>`; } }];
+    { k: 'inc', l: 'Order', w: 66, v: (r) => st(r), h: (r) => { const x = st(r); return r.child ? `<td title="No = never count this line"><button class="incb ${x === 'No' ? 'no' : ''}">${x}</button></td>` : `<td title="No = never count this order, whatever the month switch"><button class="incb ordb ${x === 'No' ? 'no' : ''}" data-o="${esc(r.g + '|' + r.o)}">${x}</button></td>`; } }];
   keys.forEach((k) => cols.push(numC('m' + k, unsLab(k), k === 'a' ? 118 : 96, (r) => r.ua.get(k) || 0, { th: on(k) ? 'uon' : '', cls: (r) => (on(k) && st(r) !== 'No' ? 'uin' : '') })));
   cols.push(numC('tot', 'Total', 110, (r) => r.tot, { h: (r) => `<td class="num"><b>${fmt(r.tot)}</b></td>` }), numC('in', 'Included', 110, (r) => incOf(r), { h: (r) => `<td class="num" style="color:#375623"><b>${fmt(incOf(r))}</b></td>` }));
-  R.unsRows = new Map(rows.map((r) => [r.g + '|' + r.o, r]));
+  R.unsRows = new Map(top.map((r) => [r.g + '|' + r.o, r]));
   const sw = keys.map((k) => ({ l: on(k) ? '✓ included' : '○ include', span: 1, cls: 'tog ' + (on(k) ? 'umon' : 'umoff'), um: k }));
   const bands = [[{ l: 'click a month to include it or leave it out →', span: 4, cls: 'blank' }, ...sw, { l: '', span: 2, cls: 'blank' }]];
-  const foot = (rs) => { const o = { o: '' }; keys.forEach((k) => { o['m' + k] = fmt(rs.reduce((s, r) => s + (r.ua.get(k) || 0), 0)); }); o.tot = fmt(rs.reduce((s, r) => s + r.tot, 0)); o.in = fmt(rs.reduce((s, r) => s + incOf(r), 0)); return o; };
-  const m = ST.uns.mode, tools = `<span class="seg"><button class="${m === 'none' ? 'on' : ''}" id="uNone">Leave all out</button><button class="${m === 'cut' ? 'on' : ''}" id="uCut">Include all up to the cut date (${esc(R.repLab)})</button><button class="${m === 'pick' ? 'on' : ''}" id="uPick" disabled>Month by month</button></span>
+  const foot = (rs0) => { const rs = rs0.filter((r) => !r.child), o = { o: '' }; keys.forEach((k) => { o['m' + k] = fmt(rs.reduce((s, r) => s + (r.ua.get(k) || 0), 0)); }); o.tot = fmt(rs.reduce((s, r) => s + r.tot, 0)); o.in = fmt(rs.reduce((s, r) => s + incOf(r), 0)); return o; };
+  const m = ST.uns.mode, tools = `<span class="seg"><button class="${m === 'none' ? 'on' : ''}" id="uNone">Leave all out</button><button class="${m === 'cut' ? 'on' : ''}" id="uCut">Include all up to the cut date (${esc(R.repLab)})</button><button class="${m === 'pick' ? 'on' : ''}" id="uPick" disabled>Month by month</button></span> <button id="uOpenAll">+ All order lines</button><button id="uCloseAll">− Orders only</button>
     <span class="help">Included <b style="color:#375623">${fmt2(R.unsIn)}</b> of ${fmt2(R.unsIn + R.unsExc)} · shown on the Summary as a CJI3 difference</span>`;
-  return { cols, rows, bands, groups: true, sel: false, extraTools: tools, foot, rowCls: (r) => (st(r) === 'No' ? 'exc' : ''),
-    gLabel: (g, rs) => `${esc(g)}<span class="gm">${rs.length} orders · not settled ${fmt(rs.reduce((s, r) => s + r.tot, 0))} · included ${fmt(rs.reduce((s, r) => s + incOf(r), 0))}</span>` };
+  return { cols, rows, bands, groups: true, sel: false, extraTools: tools, foot, rowCls: (r) => (r.child ? 'uchild ' : 'uord ') + (st(r) === 'No' ? 'exc' : ''),
+    gLabel: (g, rs0) => { const rs = rs0.filter((r) => !r.child); return `${esc(g)}<span class="gm">${rs.length} orders · not settled ${fmt(rs.reduce((s, r) => s + r.tot, 0))} · included ${fmt(rs.reduce((s, r) => s + incOf(r), 0))}</span>`; } };
 }
 // the Order switch: all lines of the order left out (line Include = No) or back to their item
 document.addEventListener('click', (e) => { const b = e.target.closest('.ordb'); if (!b || !R.unsRows) return; e.stopPropagation(); const r = R.unsRows.get(b.dataset.o); if (!r) return;
   const out = b.textContent !== 'No'; change(r.idx.map((i) => lineCh(i, 'inc', out ? 'No' : 'Yes')), (out ? 'Left out order ' : 'Included order ') + r.o); }, true);
+document.addEventListener('click', (e) => { const t = e.target.closest('[data-uo],#uOpenAll,#uCloseAll'); if (!t || ST.tab !== 'uns') return; e.stopPropagation(); const op = ST.unsOpen || (ST.unsOpen = new Set());
+  if (t.id === 'uOpenAll') R.unsRows.forEach((r, k) => op.add(k)); else if (t.id === 'uCloseAll') op.clear(); else op.has(t.dataset.uo) ? op.delete(t.dataset.uo) : op.add(t.dataset.uo); render(); }, true);
 document.addEventListener('click', (e) => { const t = e.target.closest('#uNone,#uCut'); if (!t) return; if (t.id === 'uNone') unsSet('none', [], 'Unsettled: all left out'); else unsSet('cut', [], 'Unsettled: included up to the cut date'); });
 // ---- the table renderer
 const VROW = 27;
