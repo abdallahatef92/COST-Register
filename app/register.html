@@ -176,7 +176,8 @@ function compute() {
   const ek = R.ek = new Array(N); R.hand = new Uint8Array(N); R.inc = new Uint8Array(N);
   BK.forEach((b) => b.items.forEach((it) => { it.p = new Float64Array(NP); it.q = new Float64Array(NP); it.exc = 0; it.n = 0; it.nh = 0; it.ua = null; }));
   R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.bkUns = BK.map(() => 0); R.vatIn = 0; R.unsIn = 0; R.unsExc = 0; R.unsM = new Map();
-  const pk = new Set(ST.uns.pick || []), keyOn = (k) => (ST.uns.mode === 'cut' ? k !== 'a' && +k <= rep : ST.uns.mode === 'pick' ? pk.has(String(k)) : false); R.keyOn = keyOn; R.exp = new Map();
+  const pk = new Set(ST.uns.pick || []), mStart = (k) => { const [mn, yy] = PER[+k].split('-'); return (2000 + +yy) * 10000 + (MON.indexOf(mn) + 1) * 100 + 1; },
+    keyOn = (k) => (ST.uns.mode === 'cut' ? k !== 'a' && mStart(k) <= cutI : ST.uns.mode === 'pick' ? pk.has(String(k)) : false); R.keyOn = keyOn; R.exp = new Map();
   for (let i = 0; i < N; i++) {
     const b = L.b[i], it = BK[b].items[L.it[i]], o = OVR[L.id[i]];
     const pkg = o && o.pkg !== undefined ? o.pkg : it.pkg, mnl = o && o.mnl !== undefined ? o.mnl : it.mnl, ce = o && o.ce !== undefined ? o.ce : it.ce, inc = o && o.inc !== undefined ? o.inc : it.inc;

@@ -37,7 +37,7 @@ function descriptors(b, first, groups) {
 }
 
 function buildModel(lines, { groups = new Map(), prev = null, cut = '' } = {}) {
-  const posted = lines.filter((l) => !l.open && l.ym && !l.uns).map((l) => l.ym).sort();
+  const posted = lines.filter((l) => !l.open && l.ym).map((l) => l.ym).sort();
   const first = posted[0], last = posted[posted.length - 1];
   const maxDate = lines.filter((l) => !l.uns).map((l) => l.date).filter(Boolean).sort().pop();
   cut = cut || maxDate;                                   // the cut date: later postings are Pending
