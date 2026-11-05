@@ -20,6 +20,11 @@ nav.tabs{display:flex;gap:3px;background:var(--navy);padding:0 14px} nav.tabs bu
 nav.tabs button.on{background:var(--bg);color:var(--navy)}
 #saved{font-size:11px;opacity:.8}
 .page{flex:1;display:none;flex-direction:column;min-height:0} .page.on{display:flex}
+#sbar{flex:none;display:flex;align-items:center;gap:6px;padding:4px 12px;background:#fff;border-top:1px solid var(--line);font-size:12px;white-space:nowrap;overflow-x:auto}
+#sbar .si{display:inline-flex;gap:5px;align-items:baseline;padding:2px 8px;border-radius:5px} #sbar .si span{color:#6b7280;font-size:11.5px} #sbar .si b{font-variant-numeric:tabular-nums;color:#1f2937}
+#sbar .sep{width:1px;height:18px;background:var(--line);margin:0 4px} #sbar a.si{cursor:pointer;text-decoration:none} #sbar a.si:hover{background:#f3f4f6}
+#sbar .ok{background:#E2EFDA} #sbar .ok b{color:#375623} #sbar .bad{background:#FCE4D6} #sbar .bad b{color:#C00000}
+#sbar .inc{background:#EEF7E8} #sbar .inc b{color:#375623} #sbar .exc{background:#FDF1EA} #sbar .exc b{color:#C55A11} #sbar .zero b{color:#9ca3af;font-weight:500}
 .bar{display:flex;gap:8px;align-items:center;padding:7px 12px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .bar input[type=search]{width:240px;padding:5px 10px;border:1px solid var(--line);border-radius:6px}
 .chip{border-radius:14px;padding:3px 10px;font-size:12px;white-space:nowrap} .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
@@ -73,7 +78,7 @@ table.s{border-collapse:collapse;width:100%} .s th{background:var(--navy);color:
 .bars{display:flex;align-items:flex-end;gap:3px;height:120px;margin:10px 0 4px;border-bottom:1px solid var(--line)} .bars div{flex:1;background:var(--navy2);border-radius:3px 3px 0 0;min-height:1px} .bars div.cut{background:var(--gold)}
 .blab{display:flex;gap:3px;font-size:9px;color:var(--mut)} .blab span{flex:1;text-align:center;overflow:hidden}
 dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{color:var(--mut)} dd{margin:0}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40;max-width:80vw}
+#toast{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40;max-width:80vw}
 #toast.show{opacity:.95}
 .help{font-size:11px;color:var(--mut)} kbd{background:#f1f3f6;border:1px solid #d6d9de;border-radius:3px;padding:0 4px;font-size:10px}
 .start{position:fixed;inset:0;background:rgba(20,30,50,.55);z-index:50;align-items:center;justify-content:center}
@@ -110,6 +115,7 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
 <!-- Checks -->
 <div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>
 <div class="page" id="pg-rul"><div class="dash" id="rul"></div></div>
+<footer id="sbar"></footer>
 <div id="pop"></div>
 <div id="drawer"><header><div><h1 id="dTitle"></h1><div class="sub" id="dSub"></div></div><div class="sp"></div><button id="dClose">✕</button></header><div class="body" id="dBody"></div></div>
 <div id="toast"></div>
@@ -210,10 +216,26 @@ const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct
 const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ...(HASUNS ? [['uns', 'Unsettled']] : []), ...(DEPI >= 0 ? [['dep', 'Depreciation']] : []), ['chk', 'Checks'], ['rules', 'Rules']];
 $('tabs').innerHTML = TABS.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join('');
 $('tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) { ST.tab = b.dataset.t; sel.clear(); render(); $('wrap').scrollTop = 0; } };
+// status bar: the totals of the register and everything you included / excluded, on every tab
+function renderStatus() {
+  const it = (l, v, cls, go, tip) => `<${go ? 'a' : 'span'} class="si ${cls || ''}"${go ? ` data-sgo="${go}"` : ''}${tip ? ` title="${esc(tip)}"` : ''}><span>${l}</span><b>${v}</b></${go ? 'a' : 'span'}>`, sep = '<i class="sep"></i>';
+  const z = (v) => (Math.abs(v) < 0.005 ? 'zero' : ''), inc = BK.flatMap((b) => b.items.filter((x) => x.inc !== 'No')), tdA = inc.reduce((s2, x) => s2 + x.td, 0), tdF = inc.filter((x) => statusOf(x) === 'Fully coded').reduce((s2, x) => s2 + x.td, 0);
+  const hand = R.hand ? R.hand.reduce((s2, v) => s2 + v, 0) : 0, ok = Math.abs(R.diff) < 0.01, uo = R.unsInK ? R.unsInK.o : 0, uc = R.unsInK ? R.unsInK.c : 0;
+  $('sbar').innerHTML = [it('CJI3', fmt(META.cost)), it('Counted', fmt(R.toDate), '', 'sum', 'Counted to the cut date'), it(R.repLab, fmt(R.thisM), '', 'pm', 'This month'), it('Pending', fmt(R.pend), z(R.pend)),
+    it('Difference', ok ? '0.00 ✓' : fmt2(R.diff), ok ? 'ok' : 'bad', 'chk'), sep,
+    it('Excluded', fmt(R.excl), z(R.excl) || 'exc', 'cod', 'Items / lines set to Include = No'),
+    ...(SUBI >= 0 ? [it('VAT in', fmt(R.vatIn), z(R.vatIn) || 'inc', '', ST.vat)] : []),
+    ...(R.unsMk && R.unsMk.o.size ? [it('Orders in', fmt(uo), z(uo) || 'inc', 'uns:o', 'ZINTC1 orders not yet settled, included by you')] : []),
+    ...(R.unsMk && R.unsMk.c.size ? [it('Certificates in', fmt(uc), z(uc) || 'inc', 'uns:c', 'Certificates not in CJI3, included by you')] : []),
+    ...(DEPI >= 0 ? [it('Depreciation out', fmt(R.depExc), z(R.depExc) || 'exc', 'dep', 'CJI3 depreciation excluded by you')] : []), sep,
+    it('Coded', (tdA ? Math.round(100 * tdF / tdA) : 0) + '%', '', 'cod', 'Share of counted to-date cost on fully coded items'), it('Hand-coded lines', hand.toLocaleString('en-US'), z(hand), 'lines')].join('');
+}
+document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
 function render() {
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === ST.tab));
   ['sum', 'tbl', 'chk', 'rul'].forEach((p) => $('pg-' + p).classList.toggle('on', (p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'rul' && ST.tab === 'rules') || (p === 'tbl' && !['sum', 'chk', 'rules'].includes(ST.tab))));
   $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
+  renderStatus();
   if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else renderTable();
 }
 function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };

@@ -42,6 +42,9 @@ ZINTC1 charges CJI3 has **not settled yet** (house rent since Feb-26, the duplic
 ### Subcontractor certificates not in CJI3 (app)
 Certificates in ZSCPRG01 that are approved (Character 1 = X) but not yet posted in CJI3, and certificates not approved, are kept as "not yet in CJI3" lines (net of VAT, month = certificate date) and listed on the **Unsettled** tab, view "Certificates (Subcontractor)": Type of works › PO › service (one row per service per PO under +/−, all certificates added up; approval shown as Approved / Not approved / Mixed, certificate numbers in the tooltip). Each month shows Qty · Rate · Amount (quantities only where one unit applies: service rows, single-unit orders and lines); − above a month folds it to Amount, "− Amounts only" folds every month. Left out by default; this view has its own switches (separate from "Orders (ZINTC1)") and its own Summary line "+ CJI3 difference: certificates not in CJI3". Posted certificates keep the CJI3 posting month; posted after the cut date they are Pending. The Excel register leaves them out.
 
+### Status bar (app)
+A bar at the bottom of every tab: CJI3 cost, counted to the cut date, this month, pending, difference to CJI3 (green ✓ when 0), and what you changed – excluded, VAT included, ZINTC1 orders included, certificates included, depreciation excluded – plus the coded share and hand-coded lines. Click an entry to open its tab.
+
 ### Depreciation switch (app)
 The **Depreciation** tab shows the CJI3 depreciation per cost element × month (Opening, Sep-25 …). One click excludes all of it, or click a month to exclude / count that month; the Item switch excludes one cost element. What is excluded leaves the counted cost and shows on the Summary as "– Depreciation excluded by you", so the difference to CJI3 stays 0. No estimates are added for months the depreciation run was not done. The choice is saved with your codes.
 
