@@ -294,7 +294,8 @@ function renderRules() {
   const save = () => { persist(); };
   $('rul').querySelectorAll('[data-r]').forEach((el) => { el.onchange = () => { ur[+el.dataset.r][el.dataset.f] = el.value.trim(); save(); renderRules(); }; });
   $('rul').querySelectorAll('[data-del]').forEach((el) => { el.onclick = () => { ur.splice(+el.dataset.del, 1); save(); renderRules(); }; });
-  $('rul').querySelectorAll('[data-mk]').forEach((el) => { el.onclick = () => { const x = unc[+el.dataset.mk]; ur.push({ ce: x.ce, cen: '', type: '', wbs: '', bucket: '', sub: '' }); save(); renderRules(); }; });
+  $('rul').querySelectorAll('[data-mk]').forEach((el) => { el.onclick = () => { const x = unc[+el.dataset.mk]; const w = x.wbs.filter(Boolean), pre = w.length ? w.reduce((p, v) => { let i = 0; while (i < p.length && p[i] === v[i]) i++; return p.slice(0, i); }) : '', wp = pre.replace(/[.\-]+$/, '');
+      ur.push({ ce: x.ce || '', cen: x.cen || '', type: x.type && x.type !== '(blank)' ? x.type : '', wbs: wp.length > 6 ? wp : '', bucket: '', sub: '' }); save(); renderRules(); }; });
   $('rAdd').onclick = () => { ur.push({ ce: '', cen: '', type: '', wbs: '', bucket: '', sub: '' }); save(); renderRules(); };
   $('rApply').onclick = async () => { const m = $('rMsg'), bad = ur.filter((r) => !r.bucket || !(r.ce || r.cen || r.type || r.wbs)); if (bad.length) { m.innerHTML = '<span style="color:#c00000">Every rule needs a bucket and at least one field to match.</span>'; return; }
     let files = null; try { files = await idbGet('lastFiles'); } catch (e) { /* none */ }
