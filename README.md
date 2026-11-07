@@ -48,6 +48,7 @@ A bar at the bottom of every tab: CJI3 cost, counted to the cut date, this month
 ### Layout (app)
 One header with the 5 steps of the month – **1 Code · 2 Subcontractor · 3 Adjust · 4 Check · 5 Reports** – and a sidebar on the left with the list you work through; the table takes the rest of the screen. « hide folds the sidebar to a thin rail (remembered).
 - **Code**: the buckets with coded % and amount; the open bucket lists its groups (click one to show only it). Rules is at the bottom of the list.
+- **Material families** (M Materials, P Plant & tools, SP Spare parts, SM Safety, SH Site housing, CS, OS, IT, G): the sidebar lists the families, each opening to its groups; click a family to show only it. In Coding and Per Month the table has a family row above its groups (with To date / This month, or the months, added up) and a zoom: **Families · Groups · Items**.
 - **Subcontractor**: the packages (see below); More: Overview, POs, PO register, Bridge to CJI3.
 - **Adjust**: what is not yet in CJI3 (ZINTC1 orders not settled, certificates not in CJI3 – include?) and what is in CJI3 but you may take out (depreciation – exclude?).
 - **Check**: the live checks. **Reports**: Summary, Per Month, Expenses, GL, WBS, and Lines (every CJI3 posting).
