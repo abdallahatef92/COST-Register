@@ -256,12 +256,16 @@ let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList
 const LSK = 'cost-register:' + META.project + ':' + (META.buildId || META.built), OVR = Object.assign({}, L.ovr);
 const ST = { crules: { ...(META.cruleState || {}) }, pk: (META.pkState || []).map((x) => ({ ...x })), pkTick: new Set(), depx: META.depState || { mode: 'none', pick: [] }, uns: META.unsState || { mode: 'none', pick: [] }, unsc: META.unscState || { mode: 'none', pick: [] }, unsView: 'o', rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'cod', grpSel: {}, bk: Math.max(0, MATI), sub: 'pkg', pkView: 'alloc', pmMode: 'Amount' };
 let undo = [], redo = [];
+// changes not yet saved to a file (Save codes or Export Excel) – kept across reloads, warned about before closing
+let DIRTY = 0; try { DIRTY = +localStorage.getItem(LSK + ':dirty') || 0; } catch (e) { /* none */ }
+const setDirty = (n) => { DIRTY = n; try { localStorage.setItem(LSK + ':dirty', String(n)); } catch (e) { /* none */ } };
+addEventListener('beforeunload', (e) => { if (DIRTY > 0) { e.preventDefault(); e.returnValue = ''; } });
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) { if (c.t === 'uns') return JSON.stringify(ST.uns); if (c.t === 'unsc') return JSON.stringify(ST.unsc); if (c.t === 'depx') return JSON.stringify(ST.depx); if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
 function setC(c, v) { if (c.t === 'uns') { ST.uns = JSON.parse(v); return; } if (c.t === 'unsc') { ST.unsc = JSON.parse(v); return; } if (c.t === 'depx') { ST.depx = JSON.parse(v); return; } if (c.t === 'item') { BK[c.bi].items[c.ii][c.f] = v; return; } const id = L.id[c.i]; const o = OVR[id] || (OVR[id] = {}); if (v === undefined || v === null) delete o[c.f]; else o[c.f] = v; if (!Object.keys(o).length) delete OVR[id]; }
-function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
-function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); after('Undone: ' + u.label); }
-function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); after('Redone: ' + u.label); }
+function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; setDirty(DIRTY + rec.length); after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
+function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); setDirty(DIRTY + u.rec.length); after('Undone: ' + u.label); }
+function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); setDirty(DIRTY + u.rec.length); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
 function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules }; }
 function setSaved(t) { $('saved').textContent = t; $('bSave').title = 'Save all codes (and line overrides) as a small file · ' + t; }
@@ -373,9 +377,9 @@ function renderStatus() {
     ...(R.unsMk && R.unsMk.o.size ? [it('Orders in', fmt(uo), z(uo) || 'inc', 'uns:o', 'ZINTC1 orders not yet settled, included by you')] : []),
     ...(R.unsMk && R.unsMk.c.size ? [it('Certificates in', fmt(uc), z(uc) || 'inc', 'uns:c', 'Certificates not in CJI3, included by you')] : []),
     ...(DEPI >= 0 ? [it('Depreciation out', fmt(R.depExc), z(R.depExc) || 'exc', 'dep', 'CJI3 depreciation excluded by you')] : []), sep,
-    it('Coded', (tdA ? Math.round(100 * tdF / tdA) : 0) + '%', '', 'cod', 'Share of counted to-date cost on fully coded items'), it('Hand-coded lines', hand.toLocaleString('en-US'), z(hand), 'lines')].join('');
+    ...(DIRTY > 0 ? [it('Unsaved', DIRTY.toLocaleString('en-US') + ' change' + (DIRTY > 1 ? 's' : '') + ' – save', 'bad', 'save', 'Changes kept only in this browser – click to save them to a file (Save codes)'), sep] : [it('Saved', '✓', 'ok', '', 'Every change is in a saved file')]), it('Coded', (tdA ? Math.round(100 * tdF / tdA) : 0) + '%', '', 'cod', 'Share of counted to-date cost on fully coded items'), it('Hand-coded lines', hand.toLocaleString('en-US'), z(hand), 'lines')].join('');
 }
-document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
+document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; if (a.dataset.sgo === 'save') { $('bSave').click(); return; } const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
 function render() {
   LASTT[secOf(ST.tab)] = ST.tab; document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === secOf(ST.tab)));
   const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
@@ -1232,7 +1236,7 @@ $('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value 
 const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); };
 const stamp = () => new Date().toISOString().slice(0, 10);
 try { localStorage.removeItem('cr-focus'); } catch (e) {}
-$('bSave').onclick = () => dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`);
+$('bSave').onclick = () => { dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`); setDirty(0); renderStatus(); toast('Codes saved to a file – keep it with this month\'s files'); };
 // ---- light Excel report (values, formatted)
 $('bExport').onclick = async () => {
   toast('Building the Excel report…'); await new Promise((r) => setTimeout(r, 30));
@@ -1302,11 +1306,11 @@ $('bExport').onclick = async () => {
   Object.entries(OVR).forEach(([id, o]) => { const i = ix.get(id); if (i !== undefined) wo.addRow([BK[L.b[i]].id, id, o.pkg ?? '', o.mnl ?? '', o.ce ?? '', o.inc ?? '']); }); wo.getRow(1).font = { name: A, bold: true }; [18, 30, 10, 8, 14, 8].forEach((w, i) => { wo.getColumn(i + 1).width = w; });
   // Checks
   const wk = wb.addWorksheet('Checks'); title(wk, 'Checks', note); head(wk, 4, ['Check', 'Value']); [['Register vs CJI3 cost – difference', R.diff], ['Duplicate line keys', META.dupes], ['Lines with no bucket', META.unclassified], ['Lines typed over', [...R.hand].reduce((s, v) => s + v, 0)]].forEach(([l, v], i) => put(wk, 5 + i, [l, v], { 1: '#,##0.00' })); wk.getColumn(1).width = 44; wk.getColumn(2).width = 16;
-  const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Cost_Register_${META.project}_${R.repLab}_${stamp()}.xlsx`); toast('Excel report exported');
+  const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Cost_Register_${META.project}_${R.repLab}_${stamp()}.xlsx`); toast('Excel report exported (your codes are in it)'); setDirty(0); renderStatus();
 };
 // =====================================================================================  start
 $('hsub').textContent = `${META.project} · CJI3 ${META.cji3} · ${N.toLocaleString('en-US')} lines · built ${META.built}`;
-restore(); const NRULE = applyCRules(true); if (NRULE) { persist(); setTimeout(() => toast(NRULE + ' new item' + (NRULE > 1 ? 's' : '') + ' coded by your coding rules'), 600); } $('cut').value = ST.cut; $('vat').value = ST.vat; $('vatFrom').value = ST.vatFrom; $('vatFrom').style.display = ST.vat === 'Include VAT before date' ? '' : 'none';
+restore(); const NRULE = applyCRules(true); if (NRULE) { setDirty(DIRTY + NRULE); persist(); setTimeout(() => toast(NRULE + ' new item' + (NRULE > 1 ? 's' : '') + ' coded by your coding rules'), 600); } $('cut').value = ST.cut; $('vat').value = ST.vat; $('vatFrom').value = ST.vatFrom; $('vatFrom').style.display = ST.vat === 'Include VAT before date' ? '' : 'none';
 compute(); render();
 $('bNew').onclick = () => showStart(true);
 }
