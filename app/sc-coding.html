@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subcontractor Coding</title>
+<style>
+:root{--navy:#1F3864;--navy2:#2F5597;--gold:#BF8F00;--line:#DDE2EA;--bg:#F3F5F9;--txt:#1d2433;--mut:#6b7280;--ok:#E2EFDA;--okT:#2e6b1f;--part:#FFF2CC;--partT:#8a6500;--not:#FCE4D6;--notT:#a33a00;--sel:#DCE9F9;--code:#EEF3FB;--codeB:#C9D6EA;--miss:#FFF0E8;--missB:#F2B79A}
+*{box-sizing:border-box}
+body{margin:0;font:13px/1.35 "Segoe UI",Arial,sans-serif;color:var(--txt);background:var(--bg);height:100vh;display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 10px;color:var(--txt)}
+button:hover{border-color:var(--navy2)} button.pri{background:var(--navy);color:#fff;border-color:var(--navy)} button:disabled{opacity:.45;cursor:default}
+input,select{font:inherit}
+header.top{background:var(--navy);color:#fff;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header.top h1{font-size:17px;margin:0;font-weight:600} .sub{opacity:.75;font-size:12px}
+.sp{flex:1} header.top button{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)} header.top button:hover{border-color:#fff}
+.tabs{display:flex;gap:4px;margin-left:18px} .tabs button{border-radius:6px 6px 0 0;border-bottom:0;padding:7px 16px;font-weight:600}
+.tabs button.on{background:#fff;color:var(--navy);border-color:#fff}
+#saved{font-size:11px;opacity:.8}
+.kpis{display:flex;gap:10px;padding:8px 16px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.kpi{background:var(--bg);border-radius:8px;padding:6px 14px;min-width:140px;border:1px solid var(--line)}
+.kpi b{display:block;font-size:19px;color:var(--navy)} .kpi span{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+.kpi .bar{height:5px;background:#e5e7eb;border-radius:3px;margin-top:5px;overflow:hidden} .kpi .bar i{display:block;height:100%;background:#4c9a2a}
+main{flex:1;display:flex;min-height:0}
+aside{width:260px;background:#fff;border-right:1px solid var(--line);overflow:auto;padding:8px 10px}
+aside h3{font-size:11px;text-transform:uppercase;color:var(--mut);margin:10px 4px 6px;letter-spacing:.04em}
+.tow{display:block;width:100%;text-align:right;border:1px solid transparent;border-radius:6px;padding:6px 8px 6px 8px;margin:1px 0;background:none;border-left:5px solid var(--c)}
+.tow.on{background:var(--sel);border-color:var(--navy2);border-left-color:var(--c)} .tow:hover{background:#eef2f8}
+.tow .n{float:left;color:var(--mut);font-size:11px;direction:ltr} .tow .pb{height:3px;background:#e5e7eb;border-radius:2px;margin-top:4px} .tow .pb i{display:block;height:100%;background:#4c9a2a;border-radius:2px}
+.pk{display:flex;justify-content:space-between;padding:4px 8px;border-radius:5px;font-size:12px;border-bottom:1px solid #f0f2f5} .pk b{font-weight:600}
+section{flex:1;display:flex;flex-direction:column;min-width:0}
+.tools{display:flex;gap:8px;align-items:center;padding:7px 12px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tools input[type=search]{width:260px;padding:5px 10px;border:1px solid var(--line);border-radius:6px}
+.chip{border-radius:14px;padding:3px 10px;font-size:12px} .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.bulk{display:none;gap:8px;align-items:center;padding:7px 12px;background:#EAF1FB;border-bottom:1px solid #b9cce8;flex-wrap:wrap}
+.bulk.show{display:flex} .bulk b{color:var(--navy)}
+.bulk input{width:96px;padding:4px 7px;border:1px solid var(--codeB);border-radius:5px;background:#fff}
+.wrap{flex:1;overflow:auto;background:#fff}
+table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;min-width:100%}
+th{position:sticky;top:0;background:var(--navy);color:#fff;font-weight:600;font-size:12px;padding:6px 24px 6px 8px;text-overflow:ellipsis;text-align:left;z-index:3;white-space:nowrap;border-right:1px solid #33497a;overflow:hidden}
+th.code{background:var(--gold);border-right-color:#a67c00} th.num{text-align:right}
+th .fb{position:absolute;right:4px;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:4px;padding:0 5px;font-size:11px;line-height:17px}
+th .fb.act{background:#FFD966;color:#000} th .sa{font-size:10px;opacity:.9}
+td{border-bottom:1px solid var(--line);border-right:1px solid #eef0f4;padding:3px 7px;white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}
+tr.grp td{background:var(--gc);font-weight:600;color:#1d2433;border-top:2px solid var(--navy);padding:5px 8px;cursor:pointer;border-right:0}
+tr.grp .tg{display:inline-block;width:16px;font-weight:700;color:var(--navy)} tr.grp .gm{font-weight:400;color:#444;margin-left:8px}
+tr.grp .gb{display:inline-block;width:80px;height:6px;background:rgba(255,255,255,.7);border-radius:3px;vertical-align:middle;margin-left:8px;overflow:hidden} tr.grp .gb i{display:block;height:100%;background:#4c9a2a}
+tr.it td:first-child{border-left:5px solid var(--gc)}
+tr.it:hover td{background:#f7f9fc} tr.it.sel td{background:var(--sel)} tr.it.exc td{color:#a6a6a6;text-decoration:line-through}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+td.c{padding:2px 4px} td.c input{width:100%;border:1px solid var(--codeB);background:var(--code);border-radius:4px;padding:2px 5px;font-weight:600;color:var(--navy)}
+td.c input:focus{outline:2px solid var(--navy2);background:#fff} td.c input.miss{background:var(--miss);border-color:var(--missB)} td.c input.typo{outline:2px solid #e8590c}
+.st{border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600}
+.st.Coded{background:var(--ok);color:var(--okT)} .st.Partly{background:var(--part);color:var(--partT)} .st.Not{background:var(--not);color:var(--notT)}
+.u{border-radius:4px;padding:0 6px;font-size:11px;font-weight:600;color:#1d2433}
+.inc{border:0;background:none;font-size:12px;padding:1px 6px;border-radius:4px} .inc.no{background:#eee;color:#888}
+a.lk{color:var(--navy2);font-weight:600;text-decoration:none} a.lk:hover{text-decoration:underline}
+#pop{position:fixed;z-index:30;background:#fff;border:1px solid #c9d0db;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:260px;display:none;padding:8px;font-size:12px}
+#pop.show{display:block} #pop .row{display:flex;gap:6px;margin-bottom:6px} #pop .row button{flex:1}
+#pop input[type=search],#pop input[type=number]{width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:5px}
+#pop .vals{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:5px;padding:4px 6px;margin:6px 0} #pop .vals label{display:flex;gap:6px;padding:2px 0;white-space:nowrap;overflow:hidden} #pop .vals .cn{color:var(--mut);margin-left:auto}
+#drawer{position:fixed;right:0;top:0;bottom:0;width:440px;background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.15);transform:translateX(105%);transition:transform .2s;z-index:10;display:flex;flex-direction:column}
+#drawer.open{transform:none} #drawer header{background:var(--navy2);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center} #drawer header h1{font-size:16px;margin:0} #drawer header button{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
+#drawer .body{padding:12px 16px;overflow:auto}
+.bars{display:flex;align-items:flex-end;gap:4px;height:120px;margin:10px 0 4px;border-bottom:1px solid var(--line)}
+.bars div{flex:1;background:var(--navy2);border-radius:3px 3px 0 0;min-height:1px} .bars div.cut{background:var(--gold)}
+.blab{display:flex;gap:4px;font-size:9px;color:var(--mut)} .blab span{flex:1;text-align:center;overflow:hidden}
+dl{display:grid;grid-template-columns:120px 1fr;gap:5px 10px;margin:12px 0} dt{color:var(--mut)} dd{margin:0}
+.mini{width:100%;border-collapse:collapse;table-layout:auto;min-width:0} .mini td,.mini th{position:static;border:1px solid var(--line);padding:3px 6px;font-size:12px} .mini th{background:#eef2f8;color:#1d2433}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40;max-width:80vw}
+#toast.show{opacity:.95}
+.help{font-size:11px;color:var(--mut)} kbd{background:#f1f3f6;border:1px solid #d6d9de;border-radius:3px;padding:0 4px;font-size:10px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div><h1>Subcontractor Coding</h1><div class="sub" id="hsub"></div></div>
+  <div class="tabs"><button data-v="svc" class="on">Services</button><button data-v="po">PO view</button></div>
+  <div class="sp"></div>
+  <button id="bUndo" title="Ctrl+Z">↶ Undo</button><button id="bRedo" title="Ctrl+Y">↷ Redo</button>
+  <button id="bImport" title="Read codes from the register Excel, your SC report, or a saved codes file">⇪ Import codes…</button>
+  <button id="bSave" title="Save the codes as a small file you can open again">💾 Save codes</button>
+  <button id="bExport" title="Formatted Excel with the codes (Coding + PO view) – give it to the register build as last report">⇩ Export to Excel</button>
+  <span id="saved"></span>
+  <input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden>
+</header>
+<div class="kpis" id="kpis"></div>
+<main>
+  <aside><h3>Type of works</h3><div id="tows"></div><h3>Totals by PKG (to date)</h3><div id="pkgs"></div>
+    <h3>Keys</h3><div class="help" style="padding:0 4px"><kbd>/</kbd> search · <kbd>Ctrl</kbd>+<kbd>Z</kbd>/<kbd>Y</kbd> undo/redo · <kbd>Shift</kbd>+click a range · <kbd>Enter</kbd> next row · <kbd>Esc</kbd> clear · ▾ in a header filters like Excel · click a group bar to fold it</div></aside>
+  <section>
+    <div class="tools">
+      <input type="search" id="q" placeholder="Search…  ( / )">
+      <span id="chips"></span>
+      <label class="help"><input type="checkbox" id="showExc" checked> show excluded</label>
+      <button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button><button id="bClr">✕ Clear filters</button>
+      <span class="help" id="cnt"></span>
+    </div>
+    <div class="bulk" id="bulk"><b id="bsel"></b>
+      <span>DIV</span><input id="bDIV" list="lDIV"><span>PKG</span><input id="bPKG" list="lPKG"><span>MNL</span><input id="bMNL" list="lMNL"><span>Cost element</span><input id="bCE" list="lCE">
+      <button class="pri" id="bApply">Apply to selected</button><button id="bClear">Clear codes</button><button id="bInc">Include</button><button id="bExc">Exclude</button><button id="bNone">✕ Clear selection</button>
+      <span class="help">empty box = leave as is</span></div>
+    <div class="wrap" id="wrap"><table id="tbl"><colgroup id="cg"></colgroup><thead id="th"></thead><tbody id="tb"></tbody></table></div>
+  </section>
+</main>
+<div id="pop"></div>
+<div id="drawer"><header><div><h1 id="dTitle"></h1><div class="sub" id="dSub"></div></div><div class="sp"></div><button id="dClose">✕</button></header><div class="body" id="dBody"></div></div>
+<div id="toast"></div>
+<datalist id="lDIV"></datalist><datalist id="lPKG"></datalist><datalist id="lMNL"></datalist><datalist id="lCE"></datalist>
+<script>/*__XLSX__*/</script>
+<script>/*__EXCELJS__*/</script>
+<script>/*__DATA__*/</script>
+<script>
+'use strict';
+const F = ['div', 'pkg', 'mnl', 'ce'], FN = { div: 'DIV', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' }, LID = { div: 'lDIV', pkg: 'lPKG', mnl: 'lMNL', ce: 'lCE' };
+const DIVS = ['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT'];
+const MNLS = ['MAT', 'SUB', 'LAB', 'EQU', 'OTHER'];
+const $ = (id) => document.getElementById(id), esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const fmt = (v) => (Math.abs(v) < 0.5 ? '-' : Math.round(v).toLocaleString('en-US')), fmtM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : fmt(v)), fq = (v) => (v ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '-');
+const LSK = 'sc-coding:' + META.project;
+ITEMS.forEach((it, i) => { it.i = i; });
+const statusOf = (it) => { const n = F.filter((f) => it[f]).length; return n === 4 ? 'Coded' : n === 0 ? 'Not coded' : 'Partly coded'; };
+// ---------- colours: Type of works (order of appearance) and units
+const TOWC = ['#CFE2F3', '#F4D6E2', '#D9EAD3', '#FCE5CD', '#E1D5F0', '#D0F0EA', '#F9E2C7', '#E6E0C8', '#D6E4F7', '#F2D5D0', '#DDEFC6', '#EAD7F2', '#CDEFF5', '#F7EBC1', '#E3E3E3'];
+const towList = [...new Set(ITEMS.map((x) => x.tow))], towCol = (t) => TOWC[Math.max(0, towList.indexOf(t)) % TOWC.length];
+const UNC = ['#C9DAF8', '#D9EAD3', '#FCE5CD', '#EAD1DC', '#D0E0E3', '#FFF2CC', '#D9D2E9', '#F4CCCC', '#CFE2F3', '#E6D3C3'];
+const unitList = [...new Set(ITEMS.map((x) => x.unit).filter(Boolean))].sort(), unitCol = (u) => UNC[Math.max(0, unitList.indexOf(u)) % UNC.length];
+// ---------- state, undo/redo, autosave
+let undo = [], redo = [], sel = new Set(), lastClick = null, view = 'svc';
+const V = { svc: { q: '', st: 'All', exc: true, tow: '', f: {}, sort: null, fold: new Set() }, po: { q: '', st: 'All', exc: true, tow: '', f: {}, sort: null, fold: new Set() } };
+function change(list, label) {
+  const rec = list.map(({ i, f, v }) => ({ i, f, old: ITEMS[i][f], v })).filter((c) => c.old !== c.v); if (!rec.length) return;
+  rec.forEach((c) => { ITEMS[c.i][c.f] = c.v; }); undo.push({ rec, label }); redo = []; persist(); render(); toast(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : ''));
+}
+function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => { ITEMS[c.i][c.f] = c.old; }); redo.push(u); persist(); render(); toast('Undone: ' + u.label); }
+function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => { ITEMS[c.i][c.f] = c.v; }); undo.push(u); persist(); render(); toast('Redone: ' + u.label); }
+function codesObj() { const o = {}; ITEMS.forEach((it) => { o[it.key] = { div: it.div, pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc }; }); return o; }
+function persist() { try { localStorage.setItem(LSK, JSON.stringify({ at: new Date().toISOString(), codes: codesObj() })); $('saved').textContent = 'Saved in this browser ' + new Date().toLocaleTimeString(); } catch (e) { $('saved').textContent = 'Not saved – use Save codes'; } }
+function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; ITEMS.forEach((it) => { const c = s.codes[it.key]; if (c) F.concat('inc').forEach((f) => { if (c[f] !== undefined) it[f] = c[f]; }); }); $('saved').textContent = 'Restored ' + new Date(s.at).toLocaleString(); } catch (e) {} }
+let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2800); }
+// ---------- code lists + typo hints
+const lev1 = (a, b) => { a = a.toUpperCase(); b = b.toUpperCase(); if (a === b) return true; if (Math.abs(a.length - b.length) > 1) return false; let i = 0; while (i < a.length && a[i] === b[i]) i++; return a.slice(i + 1) === b.slice(i + 1) || a.slice(i) === b.slice(i + 1) || a.slice(i + 1) === b.slice(i); };
+let USE = {}; function countUse() { USE = { div: {}, pkg: {}, mnl: {}, ce: {} }; ITEMS.forEach((it) => F.forEach((f) => { if (it[f]) USE[f][it[f]] = (USE[f][it[f]] || 0) + 1; })); }
+const typoOf = (f, v) => { if (!v || (USE[f][v] || 0) > 1 || (f === 'div' && DIVS.includes(v)) || (f === 'mnl' && MNLS.includes(v))) return ''; const near = Object.keys(USE[f]).find((k) => k !== v && USE[f][k] > 1 && lev1(k, v)); return near ? 'Did you mean ' + near + '?' : ''; };
+// ---------- columns (shared by both views; a row is {it, po?, l?})
+const codeCell = (f) => (r) => { const it = r.it, ty = typoOf(f, it[f]); return `<td class="c"><input data-f="${f}" value="${esc(it[f])}" list="${LID[f]}" class="${it[f] ? '' : 'miss'}${ty ? ' typo' : ''}" title="${esc(ty)}"></td>`; };
+const COLS = {
+  svc: [
+    { k: 'svc', l: 'Service', w: 96, v: (r) => r.it.svc, h: (r) => `<td><a href="#" class="lk open">${esc(r.it.svc)}</a></td>` },
+    { k: 'desc', l: 'Description', w: 330, v: (r) => r.it.desc, h: (r) => `<td dir="auto" title="${esc(r.it.desc)}">${esc(r.it.desc)}</td>` },
+    { k: 'unit', l: 'Unit', w: 58, v: (r) => r.it.unit, h: (r) => `<td>${r.it.unit ? `<span class="u" style="background:${unitCol(r.it.unit)}">${esc(r.it.unit)}</span>` : ''}</td>` },
+    ...F.map((f) => ({ k: f, l: FN[f], w: f === 'ce' ? 100 : f === 'div' ? 88 : f === 'mnl' ? 66 : 80, code: 1, v: (r) => r.it[f] || '(blank)', h: codeCell(f) })),
+    { k: 'st', l: 'Status', w: 100, v: (r) => statusOf(r.it), h: (r) => { const s = statusOf(r.it); return `<td><span class="st ${s.split(' ')[0]}">${s}</span></td>`; } },
+    { k: 'inc', l: 'Include', w: 64, v: (r) => r.it.inc, h: (r) => `<td><button class="inc ${r.it.inc === 'No' ? 'no' : ''}">${r.it.inc === 'No' ? 'No' : 'Yes'}</button></td>` },
+    { k: 'qty', l: 'Qty to date', w: 96, num: 1, v: (r) => r.it.qty, h: (r) => `<td class="num">${fq(r.it.qty)}</td>` },
+    { k: 'rate', l: 'Rate', w: 80, num: 1, v: (r) => (r.it.qty ? r.it.td / r.it.qty : 0), h: (r) => `<td class="num">${r.it.qty ? fmt(r.it.td / r.it.qty) : ''}</td>` },
+    { k: 'td', l: 'To date', w: 112, num: 1, v: (r) => r.it.td, h: (r) => `<td class="num"><b>${fmt(r.it.td)}</b></td>` },
+    { k: 'tm', l: 'This month', w: 104, num: 1, v: (r) => r.it.tm, h: (r) => `<td class="num">${fmt(r.it.tm)}</td>` },
+    { k: 'pos', l: 'POs', w: 120, multi: 1, v: (r) => (r.it.poList.length ? r.it.poList : ['(none)']), h: (r) => `<td title="${esc(r.it.poTxt)}">${esc(r.it.poList[0] || '')}${r.it.poList.length > 1 ? ` <span class="help">+${r.it.poList.length - 1}</span>` : ''}</td>` },
+    { k: 'subs', l: 'Subcontractors', w: 230, v: (r) => r.it.subs, h: (r) => `<td dir="auto" title="${esc(r.it.subs)}">${esc(r.it.subs)}</td>` },
+  ],
+  po: [
+    { k: 'po', l: 'PO', w: 96, v: (r) => r.p.po, h: (r) => `<td class="help">${esc(r.p.po)}</td>` },
+    { k: 'sup', l: 'Subcontractor', w: 150, v: (r) => r.p.sup, h: (r) => `<td dir="auto" class="help" title="${esc(r.p.sup)}">${esc(r.p.sup)}</td>` },
+    { k: 'svc', l: 'Service', w: 96, v: (r) => r.it.svc, h: (r) => `<td><a href="#" class="lk open">${esc(r.it.svc)}</a></td>` },
+    { k: 'desc', l: 'Description', w: 270, v: (r) => r.it.desc, h: (r) => `<td dir="auto" title="${esc(r.it.desc)}">${esc(r.it.desc)}</td>` },
+    { k: 'unit', l: 'Unit', w: 58, v: (r) => r.it.unit, h: (r) => `<td>${r.it.unit ? `<span class="u" style="background:${unitCol(r.it.unit)}">${esc(r.it.unit)}</span>` : ''}</td>` },
+    ...F.map((f) => ({ k: f, l: FN[f], w: f === 'ce' ? 100 : f === 'div' ? 88 : f === 'mnl' ? 66 : 80, code: 1, v: (r) => r.it[f] || '(blank)', h: codeCell(f) })),
+    { k: 'st', l: 'Status', w: 100, v: (r) => statusOf(r.it), h: (r) => { const s = statusOf(r.it); return `<td><span class="st ${s.split(' ')[0]}">${s}</span></td>`; } },
+    { k: 'qty', l: 'Qty (PO)', w: 92, num: 1, v: (r) => r.l.qty, h: (r) => `<td class="num">${fq(r.l.qty)}</td>` },
+    { k: 'rate', l: 'Rate', w: 80, num: 1, v: (r) => (r.l.qty ? r.l.td / r.l.qty : 0), h: (r) => `<td class="num">${r.l.qty ? fmt(r.l.td / r.l.qty) : ''}</td>` },
+    { k: 'td', l: 'To date (PO)', w: 112, num: 1, v: (r) => r.l.td, h: (r) => `<td class="num"><b>${fmt(r.l.td)}</b></td>` },
+    { k: 'tm', l: 'This month (PO)', w: 110, num: 1, v: (r) => r.l.tm, h: (r) => `<td class="num">${fmt(r.l.tm)}</td>` },
+    { k: 'share', l: '% of PO', w: 70, num: 1, v: (r) => (r.p.td ? r.l.td / r.p.td : 0), h: (r) => `<td class="num">${r.p.td ? (100 * r.l.td / r.p.td).toFixed(0) + '%' : ''}</td>` },
+  ] };
+POS.forEach((p) => { p.td = p.lines.reduce((s, l) => s + l.td, 0); p.tm = p.lines.reduce((s, l) => s + l.tm, 0); });
+ITEMS.forEach((it) => { it.poList = []; }); POS.forEach((p) => p.lines.forEach((l) => ITEMS[l.i].poList.push(p.po))); ITEMS.forEach((it) => { it.poList = [...new Set(it.poList)]; it.poTxt = it.poList.join(' '); });
+const ROWS = { svc: () => ITEMS.map((it) => ({ it, g: it.tow })), po: () => POS.flatMap((p) => p.lines.map((l) => ({ it: ITEMS[l.i], p, l, g: p.po }))) };
+// ---------- filtering
+const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v));
+const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));
+function passCol(c, r, f) { if (!f.set) return true; const v = c.v(r); return Array.isArray(v) ? v.some((x) => f.set.has(keyOf(c, x))) : f.set.has(keyOf(c, v)); }
+function rowsOf(vw, skipCol) {
+  const S = V[vw], q = S.q.trim().toLowerCase(), cols = COLS[vw];
+  return ROWS[vw]().filter((r) => {
+    const it = r.it;
+    if (S.tow && (vw === 'po' ? r.p.tow : it.tow) !== S.tow) return false;
+    if (S.st !== 'All' && statusOf(it) !== S.st) return false; if (!S.exc && it.inc === 'No') return false;
+    if (q && !(it.svc + ' ' + it.desc + ' ' + it.subs + ' ' + it.pkg + ' ' + it.ce + ' ' + it.poTxt + (r.p ? ' ' + r.p.po + ' ' + r.p.title + ' ' + r.p.sup : '')).toLowerCase().includes(q)) return false;
+    for (const c of cols) { const f = S.f[c.k]; if (f && c.k !== skipCol && !passCol(c, r, f)) return false; }
+    return true; });
+}
+const active = (f) => f && f.set;
+// ---------- render
+function render() {
+  countUse(); const all = { div: new Set(DIVS), pkg: new Set(), mnl: new Set(MNLS), ce: new Set() }; ITEMS.forEach((it) => F.forEach((f) => { if (it[f]) all[f].add(it[f]); }));
+  F.forEach((f) => { $(LID[f]).innerHTML = [...all[f]].sort().map((x) => `<option value="${esc(x)}">`).join(''); });
+  const S = V[view], cols = COLS[view];
+  $('cg').innerHTML = '<col style="width:34px">' + cols.map((c) => `<col style="width:${c.w}px">`).join('');
+  $('th').innerHTML = '<tr><th><input type="checkbox" id="all"></th>' + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''}">${c.l}${S.sort && S.sort.k === c.k ? `<span class="sa"> ${S.sort.d > 0 ? '▲' : '▼'}</span>` : ''}<button class="fb ${active(S.f[c.k]) ? 'act' : ''}" data-k="${c.k}">▾</button></th>`).join('') + '</tr>';
+  let rows = rowsOf(view);
+  if (S.sort) { const c = cols.find((x) => x.k === S.sort.k); rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S.sort.d; }); }
+  // groups: Type of works (Services) / PO (PO view); the order of groups follows the rows
+  const groups = new Map(); for (const r of rows) (groups.get(r.g) || groups.set(r.g, []).get(r.g)).push(r);
+  const tb = [], nc = cols.length + 1;
+  for (const [g, rs] of groups) {
+    const folded = S.fold.has(g), its = [...new Set(rs.map((r) => r.it))], c = its.filter((x) => statusOf(x) === 'Coded'), gc = towCol(view === 'po' ? rs[0].p.tow : g);
+    if (view === 'svc') { const td = rs.reduce((s, r) => s + r.it.td, 0), tdc = c.reduce((s, x) => s + x.td, 0);
+      tb.push(`<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}"><span class="tg">${folded ? '+' : '−'}</span><span dir="rtl" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${rs.length} services · coded ${c.length}/${its.length} · to date ${fmt(td)}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span></td></tr>`); }
+    else { const p = rs[0].p, tdc = rs.filter((r) => statusOf(r.it) === 'Coded').reduce((s, r) => s + r.l.td, 0), pc = p.td ? (100 * tdc / p.td).toFixed(0) : 0, ci = (k) => cols.findIndex((x) => x.k === k) + 1;
+      const cells = Array(nc).fill(''); cells[ci('st')] = `<span class="gb" style="margin:0"><i style="width:${pc}%"></i></span> <span style="font-weight:400">${pc}%</span>`; cells[ci('td')] = fmt(rs.reduce((s, r) => s + r.l.td, 0)); cells[ci('tm')] = fmt(rs.reduce((s, r) => s + r.l.tm, 0));
+      const span = ci('ce') + 1; tb.push(`<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="tg">${folded ? '+' : '−'}</span><b>${esc(p.po)}</b> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(p.title)}</span><span class="gm" dir="auto" style="unicode-bidi:isolate">${esc(p.sup)}</span></td>${cells.slice(span).map((x, k) => `<td class="${['td', 'tm'].includes(cols[span + k - 1]?.k) ? 'num' : ''}">${x}</td>`).join('')}</tr>`); }
+    if (folded) continue;
+    for (const r of rs) { const it = r.it; tb.push(`<tr class="it${sel.has(it.i) ? ' sel' : ''}${it.inc === 'No' ? ' exc' : ''}" data-i="${it.i}" style="--gc:${gc}"><td><input type="checkbox" class="ck" ${sel.has(it.i) ? 'checked' : ''}></td>${cols.map((c) => c.h(r)).join('')}</tr>`); }
+  }
+  $('tb').innerHTML = tb.join('') || `<tr><td colspan="${nc}" style="padding:20px;color:#6b7280">Nothing matches the filters.</td></tr>`;
+  $('cnt').textContent = view === 'svc' ? `${rows.length} of ${ITEMS.length} services` : `${groups.size} POs · ${rows.length} PO lines`;
+  // KPIs (always all services)
+  const inc = ITEMS.filter((x) => x.inc !== 'No'), tdAll = inc.reduce((s, x) => s + x.td, 0), coded = inc.filter((x) => statusOf(x) === 'Coded'), tdC = coded.reduce((s, x) => s + x.td, 0), notC = inc.filter((x) => statusOf(x) !== 'Coded');
+  $('kpis').innerHTML = [['Services', ITEMS.length], ['Fully coded', coded.length + ' of ' + inc.length], ['Coded share of To date', tdAll ? (100 * tdC / tdAll).toFixed(1) + '%' : '-', tdAll ? tdC / tdAll : 0], ['To date not coded', fmt(notC.reduce((s, x) => s + x.td, 0))], ['This month not coded', fmt(notC.reduce((s, x) => s + x.tm, 0))], ['POs', POS.length], ['Excluded', ITEMS.length - inc.length]]
+    .map(([l, b, p]) => `<div class="kpi"><span>${l}</span><b>${b}</b>${p !== undefined ? `<div class="bar"><i style="width:${(p * 100).toFixed(1)}%"></i></div>` : ''}</div>`).join('');
+  $('tows').innerHTML = `<button class="tow ${S.tow ? '' : 'on'}" data-t="" style="--c:#c9d0db">All types <span class="n">${ITEMS.length}</span></button>` + towList.map((t) => { const g = ITEMS.filter((x) => x.tow === t), c2 = g.filter((x) => statusOf(x) === 'Coded').length;
+    return `<button class="tow ${S.tow === t ? 'on' : ''}" data-t="${esc(t)}" dir="rtl" style="--c:${towCol(t)}">${esc(t)} <span class="n">${c2}/${g.length}</span><div class="pb"><i style="width:${(100 * c2 / g.length).toFixed(0)}%"></i></div></button>`; }).join('');
+  const pk = {}; inc.forEach((x) => { const k = x.pkg || '(no PKG)'; pk[k] = (pk[k] || 0) + x.td; });
+  $('pkgs').innerHTML = Object.entries(pk).sort((a, b) => (a[0] === '(no PKG)') - (b[0] === '(no PKG)') || a[0].localeCompare(b[0])).map(([k, v2]) => `<div class="pk"><span>${esc(k)}</span><b>${fmtM(v2)}</b></div>`).join('');
+  $('chips').innerHTML = ['All', 'Not coded', 'Partly coded', 'Coded'].map((s) => `<button class="chip ${S.st === s ? 'on' : ''}" data-s="${s}">${s} (${s === 'All' ? ITEMS.length : ITEMS.filter((x) => statusOf(x) === s).length})</button>`).join(' ');
+  $('bulk').classList.toggle('show', sel.size > 0); $('bsel').textContent = sel.size + ' services selected · To date ' + fmt([...sel].reduce((s, i) => s + ITEMS[i].td, 0));
+  const vis = rows.map((r) => r.it.i); $('all').checked = vis.length > 0 && vis.every((i) => sel.has(i)); $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length;
+  $('q').value = S.q; $('showExc').checked = S.exc;
+  document.querySelectorAll('.tabs button').forEach((b) => b.classList.toggle('on', b.dataset.v === view));
+}
+// ---------- Excel-like column filter
+let popK = null;
+function openPop(k, btn) {
+  const S = V[view], c = COLS[view].find((x) => x.k === k), f = S.f[k] || {}, r = btn.getBoundingClientRect(), pop = $('pop'); popK = k;
+  let html = `<div class="row"><button data-a="asc">${c.num ? 'Smallest → largest' : 'Sort A → Z'}</button><button data-a="desc">${c.num ? 'Largest → smallest' : 'Sort Z → A'}</button></div>`;
+  { const cnt = new Map(); rowsOf(view, k).forEach((x) => { const vv = c.v(x); (Array.isArray(vv) ? vv : [vv]).forEach((v0) => { const v = keyOf(c, v0); cnt.set(v, (cnt.get(v) || 0) + 1); }); }); const vals = [...cnt.keys()].sort((a, b) => (c.num ? keyNum(a) - keyNum(b) : a.localeCompare(b)));
+    html += `<input type="search" id="pS" placeholder="Search values"><div class="vals" id="pV"><label><input type="checkbox" id="pAll" ${!f.set ? 'checked' : ''}> <b>(Select all)</b></label>${vals.map((v) => `<label data-v="${esc(v.toLowerCase())}"><input type="checkbox" class="pv" value="${esc(v)}" ${!f.set || f.set.has(v) ? 'checked' : ''}> <span dir="auto">${esc(v)}</span><span class="cn">${cnt.get(v)}</span></label>`).join('')}</div>`; }
+  html += `<div class="row" style="margin:6px 0 0"><button class="pri" data-a="ok">OK</button><button data-a="clr">Clear filter</button></div>`;
+  pop.innerHTML = html; pop.classList.add('show'); pop.style.left = Math.min(window.innerWidth - 270, r.left - 200) + 'px'; pop.style.top = r.bottom + 4 + 'px';
+  const s = $('pS'); if (s) { s.oninput = () => { const q = s.value.toLowerCase(); pop.querySelectorAll('.vals label[data-v]').forEach((l) => { l.style.display = l.dataset.v.includes(q) ? '' : 'none'; }); }; s.focus(); }
+  const a = $('pAll'); if (a) a.onchange = () => pop.querySelectorAll('.pv').forEach((x) => { if (x.closest('label').style.display !== 'none') x.checked = a.checked; });
+}
+$('pop').addEventListener('click', (e) => { const a = e.target.dataset.a; if (!a) return; const S = V[view], c = COLS[view].find((x) => x.k === popK);
+  if (a === 'asc' || a === 'desc') { S.sort = { k: popK, d: a === 'asc' ? 1 : -1 }; }
+  if (a === 'clr') delete S.f[popK];
+  if (a === 'ok') { { const all = [...document.querySelectorAll('#pop .pv')], srch = ($('pS')?.value || '').trim(), boxes = srch ? all.filter((x) => x.closest('label').style.display !== 'none') : all, on = boxes.filter((x) => x.checked).map((x) => x.value); S.f[popK] = !srch && on.length === all.length ? {} : { set: new Set(on) }; } }
+  $('pop').classList.remove('show'); render(); });
+document.addEventListener('mousedown', (e) => { if (!e.target.closest('#pop') && !e.target.closest('.fb')) $('pop').classList.remove('show'); });
+// ---------- events
+$('th').addEventListener('click', (e) => { const b = e.target.closest('.fb'); if (b) { e.stopPropagation(); openPop(b.dataset.k, b); } });
+$('th').addEventListener('change', (e) => { if (e.target.id === 'all') { rowsOf(view).forEach((r) => (e.target.checked ? sel.add(r.it.i) : sel.delete(r.it.i))); render(); } });
+$('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it'); if (!tr) return; const i = +tr.dataset.i;
+  if (e.target.matches('input[data-f]')) { const f = e.target.dataset.f, v = e.target.value.trim(), targets = sel.has(i) && sel.size > 1 ? [...sel] : [i]; change(targets.map((j) => ({ i: j, f, v })), FN[f] + ' = ' + (v || '(blank)')); }
+  if (e.target.matches('.ck')) { e.target.checked ? sel.add(i) : sel.delete(i); render(); } });
+$('tb').addEventListener('click', (e) => { const g = e.target.closest('tr.grp'); if (g) { const S = V[view], k = g.dataset.g; S.fold.has(k) ? S.fold.delete(k) : S.fold.add(k); render(); return; }
+  const tr = e.target.closest('tr.it'); if (!tr) return; const i = +tr.dataset.i;
+  if (e.target.matches('.inc')) { change([{ i, f: 'inc', v: ITEMS[i].inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
+  if (e.target.matches('.open')) { e.preventDefault(); openDrawer(ITEMS[i]); return; }
+  if (e.target.matches('.ck') && e.shiftKey && lastClick !== null) { const v = rowsOf(view).map((r) => r.it.i), a = v.indexOf(lastClick), b = v.indexOf(i); v.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((j) => sel.add(j)); render(); }
+  if (e.target.matches('.ck')) lastClick = i; });
+$('tb').addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input[data-f]')) { e.preventDefault(); const f = e.target.dataset.f, idx = [...document.querySelectorAll(`#tb input[data-f="${f}"]`)].indexOf(e.target); e.target.blur(); setTimeout(() => document.querySelectorAll(`#tb input[data-f="${f}"]`)[idx + 1]?.focus(), 0); } });
+$('tows').addEventListener('click', (e) => { const b = e.target.closest('.tow'); if (b) { V[view].tow = b.dataset.t; render(); } });
+$('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (b) { V[view].st = b.dataset.s; render(); } });
+$('q').addEventListener('input', (e) => { V[view].q = e.target.value; render(); $('q').focus(); });
+$('showExc').addEventListener('change', (e) => { V[view].exc = e.target.checked; render(); });
+$('bFold').onclick = () => { const S = V[view]; rowsOf(view).forEach((r) => S.fold.add(r.g)); render(); };
+$('bOpen').onclick = () => { V[view].fold.clear(); render(); };
+$('bClr').onclick = () => { const S = V[view]; S.f = {}; S.sort = null; S.q = ''; S.st = 'All'; S.tow = ''; S.exc = true; render(); };
+document.querySelector('.tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { view = b.dataset.v; render(); $('wrap').scrollTop = 0; } });
+$('bApply').onclick = () => { const ch = []; F.forEach((f) => { const v = $('b' + (f === 'ce' ? 'CE' : FN[f])).value.trim(); if (v) sel.forEach((i) => ch.push({ i, f, v })); }); if (!ch.length) return toast('Type at least one code in the bar'); change(ch, 'Bulk coding'); };
+$('bClear').onclick = () => { if (confirm('Clear DIV, PKG, MNL and Cost element of ' + sel.size + ' services?')) change([...sel].flatMap((i) => F.map((f) => ({ i, f, v: '' }))), 'Clear codes'); };
+$('bInc').onclick = () => change([...sel].map((i) => ({ i, f: 'inc', v: 'Yes' })), 'Include'); $('bExc').onclick = () => change([...sel].map((i) => ({ i, f: 'inc', v: 'No' })), 'Exclude');
+$('bNone').onclick = () => { sel.clear(); render(); };
+$('bUndo').onclick = doUndo; $('bRedo').onclick = doRedo;
+document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.target.matches('input[type=search]')) { e.preventDefault(); doUndo(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); doRedo(); }
+  if (e.key === '/' && !e.target.matches('input')) { e.preventDefault(); $('q').focus(); } if (e.key === 'Escape') { sel.clear(); $('drawer').classList.remove('open'); $('pop').classList.remove('show'); render(); } });
+// ---------- detail drawer (service) with its POs – a PO opens the PO view on that PO
+function openDrawer(it) {
+  $('dTitle').textContent = it.svc; $('dSub').textContent = it.tow; const mx = Math.max(1, ...it.m.map(Math.abs));
+  const pl = POS.flatMap((p) => p.lines.filter((l) => l.i === it.i).map((l) => ({ p, l }))).sort((a, b) => b.l.td - a.l.td);
+  $('dBody').innerHTML = `<div dir="auto" style="font-size:14px;font-weight:600">${esc(it.desc)}</div>
+    <div class="bars">${it.m.map((v, k) => `<div class="${META.periods[k] === META.cut ? 'cut' : ''}" style="height:${(100 * Math.abs(v) / mx).toFixed(1)}%" title="${META.periods[k]}: ${fmt(v)}"></div>`).join('')}</div>
+    <div class="blab">${META.periods.map((p) => `<span>${p.replace('-', ' ')}</span>`).join('')}</div>
+    <dl><dt>To date</dt><dd><b>${fmt(it.td)}</b></dd><dt>This month (${META.cut})</dt><dd>${fmt(it.tm)}</dd><dt>Qty to date</dt><dd>${fq(it.qty)} ${esc(it.unit)}</dd><dt>Rate</dt><dd>${it.qty ? fmt(it.td / it.qty) : '-'}</dd>
+    <dt>Certified</dt><dd>${esc(it.fp)} → ${esc(it.lp)}</dd><dt>Codes</dt><dd>${F.map((f) => FN[f] + ': <b>' + (esc(it[f]) || '–') + '</b>').join(' · ')}</dd></dl>
+    <table class="mini"><tr><th>PO</th><th>Subcontractor</th><th style="text-align:right">To date</th></tr>${pl.map(({ p, l }) => `<tr><td><a href="#" class="lk gopo" data-po="${esc(p.po)}">${esc(p.po)}</a></td><td dir="auto">${esc(p.sup)}</td><td class="num">${fmt(l.td)}</td></tr>`).join('')}</table>
+    <div class="help" style="margin-top:6px">Click a PO to open it in the PO view. Amounts are net, counted lines; gold = cut month.</div>`;
+  $('drawer').classList.add('open');
+}
+$('dBody').addEventListener('click', (e) => { const a = e.target.closest('.gopo'); if (!a) return; e.preventDefault(); view = 'po'; const S = V.po; S.q = a.dataset.po; S.fold.clear(); $('drawer').classList.remove('open'); render(); });
+$('dClose').onclick = () => $('drawer').classList.remove('open');
+// ---------- import / save / export
+const norm = (t) => String(t ?? '').replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s*([-+*/()])\s*/g, '$1').replace(/\s+/g, ' ').trim().toLowerCase();
+$('bImport').onclick = () => $('file').click();
+$('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    if (f.name.toLowerCase().endsWith('.json')) { const s = JSON.parse(await f.text()); applyCodes((it) => s.codes[it.key], f.name); return; }
+    const wb = XLSX.read(await f.arrayBuffer()), name = wb.SheetNames.find((n) => n === 'Subcontractor Coding') || wb.SheetNames.find((n) => n === 'Coding');
+    if (!name) return toast('No "Subcontractor Coding" or "Coding" sheet in ' + f.name);
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' }), hi = rows.findIndex((r) => r.includes('Service') && r.includes('Description') && r.includes('PKG'));
+    if (hi < 0) return toast('Header row not found on ' + name);
+    const h = rows[hi], c = (n) => h.findIndex((x) => String(x).trim() === n), ce = c('Cost element') >= 0 ? c('Cost element') : c('Cost element code');
+    const byKey = new Map(), bySd = new Map();
+    for (const r of rows.slice(hi + 1)) { const o = { div: c('DIV') >= 0 ? String(r[c('DIV')]).trim() : undefined, pkg: String(r[c('PKG')]).trim(), mnl: String(r[c('MNL')]).trim(), ce: String(r[ce]).trim(), inc: c('Include') >= 0 ? String(r[c('Include')]).trim() || undefined : undefined };
+      if (c('Item key') >= 0 && r[c('Item key')]) byKey.set(String(r[c('Item key')]), o); bySd.set(String(r[c('Service')]).trim() + '|' + norm(r[c('Description')]), o); }
+    applyCodes((it) => byKey.get(it.key) || bySd.get(it.svc + '|' + norm(it.desc)), f.name + ' › ' + name);
+  } catch (err) { toast('Could not read ' + f.name + ': ' + err.message); }
+};
+function applyCodes(get, src) { const ch = []; let m = 0; ITEMS.forEach((it) => { const c = get(it); if (!c) return; m++; F.concat('inc').forEach((f) => { if (c[f] !== undefined && c[f] !== null && String(c[f]).trim() !== '') ch.push({ i: it.i, f, v: String(c[f]) }); }); });   // blank cells never wipe a code
+  const n = ch.filter((x) => ITEMS[x.i][x.f] !== x.v).length; change(ch, 'Imported from ' + src); toast(`Imported from ${src}: ${m} of ${ITEMS.length} services matched, ${n} codes changed`); }
+const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); };
+$('bSave').onclick = () => dl(new Blob([JSON.stringify({ project: META.project, cut: META.cut, savedAt: new Date().toISOString(), codes: codesObj() }, null, 1)], { type: 'application/json' }), `SC_codes_${META.project}_${new Date().toISOString().slice(0, 10)}.json`);
+// formatted Excel: Coding sheet (register layout, readable as "last report") + PO view
+$('bExport').onclick = async () => {
+  const wb = new ExcelJS.Workbook(), NAVY = 'FF1F3864', GOLD = 'FFBF8F00', bd = { style: 'thin', color: { argb: 'FFD9D9D9' } }, box = { top: bd, bottom: bd, left: bd, right: bd };
+  const fill = (c) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), hx = (c) => 'FF' + c.replace('#', '').toUpperCase();
+  const stF = { Coded: 'FFE2EFDA', 'Partly coded': 'FFFFF2CC', 'Not coded': 'FFFCE4D6' };
+  const head = (ws, row, labels, codeCols) => { labels.forEach((l, i) => { const c = ws.getCell(row, i + 1); c.value = l; c.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Arial', size: 10 }; c.fill = fill(codeCols.includes(l) ? GOLD : NAVY); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = box; }); ws.getRow(row).height = 30; };
+  // 1. Subcontractor Coding
+  const ws = wb.addWorksheet('Subcontractor Coding', { properties: { tabColor: { argb: GOLD } } });
+  ws.getCell('A1').value = 'Subcontractor Coding — ' + META.project; ws.getCell('A1').font = { bold: true, size: 14, color: { argb: NAVY }, name: 'Arial' };
+  ws.getCell('A2').value = `Exported ${new Date().toLocaleString()} from the coding screen · cut month ${META.cut} · ${ITEMS.filter((x) => statusOf(x) === 'Coded').length} of ${ITEMS.length} services fully coded · this sheet can be given to the register build as last report`; ws.getCell('A2').font = { color: { argb: 'FF7F7F7F' }, name: 'Arial', size: 9 };
+  const L = ['Type of works (SAP)', 'Service', 'Description', 'Unit', 'DIV', 'PKG', 'MNL', 'Cost element', 'Status', 'Include', 'Qty to date', 'Rate', 'To date', 'This month', 'POs', 'Subcontractors', 'Item key'];
+  head(ws, 4, L, ['DIV', 'PKG', 'MNL', 'Cost element', 'Include']);
+  ITEMS.forEach((it, j) => { const r = 5 + j, st = statusOf(it), v = [it.tow, it.svc, it.desc, it.unit, it.div, it.pkg, it.mnl, it.ce, st, it.inc, it.qty || null, it.qty ? it.td / it.qty : null, it.td, it.tm, it.pos || null, it.subs, it.key];
+    v.forEach((x, i) => { const c = ws.getCell(r, i + 1); c.value = x === '' ? null : x; c.border = box; c.font = { name: 'Arial', size: 10, bold: i >= 4 && i <= 7 }; });
+    ws.getCell(r, 1).fill = fill(hx(towCol(it.tow))); if (it.unit) ws.getCell(r, 4).fill = fill(hx(unitCol(it.unit))); ws.getCell(r, 9).fill = fill(stF[st]);
+    for (let i = 5; i <= 8; i++) ws.getCell(r, i).fill = fill(ws.getCell(r, i).value ? 'FFEEF3FB' : 'FFFFF0E8');
+    ws.getCell(r, 11).numFmt = '#,##0.00;[Red]-#,##0.00;"-"'; ws.getCell(r, 12).numFmt = '#,##0.00'; ws.getCell(r, 13).numFmt = '#,##0;[Red]-#,##0;"-"'; ws.getCell(r, 14).numFmt = '#,##0;[Red]-#,##0;"-"'; ws.getCell(r, 13).font = { name: 'Arial', size: 10, bold: true };
+    ws.getCell(r, 17).font = { name: 'Arial', size: 8, color: { argb: 'FF7F7F7F' } };
+    if (j === 0 || ITEMS[j - 1].tow !== it.tow) for (let i = 1; i <= L.length; i++) ws.getCell(r, i).border = { ...box, top: { style: 'medium', color: { argb: NAVY } } }; });
+  [26, 11, 46, 7, 11, 9, 8, 13, 13, 8, 12, 11, 14, 14, 6, 34, 30].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  ws.views = [{ state: 'frozen', xSplit: 3, ySplit: 4, showGridLines: false }]; ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + ITEMS.length, column: L.length } };
+  // 2. PO view
+  const wp = wb.addWorksheet('PO view', { properties: { tabColor: { argb: 'FF2F5597' } } });
+  wp.getCell('A1').value = 'PO view — ' + META.project; wp.getCell('A1').font = { bold: true, size: 14, color: { argb: NAVY }, name: 'Arial' };
+  const LP = ['PO', 'PO title', 'Subcontractor', 'Type of works', 'Service', 'Description', 'Unit', 'DIV', 'PKG', 'MNL', 'Cost element', 'Status', 'Qty (PO)', 'To date (PO)', 'This month (PO)'];
+  head(wp, 3, LP, ['DIV', 'PKG', 'MNL', 'Cost element']); let r = 4;
+  for (const p of POS) { const pr = r; [p.po, p.title, p.sup, p.tow, `${p.lines.length} services`, '', '', '', '', '', '', '', null, p.td, p.tm].forEach((x, i) => { const c = wp.getCell(r, i + 1); c.value = x; c.font = { name: 'Arial', size: 10, bold: true }; c.fill = fill(hx(towCol(p.tow))); c.border = box; });
+    wp.getCell(r, 14).numFmt = '#,##0'; wp.getCell(r, 15).numFmt = '#,##0'; r++;
+    for (const l of p.lines) { const it = ITEMS[l.i], st = statusOf(it); [p.po, '', '', '', it.svc, it.desc, it.unit, it.div, it.pkg, it.mnl, it.ce, st, l.qty || null, l.td, l.tm].forEach((x, i) => { const c = wp.getCell(r, i + 1); c.value = x === '' ? null : x; c.font = { name: 'Arial', size: 10, color: i === 0 ? { argb: 'FFA6A6A6' } : undefined }; c.border = box; });
+      wp.getCell(r, 12).fill = fill(stF[st]); wp.getCell(r, 13).numFmt = '#,##0.00'; wp.getCell(r, 14).numFmt = '#,##0;[Red]-#,##0;"-"'; wp.getCell(r, 15).numFmt = '#,##0;[Red]-#,##0;"-"'; wp.getRow(r).outlineLevel = 1; r++; }
+    void pr; }
+  [12, 34, 30, 24, 11, 44, 7, 10, 9, 8, 13, 13, 11, 14, 14].forEach((w, i) => { wp.getColumn(i + 1).width = w; });
+  wp.views = [{ state: 'frozen', xSplit: 1, ySplit: 3, showGridLines: false }]; wp.properties.outlineProperties = { summaryBelow: false }; wp.autoFilter = { from: { row: 3, column: 1 }, to: { row: r - 1, column: LP.length } };
+  const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `SC_codes_${META.project}_${new Date().toISOString().slice(0, 10)}.xlsx`); toast('Excel exported (Subcontractor Coding + PO view)');
+};
+// ---------- start
+$('hsub').textContent = `${META.project} · cut month ${META.cut} · ${ITEMS.length} services · ${POS.length} POs · data from ${META.source} (${META.built})`;
+restore(); render();
+</script>
+</body>
+</html>
