@@ -92,9 +92,9 @@ function writeSummary(ws, model, infos, ex, opts, revInfo, stats) {
   r += 2;
   // ---- 3. coding status
   sec(r, '3. Coding status', 'live – follows each Coding sheet: type PKG, MNL, Cost element code once per item'); r++;
-  head(r, ['Bucket', 'Items', 'Fully coded', 'Partly coded', 'Not coded', 'Coded share of to date', 'Items excluded']); r++;
+  head(r, ['Bucket', 'Items', 'Coded', 'New items', 'Not coded', 'Coded share of to date', 'Items excluded']); r++;
   infos.forEach((inf, i) => { const a = ws.getCell(r, 1); a.value = inf.def.id; a.font = font({ bold: true }); a.fill = fill('DDE5EE'); const st = inf.nStatus;
-    const cg = (c) => `${q(inf.nCod)}!$${colL(c)}$${inf.cod1}:$${colL(c)}$${inf.lastC}`, stF = inf.toolC ? [`COUNT(${cg(inf.C.id)})`, `COUNTIF(${cg(inf.C.st)},"Coded")`, `COUNTIF(${cg(inf.C.st)},"Partly coded")`, `COUNTIF(${cg(inf.C.st)},"Not coded")`, `${q(inf.nCod)}!I2`, `COUNTIF(${cg(inf.C.inc)},"No")`] : ['A', 'B', 'C', 'D', 'E', 'F'].map((cc) => `${q(inf.nCod)}!${cc}4`);
+    const cg = (c) => `${q(inf.nCod)}!$${colL(c)}$${inf.cod1}:$${colL(c)}$${inf.lastC}`, stF = inf.toolC ? [`COUNT(${cg(inf.C.id)})`, `COUNTIF(${cg(inf.C.st)},"Coded")`, `COUNTIF(${cg(inf.C.nw)},"New")`, `COUNTIF(${cg(inf.C.st)},"Not coded")`, `${q(inf.nCod)}!I2`, `COUNTIF(${cg(inf.C.inc)},"No")`] : ['A', 'B', 'C', 'D', 'E', 'F'].map((cc) => `${q(inf.nCod)}!${cc}4`);
     [[inf.n, '#,##0'], [st.nFull, '#,##0'], [st.nPart, '#,##0'], [st.nNot, '#,##0'], [inf.coded, PC], [st.nEx, '#,##0']].forEach(([v, f], j) => cell(r, 2 + j, v, stF[j], { fmt: f })); for (let c = 1; c <= 7; c++) ws.getCell(r, c).border = box; r++; });
   r++;
   // ---- 4. reconciliation

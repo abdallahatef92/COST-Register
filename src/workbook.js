@@ -113,8 +113,8 @@ function bucketSheets(wb, b, model, opts) {
     if (isTree) wsC.getRow(row).outlineLevel = 1;
     it.vals.forEach((v, c) => { const x = wsC.getCell(row, c + 1); x.value = v; x.font = font({ bold: c === def.boldCol }); x.border = box; if (bf && c < def.tintCols) x.fill = fill(bf); });
     [['pkg', it.pkg], ['mnl', it.mnl], ['ce', it.ce], ['inc', it.inc]].forEach(([nm, v]) => { const x = wsC.getCell(row, C[nm]); x.value = v === '' ? null : v; x.fill = fill(YELLOW); x.font = font({ bold: true }); x.border = box; x.alignment = { horizontal: 'center' }; });
-    const full = it.pkg && it.mnl && it.ce, part = it.pkg || it.ce, status = full ? 'Fully coded' : part ? 'Partly coded' : 'Not coded';
-    setF(wsC.getCell(row, C.st), `IF(AND(${rg(C.pkg)}<>"",${rg(C.mnl)}<>"",${rg(C.ce)}<>""),"Fully coded",IF(OR(${rg(C.pkg)}<>"",${rg(C.ce)}<>""),"Partly coded","Not coded"))`, status);
+    const full = it.pkg && it.mnl && it.ce, status = full ? 'Coded' : 'Not coded';   // coded = PKG, MNL and cost element all filled (no 'partly')
+    setF(wsC.getCell(row, C.st), `IF(AND(${rg(C.pkg)}<>"",${rg(C.mnl)}<>"",${rg(C.ce)}<>""),"Coded","Not coded")`, status);
     const incl = it.lines.filter((l) => l.inc === 'Yes'); it.tot = r2(incl.filter((l) => l.per !== 'Pending').reduce((s, l) => s + l.amt, 0)); it.tmv = r2(incl.filter((l) => l.per === rep).reduce((s, l) => s + l.amt, 0));
     setF(wsC.getCell(row, C.td), blockTerms(it, D.amt, '">0"', '"<>Pending"').join('+') || '0', it.tot);
     if (isMat) { const qv = Math.round(incl.filter((l) => l.per !== 'Pending').reduce((s2, l) => s2 + (l.qty || 0), 0) * 1e6) / 1e6, xq = wsC.getCell(row, C.qty), xr = wsC.getCell(row, C.rate);
@@ -124,17 +124,17 @@ function bucketSheets(wb, b, model, opts) {
     [[C.nw, it.isNew ? 'New' : null], [C.fp, it.firstP], [C.lp, it.lastP], [C.ln, it.lines.length], [C.id, it.id], [C.key, it.key]].forEach(([c, v]) => { wsC.getCell(row, c).value = v; });
     for (const nm of ['st', 'td', 'tm', 'nw', 'fp', 'lp', 'ln', 'id', 'key']) { const x = wsC.getCell(row, C[nm]); x.border = box; x.font = font(nm === 'key' ? { size: 8, color: { argb: 'FF' + GREY } } : {}); }
     wsC.getCell(row, C.td).numFmt = AMT0; wsC.getCell(row, C.tm).numFmt = AMT0;
-    tdSum += it.tot; if (full) { fullSum += it.tot; nFull++; } else if (part) nPart++; else nNot++; if (it.inc === 'No') nEx++;
+    tdSum += it.tot; if (full) { fullSum += it.tot; nFull++; } else nNot++; if (it.isNew) nPart++; if (it.inc === 'No') nEx++;   // nPart = new items
   });
   for (const h of heads) {   // division rows: coloured by family, (heading only, no numbers)
     const f1 = h.items[0].crow, f2 = h.items[h.items.length - 1].crow, c = strong(h.key);
     for (let col = 1; col <= C.key; col++) { const x = wsC.getCell(h.row, col); x.fill = fill(c); x.border = box; x.font = font({ bold: true }); }
     wsC.getCell(h.row, 1).value = h.label;
     { const st = colL(C.st), a1 = h.items[0].crow, a2 = h.items[h.items.length - 1].crow, nf = h.items.filter((it) => it.pkg && it.mnl && it.ce).length, x = wsC.getCell(h.row, C.st);
-      setF(x, `COUNTIF(${st}${a1}:${st}${a2},"Fully coded")&" / "&COUNT(${colL(C.id)}${a1}:${colL(C.id)}${a2})&" coded"`, `${nf} / ${h.items.length} coded`); x.alignment = { horizontal: 'center' }; x.font = font({ bold: true, size: 9 }); }
+      setF(x, `COUNTIF(${st}${a1}:${st}${a2},"Coded")&" / "&COUNT(${colL(C.id)}${a1}:${colL(C.id)}${a2})&" coded"`, `${nf} / ${h.items.length} coded`); x.alignment = { horizontal: 'center' }; x.font = font({ bold: true, size: 9 }); }
   }
-  [['Items', `COUNT(${cr(C.id)})`, n, '#,##0'], ['Fully coded', `COUNTIF(${cr(C.st)},"Fully coded")`, nFull, '#,##0'], ['Partly coded', `COUNTIF(${cr(C.st)},"Partly coded")`, nPart, '#,##0'],
-    ['Not coded', `COUNTIF(${cr(C.st)},"Not coded")`, nNot, '#,##0'], ['Coded share', `IFERROR(SUMIFS(${cr(C.td)},${cr(C.st)},"Fully coded")/SUMIFS(${cr(C.td)},${cr(C.id)},">0"),0)`, tdSum ? fullSum / tdSum : 0, PCT],
+  [['Items', `COUNT(${cr(C.id)})`, n, '#,##0'], ['Coded', `COUNTIF(${cr(C.st)},"Coded")`, nFull, '#,##0'], ['New items', `COUNTIF(${cr(C.nw)},"New")`, nPart, '#,##0'],
+    ['Not coded', `COUNTIF(${cr(C.st)},"Not coded")`, nNot, '#,##0'], ['Coded share', `IFERROR(SUMIFS(${cr(C.td)},${cr(C.st)},"Coded")/SUMIFS(${cr(C.td)},${cr(C.id)},">0"),0)`, tdSum ? fullSum / tdSum : 0, PCT],
     ['Excluded', `COUNTIF(${cr(C.inc)},"No")`, nEx, '#,##0']].forEach(([l, f, v, nf], i) => {
     const a = wsC.getCell(3, i + 1), x = wsC.getCell(4, i + 1); a.value = l; a.font = font({ size: 8, color: { argb: 'FF' + GREY } }); a.fill = fill('DDEBF7'); a.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
     setF(x, f, v); x.numFmt = nf; x.font = font({ size: 14, bold: true, color: { argb: 'FF' + NAVY } }); x.fill = fill('DDEBF7'); x.alignment = { horizontal: 'center' };
@@ -146,8 +146,7 @@ function bucketSheets(wb, b, model, opts) {
   wsC.dataValidations.add(`${colL(C.inc)}${COD_1}:${colL(C.inc)}${lastC}`, { type: 'list', allowBlank: true, formulae: ['"Yes,No"'] });
   const sc = colL(C.st);
   wsC.addConditionalFormatting({ ref: `${sc}${COD_1}:${sc}${lastC}`, rules: [
-    { type: 'expression', formulae: [`$${sc}${COD_1}="Fully coded"`], style: { fill: cfFill('C6EFCE') }, priority: 1 },
-    { type: 'expression', formulae: [`$${sc}${COD_1}="Partly coded"`], style: { fill: cfFill('FFEB9C') }, priority: 2 },
+    { type: 'expression', formulae: [`$${sc}${COD_1}="Coded"`], style: { fill: cfFill('C6EFCE') }, priority: 1 },
     { type: 'expression', formulae: [`$${sc}${COD_1}="Not coded"`], style: { fill: cfFill('FFC7CE') }, priority: 3 }] });
   wsC.addConditionalFormatting({ ref: `A${COD_1}:${colL(C.key)}${lastC}`, rules: [{ type: 'expression', formulae: [`$${colL(C.inc)}${COD_1}="No"`], style: { font: { color: { argb: 'FFA6A6A6' }, strike: true } }, priority: 4 }] });
   }
@@ -260,7 +259,7 @@ function bucketSheets(wb, b, model, opts) {
   if (!isQ) for (let p = 0; p < np - 1; p++) { const a = colL(colOf('Amount', p)); wsP.addConditionalFormatting({ ref: `${a}${PM_H}`, rules: [{ type: 'expression', formulae: [`${a}$${PM_H}=${CUTLAB}`], style: { fill: cfFill(GOLD) }, priority: 20 + p }] }); }
   const amtCol = (p) => colOf('Amount', p);
   const perRows = new Map(); flat.forEach((f, i) => { const p = pOrd.get(f.l.per), x = perRows.get(p); if (x) x[1] = DATA_1 + i; else perRows.set(p, [DATA_1 + i, DATA_1 + i]); });
-  return { perRows, cod1, toolC, fullWord: toolC ? 'Coded' : 'Fully coded', def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
+  return { perRows, cod1, toolC, fullWord: 'Coded', def, b, nCod, nDat, nPm, k, n, C, D, lead, lastItem, rHand, rTot, rDiff, rExc, lastC, lastD, amtCol, coded: tdSum ? fullSum / tdSum : 0, nStatus: { nFull, nPart, nNot, nEx } };
 }
 
 function revenueSheet(wb, model, opts) {
@@ -295,8 +294,8 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
     const cds = it.lines.map((l) => l.cdate || l.date).filter(Boolean).sort();
     it.vals.forEach((v, c) => { const x = ws.getCell(r, c + 1); x.value = v; x.font = font(); if (c === 0) x.fill = fill(hashBand(v)); if (c === 1) x.fill = fill(hashBand('s' + v)); });
     [['div', it.div], ['pkg', it.pkg], ['mnl', it.mnl], ['ce', it.ce]].forEach(([k, v]) => { const x = ws.getCell(r, C[k]); x.value = v ? v : null; x.fill = fill(YELLOW); x.font = font({ bold: true }); x.border = box; });
-    const full = it.div && it.pkg && it.mnl && it.ce, none = !it.div && !it.pkg && !it.mnl && !it.ce, status = full ? 'Coded' : none ? 'Not coded' : 'Partly coded';
-    setF(ws.getCell(r, C.st), `IF(COUNTA(${colL(C.div)}${r}:${colL(C.ce)}${r})=4,"Coded",IF(COUNTA(${colL(C.div)}${r}:${colL(C.ce)}${r})=0,"Not coded","Partly coded"))`, status);
+    const full = it.div && it.pkg && it.mnl && it.ce, status = full ? 'Coded' : 'Not coded';
+    setF(ws.getCell(r, C.st), `IF(COUNTA(${colL(C.div)}${r}:${colL(C.ce)}${r})=4,"Coded","Not coded")`, status);
     const x1 = ws.getCell(r, C.qty); setF(x1, blockTerms(it, D.qty, '">0"', '"<>Pending"').join('+') || '0', q); x1.numFmt = '#,##0.00;[Red]\\-#,##0.00;"-"';
     const x2 = ws.getCell(r, C.rate); setF(x2, `IF(ABS(${colL(C.qty)}${r})<0.000001,"",${colL(C.td)}${r}/${colL(C.qty)}${r})`, Math.abs(q) < 1e-6 ? '' : it.tot / q); x2.numFmt = '#,##0.00;[Red]\\-#,##0.00;""';
     const x3 = ws.getCell(r, C.td); setF(x3, blockTerms(it, D.amt, '">0"', '"<>Pending"').join('+') || '0', it.tot); x3.numFmt = AMT; x3.font = font({ bold: true });
@@ -309,19 +308,19 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
     ws.getCell(r, C.id).value = it.id;
     const inc = ws.getCell(r, C.inc); inc.value = it.inc; inc.fill = fill(YELLOW); inc.font = font({ bold: true }); inc.border = box; inc.alignment = { horizontal: 'center' };
     ws.getCell(r, C.key).value = it.key; ws.getCell(r, C.key).font = font({ size: 8, color: { argb: 'FF' + GREY } });
-    tdSum += it.tot; if (full) { fullSum += it.tot; nFull++; } else { if (none) nNot++; else nPart++; tdNot += it.tot; tmNot += it.tmv; }
+    tdSum += it.tot; if (full) { fullSum += it.tot; nFull++; } else { nNot++; tdNot += it.tot; tmNot += it.tmv; }
     if (it.inc === 'No') nEx++; if (it.isNew) nNew++; if (pos.length > 1) n2po++; for (const k of Object.keys(miss)) if (!it[k]) miss[k]++;
   });
   // a navy line where a new Type of works starts (as in the Subcontract report)
   b.items.forEach((it, i) => { if (i && it.vals[0] === b.items[i - 1].vals[0]) return; for (let c = 1; c <= C.key; c++) { const x = ws.getCell(it.crow, c); x.border = { ...(x.border || {}), top: { style: 'medium', color: { argb: 'FF' + NAVY } } }; } });
   // ---- band (rows 1-2)
-  const band = [[1, 'Services still to code', `COUNTIF(${rg(C.st)},"Not coded")+COUNTIF(${rg(C.st)},"Partly coded")`, nNot + nPart, NUM0],
-    [2, 'Fully coded', `COUNTIF(${rg(C.st)},"Coded")&" of "&(COUNTIF(${rg(C.st)},"Coded")+COUNTIF(${rg(C.st)},"Partly coded")+COUNTIF(${rg(C.st)},"Not coded"))`, `${nFull} of ${nFull + nPart + nNot}`, 'General'],
+  const band = [[1, 'Services still to code', `COUNTIF(${rg(C.st)},"Not coded")`, nNot, NUM0],
+    [2, 'Coded', `COUNTIF(${rg(C.st)},"Coded")&" of "&(COUNTIF(${rg(C.st)},"Coded")+COUNTIF(${rg(C.st)},"Not coded"))`, `${nFull} of ${nFull + nNot}`, 'General'],
     [5, 'DIV missing', `COUNTIFS(${rg(C.div)},"",${rg(C.id)},">0")`, miss.div, NUM0], [6, 'PKG missing', `COUNTIFS(${rg(C.pkg)},"",${rg(C.id)},">0")`, miss.pkg, NUM0],
     [7, 'MNL missing', `COUNTIFS(${rg(C.mnl)},"",${rg(C.id)},">0")`, miss.mnl, NUM0], [8, 'Cost element missing', `COUNTIFS(${rg(C.ce)},"",${rg(C.id)},">0")`, miss.ce, NUM0],
     [9, 'Coded – share of To date', `IFERROR(SUMIFS(${rg(C.td)},${rg(C.st)},"Coded")/SUM(${rg(C.td)}),0)`, tdSum ? fullSum / tdSum : 0, '0.0%;[Red]\\-0.0%;"-"'],
-    [C.td, 'To date not fully coded', `SUMIFS(${rg(C.td)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.td)},${rg(C.st)},"Not coded")`, r2(tdNot), AMT],
-    [C.tm, 'This month not fully coded', `SUMIFS(${rg(C.tm)},${rg(C.st)},"Partly coded")+SUMIFS(${rg(C.tm)},${rg(C.st)},"Not coded")`, r2(tmNot), AMT],
+    [C.td, 'To date not coded', `SUMIFS(${rg(C.td)},${rg(C.st)},"Not coded")`, r2(tdNot), AMT],
+    [C.tm, 'This month not coded', `SUMIFS(${rg(C.tm)},${rg(C.st)},"Not coded")`, r2(tmNot), AMT],
     [C.nw, 'New', `COUNTIF(${rg(C.nw)},"New")`, nNew, NUM0], [C.pos, '2+ POs', `COUNTIF(${rg(C.pos)},">1")`, n2po, NUM0]];
   for (const [c, l, f, v, nf] of band) { const a = ws.getCell(1, c); a.value = l; navy(a, 9); const x = ws.getCell(2, c); setF(x, f, v); x.numFmt = nf; x.font = font({ bold: true, size: 13, color: { argb: 'FF' + NAVY } }); x.alignment = { horizontal: 'center' }; x.border = box; }
   ws.mergeCells(1, 2, 1, 3); ws.mergeCells(2, 2, 2, 3); ws.getRow(1).height = 30; ws.getRow(2).height = 24;
@@ -340,9 +339,9 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
   const cf = (ref, f, c, pr) => ws.addConditionalFormatting({ ref, rules: [{ type: 'expression', formulae: [f], style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: 'FF' + c } } }, priority: pr }] });
   cf(`${colL(C.div)}${R1}:${colL(C.ce)}${lastR}`, `AND($${colL(C.id)}${R1}<>"",LEN(TRIM(${colL(C.div)}${R1}))=0)`, 'F8CBAD', 5);
   const st = colL(C.st);
-  cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Coded"`, 'E2EFDA', 6); cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Partly coded"`, 'FFF2CC', 7); cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Not coded"`, 'FCE4D6', 8);
+  cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Coded"`, 'E2EFDA', 6); cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Not coded"`, 'FCE4D6', 8);
   ws.addConditionalFormatting({ ref: `A${R1}:${colL(C.key)}${lastR}`, rules: [{ type: 'expression', formulae: [`$${colL(C.inc)}${R1}="No"`], style: { font: { color: { argb: 'FFA6A6A6' }, strike: true } }, priority: 9 }] });
-  return { tdSum, fullSum, nFull, nPart, nNot, nEx };
+  return { tdSum, fullSum, nFull, nPart: nNew, nNot, nEx };
 }
 
 module.exports = { divOfService, VATM, VATF, CUT, CUTLAB, applyCodes, bucketSheets, revenueSheet, ExcelJS, AMT0, AMT2, QTY, PCT, NAVY, GOLD, GREY, YELLOW, RED, BAND, fill, font, box, q, setF, title, header, itemOf, descOf, DATA_H, DATA_1, COD_1, PM_H, PM_1, dlayout, D: D0, UE_FILL };
