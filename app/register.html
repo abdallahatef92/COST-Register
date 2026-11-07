@@ -92,7 +92,7 @@ table.s{border-collapse:collapse;width:100%} .s th{background:var(--navy);color:
 .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;margin-top:6px} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .okc{background:var(--ok);color:var(--okT);font-weight:700;border-radius:4px;padding:1px 8px} .chk{background:#FFC7CE;color:#9C0006;font-weight:700;border-radius:4px;padding:1px 8px} .inf{color:var(--mut)}
 #pop{position:fixed;z-index:30;background:#fff;border:1px solid #c9d0db;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:270px;display:none;padding:8px;font-size:12px}
-#pop.show{display:block} #pop .row{display:flex;gap:6px;margin-bottom:6px} #pop .row button{flex:1} #pop input[type=search]{width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:5px}
+#pop.show{display:block} #cpop{position:fixed;z-index:30;background:#fff;border:1px solid #c9d0db;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:230px;display:none;padding:8px;font-size:12.5px;max-height:70vh;overflow:auto} #cpop.show{display:block} #cpop label{display:flex;gap:7px;padding:3px 4px;border-radius:4px;cursor:pointer;white-space:nowrap} #cpop label:hover{background:#F5F7FA} #cpop .h{font-size:11px;color:var(--mut);padding:2px 4px 6px} #pop .row{display:flex;gap:6px;margin-bottom:6px} #pop .row button{flex:1} #pop input[type=search]{width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:5px}
 #pop .vals{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:5px;padding:4px 6px;margin:6px 0} #pop .vals label{display:flex;gap:6px;padding:2px 0;white-space:nowrap;overflow:hidden} #pop .vals .cn{color:var(--mut);margin-left:auto}
 #drawer{position:fixed;right:0;top:0;bottom:0;width:460px;background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.15);transform:translateX(105%);transition:transform .2s;z-index:10;display:flex;flex-direction:column}
 #drawer.open{transform:none} #drawer header{background:var(--navy2);color:#fff;padding:10px 14px;display:flex;gap:10px;align-items:center} #drawer header h1{font-size:15px;margin:0} #drawer header button{background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
@@ -116,22 +116,77 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
 .drop{display:block;border:2px dashed #9fb3d1;border-radius:10px;padding:14px;text-align:center;color:var(--mut);margin:0 0 10px;cursor:pointer} .drop b{display:block;color:#1f2937;font-size:14px;margin-bottom:2px} .drop.on{background:#EAF1FB;border-color:var(--navy2)}
 .frow{display:grid;grid-template-columns:330px 1fr;gap:8px;align-items:center;padding:4px 0;border-bottom:1px solid #f0f2f5} .frow label{font-weight:600} .fn{grid-column:2;color:#2e6b1f;font-size:12px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden} .seg button{border:0;border-radius:0;padding:4px 10px} .seg button.on{background:var(--navy);color:#fff}
+
+/* ===== layout: one header with the 5 steps, a sidebar for the list you work through, the table gets the rest ===== */
+header.top{padding:0 14px;height:50px;flex-wrap:nowrap;gap:8px;flex:none} header.top .ttl{margin-right:10px;max-width:250px;min-width:0} header.top h1{font-size:15px} header.top .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+header.top .hsep{width:1px;height:22px;background:rgba(255,255,255,.25);margin:0 2px} header.top button.hp{background:#fff;color:var(--navy);border-color:#fff;font-weight:600}
+nav.secs{display:flex;gap:2px} nav.secs button{display:flex;align-items:center;gap:7px;border:0;background:transparent;color:#dfe6f3;padding:6px 12px;border-radius:7px;font-weight:500;white-space:nowrap}
+nav.secs button i{font-style:normal;width:19px;height:19px;border-radius:50%;border:1px solid #8FA3C7;display:inline-flex;align-items:center;justify-content:center;font-size:10.5px} nav.secs button:hover{background:rgba(255,255,255,.12)}
+nav.secs button.on{background:#fff;color:var(--navy);font-weight:600} nav.secs button.on i{background:var(--navy);color:#fff;border-color:var(--navy)}
+#mainrow{flex:1;display:flex;min-height:0} #pages{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+#pg-tbl{margin:10px 12px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#side{width:264px;flex:none;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#side .sh{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 6px 14px;font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.05em;text-transform:uppercase}
+#side .sh button{font-size:11px;padding:1px 7px;text-transform:none;letter-spacing:0;font-weight:400;color:#374151}
+#side .ls{flex:1;overflow:auto;padding:0 8px 8px} #side .sec{font-size:10.5px;font-weight:700;color:var(--mut);letter-spacing:.05em;text-transform:uppercase;padding:12px 8px 4px}
+.sdi{display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:0 9px;align-items:center;padding:6px 8px;border-radius:7px;margin-bottom:1px;cursor:pointer}
+.sdi:hover{background:#F5F7FA} .sdi .cb{grid-row:1/4;align-self:stretch;border-radius:2px;background:var(--c,#C9CED6)} .sdi b{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .sdi .a{font-size:12px;font-variant-numeric:tabular-nums;color:#374151}
+.sdi small{grid-column:2/4;color:var(--mut);font-size:11.5px;display:flex;justify-content:space-between;gap:8px;white-space:nowrap} .sdi small span:first-child{overflow:hidden;text-overflow:ellipsis}
+.sdi.on{background:#EAF0F8;box-shadow:inset 0 0 0 1px #9FB3D1} .sdi.on b{color:var(--navy)} .sdi .pg{grid-column:2/4;height:4px;background:#EEF0F4;border-radius:2px;margin-top:4px;overflow:hidden} .sdi .pg i{display:block;height:4px;background:#2F6B3A}
+.sdg{padding:2px 0 6px 18px} .sdg div{display:flex;justify-content:space-between;gap:8px;padding:4px 8px;border-radius:5px;font-size:12px;color:#374151;cursor:pointer} .sdg div:hover{background:#F5F7FA} .sdg div span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .sdg div span:last-child{color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap} .sdg div.on{background:#EAF0F8;color:var(--navy);font-weight:600}
+#side .ft{border-top:1px solid var(--line);padding:6px 8px}
+#side.col{width:48px} #side.col .ls{padding:0 6px} .sdr{width:36px;height:34px;border-radius:7px;border:1px solid #DCE2EA;border-left:4px solid var(--c,#C9CED6);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#374151;margin:0 0 5px;cursor:pointer;overflow:hidden} .sdr.on{background:#EAF0F8;box-shadow:inset 0 0 0 1px var(--navy)}
+/* ===== soft table: light headers, hairline borders, no heavy fills ===== */
+.t th{background:#F1F4F8;color:#1B2A41;border-right:1px solid #E3E7EE;border-bottom:1px solid #D5DCE6;padding:6px 26px 6px 9px}
+.t th.code{background:#FBF0D4;color:#5C4600;border-right-color:#EFE2BD} .t th.cut{background:#FBF0D4;color:#5C4600} .t th.pend{background:#FBE6DA;color:#8A3500}
+.t thead tr.band th{background:#E8EDF4;color:#1B2A41;border-bottom:1px solid #D5DCE6;border-right:1px solid #DCE3EC} .t thead tr.band th.tog:hover{background:#DCE5F0} .t thead tr.band th.q{background:#EEF2F7} .t thead tr.band th.y{background:#E2E9F2} .t thead tr.band th.blank{background:#F1F4F8}
+.t thead tr.band th.lab{color:#6b7280} .t thead tr.band th.umall{background:#E8EDF4;color:#1B2A41} .t thead tr.band th.umall:hover{background:#DCE5F0} .t th.uon{background:#DCEBD5;color:#2E5A22} .t thead tr.band th.umon{background:#DCEBD5;color:#2E5A22} .t thead tr.band th.umoff{background:#EEF0F4;color:#6b7280} .t thead tr.band th.dmon{background:#E8EDF4;color:#1B2A41} .t thead tr.band th.dmoff,.t th.doff{background:#F6DCDC;color:#8E2626}
+.t th .fb{right:9px;background:transparent;color:#9AA5B5} .t th:hover .fb{color:#1F3864;background:#E2E8F1} .t th .fb.act{background:#FFD966;color:#000}
+.t th .rz{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:4} .t th .rz:hover,.t th .rz.on{background:#9FB3D1} body.rzing{cursor:col-resize;user-select:none}
+.t td{border-bottom:1px solid #EEF0F4;border-right:1px solid #F4F5F8} .t tr.it td:first-child{border-left:3px solid var(--gc,#fff)}
+.t tr.grp td{border-top:1px solid #D5DCE6;color:#1B2A41} .t tr.tot td{background:#EAF0F8;color:var(--navy);border-top:1px solid #C9D3E3} .t tr.tot td.fz{background:#EAF0F8}
+.t td.c input{border-color:#DCE3EC;background:#F6F8FB} .t td.c input.miss{background:#FFF8EC;border-color:#F3D3A5}
+table.s th{background:#F1F4F8;color:#1B2A41;border-bottom:1px solid #D5DCE6;font-weight:600} .s tr.tt td{background:#EAF0F8}
+.bar{border-bottom:1px solid #EEF0F4}
+
+/* ===== Subcontractor flow: steps · packages sidebar · rates & coding · review ===== */
+#pkg{background:transparent} .pkst{display:flex;align-items:center;gap:2px;padding:6px 14px;background:#fff;border-bottom:1px solid var(--line);flex:none} .pkst button{display:flex;align-items:center;gap:9px;border:0;border-radius:0;background:none;padding:4px 14px 6px;border-bottom:3px solid transparent;color:#6b7280;text-align:left}
+.pkst button i{font-style:normal;width:22px;height:22px;border-radius:50%;background:#E5E7EB;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11.5px} .pkst button b{display:block;font-size:13px} .pkst button small{display:block;font-size:11px}
+.pkst button.on{color:var(--navy);border-bottom-color:var(--navy)} .pkst button.on i{background:var(--navy);color:#fff} .pkst .pkar{color:#C0C4CC;font-size:17px} .pkst a.lk{font-weight:500;font-size:12px;margin:0 4px}
+.pkw1{flex:1;min-height:0;display:flex;flex-direction:column;margin:10px 12px;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;position:relative}
+.pkw1 .pkt{padding:8px 12px;gap:8px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden} .pkw1 .pkt input#pkQ{width:280px} .pkw1 .pkg{flex:1}
+.pkgt .pkth{padding-right:24px!important} .pkgt .pkfb{color:#9AA5B5} .pkgt .pkth:hover .pkfb{color:#1F3864} .pkgt .pkfb.act{color:#000;background:#FFD966;border-radius:3px}
+select.pksel{width:100%;height:23px;border:1px solid #F3D3A5;background:#FFF8EC;border-radius:5px;font-weight:600;color:#1f2937;padding:0 4px} select.pksel.e{color:#9ca3af;font-weight:400}
+.pksplit{right:12px!important;top:52px!important}
+.sdi .k{font-size:10.5px;color:#9CA3AF;border:1px solid #DCE2EA;border-radius:4px;padding:0 5px} .sdi.hot,.sdr.hot{background:#EEF4FF;outline:2px dashed #2F5597} body.pkdrag #side .pkd:not([data-pks="*"]):not([data-pks="~"]){background:#F5F8FD;box-shadow:inset 0 0 0 1px #9FB3D1}
+#side .pkadd{display:flex;gap:4px;margin:6px 2px} #side .pkadd input{border:1px solid #d1d5db;border-radius:6px;padding:4px 6px;min-width:0;flex:1} #side .pkadd input#pkNewC{flex:0 0 80px}
+.pkrt td{height:44px!important;max-height:none!important} .pkrt tr.pkw2{cursor:pointer} .pkrt td.tgc{color:var(--navy);font-weight:700;text-align:center} .pkrt .wi{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis} .pkrt .wsv{display:block;font-size:11px;overflow:hidden;text-overflow:ellipsis}
+.pkrt tr.op td{background:#F3F7FC} .pkrt tr.pkex td{background:#F7F9FC;height:auto!important;white-space:normal;padding:8px 10px 12px} .pkrt td.c input{height:24px}
+.rng{position:relative;height:16px;margin:0 6px} .rng .ln{position:absolute;left:0;right:0;top:7px;height:2px;background:#E5E7EB} .rng .dot{position:absolute;top:2px;width:12px;height:12px;border-radius:50%;margin-left:-6px;border:2px solid #fff;box-shadow:0 0 0 1px #8EA2BF;background:#8EA2BF}
+.rng .dot.lo{background:#2F6B3A;box-shadow:0 0 0 1px #2F6B3A} .rng .dot.hi{background:#9B2C2C;box-shadow:0 0 0 1px #9B2C2C} .rng .avg{position:absolute;top:-2px;width:2px;height:20px;background:var(--navy);margin-left:-1px} .rlab{display:flex;justify-content:space-between;font-size:10.5px;color:#6b7280;margin:1px 2px 0;line-height:1.2}
+.pol{display:flex;flex-wrap:wrap;gap:6px} .pc{display:grid;grid-template-columns:1fr auto;gap:0 10px;border:1px solid #DCE2EA;border-radius:7px;padding:5px 9px;min-width:230px;max-width:300px;background:#fff;line-height:1.35} .pc .nm{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .pc .r{font-weight:700;font-variant-numeric:tabular-nums} .pc small{color:#6b7280;font-size:11px} .pc.lo{border-color:#9CC3A6;background:#F2F8F3} .pc.hi{border-color:#D9A3A3;background:#FBF1F1} .pc.lo .r{color:#2F6B3A} .pc.hi .r{color:#9B2C2C}
+.pkfill{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#6b7280} .pkfill input{width:74px;padding:3px 6px;border:1px solid #DCE3EC;border-radius:5px;background:#F6F8FB}
+.cbar{display:flex;align-items:center;gap:8px} .cbar div{flex:1;height:8px;background:#EEF0F4;border-radius:4px;overflow:hidden} .cbar i{display:block;height:8px;background:#2F6B3A} .cbar span{width:38px;text-align:right;font-variant-numeric:tabular-nums}
+.pktag2{display:inline-block;padding:0 8px;border-radius:10px;font-size:11.5px;font-weight:600;border:1px solid} tr.pkrv{cursor:pointer} tr.pkrv:hover td{background:#F7F9FC}
 </style>
 </head>
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div><h1>Cost Register</h1><div class="sub" id="hsub"></div></div>
+  <div class="ttl"><h1>Cost Register</h1><div class="sub" id="hsub"></div></div>
+  <nav class="secs" id="tabs"></nav>
   <div class="sp"></div>
-  <label>Cut date <select id="cut"></select></label>
-  <label>VAT <select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select></label><input type="date" id="vatFrom" style="display:none">
-  <button id="bNew" title="Build from new SAP files">⟳ New build</button><button id="bUndo" title="Ctrl+Z">↶</button><button id="bRedo" title="Ctrl+Y">↷</button>
-  <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪ Import codes</button>
-  <button id="bSave" title="Save all codes (and line overrides) as a small file">💾 Save codes</button>
-  <button id="bExport" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
-  <span id="saved"></span><input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden>
+  <label>Cut <select id="cut"></select></label>
+  <select id="vat" title="VAT on subcontractor certificates"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none">
+  <button id="bUndo" title="Undo (Ctrl+Z)">↶</button><button id="bRedo" title="Redo (Ctrl+Y)">↷</button>
+  <span class="hsep"></span>
+  <button id="bNew" title="Build from new SAP files">⟳ New build</button>
+  <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪ Import</button>
+  <button id="bSave" title="Save all codes (and line overrides) as a small file">💾 Save</button>
+  <button id="bExport" class="hp" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
+  <input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden><span id="saved" hidden></span>
 </header>
-<nav class="tabs" id="tabs"></nav>
+<div id="mainrow"><aside id="side"></aside><div id="pages">
 <!-- Summary -->
 <div class="page" id="pg-sum"><div class="dash" id="sum"></div></div>
 <!-- Coding / Per Month / Lines / Expenses / Subcontractor: table pages -->
@@ -147,8 +202,9 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
 <div class="page" id="pg-pkg"><div id="pkg" class="pkroot"></div></div>
 <div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>
 <div class="page" id="pg-rul"><div class="dash" id="rul"></div></div>
+</div></div>
 <footer id="sbar"></footer>
-<div id="pop"></div>
+<div id="pop"></div><div id="cpop"></div>
 <div id="drawer"><header><div><h1 id="dTitle"></h1><div class="sub" id="dSub"></div></div><div class="sp"></div><button id="dClose">✕</button></header><div class="body" id="dBody"></div></div>
 <div id="toast"></div>
 <datalist id="dl-div"></datalist><datalist id="dl-pkg"></datalist><datalist id="dl-mnl"></datalist><datalist id="dl-ce"></datalist>
@@ -185,7 +241,7 @@ const UNC = PAL.map((c) => tint(c, 0.84)), unitCols = new Map(); const unitCol =
 let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3000); }
 // =====================================================================================  state: cut date, VAT, codes, line overrides, undo
 const LSK = 'cost-register:' + META.project + ':' + (META.buildId || META.built), OVR = Object.assign({}, L.ovr);
-const ST = { pk: (META.pkState || []).map((x) => ({ ...x })), pkTick: new Set(), depx: META.depState || { mode: 'none', pick: [] }, uns: META.unsState || { mode: 'none', pick: [] }, unsc: META.unscState || { mode: 'none', pick: [] }, unsView: 'o', rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'ov', pmMode: 'Amount' };
+const ST = { pk: (META.pkState || []).map((x) => ({ ...x })), pkTick: new Set(), depx: META.depState || { mode: 'none', pick: [] }, uns: META.unsState || { mode: 'none', pick: [] }, unsc: META.unscState || { mode: 'none', pick: [] }, unsView: 'o', rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'cod', grpSel: {}, bk: Math.max(0, MATI), sub: 'pkg', pkView: 'alloc', pmMode: 'Amount' };
 let undo = [], redo = [];
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) { if (c.t === 'uns') return JSON.stringify(ST.uns); if (c.t === 'unsc') return JSON.stringify(ST.unsc); if (c.t === 'depx') return JSON.stringify(ST.depx); if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
@@ -195,10 +251,11 @@ function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => s
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
 function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk }; }
-function persist() { try { localStorage.setItem(LSK, JSON.stringify(snapshot())); $('saved').textContent = 'Saved in this browser ' + new Date().toLocaleTimeString(); } catch (e) { $('saved').textContent = 'Not saved here – use Save codes'; } }
+function setSaved(t) { $('saved').textContent = t; $('bSave').title = 'Save all codes (and line overrides) as a small file · ' + t; }
+function persist() { try { localStorage.setItem(LSK, JSON.stringify(snapshot())); setSaved('Saved in this browser ' + new Date().toLocaleTimeString()); } catch (e) { setSaved('Not saved here – use Save codes'); } }
 function applySnap(s, replaceLines) { let n = 0; BK.forEach((b) => { const m = s.codes && s.codes[b.id]; if (!m) return; b.items.forEach((it) => { const c = m[it.k]; if (!c) return; n++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((f) => { if (c[f] !== undefined && (f !== 'div' || isSub(it.bi))) it[f] = c[f]; }); }); });
   if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } if (Array.isArray(s.rules)) ST.rules = s.rules.map((r) => ({ ...r })); if (s.uns && s.uns.mode) ST.uns = { mode: s.uns.mode, pick: (s.uns.pick || []).map(String) }; if (s.unsc && s.unsc.mode) ST.unsc = { mode: s.unsc.mode, pick: (s.unsc.pick || []).map(String) }; if (Array.isArray(s.pk)) ST.pk = s.pk.map((x) => ({ c: String(x.c), n: x.n || '' })); if (s.depx && s.depx.mode) ST.depx = { mode: s.depx.mode, pick: (s.depx.pick || []).map(String) }; return n; }
-function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; applySnap(s, true); if (s.cut && META.cuts.includes(s.cut)) ST.cut = s.cut; if (s.vat) { ST.vat = s.vat; ST.vatFrom = s.vatFrom || ''; } $('saved').textContent = 'Restored ' + new Date(s.at).toLocaleString(); } catch (e) {} }
+function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; applySnap(s, true); if (s.cut && META.cuts.includes(s.cut)) ST.cut = s.cut; if (s.vat) { ST.vat = s.vat; ST.vatFrom = s.vatFrom || ''; } setSaved('Restored ' + new Date(s.at).toLocaleString()); } catch (e) {} }
 // =====================================================================================  the engine: everything from the lines, the codes and the cut date (no formulas)
 const R = {}; globalThis.R = R; globalThis.__BK = BK;   // results of compute() (also readable from the browser console)
 const SRC = L.src.map((x) => S[x]);
@@ -223,7 +280,7 @@ function compute() {
   for (let i = 0; i < N; i++) {
     const b = L.b[i], it = BK[b].items[L.it[i]], o = OVR[L.id[i]];
     const pkg = o && o.pkg !== undefined ? o.pkg : it.pkg, mnl = o && o.mnl !== undefined ? o.mnl : it.mnl, ce = o && o.ce !== undefined ? o.ce : it.ce, inc = o && o.inc !== undefined ? o.inc : it.inc;
-    const hand = !!o && (pkg !== it.pkg || mnl !== it.mnl || ce !== it.ce); R.hand[i] = hand ? 1 : 0; it.n++; if (hand) it.nh++;
+    const hand = !!o && ((pkg !== it.pkg && b !== SUBI) || mnl !== it.mnl || ce !== it.ce);   // a subcontractor package set per PO is not hand-coding R.hand[i] = hand ? 1 : 0; it.n++; if (hand) it.nh++;
     if (UNS[i]) {   // not yet in CJI3 (ZINTC1 order charge 'o' / subcontractor certificate 'c'): counted only when its month is switched on (Unsettled tab) and not excluded
       const v = b === SUBI ? 'c' : 'o', k = L.m[i] > 0 ? String(L.m[i]) : 'a', on = keyOnK(v, k) && inc !== 'No'; let e = R.unsMk[v].get(k); if (!e) R.unsMk[v].set(k, (e = { all: 0, on: 0 })); e.all += amt[i]; if (on) e.on += amt[i];
       if (!it.ua) it.ua = new Map(); it.ua.set(k, (it.ua.get(k) || 0) + amt[i]);
@@ -246,9 +303,44 @@ function compute() {
 }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
 // =====================================================================================  tabs
-const TABS = [['sum', 'Summary'], ['cod', 'Coding'], ['pm', 'Per Month'], ['lines', 'Lines'], ['exp', 'Expenses'], ['gl', 'GL'], ['wbs', 'WBS'], ['sub', 'Subcontractor'], ...(HASUNS ? [['uns', 'Unsettled']] : []), ...(DEPI >= 0 ? [['dep', 'Depreciation']] : []), ['chk', 'Checks'], ['rules', 'Rules']];
-$('tabs').innerHTML = TABS.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join('');
-$('tabs').onclick = (e) => { const b = e.target.closest('button'); if (b) { ST.tab = b.dataset.t; sel.clear(); render(); $('wrap').scrollTop = 0; } };
+// the 5 steps of the month (top) – each holds the pages you work through, listed in the sidebar
+const SECS = [['cod', 'Code', ['cod', 'rules']], ['sub', 'Subcontractor', ['sub']], ...(HASUNS || DEPI >= 0 ? [['adj', 'Adjust', [...(HASUNS ? ['uns'] : []), ...(DEPI >= 0 ? ['dep'] : [])]]] : []), ['chk', 'Check', ['chk']], ['rep', 'Reports', ['sum', 'pm', 'exp', 'gl', 'wbs', 'lines']]];
+const secOf = (t) => (SECS.find((x) => x[2].includes(t)) || SECS[0])[0], LASTT = {};
+$('tabs').innerHTML = SECS.map(([k, l], i) => `<button data-s="${k}"><i>${i + 1}</i>${l}</button>`).join('');
+$('tabs').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const sc = SECS.find((x) => x[0] === b.dataset.s); ST.tab = LASTT[sc[0]] || sc[2][0]; sel.clear(); render(); $('wrap').scrollTop = 0; };
+let SIDEC = false; try { SIDEC = localStorage.getItem('cr-side') === '1'; } catch (e) { /* none */ }
+const abbr = (t) => { const w = String(t).split(/[\s/]+/).filter(Boolean); return w.length > 1 ? w.map((x) => x[0].toUpperCase()).join('').slice(0, 3) : String(t).slice(0, 3); };
+const sdi = (go, on, c, t, a, s1, s2, pg) => `<div class="sdi${on ? ' on' : ''}" ${go} style="--c:${c}" title="${esc(t)}"><span class="cb"></span><b>${esc(t)}</b><span class="a">${a || ''}</span>${s1 !== undefined ? `<small><span>${s1}</span><span>${s2 || ''}</span></small>` : ''}${pg !== undefined ? `<div class="pg"><i style="width:${pg}%"></i></div>` : ''}</div>`;
+function renderSide() {
+  const sec = secOf(ST.tab), el = $('side'), items = [];   // items: [go-attrs, on, colour, title, right, sub1, sub2, progress, rail-label]
+  let head = '', foot = '', extra = {};
+  if (sec === 'cod') { head = 'Buckets';
+    BK.forEach((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((x, it) => x + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((x, it) => x + it.td, 0), pc = t ? Math.round(100 * f / t) : 0, on = ST.tab === 'cod' && ST.bk === bi;
+      items.push([`data-gt="cod" data-bk="${bi}"`, on, bkColor(bi), b.id, fmtM(t), `${b.items.length.toLocaleString('en-US')} items · coded ${pc}%`, R.repLab + ' ' + fmtM(R.rep > 0 ? R.bkP[bi][R.rep] : 0), pc, abbr(b.short)]);
+      if (on && b.tree) { const g = new Map(); b.items.forEach((it) => { const e = g.get(it.grp) || g.set(it.grp, { n: 0, t: 0 }).get(it.grp); e.n++; e.t += it.td; }); const cur = ST.grpSel[bi] || '';
+        extra[items.length - 1] = `<div class="sdg"><div class="${cur ? '' : 'on'}" data-grp=""><span>All groups</span><span>${g.size}</span></div>${[...g].sort((x, y) => y[1].t - x[1].t).map(([k, v]) => `<div class="${cur === k ? 'on' : ''}" data-grp="${esc(k)}" title="${esc(k)}"><span dir="auto">${esc(String(k).split('›').pop().trim() || '(none)')} <small style="color:#9ca3af">· ${v.n}</small></span><span>${fmtM(v.t)}</span></div>`).join('')}</div>`; } });
+    foot = sdi('data-gt="rules"', ST.tab === 'rules', '#9CA3AF', 'Rules', META.unclassified ? `<span style="color:#9B2C2C">${META.unclassified}</span>` : '✓', META.unclassified ? 'lines without a bucket' : 'every line has a bucket', ''); }
+  else if (sec === 'sub') { const ps = pkSide(SIDEC), more = [['ov', 'Overview', 'KPIs and insights'], ['po', 'POs', 'certificates per PO'], ['reg', 'PO register', 'every PO and its status'], ['bridge', 'Bridge to CJI3', 'certificates vs CJI3']];
+    if (SIDEC) { el.className = 'col'; el.innerHTML = `<div class="sh" style="padding:10px 6px 6px;justify-content:center"><button data-side="1" title="Show the packages">»</button></div><div class="ls">${ps}</div>`; return; }
+    el.className = ''; el.innerHTML = `<div class="sh">Packages<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${ps.body}<div class="sec">More</div>${more.map(([k, l, d], i) => sdi(`data-gt="sub" data-sv="${k}"`, ST.sub === k, '#C9CED6', l, '', d, '')).join('')}</div><div class="ft">${ps.foot}</div>`; return; }
+  else if (sec === 'adj') { head = 'Adjust';
+    const ua = (v) => R.unsInK[v] + R.unsExcK[v];
+    if (HASUNS) { items.push(['sec', 'Not yet in CJI3 – include?']);
+      if (R.unsMk.o.size) items.push([`data-gt="uns" data-uv="o"`, ST.tab === 'uns' && ST.unsView === 'o', '#3E6FA8', 'Orders not settled (ZINTC1)', fmtM(ua('o')), 'included ' + fmt(R.unsInK.o), '', undefined, 'Ord']);
+      if (R.unsMk.c.size) items.push([`data-gt="uns" data-uv="c"`, ST.tab === 'uns' && ST.unsView === 'c', '#2F7F7A', 'Certificates not in CJI3', fmtM(ua('c')), 'included ' + fmt(R.unsInK.c), '', undefined, 'Cer']); }
+    if (DEPI >= 0) { const all = [...R.depM.values()].reduce((x, e) => x + e.all, 0); items.push(['sec', 'In CJI3 – exclude?']); items.push(['data-gt="dep"', ST.tab === 'dep', '#5F6B7A', 'Asset depreciation', fmtM(all), 'excluded ' + fmt(R.depExc), '', undefined, 'Dep']); } }
+  else if (sec === 'chk') { head = 'Check'; const ok = Math.abs(R.diff) < 0.01;
+    items.push(['data-gt="chk"', true, ok ? '#2F6B3A' : '#9B2C2C', 'All checks', ok ? '✓' : '!', 'Difference to CJI3 ' + (ok ? '0.00' : fmt2(R.diff)), '', undefined, 'Chk']); }
+  else { head = 'Reports';
+    [['sum', 'Summary', 'cards, chart, reconciliation'], ['pm', 'Per Month', 'items by month'], ['exp', 'Expenses', 'G&A detail'], ['gl', 'GL', 'by cost element'], ['wbs', 'WBS', 'by WBS element']].forEach(([k, l, d], i) => items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)]));
+    items.push(['sec', 'Drill-down']); items.push(['data-gt="lines"', ST.tab === 'lines', '#9CA3AF', 'Lines (CJI3)', '', N.toLocaleString('en-US') + ' lines · every posting', '', undefined, 'Lin']); }
+  if (SIDEC) { el.className = 'col'; el.innerHTML = `<div class="sh" style="padding:10px 6px 6px;justify-content:center"><button data-side="1" title="Show the list">»</button></div><div class="ls">${items.filter((x) => x[0] !== 'sec').map((x) => `<div class="sdr${x[1] ? ' on' : ''}" ${x[0]} style="--c:${x[2]}" title="${esc(x[3])}">${esc(x[8] || '')}</div>`).join('')}</div>`; return; }
+  el.className = ''; el.innerHTML = `<div class="sh">${head}<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${items.map((x, k) => (x[0] === 'sec' ? `<div class="sec">${esc(x[1])}</div>` : sdi(...x.slice(0, 8)) + (extra[k] || ''))).join('')}</div>${foot ? `<div class="ft">${foot}</div>` : ''}`;
+}
+$('side').addEventListener('click', (e) => { if (e.target.closest('[data-side]')) { SIDEC = !SIDEC; try { localStorage.setItem('cr-side', SIDEC ? '1' : '0'); } catch (x) { /* none */ } render(); return; }
+  const g = e.target.closest('[data-grp]'); if (g) { ST.grpSel[ST.bk] = g.dataset.grp; sel.clear(); render(); $('wrap').scrollTop = 0; return; }
+  const a = e.target.closest('[data-gt]'); if (!a) return; ST.tab = a.dataset.gt; if (a.dataset.bk) { ST.bk = +a.dataset.bk; } if (a.dataset.uv) ST.unsView = a.dataset.uv; sel.clear();
+  if (a.dataset.sv) { goSub(a.dataset.sv); return; } render(); $('wrap').scrollTop = 0; });
 // status bar: the totals of the register and everything you included / excluded, on every tab
 function renderStatus() {
   const it = (l, v, cls, go, tip) => `<${go ? 'a' : 'span'} class="si ${cls || ''}"${go ? ` data-sgo="${go}"` : ''}${tip ? ` title="${esc(tip)}"` : ''}><span>${l}</span><b>${v}</b></${go ? 'a' : 'span'}>`, sep = '<i class="sep"></i>';
@@ -265,11 +357,11 @@ function renderStatus() {
 }
 document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
 function render() {
-  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === ST.tab));
+  LASTT[secOf(ST.tab)] = ST.tab; document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === secOf(ST.tab)));
   const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
   ['sum', 'tbl', 'chk', 'rul'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'rul' && ST.tab === 'rules') || (p === 'tbl' && !['sum', 'chk', 'rules'].includes(ST.tab)))));
   $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
-  renderStatus();
+  renderStatus(); renderSide();
   if (isOv) renderSov(); else if (isPk) renderPkg(); else if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else renderTable();
 }
 function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };
@@ -312,7 +404,7 @@ function renderChecks() {
   add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
   (META.cjiFiles || []).forEach((f) => add(`CJI3 file ${f.name} (${f.first} → ${f.last}, ${f.lines.toLocaleString('en-US')} lines): lines vs its grand-total row`, r2(f.sum - (f.grand || 0)), 'abs', f.dropped ? f.dropped.toLocaleString('en-US') + ' lines were already in an earlier file and are counted once.' : 'Sum of the file\'s lines minus its own grand-total row.'));
   if ((META.cjiFiles || []).length > 1) add('CJI3 lines with a different amount in two files', META.cjiConflictN || 0, 'zero', (META.cjiConflicts || []).slice(0, 3).map((c) => `${c.id}: ${c.wasFile} ${c.was} → ${c.nowFile} ${c.now}`).join(' · ') || 'The later download wins; none found.');
-  add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule – see the Rules tab: make a rule and apply it.');
+  add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule – Code › Rules (bottom of the list): make a rule and apply it.');
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
   if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - R.bkUns[SUBI] - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
   BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Fully coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
@@ -324,7 +416,7 @@ function renderChecks() {
     add('ZINTC1: charges not yet settled in CJI3', ZI.uns, 'info', Object.entries(ZI.unsByType || {}).filter(([, v]) => Math.abs(v) >= 1).map(([k, v]) => `${k} ${T[k] || ''} ${fmt(v)}`).join(' · ') + (ZI.unsAfter ? ` · of which after the CJI3 data ${fmt(ZI.unsAfter)}` : '') + ` · included by you: ${fmt2(R.unsIn)}`); }
   if (SUB) { add('Subcontractor: approved certificates not yet in CJI3', SUB.unposted, 'info', SUB.unpostedN + ' lines.'); add('Subcontractor: CJI3 documents explained by certificates', SUB.docs, 'info', 'of ' + SUB.cjiDocs + '.'); }
   $('chk').innerHTML = `<div class="panel"><h2>Checks<span class="note">live – everything should read OK</span></h2><table class="s"><tr><th>Check</th><th>Value</th><th>Status</th><th style="text-align:left">What it means</th></tr>${rows.map(([n, v, k, note]) => { const ok = k === 'abs' ? Math.abs(v) < 0.01 : k === 'zero' ? v === 0 : null;
-    return `<tr><td>${esc(n)}</td><td>${typeof v === 'number' && k !== 'zero' && Math.abs(v) >= 100 ? fmt2(v) : v}</td><td style="text-align:center">${ok === null ? '<span class="inf">info</span>' : ok ? '<span class="okc">OK</span>' : '<span class="chk">CHECK</span>'}</td><td style="text-align:left;color:#555">${esc(note)}</td></tr>`; }).join('')}</table></div>`;
+    return `<tr><td>${esc(n)}</td><td>${typeof v === 'number' && k !== 'zero' && Math.abs(v) >= 100 ? (Number.isInteger(v) ? v.toLocaleString('en-US') : fmt2(v)) : v}</td><td style="text-align:center">${ok === null ? '<span class="inf">info</span>' : ok ? '<span class="okc">OK</span>' : '<span class="chk">CHECK</span>'}</td><td style="text-align:left;color:#555">${esc(note)}</td></tr>`; }).join('')}</table></div>`;
 }
 // =====================================================================================  Rules: the built-in rules (read-only), YOUR rules (editable), the unclassified lines
 const ruleMatch = (r, i) => { const n = (x) => String(x || '').trim().toLowerCase(); return (r.ce || r.cen || r.type || r.wbs) && (!r.ce || n(S[L.ce[i]]) === n(r.ce)) && (!r.cen || n(S[L.cen[i]]) === n(r.cen)) && (!r.type || n(S[L.ty[i]]) === n(r.type)) && (!r.wbs || n(S[L.wbs[i]]).startsWith(n(r.wbs))); };
@@ -375,7 +467,7 @@ function slotsOf() {
       else qm.forEach((m) => out.push({ label: m.label, idx: [m.idx], kind: 'm', y, q })); } }
   out.push({ label: 'Pending', idx: [NP - 1], kind: 'pend' }); return out;
 }
-const VS = {}; const vs = () => { const k = ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') : ST.bk); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
+const VS = {}; const vsKey = () => ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') : ST.bk); const vs = () => { const k = vsKey(); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
 const sel = new Set(); let lastClick = null;
 const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v ?? ''));
 const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));
@@ -395,8 +487,8 @@ function pageDef() {
     codeF(bi).forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : f === 'div' ? 88 : f === 'mnl' ? 66 : 82, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) }));
     cols.push({ k: 'st', l: 'Status', w: 104, v: (r) => statusOf(r.it), h: (r) => stCell(r.it) }, { k: 'inc', l: 'Include', w: 66, v: (r) => r.it.inc, h: (r) => `<td><button class="incb ${r.it.inc === 'No' ? 'no' : ''}">${r.it.inc === 'No' ? 'No' : 'Yes'}</button></td>` });
     if (b.qty) cols.push(numC('qty', 'Qty to date', 96, (r) => r.it.qtd, { f: fq }), numC('rate', 'Rate', 84, (r) => (Math.abs(r.it.qtd) > 1e-9 ? r.it.td / r.it.qtd : 0), { f: fmt2 }));
-    cols.push(numC('td', 'To date', 112, (r) => r.it.td || (r.it.uns ? r.it.exc : 0), { h: (r) => (r.it.uns && !r.it.td && r.it.exc ? `<td class="num" title="Not yet settled in CJI3 – left out, not counted. Switch its months on in the Unsettled tab.">${fmt(r.it.exc)}</td>` : `<td class="num"><b>${fmt(r.it.td)}</b></td>`) }), numC('tm', 'This month · ' + R.repLab, 112, (r) => r.it.tm), numC('pe', 'Pending', 92, (r) => r.it.pe), numC('n', 'Lines', 62, (r) => r.it.n), { k: 'nw', l: 'New', w: 56, v: (r) => (r.it.nw ? 'New' : ''), h: (r) => `<td class="help">${r.it.nw ? 'New' : ''}</td>` });
-    const rows = b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
+    cols.push(numC('td', 'To date', 112, (r) => r.it.td || (r.it.uns ? r.it.exc : 0), { h: (r) => (r.it.uns && !r.it.td && r.it.exc ? `<td class="num" title="Not yet settled in CJI3 – left out, not counted. Switch its months on in the Unsettled tab.">${fmt(r.it.exc)}</td>` : `<td class="num"><b>${fmt(r.it.td)}</b></td>`) }), numC('tm', R.repLab, 112, (r) => r.it.tm), numC('pe', 'Pending', 92, (r) => r.it.pe), numC('n', 'Lines', 62, (r) => r.it.n), { k: 'nw', l: 'New', w: 56, v: (r) => (r.it.nw ? 'New' : ''), h: (r) => `<td class="help">${r.it.nw ? 'New' : ''}</td>` });
+    const gs = ST.grpSel[bi] || '', rows = b.items.filter((it) => !gs || it.grp === gs).map((it) => ({ it, g: b.tree ? it.grp : '' }));
     return { cols, rows, sel: true, status: true, groups: b.tree, rowCls: (r) => (r.it.uns && !r.it.td && r.it.exc ? 'uns exc' : ''), gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Fully coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0), un = its.filter((x) => x.uns), unx = un.reduce((s, x) => s + x.exc, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length} · to date ${fmt(td)}${un.length ? ` · not settled, left out ${fmt(unx)}` : ''}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
       foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
   }
@@ -598,8 +690,7 @@ function unsDef() {   // one row per SAP order; its component (equipment type, t
     [...lead('Include ›'), ...sw, { l: '', span: tail, cls: 'blank' }]];
   const foot = (rs0) => { const rs = rs0.filter((r) => !r.child), o = { o: '' }; keys.forEach((k) => { o['m' + k + 'Amount'] = fmt(rs.reduce((s, r) => s + (r.ua.get(k) || 0), 0)); }); o.tot = fmt(rs.reduce((s, r) => s + r.tot, 0)); o.in = fmt(rs.reduce((s, r) => s + incOf(r), 0)); return o; };
   const m = (V === 'c' ? ST.unsc : ST.uns).mode, inK = R.unsInK[V], allK = R.unsInK[V] + R.unsExcK[V], seg = (list, cur, attr) => `<span class="seg">${list.map(([v, l]) => `<button ${attr}="${v}" class="${cur === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
-  const tools = seg([['o', 'Orders'], ['c', 'Certificates']].filter(([v]) => R.unsMk[v].size), V, 'data-uv')
-    + ` <span class="seg"><button class="${m === 'none' ? 'on' : ''}" id="uNone">None</button><button class="${m === 'cut' ? 'on' : ''}" id="uCut" title="Include every month up to the cut date – follows the cut date">To ${esc(R.repLab)}</button>${m === 'pick' ? '<button class="on" disabled>By month</button>' : ''}</span>`
+  const tools = `<span class="seg"><button class="${m === 'none' ? 'on' : ''}" id="uNone">None</button><button class="${m === 'cut' ? 'on' : ''}" id="uCut" title="Include every month up to the cut date – follows the cut date">To ${esc(R.repLab)}</button>${m === 'pick' ? '<button class="on" disabled>By month</button>' : ''}</span>`
     + ` <span class="seg"><button id="uOpenAll" title="Open every ${V === 'c' ? 'PO' : 'order'}">+ Lines</button><button id="uCloseAll" title="Close every ${V === 'c' ? 'PO' : 'order'}">− Lines</button></span>`
     + ` <span class="help">Included <b style="color:#375623">${fmt(inK)}</b> / ${fmt(allK)}</span>`;
   return { cols, rows, bands, groups: true, noGroupBtns: true, sel: false, extraTools: tools, foot, rowCls: (r) => (r.child ? 'uchild ' : 'uord ') + (st(r) === 'No' ? 'exc' : ''),
@@ -632,7 +723,7 @@ function depDef() {
 }
 document.addEventListener('click', (e) => { const t = e.target.closest('#dNone,#dAll'); if (!t) return; if (t.id === 'dNone') depSet('none', [], 'Depreciation: all counted'); else depSet('all', [], 'Depreciation: all excluded'); });
 // =====================================================================================  Subcontractor › Overview: KPIs, packages, trend, insights, top POs – each opens its working view
-const subSeg = (cur) => `<span class="seg">${[['ov', 'Overview'], ['pkg', 'Packages'], ['rate', 'Rate study'], ['po', 'POs'], ['reg', 'PO Register'], ['bridge', 'Bridge to CJI3']].map(([k, l]) => `<button data-sv="${k}" class="${cur === k ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+const subSeg = (cur) => '' && `<span class="seg">${[['ov', 'Overview'], ['pkg', 'Packages'], ['rate', 'Rate study'], ['po', 'POs'], ['reg', 'PO Register'], ['bridge', 'Bridge to CJI3']].map(([k, l]) => `<button data-sv="${k}" class="${cur === k ? 'on' : ''}">${l}</button>`).join('')}</span>`;
 function renderSov() {
   const D0 = pkData(), sp = R.bkP[SUBI], rep = R.rep, prevP = rep > 1 ? rep - 1 : -1, tm = rep > 0 ? sp[rep] : 0, pm = prevP > 0 ? sp[prevP] : 0, td = sp.slice(0, NP - 1).reduce((s, v) => s + v, 0);
   const fM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(Math.abs(v) >= 1e7 ? 1 : 2) + 'M' : fmt(v)), pct = (a, b) => (b ? ((a / b - 1) * 100).toFixed(1) : '0');
@@ -660,7 +751,7 @@ function renderSov() {
   const list = D0.list, mxp = Math.max(1, ...list.map((x) => D0.pos.filter((p) => p.codes.includes(x.c)).reduce((s, p) => s + p.amt, 0)));
   const pkRows = list.map((x, i) => { const ps = D0.pos.filter((p) => p.codes.includes(x.c)), a = ps.reduce((s, p) => s + p.amt, 0), c = PKC[i % PKC.length]; return `<div class="ovpk" data-ovpk="${esc(x.c)}"><span class="d" style="background:${c}"></span><span><b>${esc(x.c)}</b> ${esc(x.n || '')}</span><span class="m">${ps.length} POs</span><b class="v">${fM(a)}</b><div class="bb"><i style="width:${(100 * a / mxp).toFixed(0)}%;background:${c}"></i></div></div>`; }).join('');
   const top = D0.pos.slice().sort((a, b) => b.sep - a.sep).filter((p) => p.sep).slice(0, 14);
-  $('sov').innerHTML = `<div class="pkbar">${subSeg('ov')}<span class="help">one tab · everything one click away</span></div><div class="ovg">
+  $('sov').innerHTML = `<div class="ovg">
    <div class="ovc kpi"><span>Certified to date</span><b>${fM(td)}</b><i>net of VAT · ${Math.abs(R.diff) < 0.01 ? 'ties to CJI3 ✓' : 'check the difference'}</i></div>
    <div class="ovc kpi"><span>This month · ${R.repLab}</span><b>${fM(tm)}</b><i class="${tm >= pm ? 'up' : 'dn'}">${pm ? (tm >= pm ? '▲ ' : '▼ ') + Math.abs(pct(tm, pm)) + '% vs ' + PER[prevP] : ''}</i></div>
    <div class="ovc kpi"><span>POs · subcontractors</span><b>${D0.pos.length}</b><i>${sups} subcontractors</i></div>
@@ -686,8 +777,8 @@ const efPkg = (i) => { const o = OVR[L.id[i]]; return o && o.pkg !== undefined ?
 function pkData() {
   const pos = new Map();
   for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI) continue; const po = S[L.po[i]]; if (!po || po[0] === '(') continue;
-    let p = pos.get(po); if (!p) pos.set(po, (p = { po, sup: (SUB && SUB.supn[po]) || S[L.sup[i]], tow: (SUB && SUB.type[po]) || (BK[SUBI].items[L.it[i]].vals[0][0] === '~' ? '(no type of works)' : BK[SUBI].items[L.it[i]].vals[0]), idx: [], amt: 0, sep: 0, pk: new Map(), items: new Set() }));
-    p.idx.push(i); p.items.add(L.it[i]); const k = efPkg(i), cnt = R.inc[i] && R.per[i] !== NP - 1; p.pk.set(k, (p.pk.get(k) || 0) + (cnt ? Math.abs(R.amt[i]) : 0) + 1e-9); if (cnt) { p.amt += R.amt[i]; if (R.per[i] === R.rep) p.sep += R.amt[i]; } }
+    let p = pos.get(po); if (!p) pos.set(po, (p = { po, sup: (SUB && SUB.supn[po]) || S[L.sup[i]], tow: (SUB && SUB.type[po]) || (BK[SUBI].items[L.it[i]].vals[0][0] === '~' ? '(no type of works)' : BK[SUBI].items[L.it[i]].vals[0]), idx: [], amt: 0, sep: 0, prv: 0, pk: new Map(), items: new Set() }));
+    p.idx.push(i); p.items.add(L.it[i]); const k = efPkg(i), cnt = R.inc[i] && R.per[i] !== NP - 1; p.pk.set(k, (p.pk.get(k) || 0) + (cnt ? Math.abs(R.amt[i]) : 0) + 1e-9); if (cnt) { p.amt += R.amt[i]; if (R.per[i] === R.rep) p.sep += R.amt[i]; else if (R.per[i] === R.rep - 1) p.prv += R.amt[i]; } }
   for (const p of pos.values()) { const ks = [...p.pk.keys()]; p.code = ks.length === 1 ? ks[0] : '~'; p.codes = ks.filter(Boolean); }
   // the package list: your boxes + any code already used on subcontractor lines
   const list = ST.pk.map((x) => ({ ...x })); for (const p of pos.values()) for (const c of p.codes) if (!list.some((x) => x.c === c)) list.push({ c, n: '' });
@@ -707,58 +798,84 @@ function pkPop(btn, v, k, rows, cols) { const F = (ST.pkF || (ST.pkF = {}))[v] |
   $('pAll').onchange = (e) => pop.querySelectorAll('.pv').forEach((c) => { if (c.closest('label').style.display !== 'none') c.checked = e.target.checked; });
   pop.onclick = (e) => { const a = e.target.dataset.a; if (!a) return; if (a === 'asc' || a === 'desc') ST.pkSort = { v, k, d: a === 'asc' ? 1 : -1 }; if (a === 'clr') delete F[k];
     if (a === 'ok') { const on = [...pop.querySelectorAll('.pv')].filter((c) => c.checked).map((c) => c.value); if (on.length === vals.length) delete F[k]; else F[k] = new Set(on); } pop.style.display = 'none'; renderPkg(); }; }
-function renderPkg() {
-  const view = ST.pkView || 'alloc', D0 = pkData(), list = D0.list, sel = ST.pkSel ?? '', q = (ST.pkQ || '').toLowerCase(), tsel = ST.pkTow || '';
+// one pass over the subcontractor lines: per package › work item › PO (qty, amount, last rate) – for Rates & coding and Review
+function pkRates() {
+  const P = new Map();
+  for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI || !R.inc[i] || R.per[i] === NP - 1) continue; const code = efPkg(i), ii = L.it[i], po = S[L.po[i]] || '';
+    let m = P.get(code); if (!m) P.set(code, (m = new Map())); let w = m.get(ii); if (!w) m.set(ii, (w = { ii, it: BK[SUBI].items[ii], by: new Map(), q: 0, a: 0, amt: 0, last: 0, lr: 0 })); w.amt += R.amt[i];
+    if (!L.qty[i] || !(SRC[i] === 'Certificate' || SRC[i] === 'Opening certificate') || !po) continue;
+    const x = w.by.get(po) || w.by.set(po, { q: 0, a: 0 }).get(po); x.q += L.qty[i]; x.a += R.amt[i]; w.q += L.qty[i]; w.a += R.amt[i]; if (L.d[i] >= w.last) { w.last = L.d[i]; w.lr = R.amt[i] / L.qty[i]; } }
+  for (const m of P.values()) for (const w of m.values()) { const rs = [...w.by.values()].filter((x) => Math.abs(x.q) > 1e-9).map((x) => x.a / x.q); w.avg = w.q ? w.a / w.q : 0; w.mn = rs.length ? Math.min(...rs) : 0; w.mx = rs.length ? Math.max(...rs) : 0; w.np = rs.length; w.sp = w.mn > 0 && w.np > 1 ? (w.mx / w.mn - 1) * 100 : 0; }
+  return P;
+}
+const pkCoded = (m) => { let t = 0, f = 0; if (m) for (const w of m.values()) { t += Math.abs(w.amt); if (statusOf(w.it) === 'Fully coded') f += Math.abs(w.amt); } return t ? Math.round(100 * f / t) : 0; };
+const fMk = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(Math.abs(v) >= 1e7 ? 1 : 2) + 'M' : fmt(v)), frt = (v) => (Math.abs(v) >= 100 ? fmt(v) : Math.abs(v - Math.round(v)) < 0.005 ? String(Math.round(v)) : v.toFixed(2));
+// the sidebar of Subcontractor: your packages (click to open, drop POs on them, keys 1…0)
+function pkSide(collapsed) {
+  const D0 = pkData(), list = D0.list, view = ST.sub === 'pkg' ? ST.pkView || 'alloc' : '', sel = ST.pkSel ?? '', P = view === 'alloc' ? null : (R.pkP || (R.pkP = pkRates())), cnt = (f) => D0.pos.filter(f), tot = (a) => a.reduce((s1, p) => s1 + p.amt, 0);
   R.pkList = list; R.pkPos = D0.pos;
-  const inSel = (p) => (sel === '*' ? true : sel === '' ? p.code === '' : sel === '~' ? p.code === '~' : p.codes.includes(sel));
-  let rows = D0.pos.filter(inSel); const tows = new Map(); rows.forEach((p) => tows.set(p.tow, (tows.get(p.tow) || 0) + 1));
-  if (tsel) rows = rows.filter((p) => p.tow === tsel); if (q) rows = rows.filter((p) => (p.po + ' ' + p.sup + ' ' + p.tow).toLowerCase().includes(q));
-  R.pkBase = rows; if (view === 'alloc') rows = pkApply(rows, PKCOL, 'a'); R.pkCols = PKCOL;
-  R.pkRows = rows; const tk = ST.pkTick || (ST.pkTick = new Set()); for (const k of [...tk]) if (!D0.pos.some((p) => p.po === k)) tk.delete(k);
-  const col = (c) => { const i = list.findIndex((x) => x.c === c); return i < 0 ? '#9ca3af' : PKC[i % PKC.length]; }, tag = (c) => `<span class="pktag" style="background:${col(c)}">${esc(c)}</span>`;
-  const pcode = (p) => (p.code === '~' ? p.codes.map(tag).join(' ') + ' <span class="help">split</span>' : p.code ? tag(p.code) : '<span style="color:#C55A11">—</span>');
-  const cnt = (f) => D0.pos.filter(f), tot = (a) => a.reduce((s, p) => s + p.amt, 0), fM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(Math.abs(v) >= 1e7 ? 1 : 2) + 'M' : fmt(v));
-
-  const lab = sel === '*' ? 'All POs' : sel === '' ? 'Not allocated' : sel === '~' ? 'Split POs' : sel + (list.find((x) => x.c === sel)?.n ? ' · ' + list.find((x) => x.c === sel).n : '');
-  // right: the package boxes (one row each – 10 or 20 fit)
-  const box = (c, n, i, ps, extra) => `<div class="pkb ${sel === c ? 'on' : ''}" data-pks="${esc(c)}" style="--c:${extra ? '#d1d5db' : PKC[i % PKC.length]}">${extra ? '<span class="k">–</span>' : `<span class="k">${i < 10 ? (i + 1) % 10 : ''}</span>`}
-    <span class="nm">${extra ? `<b style="color:${c === '' ? '#C55A11' : '#374151'}">${n}</b>` : (ST.pkEdit === c ? `<b>${esc(c)}</b> <input class="pkn" data-pkn="${esc(c)}" value="${esc(n)}" placeholder="name…">` : `<b>${esc(c)}</b> <span class="pknm">${n ? esc(n) : '<i style="color:#9ca3af">no name</i>'}</span> <button class="pke" data-pke="${esc(c)}" title="Rename">✎</button>`)}<small>${ps.length} POs</small></span><span class="v">${fM(tot(ps))}</span>${extra ? '' : `<button class="pkx" data-pkx="${esc(c)}" title="Remove this package (its POs go back to Not allocated)">✕</button>`}</div>`;
-  const right = ST.pkCol ? `<div class="pkp rail"><button class="pkexp" id="pkTog" title="Show the package panel">«</button>${list.map((x, i) => `<div class="pkb mini ${sel === x.c ? 'on' : ''}" data-pks="${esc(x.c)}" style="--c:${PKC[i % PKC.length]}" title="${esc(x.c + (x.n ? ' · ' + x.n : '') + ' – key ' + (i < 10 ? (i + 1) % 10 : ''))}"><b>${esc(x.c)}</b></div>`).join('')}<div class="pkb mini ${sel === '' ? 'on' : ''}" data-pks="" style="--c:#d1d5db" title="Not allocated"><b style="color:var(--risk)">–</b></div><div class="pkb mini ${sel === '*' ? 'on' : ''}" data-pks="*" style="--c:#d1d5db" title="All POs"><b>All</b></div></div>` : `<div class="pkp"><div class="pkh"><b>Packages</b><span class="help">drop here · or press the key</span><span style="flex:1"></span><button class="pkexp" id="pkTog" title="Collapse to a slim rail">»</button></div><div class="pkl">
-    ${list.map((x, i) => box(x.c, x.n, i, cnt((p) => p.codes.includes(x.c)))).join('')}
-    <div class="pkadd"><input id="pkNewC" placeholder="Code, e.g. P01" maxlength="12"><input id="pkNewN" placeholder="Name (optional)"><button id="pkNew">+ Add</button></div>
-    ${box('', 'Not allocated', 0, cnt((p) => p.code === ''), 1)}${cnt((p) => p.code === '~').length ? box('~', 'Split POs', 0, cnt((p) => p.code === '~'), 1) : ''}${box('*', 'All POs', 0, D0.pos, 1)}</div>
-    <div class="pkf"><b>Drag</b> a row (⠿) onto a package – ticked rows move together · or tick POs, then press <kbd>1</kbd>…<kbd>9</kbd> <kbd>0</kbd> or drag them onto a package · click a PO to split it by work item · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</div></div>`;
-  const seg = subSeg(view === 'rate' ? 'rate' : 'pkg');
-  let main;
+  const it = (c, title, i, ps, special) => { const on = view && (view === 'review' ? sel === '*' && c === '*' : sel === c), col = special ? '#C9CED6' : PKC[i % PKC.length], pc = !special && P ? pkCoded(P.get(c)) : undefined;
+    if (collapsed) return `<div class="sdr pkd${on ? ' on' : ''}" data-pks="${esc(c)}" style="--c:${col}" title="${esc(title)} · ${ps.length} POs · ${fMk(tot(ps))}">${special ? (c === '' ? `<span style="color:#9B2C2C">${ps.length}</span>` : 'All') : esc(String(c).replace(/^P0?/, ''))}</div>`;
+    return `<div class="sdi pkd${on ? ' on' : ''}" data-pks="${esc(c)}" style="--c:${col}"><span class="cb"></span><b>${special ? `<span style="color:${c === '' ? '#9B2C2C' : '#374151'}">${esc(title)}</span>` : esc(c) + (title ? ' · ' + esc(title) : '')}</b><span class="a">${special ? '' : `<span class="k" title="Key ${i < 10 ? (i + 1) % 10 : ''}">${i < 10 ? (i + 1) % 10 : ''}</span>`}</span><small><span>${ps.length} POs${pc !== undefined ? ' · coded ' + pc + '%' : ''}</span><span>${fMk(tot(ps))}</span></small>${pc !== undefined ? `<div class="pg"><i style="width:${pc}%"></i></div>` : ''}</div>`; };
+  const na = cnt((p) => p.code === ''), sp = cnt((p) => p.code === '~');
+  const rows = [...(view === 'review' ? [it('*', 'All packages', 0, D0.pos.filter((p) => p.code !== ''), 1)] : [it('', 'Not allocated', 0, na, 1)]), ...list.map((x, i) => it(x.c, x.n, i, cnt((p) => p.codes.includes(x.c)))), ...(sp.length ? [it('~', 'Split POs', 0, sp, 1)] : []), ...(view === 'alloc' ? [it('*', 'All POs', 0, D0.pos, 1)] : [])];
+  if (collapsed) return rows.join('');
+  return { body: rows.join('') + (ST.pkAdd ? `<div class="pkadd"><input id="pkNewC" placeholder="Code, e.g. P01" maxlength="12"><input id="pkNewN" placeholder="Name (optional)"><button id="pkNew" class="pri">Add</button></div>` : ''),
+    foot: `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px"><button id="pkAddT" style="border:0;background:none;color:#2F5597;padding:2px 4px">+ Add package</button>${list.length && sel && !['', '*', '~'].includes(sel) ? `<span><button class="pke" data-pke="${esc(sel)}" style="border:0;background:none;color:#6b7280" title="Rename ${esc(sel)}">✎ Rename</button><button data-pkx="${esc(sel)}" style="border:0;background:none;color:#9B2C2C" title="Remove ${esc(sel)}">✕</button></span>` : ''}</div>${ST.pkEdit ? `<div class="pkadd"><b style="align-self:center">${esc(ST.pkEdit)}</b><input class="pkn" data-pkn="${esc(ST.pkEdit)}" value="${esc((list.find((x) => x.c === ST.pkEdit) || {}).n || '')}" placeholder="name…"></div>` : ''}` };
+}
+function renderPkg() {
+  const view = ST.pkView || 'alloc', D0 = pkData(), list = D0.list, q = (ST.pkQ || '').toLowerCase(), tsel = ST.pkTow || ''; R.pkP = view === 'alloc' ? null : pkRates();
+  if (view !== 'alloc' && (ST.pkSel === '' || ST.pkSel === undefined || (view === 'rate' && ['*', '~'].includes(ST.pkSel)))) ST.pkSel = view === 'review' ? '*' : (list[0] || {}).c || '';
+  if (view === 'alloc' && ST.pkSel === undefined) ST.pkSel = '';
+  const sel = ST.pkSel; R.pkList = list; R.pkPos = D0.pos;
+  const col = (c) => { const i = list.findIndex((x) => x.c === c); return i < 0 ? '#9ca3af' : PKC[i % PKC.length]; }, tot = (a) => a.reduce((s1, p) => s1 + p.amt, 0);
+  const steps = `<div class="pkst">${[['alloc', 'Packages', 'put each PO in a package'], ['rate', 'Rates & coding', 'one package at a time'], ['review', 'Review', 'check, then export']].map(([k, l, d], i) => `<button data-pkv="${k}" class="${view === k ? 'on' : ''}"><i>${i + 1}</i><span><b>${l}</b><small>${d}</small></span></button>`).join('<span class="pkar">›</span>')}<span style="flex:1"></span><span class="help">More:</span>${[['ov', 'Overview'], ['po', 'POs'], ['reg', 'PO register'], ['bridge', 'Bridge to CJI3']].map(([k, l]) => `<a class="lk" data-sv="${k}">${l}</a>`).join('<span class="help">·</span>')}</div>`;
+  let main = '';
   if (view === 'alloc') {
-    const chips = [...tows].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t, n]) => `<button class="chip ${tsel === t ? 'on' : ''}" data-pkt="${esc(t)}"><span dir="auto">${esc(t.replace(/^مقاولين-\s?/, ''))}</span> ${n}</button>`).join('');
-    const nt = rows.filter((p) => tk.has(p.po)).length;
-    main = `<div class="pkm"><div class="pkt"><b class="pkttl">${esc(lab)}</b><span class="help">${rows.length} POs · ${fmt(tot(rows))}</span>${Object.keys((ST.pkF || {}).a || {}).length || (ST.pkSort && ST.pkSort.v === 'a') ? '<button class="clr on" id="pkFx">✕ Clear sort &amp; filters</button>' : ''}<input id="pkQ" placeholder="Search PO, subcontractor…" value="${esc(ST.pkQ || '')}"><span class="seg">${[['po', 'PO no', 1], ['tow', 'Type of works', 1], ['amt', 'Amount', -1]].map(([k, l, d]) => { const so = pkS('a'); return `<button data-pkso="${k}|${d}" class="${(so ? so.k === k : k === 'amt') ? 'on' : ''}">${l}</button>`; }).join('')}</span>${tsel ? `<button class="chip on" data-pkt="">✕ ${esc(tsel.replace(/^مقاولين-\s?/, ''))}</button>` : chips}</div>
+    const tk = ST.pkTick || (ST.pkTick = new Set()); for (const k of [...tk]) if (!D0.pos.some((p) => p.po === k)) tk.delete(k);
+    const inSel = (p) => (sel === '*' ? true : sel === '' ? p.code === '' : sel === '~' ? p.code === '~' : p.codes.includes(sel));
+    let rows = D0.pos.filter(inSel); const tows = new Map(); rows.forEach((p) => tows.set(p.tow, (tows.get(p.tow) || 0) + 1));
+    if (tsel) rows = rows.filter((p) => p.tow === tsel); if (q) rows = rows.filter((p) => (p.po + ' ' + p.sup + ' ' + p.tow).toLowerCase().includes(q));
+    R.pkBase = rows; rows = pkApply(rows, PKCOL, 'a'); R.pkRows = rows; R.pkCols = PKCOL;
+    const lab = sel === '*' ? 'All POs' : sel === '' ? 'Not allocated' : sel === '~' ? 'Split POs' : sel + ((list.find((x) => x.c === sel) || {}).n ? ' · ' + list.find((x) => x.c === sel).n : '');
+    const nt = rows.filter((p) => tk.has(p.po)).length, opts = (cur) => `<option value="">choose…</option>${list.map((x) => `<option ${cur === x.c ? 'selected' : ''} value="${esc(x.c)}">${esc(x.c)}${x.n ? ' · ' + esc(x.n) : ''}</option>`).join('')}`;
+    const pcell = (p) => (p.code === '~' ? `<span class="help">split: </span>${p.codes.map((c) => `<span class="pktag" style="background:${col(c)}">${esc(c)}</span>`).join(' ')}` : `<select class="pksel${p.code ? '' : ' e'}" data-pkpo="${esc(p.po)}" style="${p.code ? `border-color:${col(p.code)};background:${tint(col(p.code), 0.88)}` : ''}">${opts(p.code)}</select>`);
+    const chips = [...tows].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([t, n]) => `<button class="chip ${tsel === t ? 'on' : ''}" data-pkt="${esc(t)}"><span dir="auto">${esc(t.replace(/^مقاولين-\s?/, ''))}</span> ${n}</button>`).join('');
+    main = `<div class="pkt"><b class="pkttl">${esc(lab)}</b><span class="help">${rows.length} POs · ${fmt(tot(rows))}</span><input id="pkQ" placeholder="Search PO, subcontractor, type of works…" value="${esc(ST.pkQ || '')}">${tsel ? `<button class="chip on" data-pkt="">✕ ${esc(tsel.replace(/^مقاولين-\s?/, ''))}</button>` : chips}${Object.keys((ST.pkF || {}).a || {}).length || (ST.pkSort && ST.pkSort.v === 'a') ? '<button class="clr on" id="pkFx">✕ Clear sort &amp; filters</button>' : ''}<span style="flex:1"></span><span class="help" title="Tick POs, then press the package key 1…0, drag them onto a package on the left, or choose in the Package column · Ctrl+Z undo">Tick → key 1…0 or drag left</span></div>
       ${tk.size ? `<div class="pkbulk"><b>${tk.size} PO${tk.size > 1 ? 's' : ''} ticked</b> · ${fmt(tot(D0.pos.filter((p) => tk.has(p.po))))} · press a package key, drag them onto a package, or <select id="pkTo"><option value="">move to…</option>${list.map((x) => `<option value="${esc(x.c)}">${esc(x.c)}${x.n ? ' · ' + esc(x.n) : ''}</option>`).join('')}<option value="-">Not allocated</option></select> <button id="pkClr">Clear ticks</button></div>` : ''}
-      <div class="pkg"><table class="t pkgt"><colgroup><col style="width:34px"><col style="width:136px"><col><col style="width:190px"><col style="width:150px"><col style="width:64px"><col style="width:124px"><col style="width:112px"></colgroup>
-      <thead><tr><th><input type="checkbox" id="pkAll" ${rows.length && nt === rows.length ? 'checked' : ''}></th>${pkTh('a', 'po', 'PO')}${pkTh('a', 'sup', 'Subcontractor')}${pkTh('a', 'tow', 'Type of works')}${pkTh('a', 'pk', 'Package')}${pkTh('a', 'n', 'Items', 'num')}${pkTh('a', 'amt', 'Counted', 'num')}${pkTh('a', 'sep', R.repLab, 'num')}</tr></thead>
-      <tbody>${rows.map((p) => `<tr class="pkr ${tk.has(p.po) ? 'ck' : ''} ${ST.pkOpen === p.po ? 'op' : ''}" draggable="true" data-po="${esc(p.po)}"><td><input type="checkbox" class="pkc" ${tk.has(p.po) ? 'checked' : ''}></td><td><span class="grip" title="Drag onto a package">⠿</span><b>${esc(p.po)}</b></td><td dir="auto" title="${esc(p.sup)}">${esc(p.sup)}</td><td dir="auto">${esc(p.tow.replace(/^مقاولين-\s?/, ''))}</td><td>${pcode(p)}</td><td class="num">${p.items.size}</td><td class="num">${fmt(p.amt)}</td><td class="num">${fmt(p.sep)}</td></tr>`).join('') || '<tr><td colspan="8" class="help" style="padding:20px">Nothing here.</td></tr>'}</tbody></table></div></div>`;
-    if (ST.pkOpen) { const p = D0.pos.find((x) => x.po === ST.pkOpen); if (p) { const its = [...p.items].map((ii) => { const idx = p.idx.filter((i) => L.it[i] === ii), it = BK[SUBI].items[ii], a = idx.reduce((s, i) => s + (R.inc[i] && R.per[i] !== NP - 1 ? R.amt[i] : 0), 0), ks = [...new Set(idx.map(efPkg))]; return { ii, it, a, k: ks.length === 1 ? ks[0] : '~' }; }).sort((x, y) => y.a - x.a);
+      <div class="pkg"><table class="t pkgt"><colgroup><col style="width:38px"><col style="width:140px"><col><col style="width:260px"><col style="width:190px"><col style="width:90px"><col style="width:140px"><col style="width:120px"></colgroup>
+      <thead><tr><th><input type="checkbox" id="pkAll" ${rows.length && nt === rows.length ? 'checked' : ''}></th>${pkTh('a', 'po', 'PO')}${pkTh('a', 'sup', 'Subcontractor')}${pkTh('a', 'tow', 'Type of works')}${pkTh('a', 'pk', 'Package')}${pkTh('a', 'n', 'Work items', 'num')}${pkTh('a', 'amt', 'Certified', 'num')}${pkTh('a', 'sep', R.repLab, 'num')}</tr></thead>
+      <tbody>${rows.map((p) => `<tr class="pkr ${tk.has(p.po) ? 'ck' : ''} ${ST.pkOpen === p.po ? 'op' : ''}" draggable="true" data-po="${esc(p.po)}"><td><input type="checkbox" class="pkc" ${tk.has(p.po) ? 'checked' : ''}></td><td><span class="grip" title="Drag onto a package">⠿</span><b>${esc(p.po)}</b></td><td dir="auto" title="${esc(p.sup)}">${esc(p.sup)}</td><td dir="auto" title="${esc(p.tow)}">${esc(p.tow.replace(/^مقاولين-\s?/, ''))}</td><td class="pkc2">${pcell(p)}</td><td class="num">${p.items.size}</td><td class="num">${fmt(p.amt)}</td><td class="num">${fmt(p.sep)}</td></tr>`).join('') || '<tr><td colspan="8" class="help" style="padding:20px">Nothing here.</td></tr>'}</tbody></table></div>`;
+    if (ST.pkOpen) { const p = D0.pos.find((x) => x.po === ST.pkOpen); if (p) { const its = [...p.items].map((ii) => { const idx = p.idx.filter((i) => L.it[i] === ii), it = BK[SUBI].items[ii], a = idx.reduce((s1, i) => s1 + (R.inc[i] && R.per[i] !== NP - 1 ? R.amt[i] : 0), 0), ks = [...new Set(idx.map(efPkg))]; return { ii, it, a, k: ks.length === 1 ? ks[0] : '~' }; }).sort((x, y) => y.a - x.a);
       main += `<div class="pksplit"><div class="pkh"><b>${esc(p.po)}</b><span dir="auto" class="help">${esc(p.sup)}</span><span style="flex:1"></span><button id="pkClose">✕</button></div><div class="help" style="padding:6px 12px">Split by work item: set a package per work item. The whole PO: <select data-pkpo="${esc(p.po)}"><option value="">—</option>${list.map((x) => `<option ${p.code === x.c ? 'selected' : ''} value="${esc(x.c)}">${esc(x.c)}</option>`).join('')}</select></div>
-        <div style="overflow:auto;flex:1"><table class="t"><thead><tr><th>Service</th><th>Description</th><th class="num">Counted</th><th>Package</th></tr></thead><tbody>${its.map((x) => `<tr><td>${esc(x.it.vals[1])}</td><td dir="auto" title="${esc(x.it.vals[2])}">${esc(x.it.vals[2])}</td><td class="num">${fmt(x.a)}</td><td><select data-pkit="${esc(p.po)}|${x.ii}"><option value="">—</option>${x.k === '~' ? '<option selected>mixed</option>' : ''}${list.map((y) => `<option ${x.k === y.c ? 'selected' : ''} value="${esc(y.c)}">${esc(y.c)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div></div>`; } }
+        <div style="overflow:auto;flex:1"><table class="t"><thead><tr><th>Service</th><th>Description</th><th class="num">Certified</th><th>Package</th></tr></thead><tbody>${its.map((x) => `<tr><td>${esc(x.it.vals[1])}</td><td dir="auto" title="${esc(x.it.vals[2])}">${esc(x.it.vals[2])}</td><td class="num">${fmt(x.a)}</td><td><select data-pkit="${esc(p.po)}|${x.ii}"><option value="">—</option>${x.k === '~' ? '<option selected>mixed</option>' : ''}${list.map((y) => `<option ${x.k === y.c ? 'selected' : ''} value="${esc(y.c)}">${esc(y.c)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div></div>`; } }
+  } else if (view === 'rate') {
+    const code = sel, m = R.pkP.get(code) || new Map(), sup = (po) => (SUB && SUB.supn[po]) || po, f = ST.pkRF || 'all';
+    let ws = [...m.values()].sort((x, y) => y.amt - x.amt); const nAll = ws.length;
+    if (f === 'not') ws = ws.filter((w) => statusOf(w.it) !== 'Fully coded'); if (f === 'sp') ws = ws.filter((w) => w.sp >= 10);
+    if (q) ws = ws.filter((w) => (w.it.vals.join(' ') + ' ' + [w.it.div, w.it.mnl, w.it.ce].join(' ')).toLowerCase().includes(q));
+    R.pkRateRows = ws; const nm = (list.find((x) => x.c === code) || {}).n || '', pos = new Set(); [...m.values()].forEach((w) => w.by.forEach((x, po) => pos.add(po)));
+    const rng = (w) => { if (!w.np) return '<span class="help">no quantities</span>'; const lo = w.mn, hi = w.mx > w.mn ? w.mx : w.mn * 1.01 + 1, X = (v) => (100 * (v - lo) / (hi - lo)).toFixed(1);
+      return `<div class="rng"><div class="ln"></div>${[...w.by.entries()].filter(([, x]) => x.q).map(([po, x]) => { const v = x.a / x.q; return `<span class="dot${w.np > 1 && v === w.mn ? ' lo' : w.np > 1 && v === w.mx ? ' hi' : ''}" style="left:${X(v)}%" title="${esc(po + ' · ' + sup(po))} · ${fmt2(v)}"></span>`; }).join('')}<span class="avg" style="left:${X(w.avg)}%" title="average ${fmt2(w.avg)}"></span></div><div class="rlab"><span>${frt(w.mn)}</span>${w.np > 1 ? `<span${w.sp >= 10 ? ' style="color:#8A6D1F;font-weight:600"' : ''}>spread ${w.sp.toFixed(0)}%</span><span>${frt(w.mx)}</span>` : ''}</div>`; };
+    const ci = (w, fld) => { const v = w.it[fld] || ''; return `<td class="c"><input data-wi="${w.ii}" data-wf="${fld}" value="${esc(v)}" list="dl-${fld}" class="${v ? '' : 'miss'}"></td>`; };
+    const op = ST.pkOpenW;
+    main = `<div class="pkt"><b class="pkttl">${esc(code)}${nm ? ' · ' + esc(nm) : ''}</b><span class="help">${pos.size} POs · ${nAll} work items · coded ${pkCoded(m)}%</span><input id="pkQ" placeholder="Search work item, service, code…" value="${esc(ST.pkQ || '')}">${[['all', 'All'], ['not', 'Not coded'], ['sp', 'Spread ≥ 10%']].map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-pkrf="${k}">${l}</button>`).join('')}<span style="flex:1"></span><span class="pkfill">DIV <input id="pfDIV" list="dl-div"> MNL <input id="pfMNL" list="dl-mnl"> Cost element <input id="pfCE" list="dl-ce"> <button id="pfGo" title="Fill these codes on every work item shown that has them empty">Fill empty</button></span></div>
+      <div class="pkg"><table class="t pkgt pkrt"><colgroup><col style="width:30px"><col><col style="width:66px"><col style="width:100px"><col style="width:62px"><col style="width:250px"><col style="width:92px"><col style="width:92px"><col style="width:96px"><col style="width:84px"><col style="width:120px"><col style="width:110px"></colgroup>
+      <thead><tr><th></th><th>Work item</th><th>Unit</th><th class="num">Qty</th><th class="num">POs</th><th title="Each dot is one PO's rate; the line is the average; green the lowest, red the highest">Rate range · ● PO | average</th><th class="num">Average</th><th class="num">Final</th><th class="code">DIV</th><th class="code">MNL</th><th class="code">Cost element</th><th>Status</th></tr></thead>
+      <tbody>${ws.map((w) => { const s1 = statusOf(w.it), o = op === w.ii; return `<tr class="pkw2${o ? ' op' : ''}" data-wo="${w.ii}"><td class="tgc">${w.np ? (o ? '−' : '+') : ''}</td><td dir="auto" title="${esc(w.it.vals[1] + ' · ' + w.it.vals[2])}"><span class="wi">${esc(w.it.vals[2])}</span><span class="help wsv">${esc(w.it.vals[1])} · <span dir="auto">${esc(String(w.it.vals[0]).replace(/^مقاولين-\s?/, ''))}</span></span></td><td>${w.it.vals[3] ? `<span class="u" style="background:${unitCol(w.it.vals[3])}">${esc(w.it.vals[3])}</span>` : ''}</td><td class="num">${w.q ? fq(w.q) : '-'}</td><td class="num">${w.np || '-'}</td><td>${rng(w)}</td><td class="num"><b>${w.np ? frt(w.avg) : '-'}</b></td><td class="num" style="color:var(--navy);font-weight:700">${w.np ? frt(w.lr) : '-'}</td>${ci(w, 'div')}${ci(w, 'mnl')}${ci(w, 'ce')}<td><span class="st ${s1.split(' ')[0]}">${s1}</span></td></tr>${o ? `<tr class="pkex"><td></td><td colspan="11"><div class="pol">${[...w.by.entries()].filter(([, x]) => x.q).sort((a, b) => a[1].a / a[1].q - b[1].a / b[1].q).map(([po, x]) => { const v = x.a / x.q, d = w.avg ? (v / w.avg - 1) * 100 : 0; return `<div class="pc ${d < -1 ? 'lo' : d > 1 ? 'hi' : ''}"><span class="nm" dir="auto">${esc(sup(po))}</span><span class="r">${frt(v)}</span><small>${esc(po)} · ${fq(x.q)} ${esc(w.it.vals[3] || '')}</small><small>${d > 0 ? '+' : ''}${d.toFixed(1)}%</small></div>`; }).join('')}</div></td></tr>` : ''}`; }).join('') || `<tr><td colspan="12" class="help" style="padding:20px">${nAll ? 'Nothing matches.' : 'No POs in this package yet – put POs in it in step 1.'}</td></tr>`}</tbody></table></div>`;
   } else {
-    // rate study inside one package: work item (service + description) × PO, cell = the PO's certified rate
-    const code = sel && !['*', '', '~'].includes(sel) ? sel : list[0] && list[0].c; const ps = D0.pos.filter((p) => p.codes.includes(code)).slice(0, 24), pset = new Set(ps.map((p) => p.po)), fr = (v) => (Math.abs(v) >= 100 ? fmt(v) : Math.abs(v - Math.round(v)) < 0.005 ? String(Math.round(v)) : v.toFixed(2));
-    const W = new Map(); for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI || !L.qty[i] || !R.inc[i] || R.per[i] === NP - 1 || efPkg(i) !== code) continue; const po = S[L.po[i]]; if (!pset.has(po)) continue; if (!(SRC[i] === 'Certificate' || SRC[i] === 'Opening certificate')) continue;
-      let w = W.get(L.it[i]); if (!w) W.set(L.it[i], (w = { it: BK[SUBI].items[L.it[i]], by: new Map(), q: 0, a: 0, last: 0, lr: 0 })); const x = w.by.get(po) || w.by.set(po, { q: 0, a: 0 }).get(po); x.q += L.qty[i]; x.a += R.amt[i]; w.q += L.qty[i]; w.a += R.amt[i]; if (L.d[i] >= w.last) { w.last = L.d[i]; w.lr = R.amt[i] / L.qty[i]; } }
-    const ws = [...W.values()].filter((w) => w.q).map((w) => { const rs = [...w.by.values()].filter((x) => x.q).map((x) => x.a / x.q); return { ...w, avg: w.a / w.q, mn: Math.min(...rs), mx: Math.max(...rs) }; }).sort((x, y) => (ST.pkMulti ? (y.by.size > 1) - (x.by.size > 1) : 0) || y.a - x.a);
-    const mainPo = (ST.pkMain || {})[code] && ps.some((p) => p.po === ST.pkMain[code]) ? ST.pkMain[code] : ps[0] && ps[0].po, cmpM = !!ST.pkCmp;
-    const RC = { wi: (w) => w.it.vals[2], svc: (w) => w.it.vals[1], u: (w) => w.it.vals[3], q: (w) => w.q, avg: (w) => w.avg, fin: (w) => w.lr, sp: (w) => (w.mn ? Math.round((w.mx / w.mn - 1) * 1000) / 10 : 0), npo: (w) => w.by.size };
-    ps.forEach((p) => { RC['p' + p.po] = (w) => { const x = w.by.get(p.po); return x && x.q ? Math.round(x.a / x.q * 100) / 100 : ''; }; });
-    const wsF = pkApply(ws, RC, 'r'); R.pkRateRows = ws; R.pkRateCols = RC;
-    const cell = (w, po) => { const x = w.by.get(po), mn = po === mainPo; if (!x || !x.q) return `<td class="hm na${mn ? ' mpo' : ''}">·</td>`; const mx2 = w.by.get(mainPo), ref = cmpM ? (mx2 && mx2.q ? mx2.a / mx2.q : 0) : w.avg; const v = x.a / x.q, d = mn && cmpM ? 0 : ref ? (v / ref - 1) * 100 : 0, bg = d > 1 ? `rgba(155,44,44,${Math.min(0.55, 0.08 + d / 40)})` : d < -1 ? `rgba(47,107,58,${Math.min(0.55, 0.08 - d / 40)})` : '#F3F6FB'; return `<td class="hm${mn ? ' mpo' : ''}" style="background:${mn && cmpM ? '#FFF2CC' : bg}" title="${esc(po)} · ${fmt2(v)} · qty ${fq(x.q)}${!mn && ref ? ' · ' + (d > 0 ? '+' : '') + d.toFixed(1) + '% vs ' + (cmpM ? 'main PO' : 'average') : ''}">${fr(v)}</td>`; };
-    main = `<div class="pkm"><div class="pkt"><b class="pkttl">Rate study · ${esc(code || '')}</b><span class="help">${wsF.length}${wsF.length !== ws.length ? ' of ' + ws.length : ''} work items · ${ps.length} POs${D0.pos.filter((p) => p.codes.includes(code)).length > 24 ? ' (largest 24 by amount)' : ''} </span><span class="help" title="Cell = the PO's certified rate. Green below, red above ${cmpM ? 'the main PO' : 'the average'}. ★ = main PO – click ☆ to change.">ⓘ</span><button class="chip ${cmpM ? 'on' : ''}" id="pkCmp">Compare to: ${cmpM ? 'main PO' : 'average'}</button><button class="chip ${ST.pkMulti ? 'on' : ''}" id="pkMulti">Shared by 2+ POs first</button></div>
-      <div class="pkg"><table class="t pkgt"><colgroup><col style="width:260px"><col style="width:46px"><col style="width:84px"><col style="width:68px"><col style="width:64px">${ps.map(() => '<col>').join('')}</colgroup>
-      <thead><tr>${pkTh('r', 'wi', 'Work item')}${pkTh('r', 'u', 'Unit')}${pkTh('r', 'q', 'Qty', 'num')}${pkTh('r', 'avg', 'Average', 'num')}${pkTh('r', 'fin', 'Final', 'num')}${ps.map((p) => `<th class="pch pkth vth${p.po === mainPo ? ' mpoh' : ''}" data-pksort="r|p${esc(p.po)}" title="${esc(p.po + ' · ' + p.sup)} – click to sort"><button class="pkstar" data-pkmain="${esc(p.po)}" data-pkc="${esc(code)}" title="Make this the main PO">${p.po === mainPo ? '★' : '☆'}</button><span><bdi>${esc(p.sup.split(' ').slice(0, 3).join(' '))}</bdi> · ${esc(p.po.slice(-5))}</span></th>`).join('')}</tr></thead>
-      <tbody>${wsF.map((w) => `<tr><td dir="auto" title="${esc(w.it.vals[1] + ' · ' + w.it.vals[2])}">${esc(w.it.vals[2])} <span class="help">${esc(w.it.vals[1])}</span></td><td>${esc(w.it.vals[3])}</td><td class="num">${fq(w.q)}</td><td class="num"><b>${fr(w.avg)}</b></td><td class="num" style="color:var(--navy);font-weight:700">${fr(w.lr)}</td>${ps.map((p) => cell(w, p.po)).join('')}</tr>`).join('') || '<tr><td colspan="5" class="help" style="padding:20px">No certified quantities in this package yet – allocate POs first.</td></tr>'}</tbody></table></div></div>`;
+    const P = R.pkP, prv = R.rep > 1 ? R.rep - 1 : -1, row = (c, n, i, ps, special) => { const m = P.get(c), wn = m ? m.size : 0, pc = pkCoded(m), chk = m ? [...m.values()].filter((w) => w.sp >= 10).length : 0, a = tot(ps), sp = ps.reduce((s1, p) => s1 + p.sep, 0), pv = ps.reduce((s1, p) => s1 + p.prv, 0), dl = pv ? (sp / pv - 1) * 100 : 0;
+      return `<tr data-pkgo="${esc(c)}" class="pkrv"><td>${special ? `<span style="color:#9B2C2C">${esc(n)}</span>` : `<span class="pktag2" style="border-color:${PKC[i % PKC.length]};background:${tint(PKC[i % PKC.length], 0.88)};color:${PKC[i % PKC.length]}">${esc(c)}</span> ${esc(n)}`}</td><td class="num">${ps.length}</td><td class="num">${wn || ''}</td><td class="num">${fmt(a)}</td><td class="num">${fmt(sp)}</td><td class="num" style="color:${dl > 0.05 ? '#9B2C2C' : dl < -0.05 ? '#2F6B3A' : '#6b7280'}">${pv && sp ? (dl > 0 ? '▲ ' : '▼ ') + Math.abs(dl).toFixed(1) + '%' : '-'}</td><td>${special ? '' : `<div class="cbar"><div><i style="width:${pc}%"></i></div><span>${pc}%</span></div>`}</td><td>${special ? '' : chk ? `<span style="color:#8A6D1F">⚠ ${chk} work item${chk > 1 ? 's' : ''} with spread ≥ 10%</span>` : wn ? '<span style="color:#2F6B3A">✓ consistent</span>' : ''}</td></tr>`; };
+    const all = D0.pos.filter((p) => p.code !== '');
+    main = `<div class="pkt"><b class="pkttl">Review</b><span class="help">every package · certified to ${esc(R.repLab)} · ${all.length} of ${D0.pos.length} POs in a package</span><span style="flex:1"></span><button id="pkExp" class="pri">⇩ Export Excel</button><button id="pkSave">💾 Save codes</button></div>
+      <div class="pkg"><table class="t pkgt"><colgroup><col style="width:300px"><col style="width:80px"><col style="width:110px"><col style="width:150px"><col style="width:140px"><col style="width:120px"><col><col style="width:290px"></colgroup>
+      <thead><tr><th>Package</th><th class="num">POs</th><th class="num">Work items</th><th class="num">Certified to date</th><th class="num">${esc(R.repLab)}</th><th class="num">vs ${prv > 0 ? esc(PER[prv]) : 'last month'}</th><th>Coding</th><th>Rate checks</th></tr></thead>
+      <tbody>${list.map((x, i) => row(x.c, x.n, i, D0.pos.filter((p) => p.codes.includes(x.c)))).join('')}${row('', 'Not allocated', 0, D0.pos.filter((p) => p.code === ''), 1)}</tbody>
+      <tfoot><tr class="tot"><td>Total</td><td class="num">${D0.pos.length}</td><td></td><td class="num">${fmt(tot(D0.pos))}</td><td class="num">${fmt(D0.pos.reduce((s1, p) => s1 + p.sep, 0))}</td><td></td><td></td><td></td></tr></tfoot></table></div>`;
   }
-  $('pkg').innerHTML = `<div class="pkbar">${seg}<span class="seg"><button data-pkv="alloc" class="${view === 'alloc' ? 'on' : ''}">① Allocate</button><button data-pkv="rate" class="${view === 'rate' ? 'on' : ''}">② Rate study</button></span><span class="help">③ Code the services in Coding › Subcontractor – line packages already flow everywhere</span></div><div class="pkw${ST.pkCol ? ' col' : ''}">${main}${right}</div>`;
+  $('pkg').innerHTML = steps + `<div class="pkw1">${main}</div>`;
   const qi = $('pkQ'); if (qi) { qi.oninput = () => { ST.pkQ = qi.value; const pos = qi.selectionStart; renderPkg(); const n = $('pkQ'); n.focus(); n.setSelectionRange(pos, pos); }; }
+  renderSide();
 }
 function pkPlan(target) {   // target: Map line index → new package; returns the item + line changes (one undo step)
   const want = (i) => (target.has(i) ? target.get(i) : efPkg(i)), its = new Set([...target.keys()].map((i) => L.it[i])), ch = [];
@@ -769,7 +886,14 @@ function pkPlan(target) {   // target: Map line index → new package; returns t
   return ch; }
 function pkAssign(pos, code, label) { const set = new Set(pos), tg = new Map(); for (const p of R.pkPos) if (set.has(p.po)) for (const i of p.idx) tg.set(i, code); if (!tg.size) return; const ch = pkPlan(tg); ST.pkTick.clear(); ST.pkOpen = null; change(ch, label || (pos.length + ' PO' + (pos.length > 1 ? 's' : '') + ' → ' + (code || 'Not allocated'))); }
 function pkTicked() { return [...(ST.pkTick || [])]; }
-document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !pg.contains(e.target)) return; const t = e.target;
+document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !(pg.contains(e.target) || (ST.tab === 'sub' && $('side').contains(e.target) && !e.target.closest('[data-gt],[data-side]')))) return; const t = e.target;
+  const toPkg = () => { if (ST.sub !== 'pkg') { ST.sub = 'pkg'; render(); } else renderPkg(); };
+  if (t.id === 'pkAddT') { ST.pkAdd = !ST.pkAdd; renderSide(); const c = $('pkNewC'); if (c) c.focus(); return; }
+  if (t.id === 'pkExp') { $('bExport').click(); return; } if (t.id === 'pkSave') { $('bSave').click(); return; }
+  const rf = t.closest('[data-pkrf]'); if (rf) { ST.pkRF = rf.dataset.pkrf; renderPkg(); return; }
+  const gv = t.closest('[data-pkgo]'); if (gv) { ST.pkSel = gv.dataset.pkgo; ST.pkView = gv.dataset.pkgo === '' ? 'alloc' : 'rate'; ST.pkQ = ''; renderPkg(); return; }
+  if (t.id === 'pfGo') { const v = { div: $('pfDIV').value.trim(), mnl: $('pfMNL').value.trim(), ce: $('pfCE').value.trim() }, ch = []; (R.pkRateRows || []).forEach((w) => Object.entries(v).forEach(([f, x]) => { if (x && !w.it[f]) ch.push({ t: 'item', bi: SUBI, ii: w.ii, f, v: x }); })); if (ch.length) change(ch, 'Filled empty codes in ' + ST.pkSel); else toast('Nothing to fill – type a code, and only empty cells are filled'); return; }
+  const wo = t.closest('tr[data-wo]'); if (wo && !t.closest('input')) { const ii = +wo.dataset.wo; ST.pkOpenW = ST.pkOpenW === ii ? null : ii; renderPkg(); return; }
   const sv = t.closest('[data-sv]'); if (sv) { goSub(sv.dataset.sv); return; } const v = t.closest('[data-pkv]'); if (v) { ST.pkView = v.dataset.pkv; renderPkg(); return; }
   const fb = t.closest('[data-pkfb]'); if (fb) { e.stopPropagation(); const [v2, k2] = fb.dataset.pkfb.split('|'); if (v2 === 'a') { const base = R.pkBase || []; pkPop(fb, 'a', k2, base, PKCOL); } else pkPop(fb, 'r', k2, R.pkRateRows || [], R.pkRateCols); return; }
   const so2 = t.closest('[data-pkso]'); if (so2) { const [k2, d2] = so2.dataset.pkso.split('|'); ST.pkSort = { v: 'a', k: k2, d: +d2 }; renderPkg(); return; }
@@ -779,8 +903,8 @@ document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !pg.
   if (t.closest('.pkn,.pkadd input,select')) return;
   const ed = t.closest('[data-pke]'); if (ed) { ST.pkEdit = ed.dataset.pke; renderPkg(); const i = document.querySelector('.pkn'); if (i) { i.focus(); i.select(); } return; }
   const x = t.closest('[data-pkx]'); if (x) { const c = x.dataset.pkx, ps = R.pkPos.filter((p) => p.codes.includes(c)); if (ps.length && !confirm(`Remove ${c}? Its ${ps.length} POs go back to Not allocated.`)) return; ST.pk = ST.pk.filter((y) => y.c !== c); const tg = new Map(); for (const p of ps) for (const i of p.idx) if (efPkg(i) === c) tg.set(i, ''); if (tg.size) change(pkPlan(tg), 'Package ' + c + ' removed'); else { persist(); renderPkg(); } return; }
-  if (t.id === 'pkNew') { const c = $('pkNewC').value.trim(), n = $('pkNewN').value.trim(); if (!c) { $('pkNewC').focus(); return; } if (!ST.pk.some((y) => y.c === c)) ST.pk.push({ c, n }); persist(); renderPkg(); return; }
-  const b = t.closest('[data-pks]'); if (b) { if (pkTicked().length && b.dataset.pks !== '*' && b.dataset.pks !== '~' && e.detail === 1 && t.closest('.k')) { pkAssign(pkTicked(), b.dataset.pks); return; } ST.pkSel = b.dataset.pks; ST.pkOpen = null; ST.pkTow = ''; renderPkg(); return; }
+  if (t.id === 'pkNew') { const c = $('pkNewC').value.trim(), n = $('pkNewN').value.trim(); if (!c) { $('pkNewC').focus(); return; } if (!ST.pk.some((y) => y.c === c)) ST.pk.push({ c, n }); ST.pkAdd = false; persist(); renderPkg(); return; }
+  const b = t.closest('[data-pks]'); if (b) { if (pkTicked().length && b.dataset.pks !== '*' && b.dataset.pks !== '~' && e.detail === 1 && t.closest('.k')) { pkAssign(pkTicked(), b.dataset.pks); return; } ST.pkSel = b.dataset.pks; ST.pkOpen = null; ST.pkTow = ''; ST.pkQ = ''; ST.pkOpenW = null; if ((ST.pkView || 'alloc') !== 'alloc' && b.dataset.pks === '') ST.pkView = 'alloc'; else if (ST.pkView === 'review' && b.dataset.pks !== '*') ST.pkView = 'rate'; toPkg(); return; }
   const tw = t.closest('[data-pkt]'); if (tw) { ST.pkTow = tw.dataset.pkt; renderPkg(); return; }
   if (t.id === 'pkTog') { ST.pkCol = !ST.pkCol; renderPkg(); return; }
   if (t.id === 'pkFx') { if (ST.pkF) ST.pkF.a = {}; if (ST.pkSort && ST.pkSort.v === 'a') ST.pkSort = null; renderPkg(); return; }
@@ -788,7 +912,8 @@ document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !pg.
   if (t.id === 'pkAll') { const tk = ST.pkTick; if (t.checked) R.pkRows.forEach((p) => tk.add(p.po)); else R.pkRows.forEach((p) => tk.delete(p.po)); renderPkg(); return; }
   const r = t.closest('tr.pkr'); if (r) { const po = r.dataset.po, tk = ST.pkTick; if (t.classList.contains('pkc')) { if (e.shiftKey && ST.pkLast) { const ks = R.pkRows.map((p) => p.po), a = ks.indexOf(ST.pkLast), z = ks.indexOf(po); ks.slice(Math.min(a, z), Math.max(a, z) + 1).forEach((k) => tk.add(k)); } else t.checked ? tk.add(po) : tk.delete(po); ST.pkLast = po; renderPkg(); return; }
     ST.pkOpen = ST.pkOpen === po ? null : po; renderPkg(); } });
-document.addEventListener('change', (e) => { const pg = $('pkg'); if (!pg || !pg.contains(e.target)) return; const t = e.target;
+document.addEventListener('change', (e) => { const pg = $('pkg'); if (!pg || !(pg.contains(e.target) || $('side').contains(e.target))) return; const t = e.target;
+  if (t.dataset.wi !== undefined && t.dataset.wf) { const it = BK[SUBI].items[+t.dataset.wi]; change([{ t: 'item', bi: SUBI, ii: +t.dataset.wi, f: t.dataset.wf, v: t.value.trim() }], FN[t.dataset.wf] + ' ' + (t.value.trim() || '(empty)') + ' · ' + it.vals[1]); return; }
   if (t.dataset.pkn !== undefined) { const y = ST.pk.find((z) => z.c === t.dataset.pkn); if (y) y.n = t.value.trim(); else ST.pk.push({ c: t.dataset.pkn, n: t.value.trim() }); ST.pkEdit = null; persist(); renderPkg(); return; }
   if (t.id === 'pkTo' && t.value) { pkAssign(pkTicked(), t.value === '-' ? '' : t.value); return; }
   if (t.dataset.pkpo) { pkAssign([t.dataset.pkpo], t.value); return; }
@@ -796,32 +921,65 @@ document.addEventListener('change', (e) => { const pg = $('pkg'); if (!pg || !pg
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('pkn')) { e.target.blur(); return; } if (e.key === 'Enter' && (e.target.id === 'pkNewC' || e.target.id === 'pkNewN')) { $('pkNew').click(); return; } if (!(ST.tab === 'sub' && ST.sub === 'pkg') || e.ctrlKey || e.metaKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return; if (!/^[0-9]$/.test(e.key) || !pkTicked().length) return;
   const k = e.key === '0' ? 9 : +e.key - 1, x = R.pkList && R.pkList[k]; if (!x) return; e.preventDefault(); pkAssign(pkTicked(), x.c); });
 document.addEventListener('dragstart', (e) => { const r = e.target.closest && e.target.closest('tr.pkr'); if (!r) return; if (!ST.pkTick.has(r.dataset.po)) { ST.pkTick.clear(); ST.pkTick.add(r.dataset.po); } e.dataTransfer.setData('text/plain', 'pk'); e.dataTransfer.effectAllowed = 'move'; document.body.classList.add('pkdrag'); const n = ST.pkTick.size, g = document.createElement('div'); g.textContent = n + ' PO' + (n > 1 ? 's' : '') + ' → drop on a package'; g.style.cssText = 'position:fixed;top:-100px;padding:6px 10px;background:#1F3864;color:#fff;border-radius:6px;font:600 12px Segoe UI'; document.body.appendChild(g); e.dataTransfer.setDragImage(g, 10, 10); setTimeout(() => g.remove(), 0); });
-document.addEventListener('dragend', () => { document.body.classList.remove('pkdrag'); document.querySelectorAll('.pkb.hot').forEach((x) => x.classList.remove('hot')); });
-document.addEventListener('dragover', (e) => { const b = e.target.closest && e.target.closest('.pkb[data-pks]'); if (b && !['*', '~'].includes(b.dataset.pks)) { e.preventDefault(); document.querySelectorAll('.pkb.hot').forEach((x) => x !== b && x.classList.remove('hot')); b.classList.add('hot'); } });
-document.addEventListener('drop', (e) => { const b = e.target.closest && e.target.closest('.pkb[data-pks]'); if (!b) return; e.preventDefault(); b.classList.remove('hot'); pkAssign(pkTicked(), b.dataset.pks); });
+document.addEventListener('dragend', () => { document.body.classList.remove('pkdrag'); document.querySelectorAll('.hot').forEach((x) => x.classList.remove('hot')); });
+document.addEventListener('dragover', (e) => { const b = e.target.closest && e.target.closest('[data-pks]'); if (b && !['*', '~'].includes(b.dataset.pks)) { e.preventDefault(); document.querySelectorAll('.hot').forEach((x) => x !== b && x.classList.remove('hot')); b.classList.add('hot'); } });
+document.addEventListener('drop', (e) => { const b = e.target.closest && e.target.closest('[data-pks]'); if (!b) return; e.preventDefault(); b.classList.remove('hot'); pkAssign(pkTicked(), b.dataset.pks); });
 // ---- the table renderer
 const VROW = 27;
+// ---- column widths: fitted to what the column holds (header and values), or the width you dragged (kept in this browser)
+let CW = {}; try { CW = JSON.parse(localStorage.getItem('cr-cw') || '{}') || {}; } catch (e) { CW = {}; }
+const cwSave = () => { try { localStorage.setItem('cr-cw', JSON.stringify(CW)); } catch (e) { /* none */ } }, cwK = (k) => vsKey().replace(/:-?\d+$/, (m) => ':' + (BK[+m.slice(1)] ? BK[+m.slice(1)].id : m.slice(1))) + '|' + k;
+const MCV = document.createElement('canvas').getContext('2d'), tw = (t, f) => { MCV.font = f; return MCV.measureText(t).width; };
+let HID = {}; try { HID = JSON.parse(localStorage.getItem('cr-hide') || '{}') || {}; } catch (e) { HID = {}; }
+const HID0 = { cod: ['pe', 'n', 'nw'] }, hidSet = () => new Set(HID[cwK('')] || HID0[ST.tab] || []);
+document.addEventListener('click', (e) => { const b = e.target.closest('#bCols'); const cp = $('cpop');
+  if (b) { const D = R.D, h = hidSet(), r = b.getBoundingClientRect(); cp.innerHTML = '<div class="h">Show columns · drag a header edge to change its width</div>' + D.allCols.map((c, i) => `<label><input type="checkbox" data-ck="${esc(c.k)}" ${h.has(c.k) ? '' : 'checked'} ${i === 0 || c.code ? 'disabled' : ''}>${esc(c.l)}</label>`).join('');
+    cp.classList.add('show'); cp.style.left = Math.max(4, Math.min(innerWidth - 240, r.left)) + 'px'; cp.style.top = r.bottom + 4 + 'px'; return; }
+  if (!e.target.closest('#cpop')) cp.classList.remove('show'); });
+document.addEventListener('change', (e) => { const x = e.target.closest('#cpop [data-ck]'); if (!x) return; const h = hidSet(); x.checked ? h.delete(x.dataset.ck) : h.add(x.dataset.ck); HID[cwK('')] = [...h]; try { localStorage.setItem('cr-hide', JSON.stringify(HID)); } catch (er) { /* none */ } render(); });
+function fitCols(D) {
+  const rs = D.rows, n = rs.length, step = Math.max(1, Math.floor(n / 400)), samp = []; for (let i = 0; i < n; i += step) samp.push(rs[i]);
+  let ft = null; try { ft = D.foot ? D.foot(rs) : null; } catch (e) { ft = null; }
+  for (const c of D.cols) { const u = CW[cwK(c.k)]; if (u) { c.w = u; continue; } const hw = tw(c.l, '600 12px "Segoe UI",Arial,sans-serif') + 38; if (c.code) { c.w = Math.max(c.w, Math.min(hw, 150)); continue; } if (c.fixW || c.slot !== undefined && !c.num) continue;
+    let mx = ft && ft[c.k] ? tw(String(ft[c.k]), '700 13px "Segoe UI",Arial,sans-serif') : 0;
+    for (const r of samp) { let h; try { h = c.h(r); } catch (e) { continue; } if (h.includes('<input')) continue;   // measure what the cell shows (text of its html), bold where it is bold
+      const t = h.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim(); if (!t) continue; const box = (h.match(/<(button|a |span class="(u|st|tgl|pk)[^"]*")/g) || []).length * 12;
+      const w = tw(t, /<b>|font-weight:7|<td class="num"><b/.test(h) ? '700 13px "Segoe UI",Arial,sans-serif' : '13px "Segoe UI",Arial,sans-serif') + box; if (w > mx) mx = w; }
+    const pad = 22, cap = c.num ? 220 : 420;
+    c.w = Math.round(Math.max(c.num ? 64 : 56, Math.min(cap, Math.max(mx + pad, Math.min(hw, c.num ? 150 : 170))))); c.fit = 1; }
+  { const avail = ($('wrap').clientWidth || 1500) - (D.sel ? 34 : 0) - 4, tot = D.cols.reduce((t, c) => t + c.w, 0), wide = D.cols.filter((c) => c.fit && !c.num && c.w > 170);   // too wide for the screen: long text columns give way first
+    if (tot > avail && wide.length) { const over = tot - avail, room = wide.reduce((t, c) => t + c.w - 170, 0), k = Math.min(1, over / room); wide.forEach((c) => { c.w = Math.round(c.w - (c.w - 170) * k); }); } }
+  const sl = D.cols.filter((c) => c.fit && c.slot !== undefined && c.slot !== 'td'), bySub = new Map(); sl.forEach((c) => bySub.set(c.sub || '', Math.max(bySub.get(c.sub || '') || 0, c.w))); sl.forEach((c) => { c.w = bySub.get(c.sub || ''); });   // months: one width
+}
+document.addEventListener('mousedown', (e) => { const g = e.target.closest('#th .rz'); if (!g) return; e.preventDefault(); e.stopPropagation();
+  const k = g.dataset.rk, col = $('cg').querySelector(`col[data-k="${CSS.escape(k)}"]`), c = R.D.cols.find((x) => x.k === k); if (!col || !c) return;
+  const x0 = e.clientX, w0 = c.w, t0 = $('tbl').offsetWidth; let w = w0; g.classList.add('on'); document.body.classList.add('rzing');
+  const mv = (ev) => { w = Math.max(40, Math.round(w0 + ev.clientX - x0)); col.style.width = w + 'px'; $('tbl').style.width = (t0 + w - w0) + 'px'; };
+  const up = () => { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); document.body.classList.remove('rzing'); if (w !== w0) { CW[cwK(k)] = w; cwSave(); } render(); };
+  document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up); }, true);
+document.addEventListener('dblclick', (e) => { const g = e.target.closest('#th .rz'); if (!g) return; delete CW[cwK(g.dataset.rk)]; cwSave(); render(); });
+document.addEventListener('click', (e) => { if (e.target.closest('#th .rz')) e.stopPropagation(); if (e.target.id === 'bFit') { const p = cwK(''); Object.keys(CW).forEach((k) => { if (k.startsWith(p)) delete CW[k]; }); cwSave(); render(); toast('Columns fitted to their content'); } }, true);
 function renderTable() {
-  const D = pageDef(), S0 = vs(); R.D = D;
+  const D = pageDef(), S0 = vs(); R.D = D; { const h = hidSet(); D.allCols = D.cols; if (h.size && !D.bands) D.cols = D.cols.filter((c, i) => i === 0 || c.code || !h.has(c.k)); }
   // bucket bar (not for Expenses / Subcontractor)
   if (['gl', 'wbs'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = `<button class="chip ${ST.xbk === -1 ? 'on' : ''}" data-xbk="-1">All buckets</button>` + BK.map((b, bi) => `<button class="chip ${bi === ST.xbk ? 'on' : ''}" data-xbk="${bi}">${esc(b.short)}</button>`).join('') + (ST.tab === 'gl' ? `<button class="chip ${ST.xbk === -2 ? 'on' : ''}" data-xbk="-2">Revenue</button>` : ''); }
-  else if (['cod', 'pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = (ST.tab === 'lines' ? `<button class="chip ${ST.bk === -1 ? 'on' : ''}" data-bk="-1">All buckets</button>` : '') + BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+  else if (['pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = (ST.tab === 'lines' ? `<button class="chip ${ST.bk === -1 ? 'on' : ''}" data-bk="-1">All buckets</button>` : '') + BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
     return `<button class="chip ${bi === ST.bk ? 'on' : ''}" data-bk="${bi}">${esc(b.short)}<span class="pc">${t ? (100 * f / t).toFixed(0) : 0}%</span></button>`; }).join(''); } else $('bkbar').style.display = 'none';
   $('tools').innerHTML = `${D.noFilter && !D.search ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Partly coded', 'Fully coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
-    ${D.extraTools || ''} ${D.groups && !D.noGroupBtns ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : `<button id="bClr" class="clr">✕ Clear filters</button>`} <span class="help" id="cnt"></span>`;
+    ${D.extraTools || ''} ${D.groups && !D.noGroupBtns ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : `<button id="bClr" class="clr">✕ Clear filters</button>`} ${D.bands ? '' : '<button id="bCols" title="Show or hide columns">Columns ▾</button>'}<button id="bFit" title="Fit every column to its content (drops the widths you dragged)">↔ Fit</button> <span class="help" id="cnt"></span>`;
   const cols = D.cols, q = S0.q.trim().toLowerCase();
   let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && statusOf(r.it) !== S0.st) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
     if (q && !D.tree) { const t = r.sq !== undefined ? r.sq : D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.ce ? [r.ce, r.x.name].join(' ') : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce, r.it.nameS || '', (META.grpNames || {})[r.it.vals[2]] || ''].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
     return true; });
   if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
-  R.rows = rows;
-  $('cg').innerHTML = (D.sel ? '<col style="width:34px">' : '') + cols.map((c) => `<col style="width:${c.w}px">`).join('');
+  R.rows = rows; fitCols(D);
+  $('cg').innerHTML = (D.sel ? '<col style="width:34px">' : '') + cols.map((c) => `<col data-k="${esc(c.k)}" style="width:${c.w}px">`).join('');
   $('tbl').style.width = (D.sel ? 34 : 0) + cols.reduce((t, c) => t + c.w, 0) + 'px';   // exact width: keeps the fixed layout, so columns never move and frozen columns line up
   // frozen columns: left offsets
   let left = D.sel ? 34 : 0; const fzL = {}; cols.forEach((c) => { if (c.fz) { fzL[c.k] = left; left += c.w; } }); R.fzL = fzL;
   const fz = (c) => (fzL[c.k] !== undefined ? ` fz" style="left:${fzL[c.k]}px` : ''), HH = 27, nb = (D.bands || []).length;
   const bandH = (D.bands || []).map((row, ri) => '<tr class="band">' + (D.sel && ri === 0 ? `<th rowspan="${nb}" class="blank fz" style="left:0;top:0"></th>` : '') + (() => { let ci = 0; return row.flatMap((x) => { let nf = 0; while (nf < x.span && cols[ci + nf] && fzL[cols[ci + nf].k] !== undefined) nf++; ci += x.span; return nf && nf < x.span ? [{ ...x, span: nf, fzc: cols[ci - x.span] }, { ...x, span: x.span - nf, l: '', tog: '' }] : [{ ...x, fzc: nf ? cols[ci - x.span] : null }]; }).map((x) => { const c0 = x.fzc, st = !!c0; return `<th colspan="${x.span}" class="${x.cls || ''}${st ? ' fz' : ''}" style="top:${ri * HH}px${st ? `;left:${fzL[c0.k]}px` : ''}" ${x.tog ? `data-tog="${x.tog}"` : ''}${x.um !== undefined ? ` data-um="${x.um}" title="Click to include / leave out this month"` : ''}${x.dm !== undefined ? ` data-dm="${x.dm}" title="Click to count / exclude this month"` : ''}${x.attr ? ' ' + x.attr : ''}>${esc(x.l)}</th>`; }).join(''); })() + '</tr>').join('');
-  $('th').innerHTML = bandH + '<tr>' + (D.sel ? `<th class="fz" style="left:0;top:${nb * HH}px;padding-right:6px"><input type="checkbox" id="all"></th>` : '') + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzL[c.k] !== undefined ? 'fz' : ''}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.l)}">${esc(c.l)}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}</th>`).join('') + '</tr>';
+  $('th').innerHTML = bandH + '<tr>' + (D.sel ? `<th class="fz" style="left:0;top:${nb * HH}px;padding-right:6px"><input type="checkbox" id="all"></th>` : '') + cols.map((c) => `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzL[c.k] !== undefined ? 'fz' : ''}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.l)}">${esc(c.l)}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}<span class="rz" data-rk="${esc(c.k)}" title="Drag to change the width · double-click to fit"></span></th>`).join('') + '</tr>';
   const nc = cols.length + (D.sel ? 1 : 0), ft = D.foot ? D.foot(rows) : null;
   $('tf').innerHTML = ft ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzL[c.k] !== undefined ? ' fz' : ''}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''}>${j === 0 ? 'TOTAL' : ft[c.k] ?? ''}</td>`).join('')}</tr>` : '';
   { const tb = [];
