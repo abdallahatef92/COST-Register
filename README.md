@@ -57,6 +57,15 @@ One header with the 5 steps of the month – **1 Code · 2 Subcontractor · 3 Ad
 
 Tables: light headers and hairline borders. Columns are fitted to what they hold (header and values); drag a header's right edge to change a width (kept in this browser), double-click it to fit again, "↔ Fit" refits the whole table, "Columns ▾" shows or hides columns (Coding hides Pending, Lines, New by default).
 
+### Monthly workflow (app)
+- **Month-close checklist** on the 5 steps: Code shows the coded share, Subcontractor the POs in a package (e.g. 133/240), Adjust whether the include / exclude decisions are made, Check ✓ when every reconciliation check is OK, Reports whether everything is saved.
+- **Coding rules**: a code typed on a material group (Material › Rate analysis) or a subcontractor work item becomes a rule; new items of that group / service are coded automatically at the next build. Listed on Code › Rules (delete, "fill empty codes now"); kept with Save codes; exported as a sheet.
+- **New this month**: a filter in Coding and counts in the sidebar; in Subcontractor › Packages new POs are marked and each PO not in a package gets a suggestion – the package its type of works already uses (✓ to accept one, "Accept N suggestions" for all).
+- **Unsaved changes**: the status bar counts changes not yet in a saved file (click to save); Save codes and Export Excel clear it; the browser warns before closing.
+- **Changes**: every change (and undo / redo) with date, time, cells and cut date – Check › Changes, kept with Save codes, exported as a sheet.
+- **Drill-down**: double-click a bucket × month on the Summary, or a cell in Per Month (item, group or family row): the items behind the number slide in from the right; click an item for its CJI3 lines.
+- Cut dates are offered only up to the last CJI3 posting. Status is Coded / Not coded in the Tool and the Excel register. Excel export adds Material families, Packages, Subcontractor rates, Material rates, Coding rules and Changes.
+
 ### Subcontractor (app): 1 Packages · 2 Rates & coding · 3 Review
 1. **Packages** – the sidebar lists Not allocated, your packages (key 1…0, POs, amount) and All POs; "+ Add package" adds a code and an optional name, ✎ renames, ✕ removes the open one. Every PO row has a Package dropdown; or tick POs and press the key, or drag them onto a package in the sidebar. Click a PO to split it by work item. A work item whose lines are all in one package gets the package as its PKG (so Coding shows it); only a work item split between packages keeps it per line. Package allocation does not count as hand-coding.
 2. **Rates & coding** – one package at a time: one row per work item with the rate range of all its POs (a dot per PO, green lowest, red highest, a line for the average, the spread in %), average and final (latest) rate, and DIV / MNL / Cost element typed on the same row. Click a row for every PO's rate as a card, cheapest first, % vs average. "Fill empty" puts DIV / MNL / Cost element on every work item shown that has it empty. Filters: All · Not coded · Spread ≥ 10%. The sidebar shows coded % per package.
