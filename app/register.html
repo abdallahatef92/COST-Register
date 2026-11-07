@@ -183,6 +183,9 @@ nav.secs button.on .nb{background:#E8EDF4;color:var(--navy)} nav.secs button.on 
 
 .pksug{display:flex;gap:4px;align-items:center} .pksug select{flex:1;min-width:0} .pksug button{flex:none;padding:1px 6px;font-size:11.5px;font-weight:600;background:#fff;border-radius:5px} .pknew{font-size:10px;font-weight:700;color:#92400E;background:#FFF1DC;border-radius:4px;padding:0 4px}
 .spk{display:block} .mixt{color:#6b7280;font-style:italic;font-weight:600}
+
+#drawer.wide{width:760px} td.dk{cursor:zoom-in} td.dk:hover{background:#EAF0F8!important} #dBody tr.drl{cursor:pointer} #dBody tr.drl:hover td{background:#F5F7FA}
+#pg-tbl .t td.num{cursor:default} body .t tr.it td.num:hover{outline:1px solid #C9D3E3}
 </style>
 </head>
 <body>
@@ -422,8 +425,8 @@ function renderSummary() {
     svg += `<text x="${x + bw / 2}" y="${H + 14}" font-size="10" text-anchor="middle" fill="${k === rep ? '#BF8F00' : '#6b7280'}" font-weight="${k === rep ? 700 : 400}">${PER[k]}</text>`; });
   svg += '</svg>';
   const bkRows = BK.map((b, bi) => { const a = R.bkP[bi], td = a.slice(0, NP - 1).reduce((s, v) => s + v, 0), tm = rep > 0 ? a[rep] : 0, its = b.items.filter((it) => it.inc !== 'No'), tdAll = its.reduce((s, it) => s + it.td, 0), tdF = its.filter((it) => statusOf(it) === 'Coded').reduce((s, it) => s + it.td, 0);
-    return `<tr><td><a class="lk" data-gob="${bi}"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${bkColor(bi)};margin-right:6px"></i>${esc(b.id)}</a></td><td>${fmt(a[0])}</td><td>${fmt(td - tm)}</td><td style="background:#FFF8E1">${fmt(tm)}</td><td><b>${fmt(td)}</b></td><td>${pct(td, R.toDate)}</td><td>${fmt(a[NP - 1])}</td><td>${pct(tdF, tdAll)}</td><td style="color:#6b7280">${fmt(R.bkExc[bi])}</td></tr>`; }).join('');
-  const monRows = PER.slice(0, NP - 1).map((p, k) => { if (k > 0 && rep > 0 && k > rep) return ''; const t = R.tot[k]; return `<tr class="${k === rep ? 'cm' : ''}"><td>${p}</td>${BK.map((b, bi) => `<td>${fmt(R.bkP[bi][k])}</td>`).join('')}<td><b>${fmt(t)}</b></td></tr>`; }).join('');
+    return `<tr><td><a class="lk" data-gob="${bi}"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${bkColor(bi)};margin-right:6px"></i>${esc(b.id)}</a></td><td>${fmt(a[0])}</td><td>${fmt(td - tm)}</td><td style="background:#FFF8E1" class="dk" data-dk="${bi}|${rep}" title="Double-click: the items behind this number">${fmt(tm)}</td><td class="dk" data-dk="${bi}|td" title="Double-click: the items behind this number"><b>${fmt(td)}</b></td><td>${pct(td, R.toDate)}</td><td>${fmt(a[NP - 1])}</td><td>${pct(tdF, tdAll)}</td><td style="color:#6b7280">${fmt(R.bkExc[bi])}</td></tr>`; }).join('');
+  const monRows = PER.slice(0, NP - 1).map((p, k) => { if (k > 0 && rep > 0 && k > rep) return ''; const t = R.tot[k]; return `<tr class="${k === rep ? 'cm' : ''}"><td>${p}</td>${BK.map((b, bi) => `<td class="dk" data-dk="${bi}|${k}" title="Double-click: the items behind this number">${fmt(R.bkP[bi][k])}</td>`).join('')}<td><b>${fmt(t)}</b></td></tr>`; }).join('');
   const stRows = BK.map((b, bi) => { const its = b.items, c = (s) => its.filter((it) => statusOf(it) === s).length, inc = its.filter((it) => it.inc !== 'No'), tdA = inc.reduce((s, it) => s + it.td, 0), tdF = inc.filter((it) => statusOf(it) === 'Coded').reduce((s, it) => s + it.td, 0);
     return `<tr><td><a class="lk" data-gob="${bi}">${esc(b.id)}</a></td><td>${its.length}</td><td>${c('Coded')}</td><td>${c('Not coded')}</td><td>${pct(tdF, tdA)}</td><td>${its.filter((it) => it.inc === 'No').length}</td></tr>`; }).join('');
   $('sum').innerHTML = `<div class="cards">${cards.map(([l, v, c]) => `<div class="card ${c || ''}"><span>${l}</span><b>${v}</b></div>`).join('')}</div>
@@ -566,8 +569,8 @@ function pageDef() {
     const agg = (it, idx, sub) => { let a = 0, q = 0; for (const p of idx) { a += it.p[p]; q += it.q[p]; } return sub === 'Qty' ? q : sub === 'Rate' ? (Math.abs(q) > 1e-9 ? a / q : 0) : a; };
     const fmtOf = (sub) => (sub === 'Qty' ? fq : sub === 'Rate' ? fmt2 : fmt), tdIdx = PER.slice(0, NP - 1).map((x, k) => k), cols = [...lead];
     slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub), { f: fmtOf(sub), th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
-      cls: () => (sl.idx.includes(rep) ? 'cutc' : sl.kind !== 'open' && sl.kind !== 'pend' && rep > 0 && Math.min(...sl.idx) > rep ? 'after' : ''), slot: si, sub }))));
-    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub), { f: fmtOf(sub), h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub))}</b></td>`, slot: 'td', sub })));
+      cls: () => (sl.idx.includes(rep) ? 'cutc' : sl.kind !== 'open' && sl.kind !== 'pend' && rep > 0 && Math.min(...sl.idx) > rep ? 'after' : ''), slot: si, sub, pidx: sl.idx }))));
+    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub), { f: fmtOf(sub), h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub))}</b></td>`, slot: 'td', sub, pidx: tdIdx })));
     // header bands: years › quarters (› month when Qty · Rate · Amount)
     const nL = lead.length, bands = [], yr = [], qr = [], mr = [];
     const spanOf = (pred) => slots.filter(pred).length * subs.length;
@@ -1165,7 +1168,7 @@ $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it')
   if (e.target.matches('.ck')) { const k = tr.dataset.k; e.target.checked ? sel.add(k) : sel.delete(k); render(); } });
 $('tb').addEventListener('click', (e) => { const nt = e.target.closest('[data-node]'); if (nt) { e.stopPropagation(); const S1 = vs(), k = nt.dataset.node; S1.fold.has(k) ? S1.fold.delete(k) : S1.fold.add(k); render(); return; }
   const ob = e.target.closest('[data-brk]'); if (ob) { e.preventDefault(); openBreak(ob.dataset.kind, ob.dataset.brk); return; }
-  const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[o2.dataset.bi !== undefined ? +o2.dataset.bi : ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
+  const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[o2.dataset.bi !== undefined ? +o2.dataset.bi : ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g && !e.target.closest('td.num')) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
   const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr); if (!r) return;
   if (e.target.matches('.incb')) { if (r.i !== undefined) { const cur = (OVR[L.id[r.i]] || {}).inc ?? r.it.inc, nv = cur === 'No' ? 'Yes' : 'No'; change([{ t: 'line', i: r.i, f: 'inc', v: nv === r.it.inc ? undefined : nv }], 'Line include'); } else change([{ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'inc', v: r.it.inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
   if (e.target.matches('.rst')) { change(['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i: r.i, f, v: undefined })), 'Line back to item codes'); return; }
@@ -1222,7 +1225,23 @@ function openBreak(kind, key) {
     <dl><dt>To date</dt><dd><b>${fmt(t)}</b></dd><dt>Lines</dt><dd>${n.toLocaleString('en-US')}</dd></dl>${tbl(by, 'Bucket')}${tbl(by2, kind === 'ce' ? 'WBS element (top 25)' : 'Cost element (top 25)')}`;
   $('drawer').classList.add('open');
 }
+// drill-down: double-click a number → the items behind it (one bucket, one or more months) → an item's CJI3 lines
+function drill(title, sub, html) { $('dTitle').textContent = title; $('dSub').textContent = sub; $('dBody').innerHTML = html; $('drawer').classList.add('open', 'wide'); }
+function drillItems(bi, pidx, its0, label) { const b = BK[bi], ps = new Set(pidx), rows = (its0 || b.items).map((it) => { let a = 0, q = 0; for (const p of ps) { a += it.p[p]; q += it.q[p]; } return { it, a, q }; }).filter((x) => Math.abs(x.a) > 0.005).sort((x, y) => Math.abs(y.a) - Math.abs(x.a)), tot = rows.reduce((x, y) => x + y.a, 0);
+  R.drillCtx = { bi, pidx };
+  drill(b.id + ' · ' + label, rows.length + ' items · ' + fmt(tot) + ' · click an item for its CJI3 lines', `<table class="s"><tr><th style="text-align:left">Item</th><th style="text-align:left">Description</th>${b.qty ? '<th>Qty</th>' : ''}<th>Amount</th><th>%</th></tr>${rows.slice(0, 400).map((x) => `<tr class="drl" data-di="${x.it.ii}"><td style="text-align:left"><a class="lk">${esc(itemCode(x.it))}</a></td><td style="text-align:left" dir="auto">${esc(itemDesc(x.it))}</td>${b.qty ? `<td>${fq(x.q)}</td>` : ''}<td><b>${fmt(x.a)}</b></td><td>${tot ? (100 * x.a / tot).toFixed(1) + '%' : ''}</td></tr>`).join('')}${rows.length > 400 ? `<tr><td colspan="5" class="help" style="text-align:left">… ${rows.length - 400} smaller items</td></tr>` : ''}</table>`); }
+function drillLines(bi, ii, pidx, label) { const it = BK[bi].items[ii], ps = new Set(pidx), idx = []; for (let i = 0; i < N; i++) if (L.b[i] === bi && L.it[i] === ii && R.inc[i] && ps.has(R.per[i])) idx.push(i); idx.sort((x, y) => L.d[x] - L.d[y]); const tot = idx.reduce((x, i) => x + R.amt[i], 0), dt = (d) => (d ? String(d).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : '');
+  drill(itemCode(it) + ' · ' + label, idx.length + ' CJI3 lines · ' + fmt2(tot), `<div style="margin-bottom:8px">${R.drillCtx && R.drillCtx.bi === bi ? '<a class="lk" id="drBack">‹ back to the items</a> · ' : ''}<a class="lk" id="drItem">item detail</a></div><table class="s"><tr><th style="text-align:left">Date</th><th style="text-align:left">Document</th><th style="text-align:left">Text</th><th>Qty</th><th>Amount</th></tr>${idx.slice(0, 600).map((i) => `<tr><td style="text-align:left">${dt(L.d[i])}</td><td style="text-align:left">${esc(S[L.doc[i]])} <span class="help">${esc(S[L.ty[i]])}</span></td><td style="text-align:left" dir="auto">${esc(S[L.desc[i]] || S[L.name[i]] || '')}</td><td>${L.qty[i] ? fq(L.qty[i]) : ''}</td><td>${fmt2(R.amt[i])}</td></tr>`).join('')}${idx.length > 600 ? `<tr><td colspan="5" class="help" style="text-align:left">… ${idx.length - 600} more – open Lines</td></tr>` : ''}</table>`);
+  const bk = $('drBack'); if (bk) bk.onclick = () => drillItems(R.drillCtx.bi, R.drillCtx.pidx, null, R.drillCtx.label || label); $('drItem').onclick = () => openDrawer(it); }
+const perLab = (pidx) => (pidx.length === 1 ? PER[pidx[0]] : pidx.length === NP - 1 ? 'to date' : PER[pidx[0]] + ' – ' + PER[pidx[pidx.length - 1]]);
+document.addEventListener('dblclick', (e) => { const t = e.target;
+  const dk = t.closest('[data-dk]'); if (dk) { const [bi, k] = dk.dataset.dk.split('|'), pidx = k === 'td' ? PER.slice(0, NP - 1).map((x, j) => j) : [+k]; R.drillCtx = { bi: +bi, pidx, label: perLab(pidx) }; drillItems(+bi, pidx, null, perLab(pidx)); return; }
+  const td = t.closest('#tb td'); if (!td || ST.tab !== 'pm') return; const tr = td.parentElement; let ci = 0; for (const x of tr.cells) { if (x === td) break; ci += x.colSpan || 1; } const D = R.D, c = D && D.cols[ci - (D.sel ? 1 : 0)]; if (!c || !c.pidx) return;
+  if (tr.dataset.k) { const r = rowOf(tr); if (r && r.it) { R.drillCtx = null; drillLines(r.it.bi, r.it.ii, c.pidx, perLab(c.pidx)); } return; }
+  const g = tr.dataset.g; if (g !== undefined) { const its = R.rows.filter((r) => (g.startsWith('F:') ? famOf(r.g) === g.slice(2) : r.g === g)).map((r) => r.it); R.drillCtx = { bi: ST.bk, pidx: c.pidx, label: perLab(c.pidx) }; drillItems(ST.bk, c.pidx, its, (g.startsWith('F:') ? g.slice(2) : grpTail(g)) + ' · ' + perLab(c.pidx)); } });
+document.addEventListener('click', (e) => { const r = e.target.closest('#dBody tr.drl'); if (!r || !R.drillCtx) return; drillLines(R.drillCtx.bi, +r.dataset.di, R.drillCtx.pidx, perLab(R.drillCtx.pidx)); });
 function openDrawer(it) {
+  $('drawer').classList.remove('wide');
   const b = BK[it.bi], mx = Math.max(1, ...Array.from(it.p).slice(0, NP - 1).map(Math.abs));
   $('dTitle').textContent = itemCode(it); $('dSub').textContent = b.id + (it.grp ? ' · ' + it.grp : '');
   let pol = ''; if (isSub(it.bi)) { const m = new Map(); for (let i = 0; i < N; i++) if (L.b[i] === SUBI && L.it[i] === it.ii && R.inc[i] && R.per[i] !== NP - 1) { const po = S[L.po[i]]; m.set(po, (m.get(po) || 0) + R.amt[i]); }
