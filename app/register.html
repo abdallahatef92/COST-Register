@@ -74,7 +74,7 @@ table.t{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .t td.num{text-align:right;font-variant-numeric:tabular-nums} .t td.cutc{background:#FFF8E1} .t td.after{color:#c0c4cc}
 .t td.c{padding:0 4px} .t td.c input{width:100%;height:21px;border:1px solid var(--codeB);background:var(--code);border-radius:4px;padding:0 5px;font-weight:600;color:var(--navy);font-size:12px}
 .t td.c input:focus{outline:2px solid var(--navy2);background:#fff} .t td.c input.miss{background:var(--miss);border-color:var(--missB)} .t td.c input.ovr{background:var(--ovr);border-color:#e09a72;color:#8a3500}
-.st{border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600} .st.Fully{background:var(--ok);color:var(--okT)} .st.Partly{background:var(--part);color:var(--partT)} .st.Not{background:var(--not);color:var(--notT)}
+.st{border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600} .st.Fully,.st.Coded{background:var(--ok);color:var(--okT)} .st.Partly{background:var(--part);color:var(--partT)} .st.Not{background:var(--not);color:var(--notT)}
 .u{border-radius:4px;padding:0 6px;font-size:11px;font-weight:600;color:#3F4A5A}
 .incb{border:0;background:none;font-size:12px;padding:0 6px;border-radius:4px;height:20px;line-height:20px} .incb.no{background:#eee;color:#888}
 .rst{border:0;background:none;color:#c55a11;font-size:12px;padding:0 4px}
@@ -171,6 +171,7 @@ select.pksel{width:100%;height:23px;border:1px solid #F3D3A5;background:#FFF8EC;
 
 .t tr.grp.fam td{background:#E4EAF3;font-weight:700;border-top:1px solid #C9D3E3;color:var(--navy)} .t tr.grp.sub td .gl{padding-left:20px} .t tr.grp td.num{font-weight:600}
 .sdg div.fm{font-weight:600;color:#1B2A41} .sdg div.fm span:first-child::before{content:'▸ ';color:#9ca3af} .sdg div.fm.op span:first-child::before{content:'▾ '} .sdg div.gi2{padding-left:22px}
+.rng .dot.cur{box-shadow:0 0 0 2px #1F3864} #mr .pkt .seg button{padding:4px 10px} .pkw1 .pkt>*{flex-shrink:0} .pkw1 .pkt>input#pkQ,.pkw1 .pkt>input#mrQ{flex-shrink:1;min-width:140px;width:240px}
 </style>
 </head>
 <body>
@@ -203,6 +204,7 @@ select.pksel{width:100%;height:23px;border:1px solid #F3D3A5;background:#FFF8EC;
 <!-- Checks -->
 <div class="page" id="pg-sov"><div id="sov" class="pkroot"></div></div>
 <div class="page" id="pg-pkg"><div id="pkg" class="pkroot"></div></div>
+<div class="page" id="pg-mr"><div id="mr" class="pkroot"></div></div>
 <div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>
 <div class="page" id="pg-rul"><div class="dash" id="rul"></div></div>
 </div></div>
@@ -235,7 +237,7 @@ const isSub = (bi) => bi === SUBI, codeF = (bi) => (isSub(bi) ? ['div', 'pkg', '
 const itemCode = (it) => (it.bi === MATI ? it.vals[3] : isSub(it.bi) ? it.vals[1] : it.bi === BK.findIndex((b) => b.id === 'G&A') ? it.vals[0] + ' · ' + it.vals[1] : it.vals[0]);
 const itemDesc = (it) => (it.bi === MATI ? it.vals[4] : isSub(it.bi) ? it.vals[2] : it.vals.length > 1 && it.bi !== BK.findIndex((b) => b.id === 'G&A') ? it.vals[1] : '');
 const itemUnit = (it) => (it.bi === MATI ? it.vals[5] : isSub(it.bi) ? it.vals[3] : BK[it.bi].cols.indexOf('Unit') >= 0 ? it.vals[BK[it.bi].cols.indexOf('Unit')] : '');
-const statusOf = (it) => { if (isSub(it.bi)) { const n = ['div', 'pkg', 'mnl', 'ce'].filter((f) => it[f]).length; return n === 4 ? 'Fully coded' : n === 0 ? 'Not coded' : 'Partly coded'; } return it.pkg && it.mnl && it.ce ? 'Fully coded' : it.pkg || it.ce ? 'Partly coded' : 'Not coded'; };
+const statusOf = (it) => (codeF(it.bi).every((f) => it[f]) ? 'Coded' : 'Not coded');   // coded = every code filled (no 'partly')
 const PAL = ['#1F3864', '#3E6FA8', '#2F7F7A', '#6B8F4E', '#B08A2E', '#A0522D', '#6E4C8C', '#5F6B7A', '#1F6F8B', '#9C6B5A', '#4F7CAC', '#7D8F3A'];   // muted accents (packages, groups, chart series)
 const tint = (c, k = 0.86) => { const n = parseInt(c.slice(1), 16), f = (v) => Math.round(v + (255 - v) * k).toString(16).padStart(2, '0'); return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255); };
 const SOFT = PAL.map((c) => tint(c, 0.8));   // soft fills of the palette accents (group rows, type-of-works pills)
@@ -307,13 +309,13 @@ function compute() {
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);
 // =====================================================================================  tabs
 // the 5 steps of the month (top) – each holds the pages you work through, listed in the sidebar
-const SECS = [['cod', 'Code', ['cod', 'rules']], ['sub', 'Subcontractor', ['sub']], ...(HASUNS || DEPI >= 0 ? [['adj', 'Adjust', [...(HASUNS ? ['uns'] : []), ...(DEPI >= 0 ? ['dep'] : [])]]] : []), ['chk', 'Check', ['chk']], ['rep', 'Reports', ['sum', 'pm', 'exp', 'gl', 'wbs', 'lines']]];
+const SECS = [['cod', 'Code', ['cod', 'mrate', 'rules']], ['sub', 'Subcontractor', ['sub']], ...(HASUNS || DEPI >= 0 ? [['adj', 'Adjust', [...(HASUNS ? ['uns'] : []), ...(DEPI >= 0 ? ['dep'] : [])]]] : []), ['chk', 'Check', ['chk']], ['rep', 'Reports', ['sum', 'pm', 'exp', 'gl', 'wbs', 'lines']]];
 const secOf = (t) => (SECS.find((x) => x[2].includes(t)) || SECS[0])[0], LASTT = {};
 $('tabs').innerHTML = SECS.map(([k, l], i) => `<button data-s="${k}"><i>${i + 1}</i>${l}</button>`).join('');
 $('tabs').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const sc = SECS.find((x) => x[0] === b.dataset.s); ST.tab = LASTT[sc[0]] || sc[2][0]; sel.clear(); render(); $('wrap').scrollTop = 0; };
 let SIDEC = false; try { SIDEC = localStorage.getItem('cr-side') === '1'; } catch (e) { /* none */ }
 const zoomSeg = (b) => { if (!b.tree) return ''; const S1 = vs(), zm = !S1.fold.size ? 'it' : [...S1.fold].every((k) => k.startsWith('F:')) ? 'fam' : 'grp'; return `<span class="seg" title="Zoom: families › groups › items">${hasFam(b) ? `<button data-zm="fam" class="${zm === 'fam' ? 'on' : ''}">Families</button>` : ''}<button data-zm="grp" class="${zm === 'grp' ? 'on' : ''}">Groups</button><button data-zm="it" class="${zm === 'it' ? 'on' : ''}">Items</button></span>`; };
-const famLabel = (f, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Fully coded'), td = its.reduce((x, y) => x + y.td, 0), tdc = c.reduce((x, y) => x + y.td, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(f)}</span><span class="gm">${((n) => n + (n === 1 ? ' group' : ' groups'))(new Set(its.map((x) => x.grp)).size)} · ${its.length} items · coded ${c.length}/${its.length}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; };
+const famLabel = (f, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Coded'), td = its.reduce((x, y) => x + y.td, 0), tdc = c.reduce((x, y) => x + y.td, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(f)}</span><span class="gm">${((n) => n + (n === 1 ? ' group' : ' groups'))(new Set(its.map((x) => x.grp)).size)} · ${its.length} items · coded ${c.length}/${its.length}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; };
 const famOf = (g) => (String(g).includes('›') ? String(g).split('›')[0].trim() : String(g)), grpTail = (g) => (String(g).includes('›') ? String(g).split('›').slice(1).join('›').trim() : String(g)), hasFam = (b) => !!b.tree && b.items.some((it) => String(it.grp).includes('›'));
 const abbr = (t) => { const w = String(t).split(/[\s/]+/).filter(Boolean); return w.length > 1 ? w.map((x) => x[0].toUpperCase()).join('').slice(0, 3) : String(t).slice(0, 3); };
 const sdi = (go, on, c, t, a, s1, s2, pg) => `<div class="sdi${on ? ' on' : ''}" ${go} style="--c:${c}" title="${esc(t)}"><span class="cb"></span><b>${esc(t)}</b><span class="a">${a || ''}</span>${s1 !== undefined ? `<small><span>${s1}</span><span>${s2 || ''}</span></small>` : ''}${pg !== undefined ? `<div class="pg"><i style="width:${pg}%"></i></div>` : ''}</div>`;
@@ -321,8 +323,8 @@ function renderSide() {
   const sec = secOf(ST.tab), el = $('side'), items = [];   // items: [go-attrs, on, colour, title, right, sub1, sub2, progress, rail-label]
   let head = '', foot = '', extra = {};
   if (sec === 'cod') { head = 'Buckets';
-    BK.forEach((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((x, it) => x + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((x, it) => x + it.td, 0), pc = t ? Math.round(100 * f / t) : 0, on = ST.tab === 'cod' && ST.bk === bi;
-      items.push([`data-gt="cod" data-bk="${bi}"`, on, bkColor(bi), b.id, fmtM(t), `${b.items.length.toLocaleString('en-US')} items · coded ${pc}%`, R.repLab + ' ' + fmtM(R.rep > 0 ? R.bkP[bi][R.rep] : 0), pc, abbr(b.short)]);
+    BK.forEach((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((x, it) => x + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Coded').reduce((x, it) => x + it.td, 0), pc = t ? Math.round(100 * f / t) : 0, on = (ST.tab === 'cod' && ST.bk === bi) || (ST.tab === 'mrate' && bi === MATI);
+      items.push([`data-gt="${ST.tab === 'mrate' && bi === MATI ? 'mrate' : 'cod'}" data-bk="${bi}"`, on, bkColor(bi), b.id, fmtM(t), `${b.items.length.toLocaleString('en-US')} items · coded ${pc}%`, R.repLab + ' ' + fmtM(R.rep > 0 ? R.bkP[bi][R.rep] : 0), pc, abbr(b.short)]);
       if (on && b.tree) { const g = new Map(); b.items.forEach((it) => { const e = g.get(it.grp) || g.set(it.grp, { n: 0, t: 0 }).get(it.grp); e.n++; e.t += it.td; }); const cur = ST.grpSel[bi] || '', gl = (k, v, cls) => `<div class="${cls}${cur === k ? ' on' : ''}" data-grp="${esc(k)}" title="${esc(k)}"><span dir="auto">${esc(String(grpTail(k)).trim() || '(none)')} <small style="color:#9ca3af">· ${v.n}</small></span><span>${fmtM(v.t)}</span></div>`;
         let inner = '';
         if (hasFam(b)) { const F = new Map(); for (const [k, v] of g) { const f = famOf(k), e = F.get(f) || F.set(f, { n: 0, t: 0, g: [] }).get(f); e.n += v.n; e.t += v.t; e.g.push([k, v]); } const openF = cur.startsWith('F:') ? cur.slice(2) : cur ? famOf(cur) : '';
@@ -354,7 +356,7 @@ $('side').addEventListener('click', (e) => { if (e.target.closest('[data-side]')
 // status bar: the totals of the register and everything you included / excluded, on every tab
 function renderStatus() {
   const it = (l, v, cls, go, tip) => `<${go ? 'a' : 'span'} class="si ${cls || ''}"${go ? ` data-sgo="${go}"` : ''}${tip ? ` title="${esc(tip)}"` : ''}><span>${l}</span><b>${v}</b></${go ? 'a' : 'span'}>`, sep = '<i class="sep"></i>';
-  const z = (v) => (Math.abs(v) < 0.005 ? 'zero' : ''), inc = BK.flatMap((b) => b.items.filter((x) => x.inc !== 'No')), tdA = inc.reduce((s2, x) => s2 + x.td, 0), tdF = inc.filter((x) => statusOf(x) === 'Fully coded').reduce((s2, x) => s2 + x.td, 0);
+  const z = (v) => (Math.abs(v) < 0.005 ? 'zero' : ''), inc = BK.flatMap((b) => b.items.filter((x) => x.inc !== 'No')), tdA = inc.reduce((s2, x) => s2 + x.td, 0), tdF = inc.filter((x) => statusOf(x) === 'Coded').reduce((s2, x) => s2 + x.td, 0);
   const hand = R.hand ? R.hand.reduce((s2, v) => s2 + v, 0) : 0, ok = Math.abs(R.diff) < 0.01, uo = R.unsInK ? R.unsInK.o : 0, uc = R.unsInK ? R.unsInK.c : 0;
   $('sbar').innerHTML = [it('CJI3', fmt(META.cost)), it('Counted', fmt(R.toDate), '', 'sum', 'Counted to the cut date'), it(R.repLab, fmt(R.thisM), '', 'pm', 'This month'), it('Pending', fmt(R.pend), z(R.pend)),
     it('Difference', ok ? '0.00 ✓' : fmt2(R.diff), ok ? 'ok' : 'bad', 'chk'), sep,
@@ -369,10 +371,10 @@ document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [d
 function render() {
   LASTT[secOf(ST.tab)] = ST.tab; document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === secOf(ST.tab)));
   const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
-  ['sum', 'tbl', 'chk', 'rul'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'rul' && ST.tab === 'rules') || (p === 'tbl' && !['sum', 'chk', 'rules'].includes(ST.tab)))));
+  ['sum', 'tbl', 'chk', 'rul', 'mr'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'rul' && ST.tab === 'rules') || (p === 'mr' && ST.tab === 'mrate') || (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate'].includes(ST.tab)))));
   $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
   renderStatus(); renderSide();
-  if (isOv) renderSov(); else if (isPk) renderPkg(); else if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else renderTable();
+  if (isOv) renderSov(); else if (isPk) renderPkg(); else if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else if (ST.tab === 'mrate') renderMRate(); else renderTable();
 }
 function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };
   BK.forEach((b) => b.items.forEach((it) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (it[f]) s[f].add(it[f]); }))); Object.values(OVR).forEach((o) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (o[f]) s[f].add(o[f]); }));
@@ -388,11 +390,11 @@ function renderSummary() {
   mons.forEach((k, j) => { const x = pad + 6 + j * (W - pad - 10) / mons.length; let y = H; BK.forEach((b, bi) => { const v = Math.max(0, R.bkP[bi][k]); if (!v) return; const h = (H - 10) * v / mx; y -= h; svg += `<rect x="${x}" y="${y}" width="${bw}" height="${h}" fill="${bkColor(bi)}"><title>${PER[k]} · ${b.id}: ${fmt(v)}</title></rect>`; });
     svg += `<text x="${x + bw / 2}" y="${H + 14}" font-size="10" text-anchor="middle" fill="${k === rep ? '#BF8F00' : '#6b7280'}" font-weight="${k === rep ? 700 : 400}">${PER[k]}</text>`; });
   svg += '</svg>';
-  const bkRows = BK.map((b, bi) => { const a = R.bkP[bi], td = a.slice(0, NP - 1).reduce((s, v) => s + v, 0), tm = rep > 0 ? a[rep] : 0, its = b.items.filter((it) => it.inc !== 'No'), tdAll = its.reduce((s, it) => s + it.td, 0), tdF = its.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+  const bkRows = BK.map((b, bi) => { const a = R.bkP[bi], td = a.slice(0, NP - 1).reduce((s, v) => s + v, 0), tm = rep > 0 ? a[rep] : 0, its = b.items.filter((it) => it.inc !== 'No'), tdAll = its.reduce((s, it) => s + it.td, 0), tdF = its.filter((it) => statusOf(it) === 'Coded').reduce((s, it) => s + it.td, 0);
     return `<tr><td><a class="lk" data-gob="${bi}"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${bkColor(bi)};margin-right:6px"></i>${esc(b.id)}</a></td><td>${fmt(a[0])}</td><td>${fmt(td - tm)}</td><td style="background:#FFF8E1">${fmt(tm)}</td><td><b>${fmt(td)}</b></td><td>${pct(td, R.toDate)}</td><td>${fmt(a[NP - 1])}</td><td>${pct(tdF, tdAll)}</td><td style="color:#6b7280">${fmt(R.bkExc[bi])}</td></tr>`; }).join('');
   const monRows = PER.slice(0, NP - 1).map((p, k) => { if (k > 0 && rep > 0 && k > rep) return ''; const t = R.tot[k]; return `<tr class="${k === rep ? 'cm' : ''}"><td>${p}</td>${BK.map((b, bi) => `<td>${fmt(R.bkP[bi][k])}</td>`).join('')}<td><b>${fmt(t)}</b></td></tr>`; }).join('');
-  const stRows = BK.map((b, bi) => { const its = b.items, c = (s) => its.filter((it) => statusOf(it) === s).length, inc = its.filter((it) => it.inc !== 'No'), tdA = inc.reduce((s, it) => s + it.td, 0), tdF = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
-    return `<tr><td><a class="lk" data-gob="${bi}">${esc(b.id)}</a></td><td>${its.length}</td><td>${c('Fully coded')}</td><td>${c('Partly coded')}</td><td>${c('Not coded')}</td><td>${pct(tdF, tdA)}</td><td>${its.filter((it) => it.inc === 'No').length}</td></tr>`; }).join('');
+  const stRows = BK.map((b, bi) => { const its = b.items, c = (s) => its.filter((it) => statusOf(it) === s).length, inc = its.filter((it) => it.inc !== 'No'), tdA = inc.reduce((s, it) => s + it.td, 0), tdF = inc.filter((it) => statusOf(it) === 'Coded').reduce((s, it) => s + it.td, 0);
+    return `<tr><td><a class="lk" data-gob="${bi}">${esc(b.id)}</a></td><td>${its.length}</td><td>${c('Coded')}</td><td>${c('Not coded')}</td><td>${pct(tdF, tdA)}</td><td>${its.filter((it) => it.inc === 'No').length}</td></tr>`; }).join('');
   $('sum').innerHTML = `<div class="cards">${cards.map(([l, v, c]) => `<div class="card ${c || ''}"><span>${l}</span><b>${v}</b></div>`).join('')}</div>
    <div class="grid2"><div class="panel"><h2>Cost per month<span class="note">counted cost by bucket, up to the cut date · gold = this month</span></h2>${svg}<div class="legend">${BK.map((b, bi) => `<span><i style="background:${bkColor(bi)}"></i>${esc(b.id)}</span>`).join('')}</div></div>
    <div class="panel"><h2>Reconciliation to CJI3<span class="note">CJI3 is the single source of truth</span></h2><table class="s">
@@ -403,7 +405,7 @@ function renderSummary() {
    <div class="panel"><h2>Cost by bucket<span class="note">click a bucket to code it</span></h2><table class="s"><tr><th>Bucket</th><th>Opening</th><th>Previous</th><th>This month</th><th>To date</th><th>% of to date</th><th>Pending</th><th>Coded share</th><th>Excluded</th></tr>${bkRows}
      <tr class="tt"><td>Total</td><td>${fmt(R.tot[0])}</td><td>${fmt(prev)}</td><td>${fmt(R.thisM)}</td><td>${fmt(R.toDate)}</td><td>100%</td><td>${fmt(R.pend)}</td><td></td><td>${fmt(R.excl)}</td></tr></table></div>
    <div class="grid2"><div class="panel"><h2>Cost per month by bucket</h2><div style="overflow:auto"><table class="s"><tr><th>Month</th>${BK.map((b) => `<th>${esc(b.short)}</th>`).join('')}<th>Total</th></tr>${monRows}</table></div></div>
-   <div class="panel"><h2>Coding status</h2><table class="s"><tr><th>Bucket</th><th>Items</th><th>Fully</th><th>Partly</th><th>Not coded</th><th>Coded share</th><th>Excluded</th></tr>${stRows}</table></div></div>`;
+   <div class="panel"><h2>Coding status</h2><table class="s"><tr><th>Bucket</th><th>Items</th><th>Coded</th><th>Not coded</th><th>Coded share</th><th>Excluded</th></tr>${stRows}</table></div></div>`;
   $('sum').querySelectorAll('[data-gotab]').forEach((a) => { a.onclick = () => { ST.tab = a.dataset.gotab; if (a.dataset.uv) ST.unsView = a.dataset.uv; render(); }; });
   $('sum').querySelectorAll('[data-gob]').forEach((a) => { a.onclick = () => { ST.tab = 'cod'; ST.bk = +a.dataset.gob; render(); }; });
 }
@@ -417,7 +419,7 @@ function renderChecks() {
   add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule – Code › Rules (bottom of the list): make a rule and apply it.');
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
   if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - R.bkUns[SUBI] - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
-  BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Fully coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
+  BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
   add('Lines typed over (hand-coded)', [...R.hand].reduce((s, v) => s + v, 0), 'info', 'Lines coded differently from their item (Lines tab).');
   add('ZY accrual-reversal lines paired to a bucket', META.zy, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
   if (ZI) { const T = { HOUS: 'house rent', ZF01: 'fleet orders', ZFU1: 'fuel orders', ZE01: 'equipment', ZTM1: 'trips', DCRM: 'corrective maintenance' };
@@ -499,9 +501,9 @@ function pageDef() {
     if (b.qty) cols.push(numC('qty', 'Qty to date', 96, (r) => r.it.qtd, { f: fq }), numC('rate', 'Rate', 84, (r) => (Math.abs(r.it.qtd) > 1e-9 ? r.it.td / r.it.qtd : 0), { f: fmt2 }));
     cols.push(numC('td', 'To date', 112, (r) => r.it.td || (r.it.uns ? r.it.exc : 0), { h: (r) => (r.it.uns && !r.it.td && r.it.exc ? `<td class="num" title="Not yet settled in CJI3 – left out, not counted. Switch its months on in the Unsettled tab.">${fmt(r.it.exc)}</td>` : `<td class="num"><b>${fmt(r.it.td)}</b></td>`) }), numC('tm', R.repLab, 112, (r) => r.it.tm), numC('pe', 'Pending', 92, (r) => r.it.pe), numC('n', 'Lines', 62, (r) => r.it.n), { k: 'nw', l: 'New', w: 56, v: (r) => (r.it.nw ? 'New' : ''), h: (r) => `<td class="help">${r.it.nw ? 'New' : ''}</td>` });
     const gs = ST.grpSel[bi] || '', fam = hasFam(b), rows = b.items.filter((it) => !gs || (gs.startsWith('F:') ? famOf(it.grp) === gs.slice(2) : it.grp === gs)).map((it) => ({ it, g: b.tree ? it.grp : '' }));
-    const zoom = zoomSeg(b);
+    const zoom = (bi === MATI ? '<span class="seg"><button class="on">Coding</button><button data-mr="1" title="Rate per month for every material: range, average, latest, change">Rate analysis</button></span> ' : '') + zoomSeg(b);
     const sumC = (rs) => ({ td: fmt(rs.reduce((x, r) => x + r.it.td, 0)), tm: fmt(rs.reduce((x, r) => x + r.it.tm, 0)), pe: fmt(rs.reduce((x, r) => x + r.it.pe, 0)), n: rs.reduce((x, r) => x + r.it.n, 0).toLocaleString('en-US') });
-    return { cols, rows, sel: true, status: true, groups: b.tree, noGroupBtns: !!b.tree, extraTools: zoom, fam: fam ? famOf : null, gCells: b.tree ? (g, rs) => sumC(rs) : null, gSpanK: 'auto', fLabel: famLabel, rowCls: (r) => (r.it.uns && !r.it.td && r.it.exc ? 'uns exc' : ''), gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Fully coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0), un = its.filter((x) => x.uns), unx = un.reduce((s, x) => s + x.exc, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length}${b.tree ? '' : ' · to date ' + fmt(td)}${un.length ? ` · not settled, left out ${fmt(unx)}` : ''}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
+    return { cols, rows, sel: true, status: true, groups: b.tree, noGroupBtns: !!b.tree, extraTools: zoom, fam: fam ? famOf : null, gCells: b.tree ? (g, rs) => sumC(rs) : null, gSpanK: 'auto', fLabel: famLabel, rowCls: (r) => (r.it.uns && !r.it.td && r.it.exc ? 'uns exc' : ''), gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0), un = its.filter((x) => x.uns), unx = un.reduce((s, x) => s + x.exc, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length}${b.tree ? '' : ' · to date ' + fmt(td)}${un.length ? ` · not settled, left out ${fmt(unx)}` : ''}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
       foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
   }
   if (ST.tab === 'pm') {
@@ -632,7 +634,7 @@ function subDef() {
       ...['div', 'pkg', 'mnl', 'ce'].map((f) => ({ k: f, l: FN[f], w: f === 'ce' ? 100 : f === 'div' ? 88 : f === 'mnl' ? 66 : 80, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) })),
       { k: 'st', l: 'Status', w: 104, v: (r) => statusOf(r.it), h: (r) => stCell(r.it) }, numC('qty', 'Qty (PO)', 92, (r) => r.x.qty, { f: fq }), numC('td', 'To date (PO)', 112, (r) => r.x.td, { h: (r) => `<td class="num"><b>${fmt(r.x.td)}</b></td>` }), numC('tm', 'This month (PO)', 112, (r) => r.x.tm)];
     return { cols, rows, sel: true, groups: true, poGroup: true, extraTools: tools, gLabel: (g) => `<b>${esc(g)}</b> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(SUB.title[g] || '')}</span><span class="gm" dir="auto" style="unicode-bidi:isolate">${esc(SUB.supn[g] || '')}</span>`,
-      gCells: (g, rs) => ({ td: fmt(rs.reduce((s, r) => s + r.x.td, 0)), tm: fmt(rs.reduce((s, r) => s + r.x.tm, 0)), st: (() => { const t = rs.reduce((s, r) => s + r.x.td, 0), c = rs.filter((r) => statusOf(r.it) === 'Fully coded').reduce((s, r) => s + r.x.td, 0); return `<span class="gb" style="margin:0"><i style="width:${t ? (100 * c / t).toFixed(0) : 0}%"></i></span> ${t ? (100 * c / t).toFixed(0) : 0}%`; })() }),
+      gCells: (g, rs) => ({ td: fmt(rs.reduce((s, r) => s + r.x.td, 0)), tm: fmt(rs.reduce((s, r) => s + r.x.tm, 0)), st: (() => { const t = rs.reduce((s, r) => s + r.x.td, 0), c = rs.filter((r) => statusOf(r.it) === 'Coded').reduce((s, r) => s + r.x.td, 0); return `<span class="gb" style="margin:0"><i style="width:${t ? (100 * c / t).toFixed(0) : 0}%"></i></span> ${t ? (100 * c / t).toFixed(0) : 0}%`; })() }),
       gColor: (g) => grpCol(SUB.type[g] || '') };
   }
   if (ST.sub === 'reg') {
@@ -821,7 +823,7 @@ function pkRates() {
   for (const m of P.values()) for (const w of m.values()) { const rs = [...w.by.values()].filter((x) => Math.abs(x.q) > 1e-9).map((x) => x.a / x.q); w.avg = w.q ? w.a / w.q : 0; w.mn = rs.length ? Math.min(...rs) : 0; w.mx = rs.length ? Math.max(...rs) : 0; w.np = rs.length; w.sp = w.mn > 0 && w.np > 1 ? (w.mx / w.mn - 1) * 100 : 0; }
   return P;
 }
-const pkCoded = (m) => { let t = 0, f = 0; if (m) for (const w of m.values()) { t += Math.abs(w.amt); if (statusOf(w.it) === 'Fully coded') f += Math.abs(w.amt); } return t ? Math.round(100 * f / t) : 0; };
+const pkCoded = (m) => { let t = 0, f = 0; if (m) for (const w of m.values()) { t += Math.abs(w.amt); if (statusOf(w.it) === 'Coded') f += Math.abs(w.amt); } return t ? Math.round(100 * f / t) : 0; };
 const fMk = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(Math.abs(v) >= 1e7 ? 1 : 2) + 'M' : fmt(v)), frt = (v) => (Math.abs(v) >= 100 ? fmt(v) : Math.abs(v - Math.round(v)) < 0.005 ? String(Math.round(v)) : v.toFixed(2));
 // the sidebar of Subcontractor: your packages (click to open, drop POs on them, keys 1…0)
 function pkSide(collapsed) {
@@ -865,7 +867,7 @@ function renderPkg() {
   } else if (view === 'rate') {
     const code = sel, m = R.pkP.get(code) || new Map(), sup = (po) => (SUB && SUB.supn[po]) || po, f = ST.pkRF || 'all';
     let ws = [...m.values()].sort((x, y) => y.amt - x.amt); const nAll = ws.length;
-    if (f === 'not') ws = ws.filter((w) => statusOf(w.it) !== 'Fully coded'); if (f === 'sp') ws = ws.filter((w) => w.sp >= 10);
+    if (f === 'not') ws = ws.filter((w) => statusOf(w.it) !== 'Coded'); if (f === 'sp') ws = ws.filter((w) => w.sp >= 10);
     if (q) ws = ws.filter((w) => (w.it.vals.join(' ') + ' ' + [w.it.div, w.it.mnl, w.it.ce].join(' ')).toLowerCase().includes(q));
     R.pkRateRows = ws; const nm = (list.find((x) => x.c === code) || {}).n || '', pos = new Set(); [...m.values()].forEach((w) => w.by.forEach((x, po) => pos.add(po)));
     const rng = (w) => { if (!w.np) return '<span class="help">no quantities</span>'; const lo = w.mn, hi = w.mx > w.mn ? w.mx : w.mn * 1.01 + 1, X = (v) => (100 * (v - lo) / (hi - lo)).toFixed(1);
@@ -890,6 +892,35 @@ function renderPkg() {
   const qi = $('pkQ'); if (qi) { qi.oninput = () => { ST.pkQ = qi.value; const pos = qi.selectionStart; renderPkg(); const n = $('pkQ'); n.focus(); n.setSelectionRange(pos, pos); }; }
   renderSide();
 }
+// =====================================================================================  Material › Rate analysis: per material, its rate in every month (moving price), range, average, latest, change vs the month before
+function renderMRate() {
+  const b = BK[MATI], gs = ST.grpSel[MATI] || '', q = (ST.mrQ || '').toLowerCase(), f = ST.mrF || 'all', last = R.rep > 0 ? R.rep : NM, op = ST.mrOpen;
+  const its = b.items.filter((it) => it.inc !== 'No' && (!gs || (gs.startsWith('F:') ? famOf(it.grp) === gs.slice(2) : it.grp === gs)));
+  let rows = [];
+  for (const it of its) { const ms = []; for (let p = 1; p <= last; p++) { const qq = it.q[p], a = it.p[p]; if (qq > 1e-9 && a > 0) ms.push({ p, q: qq, a, r: a / qq }); } if (!ms.length) continue;
+    const rs = ms.map((m) => m.r), mn = Math.min(...rs), mx = Math.max(...rs), qs = ms.reduce((x, m) => x + m.q, 0), as = ms.reduce((x, m) => x + m.a, 0), lm = ms[ms.length - 1], pm = ms.length > 1 ? ms[ms.length - 2] : null;
+    rows.push({ it, ms, mn, mx, avg: as / qs, qs, lm, pm, d: pm ? (lm.r / pm.r - 1) * 100 : 0, sp: ms.length > 1 && mn > 0 ? (mx / mn - 1) * 100 : 0 }); }
+  const nAll = rows.length;
+  if (f === 'sp') rows = rows.filter((r) => r.sp >= 10); if (f === 'up') rows = rows.filter((r) => r.pm && r.d > 1); if (f === 'dn') rows = rows.filter((r) => r.pm && r.d < -1); if (f === 'not') rows = rows.filter((r) => statusOf(r.it) !== 'Coded');
+  if (q) rows = rows.filter((r) => (r.it.vals.join(' ') + ' ' + (r.it.nameS || '') + ' ' + [r.it.pkg, r.it.mnl, r.it.ce].join(' ')).toLowerCase().includes(q));
+  rows.sort((x, y) => y.it.td - x.it.td); R.mrRows = rows; const shown = rows.slice(0, ST.mrAll ? rows.length : 300);
+  const ttl = gs ? (gs.startsWith('F:') ? gs.slice(2) : grpTail(gs)) : 'All materials';
+  const rng = (r) => { const lo = r.mn, hi = r.mx > r.mn ? r.mx : r.mn * 1.01 + 1, X = (v) => (100 * (v - lo) / (hi - lo)).toFixed(1);
+    return `<div class="rng"><div class="ln"></div>${r.ms.map((m) => `<span class="dot${r.ms.length > 1 && m.r === r.mn ? ' lo' : r.ms.length > 1 && m.r === r.mx ? ' hi' : ''}${m === r.lm ? ' cur' : ''}" style="left:${X(m.r)}%" title="${PER[m.p]} · ${fmt2(m.r)} · qty ${fq(m.q)}"></span>`).join('')}<span class="avg" style="left:${X(r.avg)}%" title="average ${fmt2(r.avg)}"></span></div><div class="rlab"><span>${frt(r.mn)}</span>${r.ms.length > 1 ? `<span${r.sp >= 10 ? ' style="color:#8A6D1F;font-weight:600"' : ''}>spread ${r.sp.toFixed(0)}%</span><span>${frt(r.mx)}</span>` : ''}</div>`; };
+  const ci = (it, fld) => { const v = it[fld] || ''; return `<td class="c"><input data-mi="${it.ii}" data-mf="${fld}" value="${esc(v)}" list="dl-${fld}" class="${v ? '' : 'miss'}"></td>`; };
+  $('mr').innerHTML = `<div class="pkw1"><div class="pkt"><span class="seg"><button data-mr="0">Coding</button><button class="on">Rate analysis</button></span><b class="pkttl">${esc(ttl)}</b><span class="help" title="Rate = amount ÷ quantity of the month (moving price), months up to ${esc(R.repLab)}">${nAll} materials</span><input id="mrQ" placeholder="Search material, description, name…" value="${esc(ST.mrQ || '')}">${[['all', 'All'], ['sp', 'Spread ≥ 10%'], ['up', '▲ Up'], ['dn', '▼ Down'], ['not', 'Not coded']].map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-mrf="${k}">${l}</button>`).join('')}<span style="flex:1"></span><span class="pkfill">PKG <input id="mfPKG" list="dl-pkg"> MNL <input id="mfMNL" list="dl-mnl"> CE <input id="mfCE" list="dl-ce"> <button id="mfGo" title="Fill these codes on every material shown that has them empty">Fill empty</button></span></div>
+    <div class="pkg"><table class="t pkgt pkrt"><colgroup><col style="width:30px"><col style="width:110px"><col><col style="width:62px"><col style="width:112px"><col style="width:86px"><col style="width:250px"><col style="width:96px"><col style="width:100px"><col style="width:96px"><col style="width:116px"><col style="width:90px"><col style="width:84px"><col style="width:128px"><col style="width:100px"></colgroup>
+    <thead><tr><th></th><th>Material</th><th>Description</th><th>Unit</th><th class="num">Qty to date</th><th class="num">Months</th><th title="Each dot is one month's rate (moving price); ringed = latest month; the line is the average">Rate range · ● month | average</th><th class="num">Average</th><th class="num">Latest</th><th class="num" title="Latest month's rate vs the month before it">vs prev.</th><th class="num">To date</th><th class="code">PKG</th><th class="code">MNL</th><th class="code">Cost element</th><th>Status</th></tr></thead>
+    <tbody>${shown.map((r) => { const it = r.it, o = op === it.ii, s1 = statusOf(it); return `<tr class="pkw2${o ? ' op' : ''}" data-mo="${it.ii}"><td class="tgc">${o ? '−' : '+'}</td><td><b style="color:#2F5597">${esc(it.vals[3])}</b><span class="help wsv">${esc(grpTail(it.grp))}</span></td><td dir="auto" title="${esc(it.vals[4])}"><span class="wi">${esc(it.vals[4])}</span><span class="help wsv" dir="auto">${it.names ? esc(it.names[0][0]) + (it.names.length > 1 ? ' +' + (it.names.length - 1) : '') : ''}</span></td><td>${it.vals[5] ? `<span class="u" style="background:${unitCol(it.vals[5])}">${esc(it.vals[5])}</span>` : ''}</td><td class="num">${fq(r.qs)}</td><td class="num">${r.ms.length}</td><td>${rng(r)}</td><td class="num"><b>${frt(r.avg)}</b></td><td class="num"><span style="color:var(--navy);font-weight:700">${frt(r.lm.r)}</span><span class="help wsv">${PER[r.lm.p]}</span></td><td class="num" style="color:${r.pm ? (r.d > 1 ? '#9B2C2C' : r.d < -1 ? '#2F6B3A' : '#6b7280') : '#9ca3af'}">${r.pm ? (r.d > 0 ? '▲ ' : r.d < 0 ? '▼ ' : '') + Math.abs(r.d).toFixed(1) + '%' : '-'}</td><td class="num">${fmt(it.td)}</td>${ci(it, 'pkg')}${ci(it, 'mnl')}${ci(it, 'ce')}<td><span class="st ${s1.split(' ')[0]}">${s1}</span></td></tr>${o ? `<tr class="pkex"><td></td><td colspan="14"><div class="pol">${r.ms.map((m) => { const d = (m.r / r.avg - 1) * 100; return `<div class="pcard ${d < -1 ? 'lo' : d > 1 ? 'hi' : ''}" style="min-width:170px"><span class="nm"><b>${PER[m.p]}</b></span><span class="r">${frt(m.r)}</span><small>${fq(m.q)} ${esc(it.vals[5] || '')} · ${fmt(m.a)}</small><small>${d > 0 ? '+' : ''}${d.toFixed(1)}%</small></div>`; }).join('')}</div></td></tr>` : ''}`; }).join('') || `<tr><td colspan="15" class="help" style="padding:20px">Nothing matches.</td></tr>`}
+    ${rows.length > shown.length ? `<tr><td colspan="15" style="padding:12px;text-align:center"><button id="mrMore">Show all ${rows.length} (the largest ${shown.length} are shown) – or narrow with a family / group on the left</button></td></tr>` : ''}</tbody></table></div></div>`;
+  const qi = $('mrQ'); qi.oninput = () => { ST.mrQ = qi.value; const ps = qi.selectionStart; renderMRate(); const n = $('mrQ'); n.focus(); n.setSelectionRange(ps, ps); };
+}
+document.addEventListener('click', (e) => { const t = e.target; const sw = t.closest('[data-mr]'); if (sw) { ST.tab = sw.dataset.mr === '1' ? 'mrate' : 'cod'; ST.bk = MATI; render(); return; }
+  if (!$('mr').contains(t)) return;
+  const fl = t.closest('[data-mrf]'); if (fl) { ST.mrF = fl.dataset.mrf; renderMRate(); return; } if (t.id === 'mrMore') { ST.mrAll = true; renderMRate(); return; }
+  if (t.id === 'mfGo') { const v = { pkg: $('mfPKG').value.trim(), mnl: $('mfMNL').value.trim(), ce: $('mfCE').value.trim() }, ch = []; (R.mrRows || []).forEach((r) => Object.entries(v).forEach(([fl2, x]) => { if (x && !r.it[fl2]) ch.push({ t: 'item', bi: MATI, ii: r.it.ii, f: fl2, v: x }); })); if (ch.length) change(ch, 'Filled empty codes on materials'); else toast('Nothing to fill – type a code, and only empty cells are filled'); return; }
+  const mo = t.closest('tr[data-mo]'); if (mo && !t.closest('input')) { const ii = +mo.dataset.mo; ST.mrOpen = ST.mrOpen === ii ? null : ii; renderMRate(); } });
+document.addEventListener('change', (e) => { const t = e.target; if (!$('mr').contains(t) || t.dataset.mi === undefined) return; const it = BK[MATI].items[+t.dataset.mi]; change([{ t: 'item', bi: MATI, ii: +t.dataset.mi, f: t.dataset.mf, v: t.value.trim() }], FN[t.dataset.mf] + ' ' + (t.value.trim() || '(empty)') + ' · ' + it.vals[3]); });
 function pkPlan(target) {   // target: Map line index → new package; returns the item + line changes (one undo step)
   const want = (i) => (target.has(i) ? target.get(i) : efPkg(i)), its = new Set([...target.keys()].map((i) => L.it[i])), ch = [];
   for (const ii of its) { const it = BK[SUBI].items[ii], idx = []; for (let i = 0; i < N; i++) if (L.b[i] === SUBI && L.it[i] === ii) idx.push(i);
@@ -976,9 +1007,9 @@ function renderTable() {
   const D = pageDef(), S0 = vs(); R.D = D; { const h = hidSet(); D.allCols = D.cols; if (h.size && !D.bands) D.cols = D.cols.filter((c, i) => i === 0 || c.code || !h.has(c.k)); }
   // bucket bar (not for Expenses / Subcontractor)
   if (['gl', 'wbs'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = `<button class="chip ${ST.xbk === -1 ? 'on' : ''}" data-xbk="-1">All buckets</button>` + BK.map((b, bi) => `<button class="chip ${bi === ST.xbk ? 'on' : ''}" data-xbk="${bi}">${esc(b.short)}</button>`).join('') + (ST.tab === 'gl' ? `<button class="chip ${ST.xbk === -2 ? 'on' : ''}" data-xbk="-2">Revenue</button>` : ''); }
-  else if (['pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = (ST.tab === 'lines' ? `<button class="chip ${ST.bk === -1 ? 'on' : ''}" data-bk="-1">All buckets</button>` : '') + BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Fully coded').reduce((s, it) => s + it.td, 0);
+  else if (['pm', 'lines'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = (ST.tab === 'lines' ? `<button class="chip ${ST.bk === -1 ? 'on' : ''}" data-bk="-1">All buckets</button>` : '') + BK.map((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((s, it) => s + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Coded').reduce((s, it) => s + it.td, 0);
     return `<button class="chip ${bi === ST.bk ? 'on' : ''}" data-bk="${bi}">${esc(b.short)}<span class="pc">${t ? (100 * f / t).toFixed(0) : 0}%</span></button>`; }).join(''); } else $('bkbar').style.display = 'none';
-  $('tools').innerHTML = `${D.noFilter && !D.search ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Partly coded', 'Fully coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
+  $('tools').innerHTML = `${D.noFilter && !D.search ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') : ''}
     ${D.extraTools || ''} ${D.groups && !D.noGroupBtns ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : `<button id="bClr" class="clr">✕ Clear filters</button>`} ${D.bands ? '' : '<button id="bCols" title="Show or hide columns">Columns ▾</button>'}<button id="bFit" title="Fit every column to its content (drops the widths you dragged)">↔ Fit</button> <span class="help" id="cnt"></span>`;
   const cols = D.cols, q = S0.q.trim().toLowerCase();
   let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && statusOf(r.it) !== S0.st) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
@@ -1199,7 +1230,7 @@ $('bExport').onclick = async () => {
     head(wc, 4, labs, ['DIV', 'PKG', 'MNL', 'Cost element', 'Cost element code', 'Include']); let rr = 5, lastG = null;
     b.items.forEach((it) => { const stt = statusOf(it), v = [...it.vals, ...cf.map((f) => it[f]), stt, it.inc, ...(b.qty ? [r2(it.qtd), Math.abs(it.qtd) > 1e-9 ? it.td / it.qtd : null] : []), it.td, it.tm, it.pe, it.n, ...(bi === MATI ? [(it.names || []).map((x) => x[0]).join(' · ')] : []), it.k], k0 = b.cols.length;
       const fm = {}; if (b.qty) { fm[k0 + cf.length + 2] = '#,##0.00'; fm[k0 + cf.length + 3] = '#,##0.00'; } const o = k0 + cf.length + 2 + (b.qty ? 2 : 0); fm[o] = NUM; fm[o + 1] = NUM; fm[o + 2] = NUM;
-      put(wc, rr, v, fm); if (b.tree) wc.getCell(rr, 1).fill = fill(hx(grpCol(it.grp))); wc.getCell(rr, k0 + cf.length + 1).fill = fill(stt === 'Fully coded' ? 'FFE2EFDA' : stt === 'Partly coded' ? 'FFFFF2CC' : 'FFFCE4D6');
+      put(wc, rr, v, fm); if (b.tree) wc.getCell(rr, 1).fill = fill(hx(grpCol(it.grp))); wc.getCell(rr, k0 + cf.length + 1).fill = fill(stt === 'Coded' ? 'FFE2EFDA' : stt === 'Partly coded' ? 'FFFFF2CC' : 'FFFCE4D6');
       cf.forEach((f, j) => { wc.getCell(rr, k0 + j + 1).fill = fill(it[f] ? 'FFEEF3FB' : 'FFFFF0E8'); wc.getCell(rr, k0 + j + 1).font = { name: A, size: 10, bold: true }; });
       if (b.tree && it.grp !== lastG) { for (let c = 1; c <= labs.length; c++) wc.getCell(rr, c).border = { ...box, top: { style: 'medium', color: { argb: NAVY } } }; lastG = it.grp; }
       wc.getCell(rr, labs.length).font = { name: A, size: 8, color: { argb: 'FF7F7F7F' } }; rr++; });
