@@ -20,6 +20,13 @@ nav.tabs{display:flex;gap:3px;background:var(--navy);padding:0 14px} nav.tabs bu
 nav.tabs button.on{background:var(--bg);color:var(--navy)}
 #saved{font-size:11px;opacity:.8}
 .page{flex:1;display:none;flex-direction:column;min-height:0} .page.on{display:flex}
+:root{--a1:#1F3864;--a2:#3E6FA8;--a5:#B08A2E;--good:#2F6B3A;--watch:#8A6D1F;--risk:#9B2C2C;--neutral:#5F6B7A;--info:#1F6F8B}
+.ovg{flex:1;min-height:0;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:86px 1fr 1fr;gap:10px;padding:10px}
+.ovc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:0;overflow:hidden;display:flex;flex-direction:column} .ovc .ct{display:flex;align-items:center;gap:8px;margin-bottom:6px} .ovc .ct b{color:var(--navy);font-size:13px} .ovc .ct small{color:var(--mut)} .ovc .ct .sp{flex:1}
+.ovc.kpi{grid-column:span 2} .ovc.kpi span{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em} .ovc.kpi b{font-size:21px;color:#1B2A41;margin-top:2px;font-variant-numeric:tabular-nums} .ovc.kpi i{font-style:normal;font-size:11.5px;color:var(--mut)} .ovc.kpi i.up{color:var(--risk)} .ovc.kpi i.dn{color:var(--good)} .ovc.ovl{cursor:pointer} .ovc.ovl:hover{border-color:#9fb3d1}
+.ovl2{overflow:auto} .ovpk{display:grid;grid-template-columns:10px 1fr 64px 80px;gap:8px;align-items:center;padding:6px 2px;border-bottom:1px solid #F1F3F6;cursor:pointer} .ovpk:hover{background:#F7F9FC} .ovpk .d{width:10px;height:10px;border-radius:2px} .ovpk .m{color:var(--mut);text-align:right} .ovpk .v{text-align:right;font-variant-numeric:tabular-nums} .ovpk .bb{grid-column:2/5;height:5px;background:#EEF0F4;border-radius:3px} .ovpk .bb i{display:block;height:5px;border-radius:3px}
+.ins{display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:7px 2px;border-bottom:1px solid #F1F3F6;align-items:start} .ins .ic{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff} .ins small{display:block;color:var(--mut)} .ic.risk{background:var(--risk)} .ic.watch{background:var(--watch)} .ic.neutral{background:var(--neutral)} .ic.info{background:var(--info)}
+.ovt{width:100%;border-collapse:collapse} .ovt td{padding:5px 4px;border-bottom:1px solid #F1F3F6;vertical-align:top} .ovt td span{display:block;color:var(--mut);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px} .ovt tr{cursor:pointer} .ovt tr:hover td{background:#F7F9FC}
 .pkroot{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--bg)} .pkbar{display:flex;gap:10px;align-items:center;padding:7px 10px;background:#fff;border-bottom:1px solid var(--line)}
 .pkw{flex:1;min-height:0;display:grid;grid-template-columns:1fr 330px;gap:10px;padding:10px;position:relative} .pkm{background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;min-width:0}
 .pkt{display:flex;gap:6px;align-items:center;padding:7px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap} .pkttl{color:var(--navy);font-size:14px} .pkt input{border:1px solid #d1d5db;border-radius:6px;padding:4px 9px;width:220px}
@@ -60,15 +67,15 @@ table.t{border-collapse:separate;border-spacing:0;table-layout:fixed}
 .t th .fb.act{background:#FFD966;color:#000} .t th .sa{font-size:10px}
 .t td input[type=checkbox]{margin:0;vertical-align:middle} .t td{border-bottom:1px solid var(--line);border-right:1px solid #eef0f4;padding:0 7px;white-space:nowrap;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;height:27px;max-height:27px}
 .t tbody tr{height:27px}
-.t tr.grp td{background:var(--gc);font-weight:600;border-top:2px solid var(--navy);padding:0 8px;cursor:pointer}
+.t tr.grp td{background:#F1F4F8;font-weight:600;border-top:1px solid #D5DCE6;padding:0 8px;cursor:pointer;color:#1B2A41} .t tr.grp td:first-child{box-shadow:inset 4px 0 0 var(--gc)}
 .t tr.grp .tg{display:inline-block;width:16px;font-weight:700;color:var(--navy)} .t tr.grp .gm{font-weight:400;color:#444;margin-left:8px}
-.t tr.it td:first-child{border-left:5px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through} .t tr.uchild td{background:#FAFBFD;font-size:12px} .t tr.uord td{border-top:1px solid #d5dce8} .t thead tr.band th.dmon{background:#1F3864;cursor:pointer} .t thead tr.band th.dmoff{background:#C00000;cursor:pointer} .t th.doff{background:#9C2B2B} .t td.dout{color:#a6a6a6;text-decoration:line-through} .t thead tr.band th.lab{text-align:right;padding-right:10px;color:#b9c6dd;font-weight:500} .t thead tr.band th.umall{background:#1F3864;color:#fff;cursor:pointer;text-align:right;padding-right:10px} .t thead tr.band th.umall:hover{background:#2F5597} .t th.uon{background:#375623} .t thead tr.band th.umon{background:#548235;cursor:pointer} .t thead tr.band th.umoff{background:#7f8fa9;cursor:pointer} .t td.uin{background:#E2EFDA} .t tr.it.exc.uns td{text-decoration:none;font-style:italic;color:#8a8f98}
+.t tr.it td:first-child{border-left:3px solid var(--gc,#fff)} .t tr.it:hover td{background:#f7f9fc} .t tr.it.sel td{background:var(--sel)} .t tr.it.exc td{color:#a6a6a6;text-decoration:line-through} .t tr.uchild td{background:#FAFBFD;font-size:12px} .t tr.uord td{border-top:1px solid #d5dce8} .t thead tr.band th.dmon{background:#1F3864;cursor:pointer} .t thead tr.band th.dmoff{background:#C00000;cursor:pointer} .t th.doff{background:#9C2B2B} .t td.dout{color:#a6a6a6;text-decoration:line-through} .t thead tr.band th.lab{text-align:right;padding-right:10px;color:#b9c6dd;font-weight:500} .t thead tr.band th.umall{background:#1F3864;color:#fff;cursor:pointer;text-align:right;padding-right:10px} .t thead tr.band th.umall:hover{background:#2F5597} .t th.uon{background:#375623} .t thead tr.band th.umon{background:#548235;cursor:pointer} .t thead tr.band th.umoff{background:#7f8fa9;cursor:pointer} .t td.uin{background:#E2EFDA} .t tr.it.exc.uns td{text-decoration:none;font-style:italic;color:#8a8f98}
 .t tr.tot td{background:var(--navy);color:#fff;font-weight:700;position:sticky;bottom:0}
 .t td.num{text-align:right;font-variant-numeric:tabular-nums} .t td.cutc{background:#FFF8E1} .t td.after{color:#c0c4cc}
 .t td.c{padding:0 4px} .t td.c input{width:100%;height:21px;border:1px solid var(--codeB);background:var(--code);border-radius:4px;padding:0 5px;font-weight:600;color:var(--navy);font-size:12px}
 .t td.c input:focus{outline:2px solid var(--navy2);background:#fff} .t td.c input.miss{background:var(--miss);border-color:var(--missB)} .t td.c input.ovr{background:var(--ovr);border-color:#e09a72;color:#8a3500}
 .st{border-radius:10px;padding:1px 8px;font-size:11px;font-weight:600} .st.Fully{background:var(--ok);color:var(--okT)} .st.Partly{background:var(--part);color:var(--partT)} .st.Not{background:var(--not);color:var(--notT)}
-.u{border-radius:4px;padding:0 6px;font-size:11px;font-weight:600}
+.u{border-radius:4px;padding:0 6px;font-size:11px;font-weight:600;color:#3F4A5A}
 .incb{border:0;background:none;font-size:12px;padding:0 6px;border-radius:4px;height:20px;line-height:20px} .incb.no{background:#eee;color:#888}
 .rst{border:0;background:none;color:#c55a11;font-size:12px;padding:0 4px}
 a.lk{color:var(--navy2);font-weight:600;text-decoration:none;cursor:pointer} a.lk:hover{text-decoration:underline}
@@ -136,6 +143,7 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
   <div class="wrap" id="wrap"><table class="t" id="tbl"><colgroup id="cg"></colgroup><thead id="th"></thead><tbody id="tb"></tbody><tfoot id="tf"></tfoot></table></div>
 </div>
 <!-- Checks -->
+<div class="page" id="pg-sov"><div id="sov" class="pkroot"></div></div>
 <div class="page" id="pg-pkg"><div id="pkg" class="pkroot"></div></div>
 <div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>
 <div class="page" id="pg-rul"><div class="dash" id="rul"></div></div>
@@ -169,14 +177,15 @@ const itemCode = (it) => (it.bi === MATI ? it.vals[3] : isSub(it.bi) ? it.vals[1
 const itemDesc = (it) => (it.bi === MATI ? it.vals[4] : isSub(it.bi) ? it.vals[2] : it.vals.length > 1 && it.bi !== BK.findIndex((b) => b.id === 'G&A') ? it.vals[1] : '');
 const itemUnit = (it) => (it.bi === MATI ? it.vals[5] : isSub(it.bi) ? it.vals[3] : BK[it.bi].cols.indexOf('Unit') >= 0 ? it.vals[BK[it.bi].cols.indexOf('Unit')] : '');
 const statusOf = (it) => { if (isSub(it.bi)) { const n = ['div', 'pkg', 'mnl', 'ce'].filter((f) => it[f]).length; return n === 4 ? 'Fully coded' : n === 0 ? 'Not coded' : 'Partly coded'; } return it.pkg && it.mnl && it.ce ? 'Fully coded' : it.pkg || it.ce ? 'Partly coded' : 'Not coded'; };
-const PAL = ['#5B8DD6', '#E39B5B', '#6BAF6B', '#B37FCF', '#D8C24A', '#4FB3B3', '#E07A8F', '#8C9BB0', '#A4836A', '#77A8D6', '#C7A0E0', '#9DC183'];
-const SOFT = ['#CFE2F3', '#F4D6E2', '#D9EAD3', '#FCE5CD', '#E1D5F0', '#D0F0EA', '#F9E2C7', '#E6E0C8', '#D6E4F7', '#F2D5D0', '#DDEFC6', '#EAD7F2', '#CDEFF5', '#F7EBC1', '#E3E3E3'];
+const PAL = ['#1F3864', '#3E6FA8', '#2F7F7A', '#6B8F4E', '#B08A2E', '#A0522D', '#6E4C8C', '#5F6B7A', '#1F6F8B', '#9C6B5A', '#4F7CAC', '#7D8F3A'];   // muted accents (packages, groups, chart series)
+const SOFT = PAL;   // group accent = a thin bar on a neutral row (no rainbow fills)
+const tint = (c, k = 0.86) => { const n = parseInt(c.slice(1), 16), f = (v) => Math.round(v + (255 - v) * k).toString(16).padStart(2, '0'); return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255); };
 const grpCols = new Map(); const grpCol = (k) => { if (!grpCols.has(k)) grpCols.set(k, SOFT[grpCols.size % SOFT.length]); return grpCols.get(k); };
-const UNC = ['#C9DAF8', '#D9EAD3', '#FCE5CD', '#EAD1DC', '#D0E0E3', '#FFF2CC', '#D9D2E9', '#F4CCCC', '#CFE2F3', '#E6D3C3'], unitCols = new Map(); const unitCol = (u) => { if (!unitCols.has(u)) unitCols.set(u, UNC[unitCols.size % UNC.length]); return unitCols.get(u); };
+const UNC = ['#EEF1F5'], unitCols = new Map(); const unitCol = (u) => { if (!unitCols.has(u)) unitCols.set(u, UNC[unitCols.size % UNC.length]); return unitCols.get(u); };
 let tt; function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 3000); }
 // =====================================================================================  state: cut date, VAT, codes, line overrides, undo
 const LSK = 'cost-register:' + META.project + ':' + (META.buildId || META.built), OVR = Object.assign({}, L.ovr);
-const ST = { pk: (META.pkState || []).map((x) => ({ ...x })), pkTick: new Set(), depx: META.depState || { mode: 'none', pick: [] }, uns: META.unsState || { mode: 'none', pick: [] }, unsc: META.unscState || { mode: 'none', pick: [] }, unsView: 'o', rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'po', pmMode: 'Amount' };
+const ST = { pk: (META.pkState || []).map((x) => ({ ...x })), pkTick: new Set(), depx: META.depState || { mode: 'none', pick: [] }, uns: META.unsState || { mode: 'none', pick: [] }, unsc: META.unscState || { mode: 'none', pick: [] }, unsView: 'o', rules: (META.rules || []).map((r) => ({ ...r })), xbk: -1, glMode: 'ce', cut: META.cut, vat: META.vat.mode || 'Exclude VAT', vatFrom: META.vat.from || '', tab: 'sum', bk: Math.max(0, MATI), sub: 'ov', pmMode: 'Amount' };
 let undo = [], redo = [];
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) { if (c.t === 'uns') return JSON.stringify(ST.uns); if (c.t === 'unsc') return JSON.stringify(ST.unsc); if (c.t === 'depx') return JSON.stringify(ST.depx); if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
@@ -257,11 +266,11 @@ function renderStatus() {
 document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
 function render() {
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === ST.tab));
-  const isPk = ST.tab === 'sub' && ST.sub === 'pkg'; $('pg-pkg').classList.toggle('on', isPk);
+  const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
   ['sum', 'tbl', 'chk', 'rul'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'rul' && ST.tab === 'rules') || (p === 'tbl' && !['sum', 'chk', 'rules'].includes(ST.tab)))));
   $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
   renderStatus();
-  if (isPk) renderPkg(); else if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else renderTable();
+  if (isOv) renderSov(); else if (isPk) renderPkg(); else if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else renderTable();
 }
 function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };
   BK.forEach((b) => b.items.forEach((it) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (it[f]) s[f].add(it[f]); }))); Object.values(OVR).forEach((o) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (o[f]) s[f].add(o[f]); }));
@@ -440,7 +449,7 @@ function pageDef() {
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 52, v: (r) => S[L.ty[r.i]], h: (r) => `<td>${esc(S[L.ty[r.i]])}</td>` },
       { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` });
     const lastLab = cols[cols.findIndex((c) => c.k === (anyQ ? 'qty' : 'amt')) - 1].k;
-    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: L.b[i] + ':' + L.it[i] })), lines: true, sel: true, groups: true, gSpanK: lastLab, gColor: () => '#EEF2F8',
+    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: L.b[i] + ':' + L.it[i] })), lines: true, sel: true, groups: true, gSpanK: lastLab, gColor: () => '#5F6B7A',
       gLabel: (g, rs) => { const [gb, gi] = g.split(':').map(Number), x = BK[gb].items[gi]; return `${all ? `<span class="u" style="background:#DDE5EE">${esc(BK[gb].short)}</span> ` : ''}<a class="lk open2" data-bi="${gb}" data-ii="${gi}">${esc(itemCode(x))}</a> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(itemDesc(x))}</span><span class="gm">${rs.length} lines${itemUnit(x) ? ' · ' + esc(itemUnit(x)) : ''}</span>`; },
       gCells: (g, rs) => ({ qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)), amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }),
       foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
@@ -467,7 +476,7 @@ function pageDef() {
         { k: 'bk', l: 'Bucket(s)', w: 200, v: (r) => (r.x.rev ? ['Revenue'] : [...r.x.bk.keys()].map((b) => BK[b].id)), h: (r) => `<td class="help" title="${esc(r.x.rev ? 'Revenue' : [...r.x.bk.keys()].map((b) => BK[b].id).join(', '))}">${esc(r.x.rev ? 'Revenue' : [...r.x.bk.keys()].map((b) => BK[b].short).join(', '))}</td>` }, numC('n', 'Lines', 70, (r) => r.x.n));
       slotCols((r) => r.x.p);
       const ft = (rs) => { const o = {}; slots.forEach((sl, si) => { o['s' + si] = fmt(rs.filter((r) => !r.x.rev).reduce((s0, r) => s0 + sumIdx(r.x.p, sl.idx), 0)); }); o.td = fmt(rs.filter((r) => !r.x.rev).reduce((s0, r) => s0 + sumIdx(r.x.p, tdIdx), 0)); o.n = fmt(rs.reduce((s0, r) => s0 + r.x.n, 0)); return o; };
-      return { cols, rows, bands: bandsOf(4), groups: ST.glMode === 'bucket', gColor: (g) => (g === 'Revenue' ? '#E2EFDA' : grpCol(g)), gLabel: (g, rs) => `<b>${esc(g)}</b><span class="gm">${rs.length} cost elements · to date ${fmt(rs.reduce((s0, r) => s0 + sumIdx(r.x.p, tdIdx), 0))}</span>`, foot: ft,
+      return { cols, rows, bands: bandsOf(4), groups: ST.glMode === 'bucket', gColor: (g) => (g === 'Revenue' ? '#2F6B3A' : grpCol(g)), gLabel: (g, rs) => `<b>${esc(g)}</b><span class="gm">${rs.length} cost elements · to date ${fmt(rs.reduce((s0, r) => s0 + sumIdx(r.x.p, tdIdx), 0))}</span>`, foot: ft,
         extraTools: `<span class="seg">${[['ce', 'By cost element'], ['bucket', 'By bucket']].map(([k, l]) => `<button data-gm="${k}" class="${ST.glMode === k ? 'on' : ''}">${l}</button>`).join('')}</span>` + pv + ' <span class="help">TOTAL = cost (revenue rows are listed but not added)</span>' };
     }
     // ---- WBS tree: every WBS level of the codes (I-SUTH › .01 › -01 › -1 › -06 › -GRS); a node's amounts include everything below it
@@ -497,7 +506,7 @@ function pageDef() {
       { k: 'mnl', l: 'MNL', w: 64, code: 1, v: (r) => r.e.mnl || '(blank)', h: (r) => `<td><b>${esc(r.e.mnl)}</b></td>` }, { k: 'ce', l: 'Cost element', w: 100, code: 1, v: (r) => r.e.ce || '(blank)', h: (r) => `<td><b>${esc(r.e.ce)}</b></td>` }];
     PER.forEach((pl, p) => cols.push(numC('p' + p, pl, 96, (r) => r.e.p[p], { th: p === rep ? 'cut' : p === NP - 1 ? 'pend' : '', cls: () => (p === rep ? 'cutc' : p > 0 && p < NP - 1 && rep > 0 && p > rep ? 'after' : '') })));
     cols.push(numC('td', 'To date', 112, (r) => r.e.p.slice(0, NP - 1).reduce((s, v) => s + v, 0), { h: (r) => `<td class="num"><b>${fmt(r.e.p.slice(0, NP - 1).reduce((s, v) => s + v, 0))}</b></td>` }));
-    return { cols, rows, groups: true, sub2: true, pkgColor: (g) => (g === '(no PKG yet)' ? '#FFE699' : SOFT[pIx.get(g) % SOFT.length]), gLabel: (g, rs) => `<b>${esc(g)}</b><span class="gm">${new Set(rs.map((r) => r.g2)).size} buckets · ${rs.length} items · to date ${fmt(rs.reduce((s, r) => s + r.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0))}</span>`,
+    return { cols, rows, groups: true, sub2: true, pkgColor: (g) => (g === '(no PKG yet)' ? '#B08A2E' : SOFT[pIx.get(g) % SOFT.length]), gLabel: (g, rs) => `<b>${esc(g)}</b><span class="gm">${new Set(rs.map((r) => r.g2)).size} buckets · ${rs.length} items · to date ${fmt(rs.reduce((s, r) => s + r.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0))}</span>`,
       foot: (rs) => { const o = {}; PER.forEach((pl, p) => { o['p' + p] = fmt(rs.reduce((s, r) => s + r.e.p[p], 0)); }); o.td = fmt(rs.reduce((s, r) => s + r.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0)); return o; } };
   }
   if (ST.tab === 'sub') return subDef();
@@ -506,7 +515,7 @@ function pageDef() {
 }
 // ---- Subcontractor views
 function subDef() {
-  const sb = BK[SUBI], tools = `<span class="seg">${[['po', 'PO view'], ['reg', 'PO Register'], ['pkg', 'Packages'], ['bridge', 'Bridge']].map(([k, l]) => `<button data-sv="${k}" class="${ST.sub === k ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+  const sb = BK[SUBI], tools = subSeg(ST.sub);
   // PO × service from the lines (counted, to the cut date)
   const map = new Map(); for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI || !R.inc[i]) continue; const po = S[L.po[i]], k = po + '|' + L.it[i]; let x = map.get(k); if (!x) map.set(k, (x = { po, ii: L.it[i], td: 0, tm: 0, pe: 0, qty: 0, op: 0, certs: new Set(), d0: 0, d1: 0 }));
     const p = R.per[i]; if (p === NP - 1) x.pe += R.amt[i]; else { x.td += R.amt[i]; x.qty += L.qty[i]; if (p === 0) x.op += R.amt[i]; } if (p === R.rep) x.tm += R.amt[i]; if (S[L.cert[i]]) x.certs.add(S[L.cert[i]]); }
@@ -622,8 +631,57 @@ function depDef() {
   return { cols, rows, bands, groups: false, sel: false, extraTools: tools, foot };
 }
 document.addEventListener('click', (e) => { const t = e.target.closest('#dNone,#dAll'); if (!t) return; if (t.id === 'dNone') depSet('none', [], 'Depreciation: all counted'); else depSet('all', [], 'Depreciation: all excluded'); });
+// =====================================================================================  Subcontractor › Overview: KPIs, packages, trend, insights, top POs – each opens its working view
+const subSeg = (cur) => `<span class="seg">${[['ov', 'Overview'], ['pkg', 'Packages'], ['rate', 'Rate study'], ['po', 'POs'], ['reg', 'PO Register'], ['bridge', 'Bridge to CJI3']].map(([k, l]) => `<button data-sv="${k}" class="${cur === k ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+function renderSov() {
+  const D0 = pkData(), sp = R.bkP[SUBI], rep = R.rep, prevP = rep > 1 ? rep - 1 : -1, tm = rep > 0 ? sp[rep] : 0, pm = prevP > 0 ? sp[prevP] : 0, td = sp.slice(0, NP - 1).reduce((s, v) => s + v, 0);
+  const fM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(Math.abs(v) >= 1e7 ? 1 : 2) + 'M' : fmt(v)), pct = (a, b) => (b ? ((a / b - 1) * 100).toFixed(1) : '0');
+  const allA = D0.pos.reduce((s, p) => s + p.amt, 0), alloc = D0.pos.filter((p) => p.code !== ''), allocA = alloc.reduce((s, p) => s + p.amt, 0), na = D0.pos.filter((p) => p.code === '');
+  const sups = new Set(D0.pos.map((p) => p.sup)).size, notIn = R.unsInK ? R.unsInK.c + R.unsExcK.c : 0, vat = SUB ? (SUB.vatOnPosted || 0) + (SUB.vatOnOpening || 0) : 0;
+  // per PO: last certificate date and this month
+  const lastC = new Map(); for (let i = 0; i < N; i++) if (L.b[i] === SUBI && L.cd[i] && !UNS[i]) { const po = S[L.po[i]]; if (L.cd[i] > (lastC.get(po) || 0)) lastC.set(po, L.cd[i]); }
+  // rate spread between POs for the same work item (certificate lines with a quantity)
+  const W = new Map(); for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI || !L.qty[i] || !R.inc[i] || R.per[i] === NP - 1 || !(SRC[i] === 'Certificate' || SRC[i] === 'Opening certificate')) continue; const po = S[L.po[i]]; let w = W.get(L.it[i]); if (!w) W.set(L.it[i], (w = new Map())); const x = w.get(po) || w.set(po, { q: 0, a: 0 }).get(po); x.q += L.qty[i]; x.a += R.amt[i]; }
+  const spr = [...W].map(([ii, w]) => { const r = [...w.values()].filter((x) => x.q > 0 && x.a > 0).map((x) => x.a / x.q); if (r.length < 3) return null; return { ii, n: r.length, s: Math.max(...r) / Math.min(...r) - 1, a: [...w.values()].reduce((s, x) => s + x.a, 0) }; }).filter((x) => x && x.s > 0.15 && x.s < 5).sort((a, b) => b.a - a.a);
+  // movement by type of works this month vs last
+  const tw = new Map(); if (rep > 0) for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI || !R.inc[i]) continue; const p = R.per[i]; if (p !== rep && p !== prevP) continue; const t = (BK[SUBI].items[L.it[i]].vals[0] || '').replace(/^مقاولين-\s?/, ''); if (t[0] === '~') continue; const x = tw.get(t) || tw.set(t, { a: 0, b: 0 }).get(t); if (p === rep) x.a += R.amt[i]; else x.b += R.amt[i]; }
+  const mv = [...tw].map(([t, x]) => [t, x.a - x.b]).sort((a, b) => b[1] - a[1]);
+  const cutI = R.cutI, d90 = (() => { const d = new Date(String(cutI).replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')); d.setDate(d.getDate() - 90); return +d.toISOString().slice(0, 10).replace(/-/g, ''); })();
+  const idle = D0.pos.filter((p) => p.amt > 500000 && (lastC.get(p.po) || 0) < d90);
+  const ins = [];
+  if (spr.length) { const it = BK[SUBI].items[spr[0].ii]; ins.push(['!', 'risk', `${spr.length} work items: same work, rates differ more than 15% between POs`, `largest: <bdi>${esc(it.vals[1] + ' · ' + it.vals[2])}</bdi> · ${spr[0].n} POs · spread ${(spr[0].s * 100).toFixed(0)}%`, 'rate']); }
+  if (rep > 0 && pm) ins.push([tm >= pm ? '↑' : '↓', 'watch', `${R.repLab} ${fM(tm)} – ${tm >= pm ? '+' : ''}${pct(tm, pm)}% vs ${PER[prevP]}`, mv.length ? `biggest rise: <bdi>${esc(mv[0][0])}</bdi> +${fM(mv[0][1])}${mv[1] && mv[1][1] > 0 ? ` · <bdi>${esc(mv[1][0])}</bdi> +${fM(mv[1][1])}` : ''} · biggest fall: <bdi>${esc(mv[mv.length - 1][0])}</bdi> ${fM(mv[mv.length - 1][1])}` : '', 'po']);
+  ins.push(['○', 'neutral', na.length ? `${na.length} POs not in a package yet` : 'Every PO is in a package', na.length ? `${fM(na.reduce((s, p) => s + p.amt, 0))} of ${fM(allA)} counted` : '', 'pkg']);
+  if (idle.length) ins.push(['⏸', 'neutral', `${idle.length} POs above 0.5M with no certificate in the last 90 days`, 'finished, or work stopped? – largest: ' + idle.slice(0, 3).map((p) => `<bdi>${esc(p.sup.split(' ').slice(0, 3).join(' '))}</bdi>`).join(' · '), 'po']);
+  if (notIn) ins.push(['€', 'info', `${fM(notIn)} certificates not in CJI3 yet`, `included by you ${fM(R.unsInK.c)} · left out ${fM(R.unsExcK.c)}`, 'uns']);
+  // chart: certified per month
+  const ks = PER.map((p, k) => k).filter((k) => k < NP - 1 && (rep < 1 || k <= rep)), mx = Math.max(1, ...ks.map((k) => sp[k])), bw = 640 / ks.length;
+  const chart = `<svg viewBox="0 0 640 200" preserveAspectRatio="none" width="100%" height="100%">${ks.map((k, j) => { const h = 168 * Math.max(0, sp[k]) / mx, x = j * bw + bw * 0.18; return `<rect x="${x}" y="${178 - h}" width="${bw * 0.64}" height="${h}" rx="3" fill="${k === rep ? 'var(--a5)' : 'var(--a2)'}" opacity="${k === 0 ? 0.45 : 1}"><title>${PER[k]} · ${fmt(sp[k])}</title></rect><text x="${x + bw * 0.32}" y="194" font-size="10" text-anchor="middle" fill="#6B7280">${k === 0 ? 'Open' : PER[k].replace('-', '/')}</text>`; }).join('')}</svg>`;
+  const list = D0.list, mxp = Math.max(1, ...list.map((x) => D0.pos.filter((p) => p.codes.includes(x.c)).reduce((s, p) => s + p.amt, 0)));
+  const pkRows = list.map((x, i) => { const ps = D0.pos.filter((p) => p.codes.includes(x.c)), a = ps.reduce((s, p) => s + p.amt, 0), c = PKC[i % PKC.length]; return `<div class="ovpk" data-ovpk="${esc(x.c)}"><span class="d" style="background:${c}"></span><span><b>${esc(x.c)}</b> ${esc(x.n || '')}</span><span class="m">${ps.length} POs</span><b class="v">${fM(a)}</b><div class="bb"><i style="width:${(100 * a / mxp).toFixed(0)}%;background:${c}"></i></div></div>`; }).join('');
+  const top = D0.pos.slice().sort((a, b) => b.sep - a.sep).filter((p) => p.sep).slice(0, 14);
+  $('sov').innerHTML = `<div class="pkbar">${subSeg('ov')}<span class="help">one tab · everything one click away</span></div><div class="ovg">
+   <div class="ovc kpi"><span>Certified to date</span><b>${fM(td)}</b><i>net of VAT · ${Math.abs(R.diff) < 0.01 ? 'ties to CJI3 ✓' : 'check the difference'}</i></div>
+   <div class="ovc kpi"><span>This month · ${R.repLab}</span><b>${fM(tm)}</b><i class="${tm >= pm ? 'up' : 'dn'}">${pm ? (tm >= pm ? '▲ ' : '▼ ') + Math.abs(pct(tm, pm)) + '% vs ' + PER[prevP] : ''}</i></div>
+   <div class="ovc kpi"><span>POs · subcontractors</span><b>${D0.pos.length}</b><i>${sups} subcontractors</i></div>
+   <div class="ovc kpi ovl" data-sv="pkg"><span>Allocated to packages</span><b>${allA ? Math.round(100 * allocA / allA) : 0}%</b><i>${alloc.length} of ${D0.pos.length} POs</i></div>
+   <div class="ovc kpi ovl" data-ovgo="uns"><span>Not in CJI3 yet</span><b>${fM(notIn)}</b><i>certificates · ${R.unsInK && R.unsInK.c ? 'partly included' : 'left out'}</i></div>
+   <div class="ovc kpi"><span>VAT on certificates</span><b>${fM(vat)}</b><i>${esc(ST.vat)} (header switch)</i></div>
+   <div class="ovc" style="grid-column:span 4;grid-row:span 2"><div class="ct"><b>Packages</b><small>counted · POs</small><span class="sp"></span><a class="lk" data-sv="pkg">Allocate ›</a></div>
+     <div class="ovl2">${pkRows || '<div class="help" style="padding:10px 0">No packages yet – open Packages and add your codes.</div>'}<div class="ovpk" data-ovpk=""><span class="d" style="background:#D1D5DB"></span><span style="color:var(--risk)">Not allocated</span><span class="m">${na.length} POs</span><b class="v">${fM(na.reduce((s, p) => s + p.amt, 0))}</b></div></div>
+     <div class="help" style="margin-top:auto">Click a package → its POs open in Packages</div></div>
+   <div class="ovc" style="grid-column:span 5"><div class="ct"><b>Certified per month</b><small>counted · gold = ${R.repLab}</small></div><div style="flex:1;min-height:0">${chart}</div></div>
+   <div class="ovc" style="grid-column:span 3;grid-row:span 2"><div class="ct"><b>Top POs · ${R.repLab}</b></div><div style="overflow:auto;flex:1"><table class="ovt">${top.map((p) => `<tr data-ovpo="${esc(p.po)}"><td><b>${esc(p.po)}</b><span dir="auto">${esc(p.sup)}</span></td><td class="num">${fmt(p.sep)}</td></tr>`).join('') || '<tr><td class="help">Nothing this month.</td></tr>'}</table></div></div>
+   <div class="ovc" style="grid-column:span 5"><div class="ct"><b>Insights</b><small>what needs your attention</small></div><div style="overflow:auto">${ins.map(([ic, k, t, s1, go]) => `<div class="ins"><span class="ic ${k}">${ic}</span><span>${t}<small>${s1}</small></span><a class="lk" ${go === 'uns' ? 'data-ovgo="uns"' : `data-sv="${go}"`}>${{ rate: 'Rate study', po: 'POs', pkg: 'Allocate', uns: 'Unsettled' }[go]} ›</a></div>`).join('')}</div></div></div>`;
+}
+document.addEventListener('click', (e) => { const pg = $('sov'); if (!pg || !pg.contains(e.target)) return; const t = e.target;
+  const sv = t.closest('[data-sv]'); if (sv) { goSub(sv.dataset.sv); return; }
+  const g = t.closest('[data-ovgo]'); if (g) { ST.tab = 'uns'; ST.unsView = 'c'; render(); return; }
+  const pk = t.closest('[data-ovpk]'); if (pk) { ST.pkSel = pk.dataset.ovpk; ST.pkView = 'alloc'; goSub('pkg'); return; }
+  const po = t.closest('[data-ovpo]'); if (po) { ST.sub = 'po'; const S0 = vs(); S0.q = po.dataset.ovpo; S0.fold.clear(); render(); } });
+function goSub(k) { if (k === 'rate') { ST.sub = 'pkg'; ST.pkView = 'rate'; } else { if (k === 'pkg' && ST.pkView === 'rate' && ST.sub !== 'pkg') ST.pkView = 'alloc'; ST.sub = k; } sel.clear(); render(); }
 // =====================================================================================  Subcontractor › Packages: allocate POs (or single work items) to your packages, then study rates inside one package
-const PKC = ['#C55A11', '#2F5597', '#548235', '#7030A0', '#BF8F00', '#0F9ED5', '#00A08A', '#C00000', '#7F7F7F', '#8E6C3E', '#D46FA5', '#3D8B40'];
+const PKC = PAL;
 const efPkg = (i) => { const o = OVR[L.id[i]]; return o && o.pkg !== undefined ? o.pkg : BK[L.b[i]].items[L.it[i]].pkg || ''; };
 function pkData() {
   const pos = new Map();
@@ -670,7 +728,7 @@ function renderPkg() {
     <div class="pkadd"><input id="pkNewC" placeholder="Code, e.g. P01" maxlength="12"><input id="pkNewN" placeholder="Name (optional)"><button id="pkNew">+ Add</button></div>
     ${box('', 'Not allocated', 0, cnt((p) => p.code === ''), 1)}${cnt((p) => p.code === '~').length ? box('~', 'Split POs', 0, cnt((p) => p.code === '~'), 1) : ''}${box('*', 'All POs', 0, D0.pos, 1)}</div>
     <div class="pkf"><b>Drag</b> a row (⠿) onto a package – ticked rows move together · or tick POs, then press <kbd>1</kbd>…<kbd>9</kbd> <kbd>0</kbd> or drag them onto a package · click a PO to split it by work item · <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo</div></div>`;
-  const seg = `<span class="seg"><button data-sv="po">PO view</button><button data-sv="reg">PO Register</button><button class="on">Packages</button><button data-sv="bridge">Bridge</button></span>`;
+  const seg = subSeg(view === 'rate' ? 'rate' : 'pkg');
   let main;
   if (view === 'alloc') {
     const chips = [...tows].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t, n]) => `<button class="chip ${tsel === t ? 'on' : ''}" data-pkt="${esc(t)}"><span dir="auto">${esc(t.replace(/^مقاولين-\s?/, ''))}</span> ${n}</button>`).join('');
@@ -693,7 +751,7 @@ function renderPkg() {
     const RC = { wi: (w) => w.it.vals[2], svc: (w) => w.it.vals[1], u: (w) => w.it.vals[3], q: (w) => w.q, avg: (w) => w.avg, fin: (w) => w.lr, sp: (w) => (w.mn ? Math.round((w.mx / w.mn - 1) * 1000) / 10 : 0), npo: (w) => w.by.size };
     ps.forEach((p) => { RC['p' + p.po] = (w) => { const x = w.by.get(p.po); return x && x.q ? Math.round(x.a / x.q * 100) / 100 : ''; }; });
     const wsF = pkApply(ws, RC, 'r'); R.pkRateRows = ws; R.pkRateCols = RC;
-    const cell = (w, po) => { const x = w.by.get(po), mn = po === mainPo; if (!x || !x.q) return `<td class="hm na${mn ? ' mpo' : ''}">·</td>`; const mx2 = w.by.get(mainPo), ref = cmpM ? (mx2 && mx2.q ? mx2.a / mx2.q : 0) : w.avg; const v = x.a / x.q, d = mn && cmpM ? 0 : ref ? (v / ref - 1) * 100 : 0, bg = d > 1 ? `rgba(224,102,102,${Math.min(0.8, 0.12 + d / 25)})` : d < -1 ? `rgba(112,173,71,${Math.min(0.8, 0.12 - d / 25)})` : '#F3F6FB'; return `<td class="hm${mn ? ' mpo' : ''}" style="background:${mn && cmpM ? '#FFF2CC' : bg}" title="${esc(po)} · ${fmt2(v)} · qty ${fq(x.q)}${!mn && ref ? ' · ' + (d > 0 ? '+' : '') + d.toFixed(1) + '% vs ' + (cmpM ? 'main PO' : 'average') : ''}">${fr(v)}</td>`; };
+    const cell = (w, po) => { const x = w.by.get(po), mn = po === mainPo; if (!x || !x.q) return `<td class="hm na${mn ? ' mpo' : ''}">·</td>`; const mx2 = w.by.get(mainPo), ref = cmpM ? (mx2 && mx2.q ? mx2.a / mx2.q : 0) : w.avg; const v = x.a / x.q, d = mn && cmpM ? 0 : ref ? (v / ref - 1) * 100 : 0, bg = d > 1 ? `rgba(155,44,44,${Math.min(0.55, 0.08 + d / 40)})` : d < -1 ? `rgba(47,107,58,${Math.min(0.55, 0.08 - d / 40)})` : '#F3F6FB'; return `<td class="hm${mn ? ' mpo' : ''}" style="background:${mn && cmpM ? '#FFF2CC' : bg}" title="${esc(po)} · ${fmt2(v)} · qty ${fq(x.q)}${!mn && ref ? ' · ' + (d > 0 ? '+' : '') + d.toFixed(1) + '% vs ' + (cmpM ? 'main PO' : 'average') : ''}">${fr(v)}</td>`; };
     main = `<div class="pkm"><div class="pkt"><b class="pkttl">Rate study · ${esc(code || '')}</b><span class="help">${wsF.length}${wsF.length !== ws.length ? ' of ' + ws.length : ''} work items · ${ps.length} POs${D0.pos.filter((p) => p.codes.includes(code)).length > 12 ? ' (largest 12 by amount)' : ''} · cell = the PO's certified rate · green below, red above ${cmpM ? 'the main PO' : 'the average'} · ★ = main PO (click ☆ to change)</span><button class="chip ${cmpM ? 'on' : ''}" id="pkCmp">Compare to: ${cmpM ? 'main PO' : 'average'}</button><button class="chip ${ST.pkMulti ? 'on' : ''}" id="pkMulti">Shared by 2+ POs first</button></div>
       <div class="pkg"><table class="t pkgt"><colgroup><col style="width:280px"><col style="width:60px"><col style="width:104px"><col style="width:92px"><col style="width:86px">${ps.map(() => '<col>').join('')}</colgroup>
       <thead><tr>${pkTh('r', 'wi', 'Work item')}${pkTh('r', 'u', 'Unit')}${pkTh('r', 'q', 'Qty', 'num')}${pkTh('r', 'avg', 'Average', 'num')}${pkTh('r', 'fin', 'Final', 'num')}${ps.map((p) => `<th class="pch pkth${p.po === mainPo ? ' mpoh' : ''}" data-pksort="r|p${esc(p.po)}" title="${esc(p.po + ' · ' + p.sup)} – click to sort"><button class="pkstar" data-pkmain="${esc(p.po)}" data-pkc="${esc(code)}" title="Make this the main PO">${p.po === mainPo ? '★' : '☆'}</button><span dir="auto">${esc(p.sup.split(' ').slice(0, 2).join(' '))}</span><br><span style="opacity:.7">${esc(p.po.slice(-5))}</span></th>`).join('')}</tr></thead>
@@ -705,7 +763,7 @@ function renderPkg() {
 function pkAssign(pos, code, label) { const D0 = { pos: R.pkPos }, set = new Set(pos), ch = []; for (const p of D0.pos) if (set.has(p.po)) for (const i of p.idx) ch.push(lineCh(i, 'pkg', code)); if (!ch.length) return; ST.pkTick.clear(); ST.pkOpen = null; change(ch, label || (pos.length + ' PO' + (pos.length > 1 ? 's' : '') + ' → ' + (code || 'Not allocated'))); }
 function pkTicked() { return [...(ST.pkTick || [])]; }
 document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !pg.contains(e.target)) return; const t = e.target;
-  const sv = t.closest('[data-sv]'); if (sv) { ST.sub = sv.dataset.sv; render(); return; } const v = t.closest('[data-pkv]'); if (v) { ST.pkView = v.dataset.pkv; renderPkg(); return; }
+  const sv = t.closest('[data-sv]'); if (sv) { goSub(sv.dataset.sv); return; } const v = t.closest('[data-pkv]'); if (v) { ST.pkView = v.dataset.pkv; renderPkg(); return; }
   const fb = t.closest('[data-pkfb]'); if (fb) { e.stopPropagation(); const [v2, k2] = fb.dataset.pkfb.split('|'); if (v2 === 'a') { const base = R.pkBase || []; pkPop(fb, 'a', k2, base, PKCOL); } else pkPop(fb, 'r', k2, R.pkRateRows || [], R.pkRateCols); return; }
   const so2 = t.closest('[data-pkso]'); if (so2) { const [k2, d2] = so2.dataset.pkso.split('|'); ST.pkSort = { v: 'a', k: k2, d: +d2 }; renderPkg(); return; }
   const mp = t.closest('[data-pkmain]'); if (mp) { e.stopPropagation(); (ST.pkMain || (ST.pkMain = {}))[mp.dataset.pkc] = mp.dataset.pkmain; renderPkg(); return; }
@@ -814,7 +872,7 @@ $('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
   if (t.dataset.st) { S0.st = t.dataset.st; render(); } if (t.dataset.pm) { ST.pmMode = t.dataset.pm; render(); }
   if (t.dataset.lvl) { const S1 = vs(); S1.fold = new Set(R.treeNodes.filter((n) => n.depth >= +t.dataset.lvl && n.kids.size).map((n) => n.code)); S1.lv = 1; render(); }
   if (t.dataset.gm) { ST.glMode = t.dataset.gm; render(); }
-  if (t.dataset.pv) { PF.clear(); if (t.dataset.pv !== 'Months') MI.forEach((m) => PF.add(t.dataset.pv === 'Years' ? 'Y' + m.y : 'Q' + m.y + '-' + m.q)); render(); } if (t.dataset.sv) { ST.sub = t.dataset.sv; sel.clear(); render(); }
+  if (t.dataset.pv) { PF.clear(); if (t.dataset.pv !== 'Months') MI.forEach((m) => PF.add(t.dataset.pv === 'Years' ? 'Y' + m.y : 'Q' + m.y + '-' + m.q)); render(); } if (t.dataset.sv) { goSub(t.dataset.sv); }
   if (t.id === 'bFold') { R.rows.forEach((r) => S0.fold.add(r.g)); render(); } if (t.id === 'bOpen') { S0.fold.clear(); render(); } if (t.id === 'bClr') { S0.f = {}; S0.sort = null; S0.q = ''; S0.st = 'All'; render(); } });
 $('tools').addEventListener('input', (e) => { if (e.target.id === 'q') { vs().q = e.target.value; render(); const q = $('q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
 $('tb').addEventListener('click', (e) => { const a = e.target.closest('.gopo'); if (a) { e.preventDefault(); ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); render(); } });
@@ -954,7 +1012,7 @@ $('bExport').onclick = async () => {
     head(wc, 4, labs, ['DIV', 'PKG', 'MNL', 'Cost element', 'Cost element code', 'Include']); let rr = 5, lastG = null;
     b.items.forEach((it) => { const stt = statusOf(it), v = [...it.vals, ...cf.map((f) => it[f]), stt, it.inc, ...(b.qty ? [r2(it.qtd), Math.abs(it.qtd) > 1e-9 ? it.td / it.qtd : null] : []), it.td, it.tm, it.pe, it.n, ...(bi === MATI ? [(it.names || []).map((x) => x[0]).join(' · ')] : []), it.k], k0 = b.cols.length;
       const fm = {}; if (b.qty) { fm[k0 + cf.length + 2] = '#,##0.00'; fm[k0 + cf.length + 3] = '#,##0.00'; } const o = k0 + cf.length + 2 + (b.qty ? 2 : 0); fm[o] = NUM; fm[o + 1] = NUM; fm[o + 2] = NUM;
-      put(wc, rr, v, fm); if (b.tree) wc.getCell(rr, 1).fill = fill(hx(grpCol(it.grp))); wc.getCell(rr, k0 + cf.length + 1).fill = fill(stt === 'Fully coded' ? 'FFE2EFDA' : stt === 'Partly coded' ? 'FFFFF2CC' : 'FFFCE4D6');
+      put(wc, rr, v, fm); if (b.tree) wc.getCell(rr, 1).fill = fill(hx(tint(grpCol(it.grp)))); wc.getCell(rr, k0 + cf.length + 1).fill = fill(stt === 'Fully coded' ? 'FFE2EFDA' : stt === 'Partly coded' ? 'FFFFF2CC' : 'FFFCE4D6');
       cf.forEach((f, j) => { wc.getCell(rr, k0 + j + 1).fill = fill(it[f] ? 'FFEEF3FB' : 'FFFFF0E8'); wc.getCell(rr, k0 + j + 1).font = { name: A, size: 10, bold: true }; });
       if (b.tree && it.grp !== lastG) { for (let c = 1; c <= labs.length; c++) wc.getCell(rr, c).border = { ...box, top: { style: 'medium', color: { argb: NAVY } } }; lastG = it.grp; }
       wc.getCell(rr, labs.length).font = { name: A, size: 8, color: { argb: 'FF7F7F7F' } }; rr++; });

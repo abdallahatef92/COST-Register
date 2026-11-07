@@ -45,6 +45,11 @@ Certificates in ZSCPRG01 that are approved (Character 1 = X) but not yet posted 
 ### Status bar (app)
 A bar at the bottom of every tab: CJI3 cost, counted to the cut date, this month, pending, difference to CJI3 (green ✓ when 0), and what you changed – excluded, VAT included, ZINTC1 orders included, certificates included, depreciation excluded – plus the coded share and hand-coded lines. Click an entry to open its tab.
 
+### Subcontractor › Overview (app)
+The Subcontractor tab opens on one dashboard: KPIs (certified to date, this month vs last, POs and subcontractors, % allocated to packages, certificates not in CJI3, VAT), the packages with their amounts (click → Packages), certified per month, insights (rate spread between POs for the same work item, this month's movement by type of works, POs not in a package, POs above 0.5M without a certificate for 90 days, certificates not in CJI3 – each links to its view) and the top POs of the month. Views: Overview · Packages · Rate study · POs · PO Register · Bridge to CJI3.
+
+Colours: neutral group rows with one thin accent bar per group / package (10 muted accents), red and green kept for status only.
+
 ### Subcontractor › Packages (app)
 Split the POs over your packages so you work with a few at a time. Right: the package list (add a code and an optional name, rename with ✎, remove with ✕), plus Not allocated / Split POs / All POs – click one to show only its POs. Allocate: tick POs (Shift = range, header box = all shown, type-of-works chips to narrow) and press the package key 1…9, 0, drag them onto a package, or use "move to…". Click a PO to split it by work item: each work item can go to another package. A package is the line's PKG code, so it flows to Coding, Per Month, Lines and the Excel export; undo works. ② Rate study: for one package, work item (service + description) × its 12 largest POs, each cell the PO's certified rate, green below / red above the average, with the average and the final (latest) rate.
 
