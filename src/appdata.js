@@ -43,7 +43,7 @@ function toAppData(P, o) {
     gaSubs: Object.keys(require('./rules').GA).concat(['Other labour / payroll']),
     unclass: (() => { const m = new Map(); for (const l of M.lines) { if (l.bucket !== 'Unclassified') continue; const k = l.ce + '|' + l.type; const x = m.get(k) || m.set(k, { ce: l.ce, cen: l.cen, type: l.type, n: 0, amt: 0, wbs: new Map() }).get(k); x.n++; x.amt += l.amt; x.wbs.set(l.wbs, (x.wbs.get(l.wbs) || 0) + 1); }
       return [...m.values()].map((x) => ({ ce: x.ce, cen: x.cen, type: x.type, n: x.n, amt: Math.round(x.amt * 100) / 100, wbs: [...x.wbs].sort((a, b) => b[1] - a[1]).slice(0, 3).map((y) => y[0]) })).sort((a, b) => Math.abs(b.amt) - Math.abs(a.amt)); })(),
-    yours: M.lines.filter((l) => l.rule === 'yours').length, grpNames: require('./groupnames.json'), zint: P.zRes ? { ...P.zRes.stats, files: P.zRes.files } : null, unsState: (P.prev && P.prev.uns) || null, unscState: (P.prev && P.prev.unsc) || null, depState: (P.prev && P.prev.depx) || null, pkState: (P.prev && P.prev.pk) || null, wbsNames: WBSN, vat: P.vatOpt };
+    yours: M.lines.filter((l) => l.rule === 'yours').length, grpNames: require('./groupnames.json'), zint: P.zRes ? { ...P.zRes.stats, files: P.zRes.files } : null, unsState: (P.prev && P.prev.uns) || null, unscState: (P.prev && P.prev.unsc) || null, depState: (P.prev && P.prev.depx) || null, pkState: (P.prev && P.prev.pk) || null, cruleState: (P.prev && P.prev.crules) || null, logState: (P.prev && P.prev.log) || null, wbsNames: WBSN, vat: P.vatOpt };
   return { META, S, BK, L, REV, SUB };
 }
 module.exports = { toAppData };
