@@ -20,7 +20,6 @@ nav.tabs{display:flex;gap:3px;background:var(--navy);padding:0 14px} nav.tabs bu
 nav.tabs button.on{background:var(--bg);color:var(--navy)}
 #saved{font-size:11px;opacity:.8}
 .page{flex:1;display:none;flex-direction:column;min-height:0} .page.on{display:flex}
-body.focus header.top,body.focus nav.tabs{display:none} #bUnfocus{display:none;position:fixed;top:6px;right:10px;z-index:30;background:var(--navy);color:#fff;border:0;border-radius:6px;padding:4px 10px;font-size:12px;opacity:.85} body.focus #bUnfocus{display:block} body.focus #sbar{padding-right:220px}
 :root{--a1:#1F3864;--a2:#3E6FA8;--a5:#B08A2E;--good:#2F6B3A;--watch:#8A6D1F;--risk:#9B2C2C;--neutral:#5F6B7A;--info:#1F6F8B}
 .ovg{flex:1;min-height:0;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:86px 1fr 1fr;gap:10px;padding:10px}
 .ovc{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:0;overflow:hidden;display:flex;flex-direction:column} .ovc .ct{display:flex;align-items:center;gap:8px;margin-bottom:6px} .ovc .ct b{color:var(--navy);font-size:13px} .ovc .ct small{color:var(--mut)} .ovc .ct .sp{flex:1}
@@ -126,7 +125,7 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
   <div class="sp"></div>
   <label>Cut date <select id="cut"></select></label>
   <label>VAT <select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select></label><input type="date" id="vatFrom" style="display:none">
-  <button id="bFocus" title="Focus mode – hide the header and tabs (F9)">⛶ Focus</button><button id="bNew" title="Build from new SAP files">⟳ New build</button><button id="bUndo" title="Ctrl+Z">↶</button><button id="bRedo" title="Ctrl+Y">↷</button>
+  <button id="bNew" title="Build from new SAP files">⟳ New build</button><button id="bUndo" title="Ctrl+Z">↶</button><button id="bRedo" title="Ctrl+Y">↷</button>
   <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪ Import codes</button>
   <button id="bSave" title="Save all codes (and line overrides) as a small file">💾 Save codes</button>
   <button id="bExport" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
@@ -148,7 +147,7 @@ dl{display:grid;grid-template-columns:130px 1fr;gap:5px 10px;margin:12px 0} dt{c
 <div class="page" id="pg-pkg"><div id="pkg" class="pkroot"></div></div>
 <div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>
 <div class="page" id="pg-rul"><div class="dash" id="rul"></div></div>
-<footer id="sbar"></footer><button id="bUnfocus" title="Leave focus mode (F9 / Esc)">⛶ Exit focus · <span id="fTab"></span></button>
+<footer id="sbar"></footer>
 <div id="pop"></div>
 <div id="drawer"><header><div><h1 id="dTitle"></h1><div class="sub" id="dSub"></div></div><div class="sp"></div><button id="dClose">✕</button></header><div class="body" id="dBody"></div></div>
 <div id="toast"></div>
@@ -265,13 +264,12 @@ function renderStatus() {
     it('Coded', (tdA ? Math.round(100 * tdF / tdA) : 0) + '%', '', 'cod', 'Share of counted to-date cost on fully coded items'), it('Hand-coded lines', hand.toLocaleString('en-US'), z(hand), 'lines')].join('');
 }
 document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
-function setFocus(on) { document.body.classList.toggle('focus', on); try { localStorage.setItem('cr-focus', on ? '1' : ''); } catch (e) {} const t = TABS.find((x) => x[0] === ST.tab); $('fTab').textContent = t ? t[1] : ''; }
 function render() {
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === ST.tab));
   const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
   ['sum', 'tbl', 'chk', 'rul'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'chk' && ST.tab === 'chk') || (p === 'rul' && ST.tab === 'rules') || (p === 'tbl' && !['sum', 'chk', 'rules'].includes(ST.tab)))));
   $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
-  renderStatus(); if (document.body.classList.contains('focus')) setFocus(true);
+  renderStatus();
   if (isOv) renderSov(); else if (isPk) renderPkg(); else if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else renderTable();
 }
 function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };
@@ -762,7 +760,14 @@ function renderPkg() {
   $('pkg').innerHTML = `<div class="pkbar">${seg}<span class="seg"><button data-pkv="alloc" class="${view === 'alloc' ? 'on' : ''}">① Allocate</button><button data-pkv="rate" class="${view === 'rate' ? 'on' : ''}">② Rate study</button></span><span class="help">③ Code the services in Coding › Subcontractor – line packages already flow everywhere</span></div><div class="pkw${ST.pkCol ? ' col' : ''}">${main}${right}</div>`;
   const qi = $('pkQ'); if (qi) { qi.oninput = () => { ST.pkQ = qi.value; const pos = qi.selectionStart; renderPkg(); const n = $('pkQ'); n.focus(); n.setSelectionRange(pos, pos); }; }
 }
-function pkAssign(pos, code, label) { const D0 = { pos: R.pkPos }, set = new Set(pos), ch = []; for (const p of D0.pos) if (set.has(p.po)) for (const i of p.idx) ch.push(lineCh(i, 'pkg', code)); if (!ch.length) return; ST.pkTick.clear(); ST.pkOpen = null; change(ch, label || (pos.length + ' PO' + (pos.length > 1 ? 's' : '') + ' → ' + (code || 'Not allocated'))); }
+function pkPlan(target) {   // target: Map line index → new package; returns the item + line changes (one undo step)
+  const want = (i) => (target.has(i) ? target.get(i) : efPkg(i)), its = new Set([...target.keys()].map((i) => L.it[i])), ch = [];
+  for (const ii of its) { const it = BK[SUBI].items[ii], idx = []; for (let i = 0; i < N; i++) if (L.b[i] === SUBI && L.it[i] === ii) idx.push(i);
+    const ks = new Set(idx.map(want));
+    if (ks.size === 1) { const k = [...ks][0]; ch.push({ t: 'item', bi: SUBI, ii, f: 'pkg', v: k }); idx.forEach((i) => ch.push({ t: 'line', i, f: 'pkg', v: undefined })); }
+    else { idx.forEach((i) => ch.push({ t: 'line', i, f: 'pkg', v: want(i) === it.pkg ? undefined : want(i) })); } }
+  return ch; }
+function pkAssign(pos, code, label) { const set = new Set(pos), tg = new Map(); for (const p of R.pkPos) if (set.has(p.po)) for (const i of p.idx) tg.set(i, code); if (!tg.size) return; const ch = pkPlan(tg); ST.pkTick.clear(); ST.pkOpen = null; change(ch, label || (pos.length + ' PO' + (pos.length > 1 ? 's' : '') + ' → ' + (code || 'Not allocated'))); }
 function pkTicked() { return [...(ST.pkTick || [])]; }
 document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !pg.contains(e.target)) return; const t = e.target;
   const sv = t.closest('[data-sv]'); if (sv) { goSub(sv.dataset.sv); return; } const v = t.closest('[data-pkv]'); if (v) { ST.pkView = v.dataset.pkv; renderPkg(); return; }
@@ -773,7 +778,7 @@ document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !pg.
   const sh = t.closest('[data-pksort]'); if (sh) { const [v2, k2] = sh.dataset.pksort.split('|'), so = ST.pkSort; ST.pkSort = so && so.v === v2 && so.k === k2 ? (so.d === -1 ? { v: v2, k: k2, d: 1 } : null) : { v: v2, k: k2, d: -1 }; renderPkg(); return; }
   if (t.closest('.pkn,.pkadd input,select')) return;
   const ed = t.closest('[data-pke]'); if (ed) { ST.pkEdit = ed.dataset.pke; renderPkg(); const i = document.querySelector('.pkn'); if (i) { i.focus(); i.select(); } return; }
-  const x = t.closest('[data-pkx]'); if (x) { const c = x.dataset.pkx, ps = R.pkPos.filter((p) => p.codes.includes(c)); if (ps.length && !confirm(`Remove ${c}? Its ${ps.length} POs go back to Not allocated.`)) return; ST.pk = ST.pk.filter((y) => y.c !== c); const ch = []; for (const p of ps) for (const i of p.idx) if (efPkg(i) === c) ch.push(lineCh(i, 'pkg', '')); if (ch.length) change(ch, 'Package ' + c + ' removed'); else { persist(); renderPkg(); } return; }
+  const x = t.closest('[data-pkx]'); if (x) { const c = x.dataset.pkx, ps = R.pkPos.filter((p) => p.codes.includes(c)); if (ps.length && !confirm(`Remove ${c}? Its ${ps.length} POs go back to Not allocated.`)) return; ST.pk = ST.pk.filter((y) => y.c !== c); const tg = new Map(); for (const p of ps) for (const i of p.idx) if (efPkg(i) === c) tg.set(i, ''); if (tg.size) change(pkPlan(tg), 'Package ' + c + ' removed'); else { persist(); renderPkg(); } return; }
   if (t.id === 'pkNew') { const c = $('pkNewC').value.trim(), n = $('pkNewN').value.trim(); if (!c) { $('pkNewC').focus(); return; } if (!ST.pk.some((y) => y.c === c)) ST.pk.push({ c, n }); persist(); renderPkg(); return; }
   const b = t.closest('[data-pks]'); if (b) { if (pkTicked().length && b.dataset.pks !== '*' && b.dataset.pks !== '~' && e.detail === 1 && t.closest('.k')) { pkAssign(pkTicked(), b.dataset.pks); return; } ST.pkSel = b.dataset.pks; ST.pkOpen = null; ST.pkTow = ''; renderPkg(); return; }
   const tw = t.closest('[data-pkt]'); if (tw) { ST.pkTow = tw.dataset.pkt; renderPkg(); return; }
@@ -787,7 +792,7 @@ document.addEventListener('change', (e) => { const pg = $('pkg'); if (!pg || !pg
   if (t.dataset.pkn !== undefined) { const y = ST.pk.find((z) => z.c === t.dataset.pkn); if (y) y.n = t.value.trim(); else ST.pk.push({ c: t.dataset.pkn, n: t.value.trim() }); ST.pkEdit = null; persist(); renderPkg(); return; }
   if (t.id === 'pkTo' && t.value) { pkAssign(pkTicked(), t.value === '-' ? '' : t.value); return; }
   if (t.dataset.pkpo) { pkAssign([t.dataset.pkpo], t.value); return; }
-  if (t.dataset.pkit) { const [po, ii] = t.dataset.pkit.split('|'), p = R.pkPos.find((x) => x.po === po); if (p && t.value !== 'mixed') change(p.idx.filter((i) => L.it[i] === +ii).map((i) => lineCh(i, 'pkg', t.value)), 'Work item ' + BK[SUBI].items[+ii].vals[1] + ' of ' + po + ' → ' + (t.value || 'Not allocated')); } });
+  if (t.dataset.pkit) { const [po, ii] = t.dataset.pkit.split('|'), p = R.pkPos.find((x) => x.po === po); if (p && t.value !== 'mixed') change(pkPlan(new Map(p.idx.filter((i) => L.it[i] === +ii).map((i) => [i, t.value]))), 'Work item ' + BK[SUBI].items[+ii].vals[1] + ' of ' + po + ' → ' + (t.value || 'Not allocated')); } });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('pkn')) { e.target.blur(); return; } if (e.key === 'Enter' && (e.target.id === 'pkNewC' || e.target.id === 'pkNewN')) { $('pkNew').click(); return; } if (!(ST.tab === 'sub' && ST.sub === 'pkg') || e.ctrlKey || e.metaKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return; if (!/^[0-9]$/.test(e.key) || !pkTicked().length) return;
   const k = e.key === '0' ? 9 : +e.key - 1, x = R.pkList && R.pkList[k]; if (!x) return; e.preventDefault(); pkAssign(pkTicked(), x.c); });
 document.addEventListener('dragstart', (e) => { const r = e.target.closest && e.target.closest('tr.pkr'); if (!r) return; if (!ST.pkTick.has(r.dataset.po)) { ST.pkTick.clear(); ST.pkTick.add(r.dataset.po); } e.dataTransfer.setData('text/plain', 'pk'); e.dataTransfer.effectAllowed = 'move'; document.body.classList.add('pkdrag'); const n = ST.pkTick.size, g = document.createElement('div'); g.textContent = n + ' PO' + (n > 1 ? 's' : '') + ' → drop on a package'; g.style.cssText = 'position:fixed;top:-100px;padding:6px 10px;background:#1F3864;color:#fff;border-radius:6px;font:600 12px Segoe UI'; document.body.appendChild(g); e.dataTransfer.setDragImage(g, 10, 10); setTimeout(() => g.remove(), 0); });
@@ -963,9 +968,7 @@ $('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value 
 };
 const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); };
 const stamp = () => new Date().toISOString().slice(0, 10);
-$('bFocus').onclick = () => setFocus(true); $('bUnfocus').onclick = () => setFocus(false);
-document.addEventListener('keydown', (e) => { if (e.key === 'F9') { e.preventDefault(); setFocus(!document.body.classList.contains('focus')); } else if (e.key === 'Escape' && document.body.classList.contains('focus') && !document.querySelector('#pop[style*="block"]')) setFocus(false); });
-try { if (localStorage.getItem('cr-focus')) document.body.classList.add('focus'); } catch (e) {}
+try { localStorage.removeItem('cr-focus'); } catch (e) {}
 $('bSave').onclick = () => dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`);
 // ---- light Excel report (values, formatted)
 $('bExport').onclick = async () => {
