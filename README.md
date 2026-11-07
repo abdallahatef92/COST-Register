@@ -45,6 +45,9 @@ Certificates in ZSCPRG01 that are approved (Character 1 = X) but not yet posted 
 ### Status bar (app)
 A bar at the bottom of every tab: CJI3 cost, counted to the cut date, this month, pending, difference to CJI3 (green ✓ when 0), and what you changed – excluded, VAT included, ZINTC1 orders included, certificates included, depreciation excluded – plus the coded share and hand-coded lines. Click an entry to open its tab.
 
+### Subcontractor › Packages (app)
+Split the POs over your packages so you work with a few at a time. Right: the package list (add a code and an optional name, rename with ✎, remove with ✕), plus Not allocated / Split POs / All POs – click one to show only its POs. Allocate: tick POs (Shift = range, header box = all shown, type-of-works chips to narrow) and press the package key 1…9, 0, drag them onto a package, or use "move to…". Click a PO to split it by work item: each work item can go to another package. A package is the line's PKG code, so it flows to Coding, Per Month, Lines and the Excel export; undo works. ② Rate study: for one package, work item (service + description) × its 12 largest POs, each cell the PO's certified rate, green below / red above the average, with the average and the final (latest) rate.
+
 ### Depreciation switch (app)
 The **Depreciation** tab shows the CJI3 depreciation per cost element × month (Opening, Sep-25 …). One click excludes all of it, or click a month to exclude / count that month; the Item switch excludes one cost element. What is excluded leaves the counted cost and shows on the Summary as "– Depreciation excluded by you", so the difference to CJI3 stays 0. No estimates are added for months the depreciation run was not done. The choice is saved with your codes.
 
