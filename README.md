@@ -62,6 +62,13 @@ Six cards (to date, this month vs last, 6-month average, net revenue, revenue �
 
 **Reports › Cost drivers** (also "Full list – all buckets ›" on the Summary): every bucket, drivers added largest first until the chosen share of the bucket is covered – **50% · 80% (default) · 95% · All** – with the same columns as the Summary; bucket chips to filter (click one, Ctrl+click to add more, All buckets to reset); filters ▲ above / ▼ below average by 5% or more, no cost this month; search; click a bucket header to fold it; click a driver for its detail (material groups open the rate analysis). A **Type of works / group** column (Subcontractor type of works, Material division, G&A sub-group) and a switch **Group by type · List**: grouped, each bucket's drivers sit under their type with a subtotal row (click to fold). On SUTH: 80% cover = 142 drivers, 82% of the cost to date.
 
+### One table standard (app)
+Every table in the Tool works the same way:
+- **Bucket chips** (colour · name · a figure) on every page that shows buckets – Code, Per Month, Lines, GL, WBS, Cost drivers. Click = one bucket; **Ctrl+click adds more** where several make sense (Lines, GL, WBS, Cost drivers); All buckets resets.
+- **Columns fit their content**; **drag a header edge** to resize (kept in this browser), double-click it to fit again; **↔ Fit** refits the table.
+- **Click a header to sort** (custom tables: Cost drivers, Rate analysis, Rates & coding, Review, Checks, Changes – rows stay inside their group); the main tables also have the ▾ value filter and Columns ▾.
+- **Grouped tables fold**: click a group row; a zoom switch folds all at once – Families · Groups · Items (Material), Buckets · Types · Drivers (Cost drivers).
+
 ### Monthly workflow (app)
 - **Month-close checklist** on the 5 steps: Code shows the coded share, Subcontractor the POs in a package (e.g. 133/240), Adjust whether the include / exclude decisions are made, Check ✓ when every reconciliation check is OK, Reports whether everything is saved.
 - **Coding rules**: a code typed on a material group (Material › Rate analysis) or a subcontractor work item becomes a rule; new items of that group / service are coded automatically at the next build. Listed on Code › Rules (delete, "fill empty codes now"); kept with Save codes; exported as a sheet.
