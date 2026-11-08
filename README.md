@@ -118,3 +118,12 @@ Excel loop: Export Excel → edit codes on the Coding sheets (per item) or on th
 ### Several files, any names
 Drop all downloads into the tool at once: each file is recognised by its columns (`src/sniff.js`), not its name. Several CJI3 files (split by period and/or overlapping downloads) are merged on Document | Posting row | Fiscal year – a line in two files counts once; if its amount differs, the file with the later postings wins and the line is listed on Checks. Several ZSCPRG01 (by certificate line), ZSCSRV1 and MB52/ME2N files merge the same way. Command line: repeat the flag (`--cji3 a.xlsx --cji3 b.xlsx`).
 Certificate documents whose CJI3 lines fall in more than one month get one adjustment row per month, so every month ties to CJI3.
+
+## v03 – New-user fixes (from the first new-user walkthrough)
+- **Start here** strip on the Code page: what PKG, MNL and Cost element mean, with examples; hide with ✕, bring back with **?** in the top bar. ⓘ on the code headers gives the same meaning on hover. The PKG list shows each code with its name.
+- The automatic indirect fill no longer shows as an unsaved change (it is redone at every build).
+- Footer: **Client deductions** shown, so CJI3 − To date is explained; CJI3, To date and Difference say how they tie on hover.
+- Check › Coding progress reads "0 … out of 37 items".
+- Adjust in plain words: add to the cost / take out, Added / Not added, "Add none" / "Add all to <month>".
+- Save and Export Excel keep their words on a laptop screen.
+- Start page: each file shows its project (from WBS or Plant); a file of another project than the CJI3 is shown in red with a warning.
