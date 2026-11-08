@@ -203,7 +203,7 @@ table.st{border-collapse:collapse;width:100%} .st th{font-size:11.5px;font-weigh
 .rec td{height:22px} .rec tr.okr td{background:#E6F0E8;color:#2F6B3A} .rec tr.bad td{background:#FCE4D6;color:#9B2C2C}
 .sins{display:grid;grid-template-columns:22px 1fr auto;gap:2px 8px;align-items:start;padding:5px 0;border-bottom:1px solid #F1F3F6} .sins>span{width:20px;height:20px;border-radius:5px;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center} .sins small{display:block;color:var(--mut)} .sins a{font-size:12px;white-space:nowrap}
 
-#drvp{padding:10px 12px} .drvf tr.gh2 td{background:color-mix(in srgb,var(--bc) 4%,#fff);border-top:1px solid color-mix(in srgb,var(--bc) 35%,#fff);font-size:12px;height:22px;cursor:pointer} .drvf tr.gh2 td:first-child{padding-left:22px} .tg2{display:inline-block;width:14px;color:#6b7280;font-weight:700} .drvf td.dcat{text-align:right;color:#4B5563;font-size:12px} .drvf td{height:21px} .drvf tr.dvr{cursor:pointer} .drvf tr.dvr:hover td{background:#F5F8FC} .drvf tr.gh td{height:24px;font-size:12px}
+#drvp{padding:10px 12px} .dvchips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px} .dvc{display:inline-flex;align-items:center;gap:6px;border:1px solid #D5DCE6;border-radius:14px;padding:3px 10px;background:#fff;font-size:12.5px;color:#1f2937} .dvc i{width:10px;height:10px;border-radius:2px;display:inline-block} .dvc small{color:#6b7280;font-size:11px} .dvc.on{background:color-mix(in srgb,var(--bc,#1F3864) 14%,#fff);border-color:var(--bc,#1F3864);font-weight:600} .dvc[data-dvb=all].on{background:#1F3864;color:#fff;border-color:#1F3864} .drvf tr.gh2 td{background:color-mix(in srgb,var(--bc) 4%,#fff);border-top:1px solid color-mix(in srgb,var(--bc) 35%,#fff);font-size:12px;height:22px;cursor:pointer} .drvf tr.gh2 td:first-child{padding-left:22px} .tg2{display:inline-block;width:14px;color:#6b7280;font-weight:700} .drvf td.dcat{text-align:right;color:#4B5563;font-size:12px} .drvf td{height:21px} .drvf tr.dvr{cursor:pointer} .drvf tr.dvr:hover td{background:#F5F8FC} .drvf tr.gh td{height:24px;font-size:12px}
 </style>
 </head>
 <body>
@@ -470,11 +470,12 @@ function sumDrivers() { const GAI = BK.findIndex((b) => b.id === 'G&A'), EQI = B
 // Reports › Cost drivers: every bucket, drivers until the chosen share of the bucket is covered
 function renderDrivers() {
   const grp = ST.dvGrp !== false, gfold = ST.dvGFold || (ST.dvGFold = new Set()), cover = ST.dvCover ?? 0.8, f = ST.dvF || 'all', q = (ST.dvQ || '').toLowerCase(), fold = ST.dvFold || (ST.dvFold = new Set()), order = BK.map((b, i) => i).filter((bi) => BK[bi].items.some((x) => x.td > 0)).sort((a, b) => Math.abs(BK[b].items.reduce((x, y) => x + y.td, 0)) - Math.abs(BK[a].items.reduce((x, y) => x + y.td, 0)));
+  const bsel = ST.dvB || (ST.dvB = new Set()), chips = [];
   let all = [], body = '', n = 0; R.dvMap = new Map();
   for (const bi of order) { const cand = DV.of(bi), bt = cand.reduce((x, y) => x + Math.max(0, y.td), 0) || 1, pos = BK[bi].items.reduce((x, y) => x + Math.max(0, y.td), 0) || 1; let cum = 0, a = [];
     for (const x of cand) { if (cover < 1 && cum >= cover * pos) break; a.push(x); cum += Math.max(0, x.td); }
     const shown = a.filter((x) => { const c = DV.calc(x); return (f === 'all' || (f === 'up' && c.va !== null && c.va >= 5) || (f === 'dn' && c.va !== null && c.va <= -5) || (f === 'none' && !c.cur)) && (!q || x.txt.toLowerCase().includes(q)); });
-    if (!shown.length) continue; all = all.concat(shown); shown.forEach((x) => R.dvMap.set(x.key || 'i:' + x.bi + ':' + x.it.ii, x));
+    chips.push([bi, shown.length, shown.reduce((x, y) => x + y.td, 0)]); if (!shown.length || (bsel.size && !bsel.has(bi))) continue; all = all.concat(shown); shown.forEach((x) => R.dvMap.set(x.key || 'i:' + x.bi + ':' + x.it.ii, x));
     const fo = fold.has(bi), cov = Math.round(100 * a.reduce((x, y) => x + Math.max(0, y.td), 0) / pos);
     body += DV.gh(bi, `${fo ? '+' : '−'} ${esc(BK[bi].id)}`, shown, ` data-dvg="${bi}" style="--bc:${bkColor(bi)};cursor:pointer" title="${shown.length} drivers · cover ${cov}% of ${esc(BK[bi].id)} – click to fold"`, 1).replace('</b> · ', `</b> <span class="mut">${shown.length} drivers · ${cov}% of the bucket</span> · `);
     if (fo) { n += shown.length; continue; }
@@ -488,12 +489,14 @@ function renderDrivers() {
     ${[['all', 'All'], ['up', '▲ Above average ≥ 5%'], ['dn', '▼ Below average ≥ 5%'], ['none', 'No cost this month']].map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-dvf="${k}">${l}</button>`).join('')}
     <span class="seg" title="Group the drivers of a bucket by type of works (Subcontractor), division (Material) or sub-group (G&amp;A)"><button data-dvgrp="1" class="${grp ? 'on' : ''}">Group by type</button><button data-dvgrp="0" class="${grp ? '' : 'on'}">List</button></span>
     <input id="dvQ" type="search" placeholder="Search driver, type of works…" value="${esc(ST.dvQ || '')}" style="width:220px;padding:4px 9px;border:1px solid var(--line);border-radius:6px"><a class="lk" data-dvback="1">‹ Summary</a></div>
+    <div class="dvchips"><button class="dvc ${bsel.size ? '' : 'on'}" data-dvb="all">All buckets</button>${chips.map(([bi, k, t]) => `<button class="dvc ${bsel.has(bi) ? 'on' : ''}" data-dvb="${bi}" style="--bc:${bkColor(bi)}" title="${k} drivers · ${DV.fM(t)} · Ctrl+click to add to the selection"><i style="background:${bkColor(bi)}"></i>${esc(BK[bi].short || BK[bi].id)}<small>${k}</small></button>`).join('')}</div>
     <table class="st drv drvf">${DV.head('#&nbsp; Driver', 1)}${body || '<tr><td colspan="11" class="help">Nothing matches.</td></tr>'}${all.length ? DV.tot(all, 'Total of these ' + all.length + ' drivers', 1) : ''}</table></div>`;
   const i = $('dvQ'); i.oninput = () => { ST.dvQ = i.value; const p = i.selectionStart; renderDrivers(); const n2 = $('dvQ'); n2.focus(); n2.setSelectionRange(p, p); };
 }
 document.addEventListener('click', (e) => { const t = e.target, pg = $('drvp'); if (!pg || !pg.contains(t)) return;
   const c = t.closest('[data-dvc]'); if (c) { ST.dvCover = +c.dataset.dvc; renderDrivers(); return; } const f = t.closest('[data-dvf]'); if (f) { ST.dvF = f.dataset.dvf; renderDrivers(); return; }
   if (t.closest('[data-dvback]')) { ST.tab = 'sum'; render(); return; }
+  const bc = t.closest('[data-dvb]'); if (bc) { const v = bc.dataset.dvb, S2 = ST.dvB; if (v === 'all') S2.clear(); else { const bi = +v; if (e.ctrlKey || e.metaKey) { S2.has(bi) ? S2.delete(bi) : S2.add(bi); } else if (S2.size === 1 && S2.has(bi)) S2.clear(); else { S2.clear(); S2.add(bi); } } renderDrivers(); return; }
   const gp = t.closest('[data-dvgrp]'); if (gp) { ST.dvGrp = gp.dataset.dvgrp === '1'; renderDrivers(); return; }
   const g2 = t.closest('[data-dvc2]'); if (g2) { const k = g2.dataset.dvc2; ST.dvGFold.has(k) ? ST.dvGFold.delete(k) : ST.dvGFold.add(k); renderDrivers(); return; }
   const g = t.closest('[data-dvg]'); if (g) { const bi = +g.dataset.dvg; ST.dvFold.has(bi) ? ST.dvFold.delete(bi) : ST.dvFold.add(bi); renderDrivers(); return; }
