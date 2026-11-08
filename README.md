@@ -67,6 +67,7 @@ Every table in the Tool works the same way:
 - **Bucket chips** (colour · name · a figure) on every page that shows buckets – Code, Per Month, Lines, GL, WBS, Cost drivers. Click = one bucket; **Ctrl+click adds more** where several make sense (Lines, GL, WBS, Cost drivers); All buckets resets.
 - **Columns fit their content**; **drag a header edge** to resize (kept in this browser), double-click it to fit again; **↔ Fit** refits the table.
 - **Click a header to sort** (custom tables: Cost drivers, Rate analysis, Rates & coding, Review, Checks, Changes – rows stay inside their group); the main tables also have the ▾ value filter and Columns ▾.
+- **Tick a whole group**: the tick box on a group (or family) row ticks every item in it that passes the filters, ready for Apply to selected.
 - **Grouped tables fold**: click a group row; a zoom switch folds all at once – Families · Groups · Items (Material), Buckets · Types · Drivers (Cost drivers).
 
 ### Monthly workflow (app)

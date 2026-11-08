@@ -208,6 +208,7 @@ table.st{border-collapse:collapse;width:100%} .st th{font-size:11.5px;font-weigh
 table.fxt th .rz{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:4} table.fxt th .rz:hover,table.fxt th .rz.on{background:#9FB3D1}
 table.fxt th.fxs{cursor:pointer;user-select:none} table.fxt th.fxs:hover{background:#E2E8F1} table.fxt th.fxa::after{content:' ▲';font-size:10px;color:#2F5597} table.fxt th.fxd::after{content:' ▼'}
 table.fxt td{overflow:hidden;text-overflow:ellipsis} table.s.fxt td{white-space:normal} table.s.fxt td:nth-child(2){white-space:nowrap} table.fxt{min-width:100%}
+.gck{margin:0 8px 0 2px;vertical-align:middle;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1253,6 +1254,10 @@ const XB = new Set();   // GL / WBS / Lines: the buckets shown when more than on
 function bkChips(o) { const multi = !!o.all, on = (bi) => (multi && XB.size ? XB.has(bi) : o.cur === bi);
   return (multi ? `<button class="dvc ${o.cur === -1 && !XB.size ? 'on' : ''}" data-bkc="all">All buckets</button>` : '') + BK.map((b, bi) => `<button class="dvc ${on(bi) ? 'on' : ''}" data-bkc="${bi}" style="--bc:${bkColor(bi)}"${multi ? ' title="Ctrl+click to add more buckets"' : ''}><i style="background:${bkColor(bi)}"></i>${esc(b.short)}${o.fig ? `<small>${o.fig(bi)}</small>` : ''}</button>`).join('') + (o.extra || ''); }
 const codedOf = (bi) => { const inc = BK[bi].items.filter((it) => it.inc !== 'No'), t = inc.reduce((x, it) => x + Math.abs(it.td), 0), f = inc.filter((it) => statusOf(it) === 'Coded').reduce((x, it) => x + Math.abs(it.td), 0); return (t ? Math.round(100 * f / t) : 0) + '% coded'; };
+// a tick box on a group row: ticks every item (or line) of that group / family that passes the filters
+const gRows = (rows, k) => rows.filter((r) => (k.startsWith('F:') ? famOf(r.g) === k.slice(2) : r.g === k));
+function gck(D, rows, k) { if (!D.sel) return ''; const rs = gRows(rows, k), on = rs.length && rs.every((r) => sel.has(selKey(r))), some = !on && rs.some((r) => sel.has(selKey(r)));
+  return `<input type="checkbox" class="gck" data-gk="${esc(k)}" ${on ? 'checked' : ''} ${some ? 'data-some="1"' : ''} title="Tick all ${rs.length} in this group">`; }
 function renderTable() {
   const D = pageDef(), S0 = vs(); R.D = D; { const h = hidSet(); D.allCols = D.cols; if (h.size && !D.bands) D.cols = D.cols.filter((c, i) => i === 0 || c.code || !h.has(c.k));
     if (D.lines && D.rows.length) { const st2 = Math.max(1, Math.floor(D.rows.length / 300)), sm = []; for (let i = 0; i < D.rows.length; i += st2) sm.push(D.rows[i]); D.cols = D.cols.filter((c, i) => i === 0 || c.num || c.code || sm.some((r) => { try { return c.h(r).replace(/<[^>]+>/g, '').trim() !== ''; } catch (e) { return true; } })); } }   // Lines: no empty columns
@@ -1284,12 +1289,12 @@ function renderTable() {
       let lastF = null;
       for (const [g, rs] of groups) {
         if (D.fam) { const f = D.fam(g); if (f !== lastF) { lastF = f; const frs = rows.filter((r) => D.fam(r.g) === f), ff = S0.fold.has('F:' + f), cells = D.gCells(f, frs), span = spanOf(), lab = D.fLabel(f, frs);
-            tb.push(() => `<tr class="grp fam" data-g="F:${esc(f)}"><td colspan="${span}" dir="ltr"><span class="gl"><span class="tg">${ff ? '+' : '−'}</span>${lab}</span></td>${cols.slice(span - (D.sel ? 1 : 0)).map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`).join('')}</tr>`); }
+            tb.push(() => `<tr class="grp fam" data-g="F:${esc(f)}"><td colspan="${span}" dir="ltr"><span class="gl">${gck(D, rows, 'F:' + f)}<span class="tg">${ff ? '+' : '−'}</span>${lab}</span></td>${cols.slice(span - (D.sel ? 1 : 0)).map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`).join('')}</tr>`); }
           if (S0.fold.has('F:' + f)) continue; }
         const folded = S0.fold.has(g), gc = D.pkgColor ? D.pkgColor(g) : D.gColor ? D.gColor(g) : grpCol(g);
         if (D.gCells) { const cells = D.gCells(g, rs), span = spanOf(), lab = D.gLabel(g, rs);
-          tb.push(() => `<tr class="grp${D.fam ? ' sub' : ''}" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="gl"><span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td>${cols.slice(span - (D.sel ? 1 : 0)).map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`).join('')}</tr>`); }
-        else { const lab = D.gLabel(g, rs); tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}" dir="ltr"><span class="gl"><span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td></tr>`); }
+          tb.push(() => `<tr class="grp${D.fam ? ' sub' : ''}" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="gl">${gck(D, rows, g)}<span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td>${cols.slice(span - (D.sel ? 1 : 0)).map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`).join('')}</tr>`); }
+        else { const lab = D.gLabel(g, rs); tb.push(() => `<tr class="grp" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${nc}" dir="ltr"><span class="gl">${gck(D, rows, g)}<span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td></tr>`); }
         if (folded) continue;
         let lastB = null;
         for (const r of rs) { if (D.sub2 && r.g2 !== lastB) { const bs = rs.filter((x) => x.g2 === r.g2), t2 = fmt(bs.reduce((s, x) => s + x.e.p.slice(0, NP - 1).reduce((a, v) => a + v, 0), 0)), g2 = r.g2; tb.push(() => `<tr class="grp" style="--gc:${gc}"><td colspan="${nc}" style="padding-left:30px;border-top:1px solid #9fb3d1;font-weight:600">${esc(g2)} <span class="gm">${bs.length} items · to date ${t2}</span></td></tr>`); lastB = r.g2; }
@@ -1312,6 +1317,7 @@ function renderVirtual() {   // only the rows on screen are drawn (fast with tho
   if (!d.length) { $('tb').innerHTML = `<tr><td colspan="${nc}" style="padding:20px;color:#6b7280">Nothing matches.</td></tr>`; return; }
   let html = `<tr class="sp" style="height:${a * VROW}px"><td colspan="${nc}" style="border:0;padding:0;height:${a * VROW}px"></td></tr>`; for (let k = a; k < z; k++) html += d[k]();
   $('tb').innerHTML = html + `<tr class="sp" style="height:${(d.length - z) * VROW}px"><td colspan="${nc}" style="border:0;padding:0;height:${(d.length - z) * VROW}px"></td></tr>`;
+  $('tb').querySelectorAll('input.gck[data-some]').forEach((x) => { x.indeterminate = true; });
 }
 let vt = 0, lastTop = -1; $('wrap').addEventListener('scroll', () => { if (vt || $('wrap').scrollTop === lastTop) return; lastTop = $('wrap').scrollTop; vt = requestAnimationFrame(() => { vt = 0; renderVirtual(); }); });
 // ---- events on the table pages
@@ -1323,7 +1329,7 @@ $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it')
   if (e.target.matches('.ck')) { const k = tr.dataset.k; e.target.checked ? sel.add(k) : sel.delete(k); render(); } });
 $('tb').addEventListener('click', (e) => { const nt = e.target.closest('[data-node]'); if (nt) { e.stopPropagation(); const S1 = vs(), k = nt.dataset.node; S1.fold.has(k) ? S1.fold.delete(k) : S1.fold.add(k); render(); return; }
   const ob = e.target.closest('[data-brk]'); if (ob) { e.preventDefault(); openBreak(ob.dataset.kind, ob.dataset.brk); return; }
-  const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[o2.dataset.bi !== undefined ? +o2.dataset.bi : ST.bk].items[+o2.dataset.ii]); return; } const g = e.target.closest('tr.grp[data-g]'); if (g && !e.target.closest('td.num')) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
+  const o2 = e.target.closest('.open2'); if (o2) { e.preventDefault(); e.stopPropagation(); openDrawer(BK[o2.dataset.bi !== undefined ? +o2.dataset.bi : ST.bk].items[+o2.dataset.ii]); return; } const gc0 = e.target.closest('input.gck'); if (gc0) { e.stopPropagation(); const rs = gRows(R.rows, gc0.dataset.gk), on = gc0.checked; rs.forEach((r) => (on ? sel.add(selKey(r)) : sel.delete(selKey(r)))); render(); return; } const g = e.target.closest('tr.grp[data-g]'); if (g && !e.target.closest('td.num')) { const S0 = vs(); S0.fold.has(g.dataset.g) ? S0.fold.delete(g.dataset.g) : S0.fold.add(g.dataset.g); render(); return; }
   const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr); if (!r) return;
   if (e.target.matches('.incb')) { if (r.i !== undefined) { const cur = (OVR[L.id[r.i]] || {}).inc ?? r.it.inc, nv = cur === 'No' ? 'Yes' : 'No'; change([{ t: 'line', i: r.i, f: 'inc', v: nv === r.it.inc ? undefined : nv }], 'Line include'); } else change([{ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'inc', v: r.it.inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
   if (e.target.matches('.rst')) { change(['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i: r.i, f, v: undefined })), 'Line back to item codes'); return; }
