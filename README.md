@@ -70,6 +70,10 @@ Every table in the Tool works the same way:
 - **Tick a whole group**: the tick box on a group (or family) row ticks every item in it that passes the filters, ready for Apply to selected.
 - **Grouped tables fold**: click a group row; a zoom switch folds all at once – Families · Groups · Items (Material), Buckets · Types · Drivers (Cost drivers).
 
+### PKG summary (app) – Cost Report Grand Summary
+Reports › PKG summary: the company template, actual cost (AC) accumulated to the cut date. **Direct** rows are PKG codes (Civil STR-02/03/301 · Arch STR-04/06/07/09 · MEP MEC-22/ELC-26/INF-33); **Indirect** rows are your cost element codes (SF-…, SP-…, TR-…, SE-…, SS-…, CO-…, Sponsorship). A line whose cost element is an indirect code goes to Indirect; otherwise its PKG decides; PKG codes not in any group and lines with neither show separately, so the total always equals the counted cost (ties to CJI3).
+Drill with + / −: PKG › MNL › your cost element (named after its largest item) › items › CJI3 lines; Indirect: cost element › MNL › items. Zoom: Sections · Groups · Rows · MNL · Cost element. Double-click an amount for its items. **⚙ Edit groups**: rename, add / remove codes, new group, reorder, back to the template – kept with your codes. Exported as the "PKG summary" sheet (outline levels). BAC / EAC / EV are not in yet (AC only).
+
 ### Monthly workflow (app)
 - **Month-close checklist** on the 5 steps: Code shows the coded share, Subcontractor the POs in a package (e.g. 133/240), Adjust whether the include / exclude decisions are made, Check ✓ when every reconciliation check is OK, Reports whether everything is saved.
 - **Coding rules**: a code typed on a material group (Material › Rate analysis) or a subcontractor work item becomes a rule; new items of that group / service are coded automatically at the next build. Listed on Code › Rules (delete, "fill empty codes now"); kept with Save codes; exported as a sheet.
