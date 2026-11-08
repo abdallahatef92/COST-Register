@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cost Register</title>
+<title>Cost Register __VER__</title>
 <style>
 :root{--navy:#1F3864;--navy2:#2F5597;--gold:#BF8F00;--line:#DDE2EA;--bg:#F3F5F9;--txt:#1d2433;--mut:#6b7280;--ok:#E2EFDA;--okT:#2e6b1f;--part:#FFF2CC;--partT:#8a6500;--not:#FCE4D6;--notT:#a33a00;--sel:#DCE9F9;--code:#EEF3FB;--codeB:#C9D6EA;--miss:#FFF0E8;--missB:#F2B79A;--ovr:#F8CBAD}
 *{box-sizing:border-box}
@@ -232,12 +232,13 @@ table.fxt td{overflow:hidden;text-overflow:ellipsis} table.s.fxt td{white-space:
 
 @page { size: A3 portrait; margin: 12mm; }
 @media print { body.psprint{display:block;height:auto;background:#fff} body.psprint header.top, body.psprint #side, body.psprint #sbar, body.psprint #toast, body.psprint .psw>.sct, body.psprint .psrep>.sct:first-child, body.psprint #drawer{display:none!important} body.psprint #mainrow, body.psprint #pages{display:block} body.psprint .page{display:none!important} body.psprint #pg-psum{display:block!important} body.psprint .psrep{border:0;box-shadow:none;padding:0;max-width:none} body.psprint .pst{width:100%!important} body.psprint *{-webkit-print-color-adjust:exact;print-color-adjust:exact} }
+header.top h1 .ver{font-size:11px;font-weight:600;background:rgba(255,255,255,.18);border-radius:4px;padding:1px 6px;vertical-align:2px}
 </style>
 </head>
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div class="ttl"><h1>Cost Register</h1><div class="sub" id="hsub"></div></div>
+  <div class="ttl"><h1>Cost Register <span class="ver" title="Tool version">__VER__</span></h1><div class="sub" id="hsub"></div></div>
   <nav class="secs" id="tabs"></nav>
   <div class="sp"></div>
   <label><span class="bl">Cut </span><select id="cut"></select></label>
@@ -327,7 +328,7 @@ function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c)
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); setDirty(DIRTY + 1); logIt('Undone: ' + u.label, u.rec.length); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); setDirty(DIRTY + 1); logIt('Redone: ' + u.label, u.rec.length); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
-function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null }; }
+function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: '__VER__', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null }; }
 function setSaved(t) { $('saved').textContent = t; $('bSave').title = 'Save all codes (and line overrides) as a small file · ' + t; }
 function persist() { try { localStorage.setItem(LSK, JSON.stringify(snapshot())); setSaved('Saved in this browser ' + new Date().toLocaleTimeString()); } catch (e) { setSaved('Not saved here – use Save codes'); } }
 function applySnap(s, replaceLines) { let n = 0; BK.forEach((b) => { const m = s.codes && s.codes[b.id]; if (!m) return; b.items.forEach((it) => { const c = m[it.k]; if (!c) return; n++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((f) => { if (c[f] !== undefined && (f !== 'div' || isSub(it.bi))) it[f] = c[f]; }); }); });
@@ -1610,7 +1611,7 @@ $('bExport').onclick = async () => {
   const title = (ws, t, n) => { ws.getCell('A1').value = t; ws.getCell('A1').font = { name: A, bold: true, size: 14, color: { argb: NAVY } }; ws.getCell('A2').value = n; ws.getCell('A2').font = { name: A, size: 9, color: { argb: 'FF7F7F7F' } }; };
   const head = (ws, row, labels, gold = []) => { labels.forEach((l, i) => { const c = ws.getCell(row, i + 1); c.value = l; c.font = { name: A, bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = fill(gold.includes(l) ? GOLD : NAVY); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = box; }); ws.getRow(row).height = 30; };
   const put = (ws, row, vals, fmts = {}, o = {}) => vals.forEach((v, i) => { const c = ws.getCell(row, i + 1); c.value = v === '' ? null : v; c.border = box; c.font = { name: A, size: 10, bold: !!o.bold, color: o.color ? { argb: o.color } : undefined }; if (fmts[i]) c.numFmt = fmts[i]; if (o.fill) c.fill = fill(o.fill); });
-  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register app · values (not live)`;
+  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register Tool __VER__ · values (not live)`;
   // Summary
   const ws = wb.addWorksheet('Summary', { properties: { tabColor: { argb: NAVY } } }); title(ws, 'Project Cost Register — ' + META.project, note);
   [['Previous', R.toDate - R.thisM], ['This month · ' + R.repLab, R.thisM], ['To date', R.toDate], ['Pending', R.pend], ['Excluded', R.excl], ['Difference to CJI3', R.diff]].forEach(([l, v], i) => { const a = ws.getCell(4, i + 1), b2 = ws.getCell(5, i + 1); a.value = l; a.font = { name: A, bold: true, size: 9, color: { argb: 'FFFFFFFF' } }; a.fill = fill(i === 1 ? GOLD : i === 5 ? 'FFC00000' : NAVY); a.alignment = { horizontal: 'center', wrapText: true }; b2.value = r2(v); b2.numFmt = i === 5 ? NUM2 : NUM; b2.font = { name: A, bold: true, size: 13, color: { argb: NAVY } }; b2.alignment = { horizontal: 'center' }; b2.border = box; });

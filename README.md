@@ -105,8 +105,11 @@ The **Depreciation** tab shows the CJI3 depreciation per cost element × month (
 ### HTML app (prototype)
 `node tools/proto-app.js --cji3 … --mb52 … --zscprg01 … --zscsrv1 … [--prev last.xlsx] --out out/Cost_Register_App.html` writes the whole register as ONE offline HTML file (tabs: Summary, Coding, Per Month, Lines, Expenses, Subcontractor, Checks; cut date and VAT switch live; codes saved in the browser, Save/Import codes; Export Excel = a light formatted report of values). The exported Excel can be given back to the register build as `--prev` (Coding sheets + "Line overrides").
 
+### Version
+The Tool carries a version (v01, v02 …) from the `VERSION` file: in its file name (`out/Cost_Register_Tool_v01.html`), next to the title, in the Excel export note and in saved codes files. Each new release bumps the number.
+
 ### The tool (no Node needed each month)
-`node tools/build-app.js out/Cost_Register_Tool.html` writes ONE offline page (≈1.3 MB) with the engine inside. Open it, drop CJI3 (+ MB52, ZSCPRG01, ZSCSRV1 and last month's Excel or codes .json) and press Build – about 20–30 s in the browser; the build is kept in the browser until the next one. The same engine runs in Node (`src/prepare.js`, `src/appdata.js`), and the browser build is checked to give identical data.
+`node tools/build-app.js` writes ONE offline page, `out/Cost_Register_Tool_v01.html` (version from `VERSION`), (≈1.3 MB) with the engine inside. Open it, drop CJI3 (+ MB52, ZSCPRG01, ZSCSRV1 and last month's Excel or codes .json) and press Build – about 20–30 s in the browser; the build is kept in the browser until the next one. The same engine runs in Node (`src/prepare.js`, `src/appdata.js`), and the browser build is checked to give identical data.
 Excel loop: Export Excel → edit codes on the Coding sheets (per item) or on the Lines sheet (per line) → Import codes into the app, or give that Excel as "last report" to the next build (the app or `bin/register.js --prev`).
 
 ### Several files, any names
