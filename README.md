@@ -57,6 +57,9 @@ One header with the 5 steps of the month – **1 Code · 2 Subcontractor · 3 Ad
 
 Tables: light headers and hairline borders. Columns are fitted to what they hold (header and values); drag a header's right edge to change a width (kept in this browser), double-click it to fit again, "↔ Fit" refits the whole table, "Columns ▾" shows or hides columns (Coding hides Pending, Lines, New by default).
 
+### Summary (app) – one screen
+Six cards (to date, this month vs last, 6-month average, net revenue, revenue − cost, difference to CJI3 with coded %); **This month by bucket** (last month, this month, change with a −/+ bar, to date, share, coded %; click a bucket to code it, double-click a number for its items); **Cost per month** (every bucket in its own colour, 6-month average line); **Cost drivers** – the largest material groups, subcontractor work items, G&A lines and equipment: rate (or cost per month for G&A) this month, 6-month average, vs average, vs last month, trend, this month's cost, to date and share, with subtotals and a total (about 55% of the cost to date on SUTH); reconciliation, what needs attention, revenue. One colour per bucket everywhere in the Tool.
+
 ### Monthly workflow (app)
 - **Month-close checklist** on the 5 steps: Code shows the coded share, Subcontractor the POs in a package (e.g. 133/240), Adjust whether the include / exclude decisions are made, Check ✓ when every reconciliation check is OK, Reports whether everything is saved.
 - **Coding rules**: a code typed on a material group (Material › Rate analysis) or a subcontractor work item becomes a rule; new items of that group / service are coded automatically at the next build. Listed on Code › Rules (delete, "fill empty codes now"); kept with Save codes; exported as a sheet.
