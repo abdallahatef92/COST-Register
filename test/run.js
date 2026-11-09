@@ -107,6 +107,30 @@ const r2 = (x) => Math.round(x * 100) / 100;
   ok('Code › Rate analysis (Material) opens', await p.$eval('#pg-mr', (e) => e.classList.contains('on') && e.innerText.length > 100));
   await p.click('[data-cv="cod"]:visible'); await p.waitForTimeout(300);
 
+  head('7b. Next to code: biggest first, suggestions, keys');
+  { const { ctx: c5, p: p5 } = await open(APP); await p5.click('#tabs [data-s="cod"]'); await p5.click('#side [data-gt="cod"][data-bk="0"]'); await p5.waitForTimeout(300);
+    await p5.click('[data-nx="1"]:visible'); await p5.waitForTimeout(600);
+    const tds = await p5.evaluate(() => [...document.querySelectorAll('#tb tr.it')].slice(0, 15).map((tr) => Math.abs(__BK[0].items[+tr.dataset.k.split(':')[1]].td)));
+    ok('Next to code lists the not-coded items, biggest first', tds.length > 10 && tds.every((v, i) => !i || tds[i - 1] >= v));
+    ok('progress: how many items bring the bucket to 80%', /bring you to 80%/.test(await p5.$eval('#nxbar', (e) => e.textContent)));
+    const k0 = await p5.$eval('#tb tr.it', (tr) => tr.dataset.k), g0 = await p5.evaluate((k) => __BK[0].items[+k.split(':')[1]].vals[2], k0);
+    const a = await p5.$('#tb input[data-f="pkg"]'); await a.fill('T05'); await a.press('Enter'); await p5.waitForTimeout(500); const m5 = await p5.$('#asLater'); if (m5) await m5.click();
+    const c0 = await p5.$('#tb input[data-f="ce"]'); await c0.fill('TCE'); await c0.press('Enter'); await p5.waitForTimeout(600);
+    ok('a coded item leaves the list', await p5.$$eval('#tb tr.it', (x, k) => !x.some((tr) => tr.dataset.k === k), k0));
+    const sg = await p5.$('#tb tr.it input.sug[data-f="pkg"]'); ok('an item of the same material group gets the suggestion', !!sg && (await sg.getAttribute('data-sug')) === 'T05' && (await sg.evaluate((x, g) => x.closest('tr').textContent.includes(g), g0)));
+    const ks = await sg.evaluate((x) => x.closest('tr').dataset.k); await sg.focus(); await p5.keyboard.press('Enter'); await p5.waitForTimeout(600);
+    ok('Enter accepts the suggestion (PKG and cost element)', await p5.evaluate((k) => { const it = __BK[0].items[+k.split(':')[1]]; return it.pkg === 'T05' && it.ce === 'TCE'; }, ks));
+    const ins = await p5.$$('#tb input[data-f="pkg"]'); await ins[0].fill('T06'); await ins[0].press('Tab'); await p5.waitForTimeout(500);
+    const ins2 = await p5.$$('#tb input[data-f="pkg"]'); await ins2[1].focus(); await p5.keyboard.press('Control+d'); await p5.waitForTimeout(500);
+    ok('Ctrl+D copies the code from the row above', await p5.evaluate(() => __BK[0].items.filter((x) => x.pkg === 'T06').length === 2));
+    // Subcontractor: same PO
+    const si = await p5.evaluate(() => __BK.findIndex((b) => b.id === 'Subcontractor')); await p5.click(`#side [data-gt="cod"][data-bk="${si}"]`); await p5.waitForTimeout(600);
+    const sp = await p5.evaluate((si) => { const { L, S, N } = __D, m = new Map(); for (let i = 0; i < N; i++) if (L.b[i] === si) { const po = S[L.po[i]]; if (po && po[0] !== '(') { const s = m.get(po) || m.set(po, new Set()).get(po); s.add(L.it[i]); } } const hit = [...m].find(([, s]) => s.size > 1); return hit ? [hit[0], [...hit[1]].slice(0, 2)] : null; }, si);
+    if (sp) { await p5.evaluate(([si, ii]) => { const it = __BK[si].items[ii]; it.pkg = 'T07'; it.ce = 'TSC'; it.div = it.div || 'DIV 03'; it.mnl = it.mnl || 'SUB'; }, [si, sp[1][0]]); await p5.click('[data-nx="0"]:visible'); await p5.click('[data-nx="1"]:visible'); await p5.waitForTimeout(600);
+      ok('Subcontractor: an item on the same PO gets the suggestion', await p5.evaluate(([si, ii]) => { const tr = document.querySelector(`#tb tr.it[data-k="${si}:${ii}"]`); return !!tr && !!tr.querySelector('input.sug'); }, [si, sp[1][1]]) );
+    } else ok('Subcontractor: a PO with two items exists', false);
+    eq('difference stays 0', await p5.evaluate(() => R.diff), 0); await c5.close(); }
+
   head('8. Save codes and read them back');
   const it1 = await p.$('#tb input[data-f="pkg"]'); await it1.fill('T02'); await it1.press('Enter'); await p.waitForTimeout(400);
   const [dlS] = await Promise.all([p.waitForEvent('download'), p.click('#bSave')]); const codes = path.join(OUT, 'codes.json'); await dlS.saveAs(codes);

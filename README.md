@@ -142,3 +142,8 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 - The footer shows the save status: red **Not saved to a file · Choose file** (codes only in this browser), green **Auto-saved · SUTH_codes.json · 10:42**, amber **Click to keep auto-saving** (after reopening the Tool, the browser asks for one click).
 - The file is linked per project: when the Tool opens (e.g. next month's build) and the file holds newer codes than the browser, they are loaded from it.
 - **Later** keeps today's way (codes in this browser; Save / Export as before); the question comes back the next session. Save and Import still work, e.g. to send codes to someone.
+
+## v07 – Coding speed
+- **⚡ Next to code** (Code, every bucket): only the items still to code, biggest to-date amount first, with their rank and cumulative share; the keys strip shows how far the bucket is coded and how many items bring it to **80%** of the cost. A coded item leaves the list. **All items** is the normal view.
+- **Suggested codes** (grey, in the empty PKG / cost element boxes): taken from coded items of the same **material group** (Material) or the same **PO** – first the same service on that PO (Subcontractor). Codes kept from **last month** count too; the reason is shown ("like … – same material group M030201 · last month"). One row at a time – there is no accept-all.
+- **Keys**: **Enter** accepts the suggestion (PKG + cost element) or saves and goes down; **Tab** next box; **Ctrl+D** same as the row above; **Esc** skip.
