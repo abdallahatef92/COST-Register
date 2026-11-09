@@ -60,7 +60,7 @@ const r2 = (x) => Math.round(x * 100) / 100;
   // ---------------------------------------------------------------------------- 4. the app in a browser
   let chromium; try { ({ chromium } = require('playwright')); } catch (e) { console.error('Playwright is not installed – npm i -D playwright'); process.exit(2); }
   const browser = await chromium.launch(), errs = [];
-  const open = async (url, ctxOpt = {}) => { const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true, ...ctxOpt }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => d.dismiss()); await p.goto('file://' + url); await p.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p.waitForTimeout(1200); return { ctx, p }; };
+  const open = async (url, ctxOpt = {}) => { const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true, ...ctxOpt }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => (d.type() === 'beforeunload' ? d.accept() : d.dismiss())); await p.goto('file://' + url); await p.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p.waitForTimeout(1200); return { ctx, p }; };
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
   eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
@@ -115,6 +115,7 @@ const r2 = (x) => Math.round(x * 100) / 100;
 
   head('7b. Next to code: biggest first, suggestions, keys');
   { const { ctx: c5, p: p5 } = await open(APP); await p5.click('#tabs [data-s="cod"]'); await p5.click('#side [data-gt="cod"][data-bk="0"]'); await p5.waitForTimeout(300);
+    await p5.evaluate(() => { const th = [...document.querySelectorAll('#th th')].find((x) => /^Material/.test(x.textContent.trim())); if (th) th.click(); }); await p5.waitForTimeout(400);   // a sort set in All items must not carry over
     await p5.click('[data-nx="1"]:visible'); await p5.waitForTimeout(600);
     const tds = await p5.evaluate(() => [...document.querySelectorAll('#tb tr.it')].slice(0, 15).map((tr) => Math.abs(__BK[0].items[+tr.dataset.k.split(':')[1]].td)));
     ok('Next to code lists the not-coded items, biggest first', tds.length > 10 && tds.every((v, i) => !i || tds[i - 1] >= v));
@@ -136,6 +137,21 @@ const r2 = (x) => Math.round(x * 100) / 100;
       ok('Subcontractor: an item on the same PO gets the suggestion', await p5.evaluate(([si, ii]) => { const tr = document.querySelector(`#tb tr.it[data-k="${si}:${ii}"]`); return !!tr && !!tr.querySelector('input.sug'); }, [si, sp[1][1]]) );
     } else ok('Subcontractor: a PO with two items exists', false);
     eq('difference stays 0', await p5.evaluate(() => R.diff), 0); await c5.close(); }
+
+  head('7c. Codes in one spelling');
+  { const { ctx: c6, p: p6 } = await open(APP); await p6.click('#tabs [data-s="cod"]'); await p6.click('#side [data-gt="cod"][data-bk="0"]'); await p6.waitForTimeout(300);
+    const ks = await p6.$$eval('#tb tr.it', (x) => x.slice(0, 2).map((tr) => tr.dataset.k));
+    const i1 = (await p6.$$('#tb input[data-f="ce"]'))[0]; await i1.fill('sf-02x'); await i1.press('Tab'); await p6.waitForTimeout(400); const m6 = await p6.$('#asLater'); if (m6) await m6.click();
+    eq('a typed code is kept in capitals (sf-02x → SF-02X)', await p6.evaluate((k) => __BK[0].items[+k.split(':')[1]].ce, ks[0]), 'SF-02X');
+    const i2 = (await p6.$$('#tb input[data-f="pkg"]'))[1]; await i2.fill('indirect'); await i2.press('Tab'); await p6.waitForTimeout(400);
+    eq('a known code keeps its own spelling (indirect → Indirect)', await p6.evaluate((k) => __BK[0].items[+k.split(':')[1]].pkg, ks[1]), 'Indirect');
+    // an old lowercase code (from before) is fixed when the register opens
+    await p6.evaluate((k) => { __BK[0].items[+k.split(':')[1]].ce = 'sp-17'; }, ks[0]); const i3 = (await p6.$$('#tb input[data-f="pkg"]'))[2]; await i3.fill('T09'); await i3.press('Tab'); await p6.waitForTimeout(500);
+    await p6.reload(); await p6.waitForFunction(() => document.querySelector('#tabs button')); await p6.waitForTimeout(2500);
+    eq('an old lowercase code is in capitals after reopening (sp-17 → SP-17)', await p6.evaluate((k) => __BK[0].items[+k.split(':')[1]].ce, ks[0]), 'SP-17');
+    await p6.click('#tabs [data-s="chk"]'); await p6.click('#side [data-gt="log"]'); await p6.waitForTimeout(400);
+    ok('…and it is in the Changes log', /Codes in capitals/.test(await p6.$eval('#pages .page.on', (e) => e.innerText)));
+    eq('difference stays 0', await p6.evaluate(() => R.diff), 0); await c6.close(); }
 
   head('8. Save codes and read them back');
   const it1 = await p.$('#tb input[data-f="pkg"]'); await it1.fill('T02'); await it1.press('Enter'); await p.waitForTimeout(400);

@@ -10,7 +10,16 @@ addEventListener('beforeunload', (e) => { if (DIRTY > 0) { e.preventDefault(); e
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) { if (c.t === 'uns') return JSON.stringify(ST.uns); if (c.t === 'unsc') return JSON.stringify(ST.unsc); if (c.t === 'depx') return JSON.stringify(ST.depx); if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
 function setC(c, v) { if (c.t === 'uns') { ST.uns = JSON.parse(v); return; } if (c.t === 'unsc') { ST.unsc = JSON.parse(v); return; } if (c.t === 'depx') { ST.depx = JSON.parse(v); return; } if (c.t === 'item') { BK[c.bi].items[c.ii][c.f] = v; return; } const id = L.id[c.i]; const o = OVR[id] || (OVR[id] = {}); if (v === undefined || v === null) delete o[c.f]; else o[c.f] = v; if (!Object.keys(o).length) delete OVR[id]; }
-function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; setDirty(DIRTY + 1); logIt(label, rec.length); if (!AS.boot) setTimeout(asAsk, 400); after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
+// codes in one spelling: a known code keeps its own (Indirect, Sponsorship, SF-02 …), anything else in capitals – sf-02 → SF-02
+const CODEF = new Set(['pkg', 'mnl', 'ce', 'div']);
+let KNOWN = null; const canon = (f, v) => { if (typeof v !== 'string') return v; const t = v.trim(); if (!t) return t;
+  if (!KNOWN) { KNOWN = new Map(); [IND_PKG, ...Object.keys(PS_NAMES)].forEach((k) => KNOWN.set(k.toLowerCase(), k)); } return KNOWN.get(t.toLowerCase()) || t.toUpperCase(); };
+const canonCh = (c) => ((c.t === 'item' || c.t === 'line') && CODEF.has(c.f) && typeof c.v === 'string' ? { ...c, v: canon(c.f, c.v) } : c);
+// the same for your lists in the PKG summary (PKG names, cost element names, the codes in the groups)
+function canonCfg() { const c = ST.psg; if (!c) return; const re = (o, fn) => { if (!o) return o; const n = {}; Object.entries(o).forEach(([k, v]) => { const k2 = fn(k); n[k2] = n[k2] && n[k2].n ? n[k2] : v; }); return n; };
+  c.pkgs = re(c.pkgs, (k) => canon('pkg', k)); c.ces = re(c.ces, (k) => { const i = k.indexOf('|'); return i < 0 ? canon('ce', k) : canon('pkg', k.slice(0, i)) + '|' + canon('ce', k.slice(i + 1)); });
+  ['direct', 'indirect'].forEach((s) => (c[s] || []).forEach((g) => { g.c = [...new Set(g.c.map((x) => canon(s === 'direct' ? 'pkg' : 'ce', x)))]; })); }
+function change(list, label) { list = list.map(canonCh); const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; setDirty(DIRTY + 1); logIt(label, rec.length); if (!AS.boot) setTimeout(asAsk, 400); after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); setDirty(DIRTY + 1); logIt('Undone: ' + u.label, u.rec.length); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); setDirty(DIRTY + 1); logIt('Redone: ' + u.label, u.rec.length); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }

@@ -11,7 +11,7 @@ function slotsOf() {
       else qm.forEach((m) => out.push({ label: m.label, idx: [m.idx], kind: 'm', y, q })); } }
   out.push({ label: 'Pending', idx: [NP - 1], kind: 'pend' }); return out;
 }
-const VS = {}; const vsKey = () => ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') + [...XB].join('.') : ST.bk + (ST.tab === 'lines' ? [...XB].join('.') : '')); const vs = () => { const k = vsKey(); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
+const VS = {}; const vsKey = () => ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') + [...XB].join('.') : ST.bk + (ST.tab === 'lines' ? [...XB].join('.') : '') + (ST.tab === 'cod' && ST.next ? ':next' : '')); const vs = () => { const k = vsKey(); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
 const sel = new Set(); let lastClick = null;
 const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v ?? ''));
 const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));

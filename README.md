@@ -154,3 +154,7 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 
 ## v09 – Direct groups in the PKG summary
 - The Direct section starts with four empty groups: **Civil, Architecture, MEP, Infrastructure**. Put your PKGs in them in Reports › PKG summary › Codes & groups (rename, add or remove groups there). A register that already has its own groups keeps them.
+
+## v10 – Codes in one spelling
+- PKG, MNL, cost element and DIV are kept in **capitals** (sf-02 → SF-02); a known code keeps its own spelling (Indirect, Sponsorship). Codes typed in lowercase before are fixed once when the register opens – logged in Changes, Ctrl+Z to undo. Same for the codes in Codes & groups.
+- Next to code always opens biggest first: a column sort chosen in All items no longer carries over.
