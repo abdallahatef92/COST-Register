@@ -63,7 +63,8 @@ const r2 = (x) => Math.round(x * 100) / 100;
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
   eq('client deductions', r2(R0.cd), want('clientDeductions', r2(R0.cd)));
-  ok('footer: Saved (the automatic indirect fill is not an unsaved change)', await p.$eval('#sbar', (e) => /Saved/.test(e.textContent) && !/Unsaved/.test(e.textContent)), await p.$eval('#sbar', (e) => e.textContent.slice(0, 200)));
+  ok('footer: "Not saved to a file", no change counted (the automatic indirect fill is not a change of yours)', await p.$eval('#sbar', (e) => /Not saved to a file/.test(e.textContent) && !/change/.test(e.textContent)), await p.$eval('#sbar', (e) => e.textContent.slice(0, 300)));
+  ok('no auto-save question before any coding', !(await p.$('#asm')));
   const bkTd = await p.evaluate(() => __BK.map((b) => b.id + ':' + Math.round(b.items.reduce((s, it) => s + it.td, 0))));
   eq('to date per bucket', bkTd, want('bucketToDate', bkTd));
 
@@ -91,10 +92,12 @@ const r2 = (x) => Math.round(x * 100) / 100;
   head('7. Coding, undo, Lines');
   await p.click('#tabs [data-s="cod"]'); await p.click('#side [data-gt="cod"][data-bk="0"]'); await p.waitForTimeout(400);
   ok('Start here guide on the Code page', await p.$eval('#guide', (g) => !g.hidden));
-  const first = await p.$('#tb input[data-f="pkg"]'); await first.fill('T01'); await first.press('Enter'); await p.waitForTimeout(500);
+  const first = await p.$('#tb input[data-f="pkg"]'); await first.fill('T01'); await first.press('Enter'); await p.waitForTimeout(900);
+  ok('first coding asks: Save your codes automatically?', !!(await p.$('#asm')) && /Save your codes automatically/.test(await p.$eval('#asm', (e) => e.textContent)));
+  await p.click('#asLater'); await p.waitForTimeout(200); ok('Later closes it', !(await p.$('#asm')));
   const it0 = await p.evaluate(() => __BK[0].items.find((x) => x.pkg === 'T01') ? 1 : 0);
   ok('typing a PKG codes the item', it0 === 1);
-  ok('footer shows the unsaved change', await p.$eval('#sbar', (e) => /Unsaved/.test(e.textContent)));
+  ok('footer: not saved to a file · 1 change (on hover)', await p.$eval('#sbar .asv.red', (e) => /1 change/.test(e.title)));
   eq('difference stays 0 after coding', await p.evaluate(() => R.diff), 0);
   await p.keyboard.press('Control+z'); await p.waitForTimeout(400);
   ok('Ctrl+Z takes the code back', await p.evaluate(() => !__BK[0].items.some((x) => x.pkg === 'T01')));
@@ -113,6 +116,22 @@ const r2 = (x) => Math.round(x * 100) / 100;
   await p2.setInputFiles('#file', codes); await p2.waitForTimeout(2500);
   ok('Import brings the code back', await p2.evaluate(() => __BK[0].items.some((x) => x.pkg === 'T02')));
   eq('difference stays 0 after import', await p2.evaluate(() => R.diff), 0); await ctx2.close();
+
+  head('8b. Auto-save to a chosen file');
+  { const ctx4 = await browser.newContext({ viewport: { width: 1600, height: 900 } });
+    // a stand-in for the browser's "choose file" window, which a test cannot click
+    await ctx4.addInitScript(() => { window.__file = { name: 'SUTH_codes.json', text: '', writes: 0 };
+      window.showSaveFilePicker = async () => ({ name: window.__file.name, queryPermission: async () => 'granted', requestPermission: async () => 'granted', getFile: async () => ({ text: async () => window.__file.text }),
+        createWritable: async () => { let buf = ''; return { write: async (t) => { buf += t; }, close: async () => { window.__file.text = buf; window.__file.writes++; } }; } }); });
+    const p4 = await ctx4.newPage(); p4.on('pageerror', (e) => errs.push(e.message)); await p4.goto('file://' + APP); await p4.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p4.waitForTimeout(1200);
+    await p4.click('#tabs [data-s="cod"]'); await p4.waitForTimeout(300); const i4 = await p4.$('#tb input[data-f="pkg"]'); await i4.fill('T03'); await i4.press('Enter'); await p4.waitForTimeout(900);
+    await p4.click('#asPick'); await p4.waitForTimeout(1200);
+    ok('Choose file → the codes are written to it', await p4.evaluate(() => window.__file.writes > 0 && JSON.stringify(JSON.parse(window.__file.text).codes).includes('"T03"')));
+    ok('footer: ✓ Auto-saved · SUTH_codes.json', await p4.$eval('#sbar', (e) => /Auto-saved · SUTH_codes\.json/.test(e.textContent)), await p4.$eval('#sbar', (e) => e.textContent.slice(0, 300)));
+    const w0 = await p4.evaluate(() => window.__file.writes); const i5 = (await p4.$$('#tb input[data-f="pkg"]'))[1]; await i5.fill('T04'); await i5.press('Enter'); await p4.waitForTimeout(1500);
+    ok('the next change saves itself', await p4.evaluate((w) => window.__file.writes > w && window.__file.text.includes('"T04"'), w0));
+    ok('no second question once a file is chosen', !(await p4.$('#asm')));
+    await ctx4.close(); }
 
   head('9. Excel export');
   const [dlX] = await Promise.all([p.waitForEvent('download', { timeout: 180000 }), p.click('#bExport')]); const xl = path.join(OUT, 'export.xlsx'); await dlX.saveAs(xl);

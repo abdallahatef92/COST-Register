@@ -136,3 +136,9 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 ## v05 – Opening balance marked on the lines
 - CJI3 lines of doc type **UE** with header text "OB…" or posted on the first CJI3 day (the project's opening balance) carry a yellow **OB** tag and a light-yellow row in Code › Lines and in the item's lines drawer; the item heading on Lines shows its OB amount. Filter the Type column on "UE · OB" to see them all.
 - Allocation is unchanged: each OB line stays in its cost element's bucket (Main Material OB stays in Other direct cost until it is reallocated in SAP). SUTH: 54 lines, 39.3M.
+
+## v06 – Auto-save to a codes file
+- The first time you code an item, the Tool asks once: **Save your codes automatically?** Choose a file (e.g. `SUTH_codes.json`, next to the Tool) and every change then saves itself to it – no Save button. Chrome / Edge.
+- The footer shows the save status: red **Not saved to a file · Choose file** (codes only in this browser), green **Auto-saved · SUTH_codes.json · 10:42**, amber **Click to keep auto-saving** (after reopening the Tool, the browser asks for one click).
+- The file is linked per project: when the Tool opens (e.g. next month's build) and the file holds newer codes than the browser, they are loaded from it.
+- **Later** keeps today's way (codes in this browser; Save / Export as before); the question comes back the next session. Save and Import still work, e.g. to send codes to someone.

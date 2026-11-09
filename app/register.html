@@ -173,7 +173,7 @@ select.pksel{width:100%;height:23px;border:1px solid #F3D3A5;background:#FFF8EC;
 .sdg div.fm{font-weight:600;color:#1B2A41} .sdg div.fm span:first-child::before{content:'▸ ';color:#9ca3af} .sdg div.fm.op span:first-child::before{content:'▾ '} .sdg div.gi2{padding-left:22px}
 .rng .dot.cur{box-shadow:0 0 0 2px #1F3864} #mr .pkt .seg button{padding:4px 10px} .pkw1 .pkt>*{flex-shrink:0} .pkw1 .pkt>input#pkQ,.pkw1 .pkt>input#mrQ{flex-shrink:1;min-width:140px;width:240px}
 
-@media (max-width:1600px){ header.top button{white-space:nowrap} nav.secs button{padding:6px 6px;gap:5px} nav.secs{gap:2px} header.top .bl{display:none} header.top #bSave .bl,header.top #bExport .bl{display:inline} header.top .ttl{max-width:170px;flex-shrink:0} header.top .ttl h1{white-space:nowrap} header.top #vat{max-width:112px} header.top #cut{max-width:118px} }
+@media (max-width:1600px){ #sbar{gap:2px;padding:4px 8px} #sbar .si{padding:2px 5px} #sbar .sep{margin:0 2px} header.top button{white-space:nowrap} nav.secs button{padding:6px 6px;gap:5px} nav.secs{gap:2px} header.top .bl{display:none} header.top #bSave .bl,header.top #bExport .bl{display:inline} header.top .ttl{max-width:170px;flex-shrink:0} header.top .ttl h1{white-space:nowrap} header.top #vat{max-width:112px} header.top #cut{max-width:118px} }
 header.top button{white-space:nowrap} @media (max-width:1460px){ nav.secs button i{display:none} header.top .ttl{max-width:140px} header.top #vat{max-width:100px} } @media (max-width:1300px){ header.top #bSave .bl,header.top #bExport .bl{display:none} }
 @media (max-width:1400px){ nav.secs button{padding:5px 7px;gap:5px} header.top .ttl .sub{display:none} }
 #tools,#bkbar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin} #tools>*{flex-shrink:0} .chip.new{border-color:#F3C58A;color:#92400E;background:#FFF7EB} .chip.new.on{background:#B45309;color:#fff;border-color:#B45309}
@@ -225,6 +225,12 @@ table.fxt td{overflow:hidden;text-overflow:ellipsis} table.s.fxt td{white-space:
 th .tip{color:#2F5597;font-size:11px;margin-left:3px;cursor:help}
 .obt{display:inline-block;font:700 10.5px/15px "Segoe UI",Arial,sans-serif;color:#8A5A00;background:#FFE9A8;border:1px solid #E3C46A;border-radius:4px;padding:0 5px;margin-left:2px;cursor:help;vertical-align:1px}
 tr.obr td{background:#FFF8E1!important}
+.asv{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:1px 8px;font-weight:600;white-space:nowrap;border:1px solid;text-decoration:none;cursor:default} a.asv{cursor:pointer}
+.asv.red{background:#FDE8E8;color:#9B1C1C;border-color:#F5B5B5} .asv.ok{background:#E6F4EA;color:#1E5631;border-color:#A8D5B5} .asv.amb{background:#FFF4D6;color:#8A5A00;border-color:#E8D49A}
+.asm{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:200}
+.asm .bx{background:#fff;border-radius:12px;width:500px;max-width:calc(100vw - 32px);padding:22px 24px;box-shadow:0 20px 50px rgba(0,0,0,.3);font-size:14.5px;line-height:1.55;color:#1B2A41}
+.asm h3{margin:0 0 8px;font-size:19px;color:#1F3864} .asm .f{margin:12px 0;background:#F5F8FD;border:1px solid #C9D3E3;border-radius:8px;padding:9px 12px;font-size:13.5px}
+.asm .bt{display:flex;gap:8px;justify-content:flex-end;margin-top:16px} .asm .bt button{padding:7px 16px;font-weight:600}
 .pst{table-layout:fixed} .pst td:first-child{white-space:nowrap} .psetup td{height:30px} .psetup tr.grp .psgn{background:transparent;border:1px solid transparent;border-radius:5px;padding:2px 6px;font-weight:700;color:#1F3864;width:100%} .psetup tr.grp .psgn:hover,.psetup tr.grp .psgn:focus{border-color:#C9D3E3;background:#fff} .psetup tr.unused td{color:#9CA3AF} .psetup tr.loose td{background:#FFF8EC} .psetup .psgs{width:100%} .pst td{height:24px;overflow:hidden;text-overflow:ellipsis} .pst td:nth-child(2){text-align:left} .pst th:nth-child(2){text-align:left} .pst tr.sec td{background:#1F3864;color:#fff;font-weight:700;height:27px} .pst tr.sec .tg{color:#fff} .pst tr.grp td{background:#E4EAF3;font-weight:700;color:#1F3864} .pst tr.grp.warn td{background:#FFF8EC;color:#8A6D1F} .pst tr.grp.na td{background:#FCE4D6;color:#9B2C2C}
 .pst tr.l2 td{background:#F7F9FC;color:#374151} .pst tr.l3 td{background:#FBFCFD;color:#4B5563;font-size:12.5px} .pst tr.l4 td{font-size:12px;color:#6B7280} .pst tr.zero td{color:#B0B6C0} .pst td:nth-child(n+3){text-align:right} .pst tr.t td{background:#1B2A41;color:#fff}
 .pst .tg{display:inline-block;width:16px;color:#1F3864;font-weight:700;cursor:pointer} .pst .pi1{padding-left:20px} .pst .pi2{padding-left:38px} .pst .pi3{padding-left:56px} .pst .pi4{padding-left:74px} .pst .code{font-weight:600;color:#2F5597}
@@ -335,13 +341,40 @@ addEventListener('beforeunload', (e) => { if (DIRTY > 0) { e.preventDefault(); e
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) { if (c.t === 'uns') return JSON.stringify(ST.uns); if (c.t === 'unsc') return JSON.stringify(ST.unsc); if (c.t === 'depx') return JSON.stringify(ST.depx); if (c.t === 'item') return BK[c.bi].items[c.ii][c.f]; const o = OVR[L.id[c.i]]; return o ? o[c.f] : undefined; }
 function setC(c, v) { if (c.t === 'uns') { ST.uns = JSON.parse(v); return; } if (c.t === 'unsc') { ST.unsc = JSON.parse(v); return; } if (c.t === 'depx') { ST.depx = JSON.parse(v); return; } if (c.t === 'item') { BK[c.bi].items[c.ii][c.f] = v; return; } const id = L.id[c.i]; const o = OVR[id] || (OVR[id] = {}); if (v === undefined || v === null) delete o[c.f]; else o[c.f] = v; if (!Object.keys(o).length) delete OVR[id]; }
-function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; setDirty(DIRTY + 1); logIt(label, rec.length); after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
+function change(list, label) { const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v); if (!rec.length) return; rec.forEach((c) => setC(c, c.v)); undo.push({ rec, label }); redo = []; setDirty(DIRTY + 1); logIt(label, rec.length); if (!AS.boot) setTimeout(asAsk, 400); after(label + ' · ' + rec.length + ' change' + (rec.length > 1 ? 's' : '')); }
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); setDirty(DIRTY + 1); logIt('Undone: ' + u.label, u.rec.length); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); setDirty(DIRTY + 1); logIt('Redone: ' + u.label, u.rec.length); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
 function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: '__VER__', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null, indOff: ST.indOff }; }
 function setSaved(t) { $('saved').textContent = t; $('bSave').title = 'Save all codes (and line overrides) as a small file · ' + t; }
-function persist() { try { localStorage.setItem(LSK, JSON.stringify(snapshot())); setSaved('Saved in this browser ' + new Date().toLocaleTimeString()); } catch (e) { setSaved('Not saved here – use Save codes'); } }
+function persist() { asSoon(); try { localStorage.setItem(LSK, JSON.stringify(snapshot())); setSaved('Saved in this browser ' + new Date().toLocaleTimeString()); } catch (e) { setSaved('Not saved here – use Save codes'); } }
+// =====================================================================================  Auto-save: the codes go to a file the user chose once (Chrome / Edge); the file is linked per project, so next month's build finds it
+const AS = { h: null, st: 'none', at: '', asked: false, ready: false, t: 0, ok: typeof window.showSaveFilePicker === 'function' };   // st: none | ok | perm | err
+const asKey = () => 'codesFile:' + META.project, asName = () => (AS.h && AS.h.name) || META.project + '_codes.json';
+async function asWrite() { if (!AS.h || AS.st !== 'ok') return; try { const w = await AS.h.createWritable(); await w.write(JSON.stringify(snapshot())); await w.close(); AS.at = new Date().toTimeString().slice(0, 5); setDirty(0); }
+  catch (e) { AS.st = 'perm'; } renderStatus(); navBadges(); }
+const asSoon = () => { if (!AS.h || AS.st !== 'ok') return; clearTimeout(AS.t); AS.t = setTimeout(asWrite, 800); };
+async function asPick() {   // choose the file (needs a click)
+  if (!AS.ok) { $('bSave').click(); return; }
+  try { AS.h = await window.showSaveFilePicker({ suggestedName: META.project + '_codes.json', types: [{ description: 'Codes file', accept: { 'application/json': ['.json'] } }] }); }
+  catch (e) { return; }   // cancelled
+  AS.st = 'ok'; try { await idbSet(asKey(), AS.h); } catch (e) { /* kept for this session only */ } await asWrite(); toast('Auto-save on: every change goes to ' + asName());
+}
+async function asAllow() { if (!AS.h) return asPick(); try { const p = await AS.h.requestPermission({ mode: 'readwrite' }); if (p === 'granted') { AS.st = 'ok'; await asWrite(); } } catch (e) { AS.st = 'err'; } renderStatus(); }
+// the Tool opens: find the linked file; when it holds newer codes than this browser (e.g. next month's build), load them
+async function asStart() { let h = null; try { h = await idbGet(asKey()); } catch (e) { /* none */ } AS.ready = true; if (!h || !h.queryPermission) { renderStatus(); return; }
+  AS.h = h; let p = 'prompt'; try { p = await h.queryPermission({ mode: 'readwrite' }); } catch (e) { /* ask */ } AS.st = p === 'granted' ? 'ok' : 'perm';
+  if (AS.st === 'ok') { try { const f = JSON.parse(await (await h.getFile()).text()); let loc = null; try { loc = JSON.parse(localStorage.getItem(LSK) || 'null'); } catch (e) { /* none */ }
+      if (f && f.codes && (!f.project || f.project === META.project) && (!loc || (f.at || '') > (loc.at || ''))) { const n = applySnap(f, true); undo = []; redo = []; persist(); compute(); render(); toast('Codes of ' + n + ' items loaded from ' + asName()); } }
+    catch (e) { /* an empty / new file */ } }
+  renderStatus(); }
+// the first coding of a session, with no file linked yet: ask once
+function asAsk() { if (!AS.ready || AS.h || AS.asked || !AS.ok) return; AS.asked = true; const m = document.createElement('div'); m.className = 'asm'; m.id = 'asm';
+  m.innerHTML = `<div class="bx"><h3>Save your codes automatically?</h3>Choose a file <b>once</b>. The Tool then saves every change to it by itself – no Save button.
+    <div class="f">📄 Name: <b>${esc(META.project)}_codes.json</b> &nbsp;·&nbsp; keep it next to the Tool (OneDrive or the project share).<br><span style="color:#4B5563">Next month the Tool reads your codes from this file.</span></div>
+    <span style="color:#6B7280;font-size:13px">If you choose <b>Later</b>, your codes stay only in this browser.</span>
+    <div class="bt"><button id="asLater">Later</button><button class="pri" id="asPick">Choose file…</button></div></div>`;
+  document.body.appendChild(m); $('asLater').onclick = () => m.remove(); $('asPick').onclick = () => { m.remove(); asPick(); }; }
 function applySnap(s, replaceLines) { let n = 0; BK.forEach((b) => { const m = s.codes && s.codes[b.id]; if (!m) return; b.items.forEach((it) => { const c = m[it.k]; if (!c) return; n++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((f) => { if (c[f] !== undefined && (f !== 'div' || isSub(it.bi))) it[f] = c[f]; }); }); });
   if (s.lines && replaceLines) { for (const k of Object.keys(OVR)) delete OVR[k]; Object.assign(OVR, s.lines); } if (Array.isArray(s.rules)) ST.rules = s.rules.map((r) => ({ ...r })); if (s.uns && s.uns.mode) ST.uns = { mode: s.uns.mode, pick: (s.uns.pick || []).map(String) }; if (s.unsc && s.unsc.mode) ST.unsc = { mode: s.unsc.mode, pick: (s.unsc.pick || []).map(String) }; if (Array.isArray(s.pk)) ST.pk = s.pk.map((x) => ({ c: String(x.c), n: x.n || '' })); if (s.depx && s.depx.mode) ST.depx = { mode: s.depx.mode, pick: (s.depx.pick || []).map(String) }; if (s.crules && typeof s.crules === 'object') ST.crules = { ...ST.crules, ...s.crules }; if (Array.isArray(s.log) && s.log.length >= ST.log.length) ST.log = s.log.slice(-3000); if (s.psg && Array.isArray(s.psg.direct)) ST.psg = s.psg; if (s.indOff !== undefined) ST.indOff = !!s.indOff; return n; }
 function restore() { try { const s = JSON.parse(localStorage.getItem(LSK) || 'null'); if (!s) return; applySnap(s, true); if (s.cut && META.cuts.includes(s.cut) && (typeof CUTS === 'undefined' || CUTS.includes(s.cut))) ST.cut = s.cut; if (s.vat) { ST.vat = s.vat; ST.vatFrom = s.vatFrom || ''; } setSaved('Restored ' + new Date(s.at).toLocaleString()); } catch (e) {} }
@@ -406,7 +439,7 @@ function navBadges() {
   if (SUBI >= 0) { const pos = new Map(); for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI) continue; const po = S[L.po[i]]; if (!po || po[0] === '(') continue; if (efPkg(i)) pos.set(po, true); else if (!pos.has(po)) pos.set(po, false); } const a = [...pos.values()].filter(Boolean).length; B.sub = [a + '/' + pos.size, a === pos.size && a ? 'ok' : a ? 'mid' : '', 'POs in a package']; }
   if (SECS.some((x) => x[0] === 'adj')) { const d = [ST.uns.mode, ST.unsc.mode, ST.depx.mode].some((m) => m && m !== 'none'); B.adj = [d ? '✓' : 'open', d ? 'ok' : '', d ? 'Decisions made (include / exclude)' : 'Not yet decided: unsettled orders, certificates not in CJI3, depreciation']; }
   const ok = Math.abs(R.diff) < 0.01 && !META.dupes && !META.unclassified; B.chk = [ok ? '✓' : '!', ok ? 'ok' : 'bad', ok ? 'Every reconciliation check is OK' : 'A check needs a look'];
-  B.rep = [DIRTY > 0 ? 'save' : '✓', DIRTY > 0 ? 'mid' : 'ok', DIRTY > 0 ? 'Unsaved changes – Save codes or Export Excel' : 'Everything saved'];
+  B.rep = [DIRTY > 0 ? '●' : '✓', DIRTY > 0 ? 'mid' : 'ok', DIRTY > 0 ? 'Unsaved changes – Save codes or Export Excel' : 'Everything saved'];
   document.querySelectorAll('#tabs button').forEach((b) => { const x = B[b.dataset.s]; let g = b.querySelector('.nb'); if (!x) { if (g) g.remove(); return; } if (!g) { g = document.createElement('span'); g.className = 'nb'; b.appendChild(g); } g.textContent = x[0]; g.className = 'nb ' + x[1]; b.title = x[2]; });
 }
 let SIDEC = innerWidth < 1500; try { const v = localStorage.getItem('cr-side'); if (v !== null) SIDEC = v === '1'; } catch (e) { /* none */ }
@@ -464,8 +497,11 @@ function renderStatus() {
     ...(R.unsMk && R.unsMk.c.size ? [it('Certificates in', fmt(uc), z(uc) || 'inc', 'uns:c', 'Certificates not in CJI3, included by you')] : []),
     ...(DEPI >= 0 ? [it('Depreciation out', fmt(R.depExc), z(R.depExc) || 'exc', 'dep', 'CJI3 depreciation excluded by you')] : []),
     ...(Math.abs(R.cdAll) >= 0.5 ? [it('Client deductions', fmt(R.cdAll), 'exc', 'chk', 'Client deductions in CJI3 booked with revenue – in the CJI3 total, not counted as cost')] : []), sep,
-    ...(DIRTY > 0 ? [it('Unsaved', DIRTY.toLocaleString('en-US') + ' change' + (DIRTY > 1 ? 's' : '') + ' – save', 'bad', 'save', 'Changes kept only in this browser – click to save them to a file (Save codes)'), sep] : [it('Saved', '✓', 'ok', '', 'Every change is in a saved file')]), it('Coded', (tdA ? Math.round(100 * tdF / tdA) : 0) + '%', '', 'cod', 'Share of counted to-date cost on fully coded items'), it('Hand-coded lines', hand.toLocaleString('en-US'), z(hand), 'lines')].join('');
+    AS.h && AS.st === 'ok' ? `<span class="asv ok" title="Every change is saved to this file by itself">✓ Auto-saved · ${esc(asName())}${AS.at ? ' · ' + AS.at : ''}</span>`
+      : AS.h ? `<a class="asv amb" data-asgo="allow" title="The browser asks again after the Tool is reopened – one click">⟳ Click to keep auto-saving</a>`
+      : `<a class="asv red" data-asgo="pick" title="${(DIRTY > 0 ? DIRTY.toLocaleString('en-US') + ' change' + (DIRTY > 1 ? 's' : '') + ' not in a file yet. ' : '') + (AS.ok ? 'Your codes are only in this browser – choose a file once and every change saves itself' : 'This browser cannot auto-save: use Save to keep your codes in a file')}">⚠ Not saved to a file · <u>${AS.ok ? 'Choose file' : 'Save'}</u></a>`, sep, it('Coded', (tdA ? Math.round(100 * tdF / tdA) : 0) + '%', '', 'cod', 'Share of counted to-date cost on fully coded items'), it('Hand-coded lines', hand.toLocaleString('en-US'), z(hand), 'lines')].join('');
 }
+document.addEventListener('click', (e) => { const g = e.target.closest('#sbar [data-asgo]'); if (g) { if (g.dataset.asgo === 'pick') asPick(); else asAllow(); } });
 document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; if (a.dataset.sgo === 'save') { $('bSave').click(); return; } const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
 let GUIDE_OFF = false; try { GUIDE_OFF = localStorage.getItem('crt:guideOff') === '1'; } catch (e) { /* per-viewer only */ }
 function renderGuide() { const g = $('guide'), on = ST.tab === 'cod' && !GUIDE_OFF; g.hidden = !on; $('bHelp').classList.toggle('on', ST.tab === 'cod' && !GUIDE_OFF); if (!on) return; const sub = isSub(ST.bk);
@@ -1648,7 +1684,7 @@ $('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value 
 const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); };
 const stamp = () => new Date().toISOString().slice(0, 10);
 try { localStorage.removeItem('cr-focus'); } catch (e) {}
-$('bSave').onclick = () => { dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`); setDirty(0); renderStatus(); toast('Codes saved to a file – keep it with this month\'s files'); };
+$('bSave').onclick = () => { if (AS.h && AS.st === 'ok') asWrite(); dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`); setDirty(0); renderStatus(); toast('Codes saved to a file – keep it with this month\'s files'); };
 // ---- light Excel report (values, formatted)
 $('bExport').onclick = async () => {
   toast('Building the Excel report…'); await new Promise((r) => setTimeout(r, 30));
@@ -1764,14 +1800,15 @@ $('bExport').onclick = async () => {
 $('hsub').textContent = `${META.project} · CJI3 ${META.cji3} · ${N.toLocaleString('en-US')} lines · built ${META.built}`;
 restore(); ST.tab = 'sum'; const NRULE = applyCRules(true); if (NRULE) { setDirty(DIRTY + 1); persist(); setTimeout(() => toast(NRULE + ' new item' + (NRULE > 1 ? 's' : '') + ' coded by your coding rules'), 600); } $('cut').value = ST.cut; $('vat').value = ST.vat; $('vatFrom').value = ST.vatFrom; $('vatFrom').style.display = ST.vat === 'Include VAT before date' ? '' : 'none';
 compute(); render();
-{ const ch = indPresetChanges(); if (ch.length) { const d0 = DIRTY; change(ch, 'Indirect presets (SAP GL → indirect code)'); setDirty(d0); persist(); render(); setTimeout(() => toast(ch.filter((c) => c.f === 'ce').length + ' indirect items (G&A, equipment, fleet, house rent…) got their code automatically from their SAP GL – see Code › Rules · Ctrl+Z to undo'), 900); } }
+{ const ch = indPresetChanges(); if (ch.length) { const d0 = DIRTY; AS.boot = true; change(ch, 'Indirect presets (SAP GL → indirect code)'); AS.boot = false; setDirty(d0); persist(); render(); setTimeout(() => toast(ch.filter((c) => c.f === 'ce').length + ' indirect items (G&A, equipment, fleet, house rent…) got their code automatically from their SAP GL – see Code › Rules · Ctrl+Z to undo'), 900); } }
+asStart();
 $('bNew').onclick = () => showStart(true);
 $('bHelp').onclick = () => { GUIDE_OFF = !GUIDE_OFF; try { localStorage.setItem('crt:guideOff', GUIDE_OFF ? '1' : '0'); } catch (e) { /* none */ } if (!GUIDE_OFF && ST.tab !== 'cod') { ST.tab = 'cod'; render(); } else renderGuide(); };
 }
 
 // =====================================================================================  start: embedded data, the last build saved in this browser, or build from SAP files
 const idb = (mode, fn) => new Promise((res, rej) => { const rq = indexedDB.open('cost-register', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onerror = () => rej(rq.error);
-  rq.onsuccess = () => { const tx = rq.result.transaction('kv', mode), st = tx.objectStore('kv'), r = fn(st); tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }; });
+  rq.onsuccess = () => { let tx, r; try { tx = rq.result.transaction('kv', mode); r = fn(tx.objectStore('kv')); } catch (e) { rej(e); return; } tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }; });
 const idbGet = (k) => idb('readonly', (st) => st.get(k)), idbSet = (k, v) => idb('readwrite', (st) => st.put(v, k));
 // files are recognised by their content (column headers), not by their names; several CJI3 / ZSCPRG01 / ZSCSRV1 / MB52 files are merged
 const KIND_ORDER = ['cji3', 'zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n', 'prev', 'ignore'], picked = [];
