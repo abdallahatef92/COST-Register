@@ -1,12 +1,18 @@
 #!/usr/bin/env node
 'use strict';
-// Release checks for the Cost Register Tool – run before every release:  npm test   (add --quick to skip the start-page build, --update to rewrite test/expected.json)
-// Data: test/data = a MASKED copy of the SUTH SAP files (tools/mask-sap.js): names and texts replaced, every number kept.
+// Release checks for the Cost Register Tool – run before every release:  npm test   (runs both projects)
+//   node test/run.js [--set suth|sbay] [--quick: skip the start-page build] [--update: rewrite that set's expected figures]
+// Data: test/data (SUTH) and test/data-sbay (SBAY) = MASKED copies of the SAP files (tools/mask-sap.js): names and texts replaced, every number kept.
 // Needs Playwright with Chromium (npm i -D playwright && npx playwright install chromium, if it is not on the machine).
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
-const ROOT = path.join(__dirname, '..'), DATA = path.join(__dirname, 'data'), OUT = path.join(ROOT, 'out', 'test'), EXP = path.join(__dirname, 'expected.json');
-const args = process.argv.slice(2), UPDATE = args.includes('--update'), QUICK = args.includes('--quick');
-const F = { cji3: 'cji3.xlsx', zscprg01: 'zscprg01.xlsx', zscsrv1: 'zscsrv1.xlsx', zintc1: ['zintc1-2025.xlsx', 'zintc1-2026.xlsx'], mb52: 'mb52-other-project.xlsx' };
+const args = process.argv.slice(2), UPDATE = args.includes('--update'), QUICK = args.includes('--quick'), SET = (args[args.indexOf('--set') + 1] && args.includes('--set') ? args[args.indexOf('--set') + 1] : 'suth').toLowerCase();
+const SETS = {
+  suth: { dir: 'data', exp: 'expected.json', other: 'SBAY', F: { cji3: 'cji3.xlsx', zscprg01: 'zscprg01.xlsx', zscsrv1: 'zscsrv1.xlsx', zintc1: ['zintc1-2025.xlsx', 'zintc1-2026.xlsx'], mb52: 'mb52-other-project.xlsx' } },   // its MB52 is another project on purpose
+  sbay: { dir: 'data-sbay', exp: 'expected-sbay.json', other: '', F: { cji3: 'cji3.xlsx', zscprg01: 'zscprg01.xlsx', zscsrv1: 'zscsrv1.xlsx', zintc1: ['zintc1.xlsx'], mb52: 'mb52.xlsx' } },
+};
+if (!SETS[SET]) { console.error('Unknown set ' + SET + ' – use ' + Object.keys(SETS).join(' / ')); process.exit(2); }
+const ROOT = path.join(__dirname, '..'), DATA = path.join(__dirname, SETS[SET].dir), OUT = path.join(ROOT, 'out', 'test', SET), EXP = path.join(__dirname, SETS[SET].exp), F = SETS[SET].F;
+console.log('Data set: ' + SET.toUpperCase());
 const files = () => Object.values(F).flat().map((f) => path.join(DATA, f));
 
 // ---------------------------------------------------------------------------------------------- tiny test kit
@@ -48,7 +54,7 @@ const r2 = (x) => Math.round(x * 100) / 100;
   const VER = fs.readFileSync(path.join(ROOT, 'VERSION'), 'utf8').trim(), TOOL = path.join(ROOT, 'out', `Cost_Register_Tool_v${VER}.html`), APP = path.join(OUT, 'test_app.html');
   ok('Tool built: ' + path.basename(TOOL), fs.existsSync(TOOL));
   ok('Tool has its version, no placeholder', fs.readFileSync(TOOL, 'utf8').includes('v' + VER) && !fs.readFileSync(TOOL, 'utf8').includes('__VER__'));
-  execFileSync('node', ['tools/proto-app.js', '--cji3', o.cji3, '--zscprg01', o.zscprg01, '--zscsrv1', o.zscsrv1, '--zintc1', o.zintc1[0], '--zintc1', o.zintc1[1], '--mb52', o.mb52, '--out', APP], { cwd: ROOT, stdio: 'pipe' });
+  execFileSync('node', ['tools/proto-app.js', '--cji3', o.cji3, '--zscprg01', o.zscprg01, '--zscsrv1', o.zscsrv1, ...o.zintc1.flatMap((z) => ['--zintc1', z]), '--mb52', o.mb52, '--out', APP], { cwd: ROOT, stdio: 'pipe' });
   ok('test app built', fs.existsSync(APP));
 
   // ---------------------------------------------------------------------------- 4. the app in a browser
@@ -170,7 +176,8 @@ const r2 = (x) => Math.round(x * 100) / 100;
     const ctx3 = await browser.newContext({ viewport: { width: 1600, height: 900 } }), p3 = await ctx3.newPage(); p3.on('pageerror', (e) => errs.push(e.message)); p3.on('dialog', (d) => d.dismiss());
     await p3.goto('file://' + TOOL); await p3.waitForSelector('#pick', { state: 'attached' });
     await p3.setInputFiles('#pick', files()); await p3.waitForFunction(() => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''), null, { timeout: 120000 });
-    ok('warns that the MB52 is another project', await p3.$eval('.stchk', (e) => /is project SBAY/.test(e.textContent)));
+    if (SETS[SET].other) ok('warns that the MB52 is another project', await p3.$eval('.stchk', (e, o) => new RegExp('is project ' + o).test(e.textContent), SETS[SET].other));
+    else ok('no wrong-project warning (every file is this project)', await p3.$eval('.stchk', (e) => !/is project/.test(e.textContent)));
     await p3.click('#sBuild'); await p3.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 180000 }); await p3.waitForTimeout(1500);
     eq('built from the start page: difference 0', await p3.evaluate(() => R.diff), 0);
     eq('same to date as the test app', r2(await p3.evaluate(() => R.toDate)), r2(R0.toDate));
@@ -179,7 +186,7 @@ const r2 = (x) => Math.round(x * 100) / 100;
   await browser.close();
   head('Page errors'); ok('no JavaScript errors on any page', errs.length === 0, [...new Set(errs)].slice(0, 5).join(' | '));
 
-  if (UPDATE) { fs.writeFileSync(EXP, JSON.stringify(got, null, 1) + '\n'); console.log('\nexpected.json updated'); }
+  if (UPDATE) { fs.writeFileSync(EXP, JSON.stringify(got, null, 1) + '\n'); console.log('\n' + path.basename(EXP) + ' updated'); }
   const bad = results.filter((r) => !r.pass);
   console.log(`\n${results.length - bad.length} passed · ${bad.length} failed · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   if (bad.length) { console.log('FAILED:'); bad.forEach((r) => console.log(`  ${r.section} › ${r.name}: ${r.detail}`)); process.exit(1); }

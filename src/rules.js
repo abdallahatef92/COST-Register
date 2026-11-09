@@ -10,7 +10,7 @@ const GA = {
   'CAR insurance': ['Insurance Charges'],
   'Taxes and government fees': ['Stamp Taxes', 'Governmental Charges'],
   'Site running costs': ['Meals Night Staff', 'Miscel. allowances', 'Buffet & hosp allow', 'Buffet & Cleaning', 'Consultant fees', 'Consultant Fees', 'Tech Consul & Insp', 'Utilities Wat & Elec',
-    'Location service', 'Location treatment', 'Donations', 'Stationary &supplies', 'Others', 'Other Expenses', 'Miscel consultancy', 'Miscel. consultancy', 'Utilities', 'Advertising'],
+    'Location service', 'Location treatment', 'Donations', 'Stationary &supplies', 'Others', 'Other Expenses', 'Miscel consultancy', 'Miscel. consultancy', 'Cash consultancy', 'Security expenses', 'Utilities', 'Advertising'],
 };
 
 function classifyOne(l) {
@@ -30,7 +30,7 @@ function classifyOne(l) {
   if (['Fuel', 'Diesel', 'Oil and Lubricant', 'Other Equip Exp.', 'Maintenace & repairs', 'Insurance For Equip', 'Spare Parts'].includes(cen)) return cen === 'Spare Parts' ? ['Other direct cost', ''] : ['Equipment / fuel', ''];
   if (cen === 'Transp & Car Allow' || cen === 'Transp.of Material') return ['Fleet / transportation', ''];
   if (['Main Material', 'Consumables Material', 'Material Damages'].includes(cen)) return ['Other direct cost', ''];
-  if (cen === 'Outside Hire manp.' || (wbs === 'I-SUTH.IN-02-1' && ['Salaries', 'Wages', 'Bonus'].includes(cen))) return ['G&A', 'Other labour / payroll'];
+  if (cen === 'Outside Hire manp.' || (/^[A-Z]-[A-Z0-9]+\.IN-02-1$/.test(wbs) && ['Salaries', 'Wages', 'Bonus'].includes(cen))) return ['G&A', 'Other labour / payroll'];
   for (const [sub, list] of Object.entries(GA)) if (list.includes(cen) || (sub === 'Finance charges' && cen.startsWith('Debit inter'))) return ['G&A', sub];
   return ['Unclassified', ''];
 }
@@ -72,7 +72,7 @@ const RULES = [
   ['12', 'Fuel, diesel, oil, other equipment expenses, maintenance, equipment insurance', 'Equipment / fuel', 'Not posted through a goods issue.'],
   ['13', 'Transport', 'Fleet / transportation', ''],
   ['14', 'Main Material, Consumables, Material Damages, Spare Parts without a material number', 'Other direct cost', ''],
-  ['15', 'Outside Hire manpower, salary-type lines on WBS I-SUTH.IN-02-1', 'G&A · Other labour / payroll', ''],
+  ['15', 'Outside Hire manpower, salary-type lines on the project WBS …IN-02-1 (e.g. I-SUTH.IN-02-1)', 'G&A · Other labour / payroll', ''],
   ['16', 'Remaining cost elements by name', 'G&A · Staff payroll / Social insurance / Finance charges / CAR insurance / Taxes / Site running', 'See the list on the Rules sheet.'],
   ['17', 'Document type ZY (accrual reversal)', 'Same bucket as the equal-and-opposite line (same cost element, same month)', 'Pairs net to zero.'],
   ['18', 'Anything else', 'Unclassified', 'Shows on Checks – add a rule.'],

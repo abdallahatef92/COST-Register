@@ -15,7 +15,7 @@ const hasLetters = (s) => /[A-Za-z؀-ۿ]/.test(s);
 // word for word, keeping spaces and letter case – two texts that differ stay different (items are grouped by text)
 const kase = (m, t) => (m === m.toUpperCase() ? t.toUpperCase() : m === m.toLowerCase() ? t.toLowerCase() : t);
 const NAMES = [[/south/gi, (m) => kase(m, 'Demo')], [/soma/gi, (m) => kase(m, 'Demo')], [/shorouk/gi, (m) => kase(m, 'Demo')], [/\(Shrk\)/g, '(Demo)'],
-  [/ساوث/g, 'ديمو'], [/ثاوث/g, 'ديموث'], [/الشروق/g, 'الديمو']];
+  [/ساوث/g, 'ديمو'], [/ثاوث/g, 'ديموث'], [/الشروق/g, 'الديمو'], [/سوما/g, 'ديموس']];
 const scrub = (s) => NAMES.reduce((x, [re, to]) => x.replace(re, to), s);
 
 // column header → how to mask it (headers as SAP writes them)

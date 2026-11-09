@@ -8,8 +8,8 @@
   },
   "scripts": {
     "build": "node bin/register.js",
-    "test": "node test/run.js",
-    "test:quick": "node test/run.js --quick",
+    "test": "node test/run.js --set suth && node test/run.js --set sbay",
+    "test:quick": "node test/run.js --set suth --quick && node test/run.js --set sbay --quick",
     "build:tool": "node tools/build-app.js"
   },
   "dependencies": {

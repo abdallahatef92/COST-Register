@@ -1,0 +1,72 @@
+{
+ "sniff:cji3.xlsx": {
+  "kind": "cji3",
+  "proj": "SBAY"
+ },
+ "sniff:zscprg01.xlsx": {
+  "kind": "zscprg01",
+  "proj": "SBAY"
+ },
+ "sniff:zscsrv1.xlsx": {
+  "kind": "zscsrv1",
+  "proj": "SBAY"
+ },
+ "sniff:zintc1.xlsx": {
+  "kind": "zintc1",
+  "proj": "SBAY"
+ },
+ "sniff:mb52.xlsx": {
+  "kind": "mb52",
+  "proj": "SBAY"
+ },
+ "project": "SBAY",
+ "cost": 143636944.95,
+ "lines": 8086,
+ "lineSum": 153150535.96,
+ "items": 703,
+ "bucketItems": [
+  "Material:552",
+  "Subcontractor:97",
+  "Subcontractor deductions:1",
+  "Labor:1",
+  "Equipment / fuel:11",
+  "Fleet / transportation:20",
+  "House rent:2",
+  "G&A:19"
+ ],
+ "toDate": 143336451.62,
+ "clientDeductions": 300493.33,
+ "bucketToDate": [
+  "Material:60054046",
+  "Subcontractor:63488972",
+  "Subcontractor deductions:-2614413",
+  "Labor:1707075",
+  "Equipment / fuel:507861",
+  "Fleet / transportation:3711832",
+  "House rent:140652",
+  "G&A:16340426"
+ ],
+ "presetItems": 51,
+ "presetCodes": {
+  "Equipment / fuel SE-11": 1,
+  "Equipment / fuel SE-18": 9,
+  "Equipment / fuel SE-17": 1,
+  "Fleet / transportation TR-01": 19,
+  "Fleet / transportation TR-02": 1,
+  "House rent SP-02": 2,
+  "G&A SF-01": 2,
+  "G&A Sponsorship": 2,
+  "G&A SP-17": 3,
+  "G&A SP-28": 3,
+  "G&A SS-01": 3,
+  "G&A CO-01": 1,
+  "G&A SP-18": 1,
+  "G&A SF-03": 1,
+  "G&A SF-02": 1,
+  "G&A SP-19": 1
+ },
+ "openingBalance": [
+  0,
+  0
+ ]
+}

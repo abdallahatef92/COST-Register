@@ -147,3 +147,7 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 - **⚡ Next to code** (Code, every bucket): only the items still to code, biggest to-date amount first, with their rank and cumulative share; the keys strip shows how far the bucket is coded and how many items bring it to **80%** of the cost. A coded item leaves the list. **All items** is the normal view.
 - **Suggested codes** (grey, in the empty PKG / cost element boxes): taken from coded items of the same **material group** (Material) or the same **PO** – first the same service on that PO (Subcontractor). Codes kept from **last month** count too; the reason is shown ("like … – same material group M030201 · last month"). One row at a time – there is no accept-all.
 - **Keys**: **Enter** accepts the suggestion (PKG + cost element) or saves and goes down; **Tab** next box; **Ctrl+D** same as the row above; **Esc** skip.
+
+## v08 – Second project (SBAY)
+- Rules: **Cash consultancy** and **Security expenses** (cost elements first seen on SBAY) are G&A › Site running costs; the "Other labour / payroll" rule now matches any project's WBS …IN-02-1, not only SUTH.
+- Tests: `npm test` runs both projects – SUTH (91 checks) and SBAY (87 checks, masked copy in test/data-sbay).
