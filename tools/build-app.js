@@ -4,10 +4,17 @@
 // usage: node tools/build-app.js [out file]   – version from the VERSION file (v01, v02 …), shown in the Tool and in its file name
 const fs = require('fs'), path = require('path');
 const esbuild = require('esbuild');
+// the page = app/register.html (skeleton) + app/css/register.css + app/js/*.js in file-name order (one script, as before:
+// parts 01–18 sit inside function boot(), so they share its scope – read them as chapters of one file, not as modules)
+function assemble() {
+  const A = path.join(__dirname, '..', 'app'), rd = (f) => fs.readFileSync(f, 'utf8').replace(/\n$/, '');
+  const js = fs.readdirSync(path.join(A, 'js')).filter((f) => /^\d\d-.*\.js$/.test(f)).sort().map((f) => rd(path.join(A, 'js', f))).join('\n');
+  return rd(path.join(A, 'register.html')).replace('/*__CSS__*/', () => rd(path.join(A, 'css', 'register.css'))).replace('/*__APP__*/', () => js) + '\n';
+}
 function page(dataJs) {
 const engine = esbuild.buildSync({ entryPoints: [path.join(__dirname, '..', 'app', 'engine-entry.js')], bundle: true, format: 'iife', platform: 'browser', external: ['xlsx'], minify: true, write: false }).outputFiles[0].text;
 const VER = 'v' + fs.readFileSync(path.join(__dirname, '..', 'VERSION'), 'utf8').trim().padStart(2, '0');
-const tpl = fs.readFileSync(path.join(__dirname, '..', 'app', 'register.html'), 'utf8').replace(/__VER__/g, VER);
+const tpl = assemble().replace(/__VER__/g, VER);
 const lib = fs.readFileSync(require.resolve('xlsx/dist/xlsx.mini.min.js'), 'utf8'), xl = fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'), 'utf8');
 return tpl.replace('/*__XLSX__*/', () => lib).replace('/*__EXCELJS__*/', () => xl).replace('/*__ENGINE__*/', () => engine).replace('/*__DATA__*/', () => dataJs || 'const DATA0 = null;');
 }

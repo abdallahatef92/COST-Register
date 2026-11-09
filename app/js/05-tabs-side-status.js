@@ -1,0 +1,107 @@
+// =====================================================================================  tabs
+// the 5 steps of the month (top) – each holds the pages you work through, listed in the sidebar
+const SECS = [['dash', 'Dashboard', ['sum', 'drv']], ['cod', 'Code', ['cod', 'lines', 'mrate', 'rules']], ['sub', 'Subcontractor', ['sub']], ...(HASUNS || DEPI >= 0 ? [['adj', 'Adjust', [...(HASUNS ? ['uns'] : []), ...(DEPI >= 0 ? ['dep'] : [])]]] : []), ['chk', 'Check', ['chk', 'log']], ['rep', 'Reports', ['psum', 'pm', 'exp', 'gl', 'wbs']]];
+const secOf = (t) => (SECS.find((x) => x[2].includes(t)) || SECS[0])[0], LASTT = {};
+$('tabs').innerHTML = SECS.map(([k, l], i) => `<button data-s="${k}"><i>${i + 1}</i>${l}</button>`).join('');
+$('tabs').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const sc = SECS.find((x) => x[0] === b.dataset.s); ST.tab = (sc[0] === 'cod' && LASTT.cod === 'rules') || (sc[0] === 'chk' && LASTT.chk === 'log') ? sc[2][0] : LASTT[sc[0]] || sc[2][0]; sel.clear(); render(); $('wrap').scrollTop = 0; };
+// month-close checklist on the 5 steps: how far each one is
+function navBadges() {
+  const inc = BK.flatMap((b) => b.items.filter((x) => x.inc !== 'No')), tdA = inc.reduce((x, y) => x + Math.abs(y.td), 0), tdF = inc.filter((x) => statusOf(x) === 'Coded').reduce((x, y) => x + Math.abs(y.td), 0), pc = tdA ? Math.round(100 * tdF / tdA) : 0;
+  const B = { cod: [pc + '%', pc >= 100 ? 'ok' : pc ? 'mid' : '', 'Coded share of the to-date cost'] };
+  if (SUBI >= 0) { const pos = new Map(); for (let i = 0; i < N; i++) { if (L.b[i] !== SUBI) continue; const po = S[L.po[i]]; if (!po || po[0] === '(') continue; if (efPkg(i)) pos.set(po, true); else if (!pos.has(po)) pos.set(po, false); } const a = [...pos.values()].filter(Boolean).length; B.sub = [a + '/' + pos.size, a === pos.size && a ? 'ok' : a ? 'mid' : '', 'POs in a package']; }
+  if (SECS.some((x) => x[0] === 'adj')) { const d = [ST.uns.mode, ST.unsc.mode, ST.depx.mode].some((m) => m && m !== 'none'); B.adj = [d ? '✓' : 'open', d ? 'ok' : '', d ? 'Decisions made (include / exclude)' : 'Not yet decided: unsettled orders, certificates not in CJI3, depreciation']; }
+  const ok = Math.abs(R.diff) < 0.01 && !META.dupes && !META.unclassified; B.chk = [ok ? '✓' : '!', ok ? 'ok' : 'bad', ok ? 'Every reconciliation check is OK' : 'A check needs a look'];
+  B.rep = [DIRTY > 0 ? '●' : '✓', DIRTY > 0 ? 'mid' : 'ok', DIRTY > 0 ? 'Unsaved changes – Save codes or Export Excel' : 'Everything saved'];
+  document.querySelectorAll('#tabs button').forEach((b) => { const x = B[b.dataset.s]; let g = b.querySelector('.nb'); if (!x) { if (g) g.remove(); return; } if (!g) { g = document.createElement('span'); g.className = 'nb'; b.appendChild(g); } g.textContent = x[0]; g.className = 'nb ' + x[1]; b.title = x[2]; });
+}
+let SIDEC = innerWidth < 1500; try { const v = localStorage.getItem('cr-side'); if (v !== null) SIDEC = v === '1'; } catch (e) { /* none */ }
+const zoomSeg = (b) => { if (!b.tree) return ''; const S1 = vs(), zm = !S1.fold.size ? 'it' : [...S1.fold].every((k) => k.startsWith('F:')) ? 'fam' : 'grp'; return `<span class="seg" title="Zoom: families › groups › items">${hasFam(b) ? `<button data-zm="fam" class="${zm === 'fam' ? 'on' : ''}">Families</button>` : ''}<button data-zm="grp" class="${zm === 'grp' ? 'on' : ''}">Groups</button><button data-zm="it" class="${zm === 'it' ? 'on' : ''}">Items</button></span>`; };
+const famLabel = (f, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Coded'), td = its.reduce((x, y) => x + y.td, 0), tdc = c.reduce((x, y) => x + y.td, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(f)}</span><span class="gm">${((n) => n + (n === 1 ? ' group' : ' groups'))(new Set(its.map((x) => x.grp)).size)} · ${its.length} items · coded ${c.length}/${its.length}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; };
+const famOf = (g) => (String(g).includes('›') ? String(g).split('›')[0].trim() : String(g)), grpTail = (g) => (String(g).includes('›') ? String(g).split('›').slice(1).join('›').trim() : String(g)), hasFam = (b) => !!b.tree && b.items.some((it) => String(it.grp).includes('›'));
+const abbr = (t) => { const w = String(t).split(/[\s/]+/).filter(Boolean); return w.length > 1 ? w.map((x) => x[0].toUpperCase()).join('').slice(0, 3) : String(t).slice(0, 3); };
+const sdi = (go, on, c, t, a, s1, s2, pg) => `<div class="sdi${on ? ' on' : ''}" ${go} style="--c:${c}" title="${esc(t)}"><span class="cb"></span><b>${esc(t)}</b><span class="a">${a || ''}</span>${s1 !== undefined ? `<small><span>${s1}</span><span>${s2 || ''}</span></small>` : ''}${pg !== undefined ? `<div class="pg"><i style="width:${pg}%"></i></div>` : ''}</div>`;
+function renderSide() {
+  const sec = secOf(ST.tab), el = $('side'), items = [];   // items: [go-attrs, on, colour, title, right, sub1, sub2, progress, rail-label]
+  let head = '', foot = '', extra = {};
+  if (sec === 'cod') { head = 'Buckets'; if (ST.tab === 'lines') items.push(['data-gt="lines" data-bk="-1"', ST.bk < 0, '#9CA3AF', 'All buckets', '', N.toLocaleString('en-US') + ' CJI3 lines · search any document', '', undefined, 'All']);
+    BK.forEach((b, bi) => { const inc = b.items.filter((it) => it.inc !== 'No'), t = inc.reduce((x, it) => x + it.td, 0), f = inc.filter((it) => statusOf(it) === 'Coded').reduce((x, it) => x + it.td, 0), pc = t ? Math.round(100 * f / t) : 0, on = ((ST.tab === 'cod' || ST.tab === 'lines') && ST.bk === bi) || (ST.tab === 'mrate' && bi === MATI);
+      items.push([`data-gt="${ST.tab === 'mrate' && bi === MATI ? 'mrate' : ST.tab === 'lines' ? 'lines' : 'cod'}" data-bk="${bi}"`, on, bkColor(bi), b.id, fmtM(t), `${b.items.length.toLocaleString('en-US')} items · coded ${pc}%${((n) => (n ? ` · <b style="color:#B45309">${n} new</b>` : ''))(b.items.filter((it) => it.nw).length)}`, R.repLab + ' ' + fmtM(R.rep > 0 ? R.bkP[bi][R.rep] : 0), pc, abbr(b.short)]);
+      if (on && b.tree) { const g = new Map(); b.items.forEach((it) => { const e = g.get(it.grp) || g.set(it.grp, { n: 0, t: 0 }).get(it.grp); e.n++; e.t += it.td; }); const cur = ST.grpSel[bi] || '', gl = (k, v, cls) => `<div class="${cls}${cur === k ? ' on' : ''}" data-grp="${esc(k)}" title="${esc(k)}"><span dir="auto">${esc(String(grpTail(k)).trim() || '(none)')} <small style="color:#9ca3af">· ${v.n}</small></span><span>${fmtM(v.t)}</span></div>`;
+        let inner = '';
+        if (hasFam(b)) { const F = new Map(); for (const [k, v] of g) { const f = famOf(k), e = F.get(f) || F.set(f, { n: 0, t: 0, g: [] }).get(f); e.n += v.n; e.t += v.t; e.g.push([k, v]); } const openF = cur.startsWith('F:') ? cur.slice(2) : cur ? famOf(cur) : '';
+          inner = [...F].sort((x, y) => y[1].t - x[1].t).map(([f, e]) => `<div class="fm${f === openF ? ' op' : ''}${cur === 'F:' + f ? ' on' : ''}" data-grp="F:${esc(f)}" title="${esc(f)}"><span>${esc(f)} <small style="color:#9ca3af;font-weight:400">· ${e.g.length} group${e.g.length === 1 ? '' : 's'}</small></span><span>${fmtM(e.t)}</span></div>` + (f === openF ? e.g.sort((x, y) => y[1].t - x[1].t).map(([k, v]) => gl(k, v, 'gi2')).join('') : '')).join(''); }
+        else inner = [...g].sort((x, y) => y[1].t - x[1].t).map(([k, v]) => gl(k, v, '')).join('');
+        extra[items.length - 1] = `<div class="sdg"><div class="${cur ? '' : 'on'}" data-grp=""><span>All groups</span><span>${g.size}</span></div>${inner}</div>`; } });
+    foot = sdi('data-gt="rules"', ST.tab === 'rules', '#9CA3AF', 'Rules', META.unclassified ? `<span style="color:#9B2C2C">${META.unclassified}</span>` : '✓', META.unclassified ? 'lines without a bucket' : 'every line has a bucket', ''); }
+  else if (sec === 'sub') { const ps = pkSide(SIDEC), more = [['ov', 'Overview', 'KPIs and insights'], ['po', 'POs', 'certificates per PO'], ['reg', 'PO register', 'every PO and its status'], ['bridge', 'Bridge to CJI3', 'certificates vs CJI3']];
+    if (SIDEC) { el.className = 'col'; el.innerHTML = `<div class="sh" style="padding:10px 6px 6px;justify-content:center"><button data-side="1" title="Show the packages">»</button></div><div class="ls">${ps}</div>`; return; }
+    el.className = ''; el.innerHTML = `<div class="sh">Packages<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${ps.body}<div class="sec">More</div>${more.map(([k, l, d], i) => sdi(`data-gt="sub" data-sv="${k}"`, ST.sub === k, '#C9CED6', l, '', d, '')).join('')}</div><div class="ft">${ps.foot}</div>`; return; }
+  else if (sec === 'adj') { head = 'Adjust';
+    const ua = (v) => R.unsInK[v] + R.unsExcK[v];
+    if (HASUNS) { items.push(['sec', 'Not in CJI3 yet – add to the cost?']);
+      if (R.unsMk.o.size) items.push([`data-gt="uns" data-uv="o"`, ST.tab === 'uns' && ST.unsView === 'o', '#3E6FA8', 'Orders not settled', fmtM(ua('o')), (R.unsInK.o ? 'ZINTC1 · added ' + fmt(R.unsInK.o) : 'ZINTC1 · not added yet'), '', undefined, 'Ord']);
+      if (R.unsMk.c.size) items.push([`data-gt="uns" data-uv="c"`, ST.tab === 'uns' && ST.unsView === 'c', '#2F7F7A', 'Certificates not in CJI3', fmtM(ua('c')), (R.unsInK.c ? 'added ' + fmt(R.unsInK.c) : 'not added yet'), '', undefined, 'Cer']); }
+    if (DEPI >= 0) { const all = [...R.depM.values()].reduce((x, e) => x + e.all, 0); items.push(['sec', 'In CJI3 – take out?']); items.push(['data-gt="dep"', ST.tab === 'dep', '#5F6B7A', 'Asset depreciation', fmtM(all), (R.depExc ? 'taken out ' + fmt(R.depExc) : 'kept in the cost'), '', undefined, 'Dep']); } }
+  else if (sec === 'chk') { head = 'Check'; const ok = Math.abs(R.diff) < 0.01;
+    items.push(['data-gt="chk"', ST.tab === 'chk', ok ? '#2F6B3A' : '#9B2C2C', 'All checks', ok ? '✓' : '!', 'Difference to CJI3 ' + (ok ? '0.00' : fmt2(R.diff)), '', undefined, 'Chk']); items.push(['data-gt="log"', ST.tab === 'log', '#5F6B7A', 'Changes', String(ST.log.length), 'every change you made, with time', '', undefined, 'Log']); }
+  else if (sec === 'dash') { head = 'Dashboard';
+    [['sum', 'Summary', 'one-screen view'], ['drv', 'Cost drivers', 'rates and monthly costs behind the cost']].forEach(([k, l, d], i) => items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)])); }
+  else { head = 'Reports';
+    [['psum', 'PKG summary', 'Direct by PKG · Indirect by cost element'], ['pm', 'Per Month', 'items by month'], ['exp', 'By PKG', 'every item under its package code'], ['gl', 'GL', 'by cost element'], ['wbs', 'WBS', 'by WBS element']].forEach(([k, l, d], i) => items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)]));
+  }
+  if (SIDEC) { el.className = 'col'; el.innerHTML = `<div class="sh" style="padding:10px 6px 6px;justify-content:center"><button data-side="1" title="Show the list">»</button></div><div class="ls">${items.filter((x) => x[0] !== 'sec').map((x) => `<div class="sdr${x[1] ? ' on' : ''}" ${x[0]} style="--c:${x[2]}" title="${esc(x[3])}">${esc(x[8] || '')}</div>`).join('')}</div>`; return; }
+  el.className = ''; el.innerHTML = `<div class="sh">${head}<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${items.map((x, k) => (x[0] === 'sec' ? `<div class="sec">${esc(x[1])}</div>` : sdi(...x.slice(0, 8)) + (extra[k] || ''))).join('')}</div>${foot ? `<div class="ft">${foot}</div>` : ''}`;
+}
+$('side').addEventListener('click', (e) => { if (e.target.closest('[data-side]')) { SIDEC = !SIDEC; try { localStorage.setItem('cr-side', SIDEC ? '1' : '0'); } catch (x) { /* none */ } render(); return; }
+  const g = e.target.closest('[data-grp]'); if (g) { ST.grpSel[ST.bk] = g.dataset.grp; sel.clear(); render(); $('wrap').scrollTop = 0; return; }
+  const a = e.target.closest('[data-gt]'); if (!a) return; ST.tab = a.dataset.gt; if (a.dataset.bk) { ST.bk = +a.dataset.bk; } if (a.dataset.uv) ST.unsView = a.dataset.uv; sel.clear();
+  if (a.dataset.sv) { goSub(a.dataset.sv); return; } render(); $('wrap').scrollTop = 0; });
+// status bar: the totals of the register and everything you included / excluded, on every tab
+function renderStatus() {
+  const it = (l, v, cls, go, tip) => `<${go ? 'a' : 'span'} class="si ${cls || ''}"${go ? ` data-sgo="${go}"` : ''}${tip ? ` title="${esc(tip)}"` : ''}><span>${l}</span><b>${v}</b></${go ? 'a' : 'span'}>`, sep = '<i class="sep"></i>';
+  const z = (v) => (Math.abs(v) < 0.005 ? 'zero' : ''), inc = BK.flatMap((b) => b.items.filter((x) => x.inc !== 'No')), tdA = inc.reduce((s2, x) => s2 + x.td, 0), tdF = inc.filter((x) => statusOf(x) === 'Coded').reduce((s2, x) => s2 + x.td, 0);
+  const hand = R.hand ? R.hand.reduce((s2, v) => s2 + v, 0) : 0, ok = Math.abs(R.diff) < 0.01, uo = R.unsInK ? R.unsInK.o : 0, uc = R.unsInK ? R.unsInK.c : 0;
+  $('sbar').innerHTML = [it('CJI3', fmt(META.cost), '', 'chk', 'The CJI3 file total. It is more than To date by Pending, Excluded, Depreciation out and Client deductions – Difference is what is left and must be 0'), it('To date', fmt(R.toDate), '', 'sum', 'The cost counted up to the cut date – CJI3 less what is shown to the right'), it(R.repLab, fmt(R.thisM), '', 'pm', 'This month'), it('Pending', fmt(R.pend), z(R.pend)),
+    it('Difference', ok ? '0.00 ✓' : fmt2(R.diff), ok ? 'ok' : 'bad', 'chk', 'CJI3 − To date − Pending − Excluded − Depreciation out − Client deductions (+ what you added). Must be 0'), sep,
+    it('Excluded', fmt(R.excl), z(R.excl) || 'exc', 'cod', 'Items / lines set to Include = No'),
+    ...(SUBI >= 0 ? [it('VAT in', fmt(R.vatIn), z(R.vatIn) || 'inc', '', ST.vat)] : []),
+    ...(R.unsMk && R.unsMk.o.size ? [it('Orders in', fmt(uo), z(uo) || 'inc', 'uns:o', 'ZINTC1 orders not yet settled, included by you')] : []),
+    ...(R.unsMk && R.unsMk.c.size ? [it('Certificates in', fmt(uc), z(uc) || 'inc', 'uns:c', 'Certificates not in CJI3, included by you')] : []),
+    ...(DEPI >= 0 ? [it('Depreciation out', fmt(R.depExc), z(R.depExc) || 'exc', 'dep', 'CJI3 depreciation excluded by you')] : []),
+    ...(Math.abs(R.cdAll) >= 0.5 ? [it('Client deductions', fmt(R.cdAll), 'exc', 'chk', 'Client deductions in CJI3 booked with revenue – in the CJI3 total, not counted as cost')] : []), sep,
+    AS.h && AS.st === 'ok' ? `<span class="asv ok" title="Every change is saved to this file by itself">✓ Auto-saved · ${esc(asName())}${AS.at ? ' · ' + AS.at : ''}</span>`
+      : AS.h ? `<a class="asv amb" data-asgo="allow" title="The browser asks again after the Tool is reopened – one click">⟳ Click to keep auto-saving</a>`
+      : `<a class="asv red" data-asgo="pick" title="${(DIRTY > 0 ? DIRTY.toLocaleString('en-US') + ' change' + (DIRTY > 1 ? 's' : '') + ' not in a file yet. ' : '') + (AS.ok ? 'Your codes are only in this browser – choose a file once and every change saves itself' : 'This browser cannot auto-save: use Save to keep your codes in a file')}">⚠ Not saved to a file · <u>${AS.ok ? 'Choose file' : 'Save'}</u></a>`, sep, it('Coded', (tdA ? Math.round(100 * tdF / tdA) : 0) + '%', '', 'cod', 'Share of counted to-date cost on fully coded items'), it('Hand-coded lines', hand.toLocaleString('en-US'), z(hand), 'lines')].join('');
+}
+document.addEventListener('click', (e) => { const g = e.target.closest('#sbar [data-asgo]'); if (g) { if (g.dataset.asgo === 'pick') asPick(); else asAllow(); } });
+document.addEventListener('click', (e) => { const a = e.target.closest('#sbar [data-sgo]'); if (!a) return; if (a.dataset.sgo === 'save') { $('bSave').click(); return; } const [t, v] = a.dataset.sgo.split(':'); ST.tab = t === 'chk' ? 'chk' : t; if (v) ST.unsView = v; sel.clear(); render(); });
+let GUIDE_OFF = false; try { GUIDE_OFF = localStorage.getItem('crt:guideOff') === '1'; } catch (e) { /* per-viewer only */ }
+function renderGuide() { const g = $('guide'), on = ST.tab === 'cod' && !GUIDE_OFF; g.hidden = !on; $('bHelp').classList.toggle('on', ST.tab === 'cod' && !GUIDE_OFF); if (!on) return; const sub = isSub(ST.bk);
+  g.innerHTML = `<div class="lead"><h4>Start here – coding an item</h4><span class="s">Each item needs <b>${sub ? 4 : 3} codes</b>. When all ${sub ? 4 : 3} are filled the status turns <b style="color:#2F6B3A">Coded</b>.</span></div>
+    <div><span class="k">PKG</span><b>Which package pays for it</b><div class="s">e.g. <b>S03</b> Concrete works. Pick from the list. Indirect items use <b>Indirect</b>.</div></div>
+    <div><span class="k">MNL</span><b>What kind of cost</b><div class="s">MAT material · SUB subcontract · LAB labour · EQU equipment · OTHER. Filled for you from the bucket.</div></div>
+    <div><span class="k">Cost element</span><b>What it is inside the package</b><div class="s">e.g. <b>STEEL</b>, <b>CONC</b>. Your own short code.${sub ? ' Subcontractor items also need <b>DIV</b> (the CSI division).' : ''}</div></div>
+    <button class="x" id="gHide" title="Hide – bring it back with ? in the top bar">✕ hide</button>
+    <div class="ft"><span>💡 Tick several rows → give them one code at once</span><span>✓ Indirect items (G&amp;A, equipment, fleet, house rent) are already coded from their SAP GL</span><span style="margin-left:auto">Your PKG list and names: <button id="gPk">Reports › PKG summary › Codes &amp; groups</button></span></div>`;
+  $('gHide').onclick = () => { GUIDE_OFF = true; try { localStorage.setItem('crt:guideOff', '1'); } catch (e) { /* none */ } renderGuide(); };
+  $('gPk').onclick = () => { ST.tab = 'psum'; ST.psEd = true; render(); $('wrap').scrollTop = 0; }; }
+function render() {
+  LASTT[secOf(ST.tab)] = ST.tab; renderGuide(); navBadges(); document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === secOf(ST.tab)));
+  const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
+  ['sum', 'tbl', 'chk', 'rul', 'mr', 'log', 'drv', 'psum'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'drv' && ST.tab === 'drv') || (p === 'psum' && ST.tab === 'psum') || (p === 'chk' && ST.tab === 'chk') || (p === 'log' && ST.tab === 'log') || (p === 'rul' && ST.tab === 'rules') || (p === 'mr' && ST.tab === 'mrate') || (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum'].includes(ST.tab)))));
+  $('bUndo').disabled = !undo.length; $('bRedo').disabled = !redo.length; lists();
+  renderStatus(); renderSide();
+  if (isOv) renderSov(); else if (isPk) renderPkg(); else if (ST.tab === 'sum') renderSummary(); else if (ST.tab === 'chk') renderChecks(); else if (ST.tab === 'rules') renderRules(); else if (ST.tab === 'mrate') renderMRate(); else if (ST.tab === 'log') renderLog(); else if (ST.tab === 'drv') renderDrivers(); else if (ST.tab === 'psum') renderPsum(); else renderTable();
+}
+function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DIV 05', 'DIV 06', 'DIV 07', 'DIV 08', 'DIV 09', 'DIV 10', 'DIV 21', 'DIV 22', 'DIV 23', 'DIV 26', 'DIV 27', 'DIV 31', 'DIV 32', 'DIV 33', 'INDIRECT']), pkg: new Set(), mnl: new Set(['MAT', 'SUB', 'LAB', 'EQU', 'OTHER']), ce: new Set() };
+  BK.forEach((b) => b.items.forEach((it) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (it[f]) s[f].add(it[f]); }))); Object.values(OVR).forEach((o) => ['pkg', 'mnl', 'ce'].forEach((f) => { if (o[f]) s[f].add(o[f]); }));
+  Object.keys(psPk()).forEach((p) => s.pkg.add(p)); s.pkg.add(IND_PKG); Object.keys(psCe()).forEach((k) => s.ce.add(k.slice(k.indexOf('|') + 1)));
+  ['div', 'mnl'].forEach((f) => { $('dl-' + f).innerHTML = [...s[f]].sort().map((x) => `<option value="${esc(x)}">`).join(''); });
+  $('dl-pkg').innerHTML = [...s.pkg].sort().map((x) => `<option value="${esc(x)}" label="${esc(isIndPkg(x) ? 'Indirect cost (G&A, site, equipment, fleet, house rent)' : pkgLabel(x) || 'no name yet – name it in Codes & groups')}">`).join(''); R.ceAll = [...s.ce].sort(); ceList(''); R.pkgs = [...s.pkg].sort(); }
+// the cost element dropdown shows the cost elements of the row's PKG (defined ones and ones already used under it), else all
+function ceList(pkg) { const p = isIndPkg(pkg) ? IND_PKG : pkg, m = new Map(); if (p) { Object.keys(psCe()).forEach((k) => { if (k.startsWith(p + '|')) m.set(k.slice(p.length + 1), 1); }); BK.forEach((b) => b.items.forEach((it) => { if (it.ce && (isIndPkg(it.pkg) ? IND_PKG : it.pkg) === p) m.set(it.ce, 1); })); }
+  const list = m.size ? [...m.keys()].sort() : R.ceAll || []; $('dl-ce').innerHTML = list.map((c) => `<option value="${esc(c)}" label="${esc(p ? ceLabel(p, c) : '')}">`).join(''); }
+document.addEventListener('focusin', (e) => { const t = e.target; if (!t.matches || !t.matches('input[list="dl-ce"]')) return; let pkg = '';
+  const tr = t.closest('tr'); if (tr && tr.dataset.k) { const r = rowOf(tr); if (r && r.it) { const o = r.i !== undefined ? OVR[L.id[r.i]] : null; pkg = (o && o.pkg !== undefined ? o.pkg : r.it.pkg) || ''; } }
+  else if (tr && tr.dataset.mo) pkg = BK[MATI].items[+tr.dataset.mo].pkg || ''; else if (tr && tr.dataset.wo) pkg = BK[SUBI].items[+tr.dataset.wo].pkg || ''; else if (t.id === 'bCE') pkg = $('bPKG').value.trim(); else if (t.id === 'mfCE') pkg = $('mfPKG').value.trim();
+  ceList(pkg); });

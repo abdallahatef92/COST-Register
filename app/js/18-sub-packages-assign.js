@@ -1,0 +1,49 @@
+function pkPlan(target) {   // target: Map line index → new package; returns the item + line changes (one undo step)
+  const want = (i) => (target.has(i) ? target.get(i) : efPkg(i)), its = new Set([...target.keys()].map((i) => L.it[i])), ch = [];
+  for (const ii of its) { const it = BK[SUBI].items[ii], idx = []; for (let i = 0; i < N; i++) if (L.b[i] === SUBI && L.it[i] === ii) idx.push(i);
+    const ks = new Set(idx.map(want));
+    if (ks.size === 1) { const k = [...ks][0]; ch.push({ t: 'item', bi: SUBI, ii, f: 'pkg', v: k }); idx.forEach((i) => ch.push({ t: 'line', i, f: 'pkg', v: undefined })); }
+    else { idx.forEach((i) => ch.push({ t: 'line', i, f: 'pkg', v: want(i) === it.pkg ? undefined : want(i) })); } }
+  return ch; }
+function pkAssign(pos, code, label) { const set = new Set(pos), tg = new Map(); for (const p of R.pkPos) if (set.has(p.po)) for (const i of p.idx) tg.set(i, code); if (!tg.size) return; const ch = pkPlan(tg); ST.pkTick.clear(); ST.pkOpen = null; change(ch, label || (pos.length + ' PO' + (pos.length > 1 ? 's' : '') + ' → ' + (code || 'Not allocated'))); }
+function pkTicked() { return [...(ST.pkTick || [])]; }
+document.addEventListener('click', (e) => { const pg = $('pkg'); if (!pg || !(pg.contains(e.target) || (ST.tab === 'sub' && $('side').contains(e.target) && !e.target.closest('[data-gt],[data-side]')))) return; const t = e.target;
+  const toPkg = () => { if (ST.sub !== 'pkg') { ST.sub = 'pkg'; render(); } else renderPkg(); };
+  if (t.id === 'pkAddT') { ST.pkAdd = !ST.pkAdd; renderSide(); const c = $('pkNewC'); if (c) c.focus(); return; }
+  if (t.id === 'pkExp') { $('bExport').click(); return; } if (t.id === 'pkSave') { $('bSave').click(); return; }
+  const ok1 = t.closest('[data-pkok]'); if (ok1) { pkAssign([ok1.dataset.pkok], ok1.dataset.pkc, 'PO ' + ok1.dataset.pkok + ' → ' + ok1.dataset.pkc + ' (suggested)'); return; }
+  if (t.id === 'pkSugAll') { const tg = new Map(); (R.pkRows || []).filter((p) => p.code === '' && p.sug).forEach((p) => p.idx.forEach((i) => tg.set(i, p.sug))); if (tg.size) { ST.pkTick.clear(); change(pkPlan(tg), 'Accepted package suggestions'); } return; }
+  const rf = t.closest('[data-pkrf]'); if (rf) { ST.pkRF = rf.dataset.pkrf; renderPkg(); return; }
+  const gv = t.closest('[data-pkgo]'); if (gv) { ST.pkSel = gv.dataset.pkgo; ST.pkView = gv.dataset.pkgo === '' ? 'alloc' : 'rate'; ST.pkQ = ''; renderPkg(); return; }
+  if (t.id === 'pfGo') { const v = { div: $('pfDIV').value.trim(), mnl: $('pfMNL').value.trim(), ce: $('pfCE').value.trim() }, ch = []; (R.pkRateRows || []).forEach((w) => Object.entries(v).forEach(([f, x]) => { if (x && !w.it[f]) ch.push({ t: 'item', bi: SUBI, ii: w.ii, f, v: x }); })); if (ch.length) change(ch, 'Filled empty codes in ' + ST.pkSel); else toast('Nothing to fill – type a code, and only empty cells are filled'); return; }
+  const wo = t.closest('tr[data-wo]'); if (wo && !t.closest('input')) { const ii = +wo.dataset.wo; ST.pkOpenW = ST.pkOpenW === ii ? null : ii; renderPkg(); return; }
+  const sv = t.closest('[data-sv]'); if (sv) { goSub(sv.dataset.sv); return; } const v = t.closest('[data-pkv]'); if (v) { ST.pkView = v.dataset.pkv; renderPkg(); return; }
+  const fb = t.closest('[data-pkfb]'); if (fb) { e.stopPropagation(); const [v2, k2] = fb.dataset.pkfb.split('|'); if (v2 === 'a') { const base = R.pkBase || []; pkPop(fb, 'a', k2, base, PKCOL); } else pkPop(fb, 'r', k2, R.pkRateRows || [], R.pkRateCols); return; }
+  const so2 = t.closest('[data-pkso]'); if (so2) { const [k2, d2] = so2.dataset.pkso.split('|'); ST.pkSort = { v: 'a', k: k2, d: +d2 }; renderPkg(); return; }
+  const mp = t.closest('[data-pkmain]'); if (mp) { e.stopPropagation(); (ST.pkMain || (ST.pkMain = {}))[mp.dataset.pkc] = mp.dataset.pkmain; renderPkg(); return; }
+  if (t.id === 'pkCmp') { ST.pkCmp = !ST.pkCmp; renderPkg(); return; }
+  const sh = t.closest('[data-pksort]'); if (sh) { const [v2, k2] = sh.dataset.pksort.split('|'), so = ST.pkSort; ST.pkSort = so && so.v === v2 && so.k === k2 ? (so.d === -1 ? { v: v2, k: k2, d: 1 } : null) : { v: v2, k: k2, d: -1 }; renderPkg(); return; }
+  if (t.closest('.pkn,.pkadd input,select')) return;
+  const ed = t.closest('[data-pke]'); if (ed) { ST.pkEdit = ed.dataset.pke; renderPkg(); const i = document.querySelector('.pkn'); if (i) { i.focus(); i.select(); } return; }
+  const x = t.closest('[data-pkx]'); if (x) { const c = x.dataset.pkx, ps = R.pkPos.filter((p) => p.codes.includes(c)); if (ps.length && !confirm(`Remove ${c}? Its ${ps.length} POs go back to Not allocated.`)) return; ST.pk = ST.pk.filter((y) => y.c !== c); const tg = new Map(); for (const p of ps) for (const i of p.idx) if (efPkg(i) === c) tg.set(i, ''); if (tg.size) change(pkPlan(tg), 'Package ' + c + ' removed'); else { persist(); renderPkg(); } return; }
+  if (t.id === 'pkNew') { const c = $('pkNewC').value.trim(), n = $('pkNewN').value.trim(); if (!c) { $('pkNewC').focus(); return; } if (!ST.pk.some((y) => y.c === c)) ST.pk.push({ c, n }); ST.pkAdd = false; persist(); renderPkg(); return; }
+  const b = t.closest('[data-pks]'); if (b) { if (pkTicked().length && b.dataset.pks !== '*' && b.dataset.pks !== '~' && e.detail === 1 && t.closest('.k')) { pkAssign(pkTicked(), b.dataset.pks); return; } ST.pkSel = b.dataset.pks; ST.pkOpen = null; ST.pkTow = ''; ST.pkQ = ''; ST.pkOpenW = null; if ((ST.pkView || 'alloc') !== 'alloc' && b.dataset.pks === '') ST.pkView = 'alloc'; else if (ST.pkView === 'review' && b.dataset.pks !== '*') ST.pkView = 'rate'; toPkg(); return; }
+  const tw = t.closest('[data-pkt]'); if (tw) { ST.pkTow = tw.dataset.pkt; renderPkg(); return; }
+  if (t.id === 'pkTog') { ST.pkCol = !ST.pkCol; renderPkg(); return; }
+  if (t.id === 'pkFx') { if (ST.pkF) ST.pkF.a = {}; if (ST.pkSort && ST.pkSort.v === 'a') ST.pkSort = null; renderPkg(); return; }
+  if (t.id === 'pkClr') { ST.pkTick.clear(); renderPkg(); return; } if (t.id === 'pkClose') { ST.pkOpen = null; renderPkg(); return; } if (t.id === 'pkMulti') { ST.pkMulti = !ST.pkMulti; renderPkg(); return; }
+  if (t.id === 'pkAll') { const tk = ST.pkTick; if (t.checked) R.pkRows.forEach((p) => tk.add(p.po)); else R.pkRows.forEach((p) => tk.delete(p.po)); renderPkg(); return; }
+  const r = t.closest('tr.pkr'); if (r) { const po = r.dataset.po, tk = ST.pkTick; if (t.classList.contains('pkc')) { if (e.shiftKey && ST.pkLast) { const ks = R.pkRows.map((p) => p.po), a = ks.indexOf(ST.pkLast), z = ks.indexOf(po); ks.slice(Math.min(a, z), Math.max(a, z) + 1).forEach((k) => tk.add(k)); } else t.checked ? tk.add(po) : tk.delete(po); ST.pkLast = po; renderPkg(); return; }
+    ST.pkOpen = ST.pkOpen === po ? null : po; renderPkg(); } });
+document.addEventListener('change', (e) => { const pg = $('pkg'); if (!pg || !(pg.contains(e.target) || $('side').contains(e.target))) return; const t = e.target;
+  if (t.dataset.wi !== undefined && t.dataset.wf) { const it = BK[SUBI].items[+t.dataset.wi]; setCRule('s:' + it.vals[1], t.dataset.wf, t.value.trim()); change([{ t: 'item', bi: SUBI, ii: +t.dataset.wi, f: t.dataset.wf, v: t.value.trim() }], FN[t.dataset.wf] + ' ' + (t.value.trim() || '(empty)') + ' · ' + it.vals[1]); return; }
+  if (t.dataset.pkn !== undefined) { const y = ST.pk.find((z) => z.c === t.dataset.pkn); if (y) y.n = t.value.trim(); else ST.pk.push({ c: t.dataset.pkn, n: t.value.trim() }); ST.pkEdit = null; persist(); renderPkg(); return; }
+  if (t.id === 'pkTo' && t.value) { pkAssign(pkTicked(), t.value === '-' ? '' : t.value); return; }
+  if (t.dataset.pkpo) { pkAssign([t.dataset.pkpo], t.value); return; }
+  if (t.dataset.pkit) { const [po, ii] = t.dataset.pkit.split('|'), p = R.pkPos.find((x) => x.po === po); if (p && t.value !== 'mixed') change(pkPlan(new Map(p.idx.filter((i) => L.it[i] === +ii).map((i) => [i, t.value]))), 'Work item ' + BK[SUBI].items[+ii].vals[1] + ' of ' + po + ' → ' + (t.value || 'Not allocated')); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('pkn')) { e.target.blur(); return; } if (e.key === 'Enter' && (e.target.id === 'pkNewC' || e.target.id === 'pkNewN')) { $('pkNew').click(); return; } if (!(ST.tab === 'sub' && ST.sub === 'pkg') || e.ctrlKey || e.metaKey || e.altKey || /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return; if (!/^[0-9]$/.test(e.key) || !pkTicked().length) return;
+  const k = e.key === '0' ? 9 : +e.key - 1, x = R.pkList && R.pkList[k]; if (!x) return; e.preventDefault(); pkAssign(pkTicked(), x.c); });
+document.addEventListener('dragstart', (e) => { const r = e.target.closest && e.target.closest('tr.pkr'); if (!r) return; if (!ST.pkTick.has(r.dataset.po)) { ST.pkTick.clear(); ST.pkTick.add(r.dataset.po); } e.dataTransfer.setData('text/plain', 'pk'); e.dataTransfer.effectAllowed = 'move'; document.body.classList.add('pkdrag'); const n = ST.pkTick.size, g = document.createElement('div'); g.textContent = n + ' PO' + (n > 1 ? 's' : '') + ' → drop on a package'; g.style.cssText = 'position:fixed;top:-100px;padding:6px 10px;background:#1F3864;color:#fff;border-radius:6px;font:600 12px Segoe UI'; document.body.appendChild(g); e.dataTransfer.setDragImage(g, 10, 10); setTimeout(() => g.remove(), 0); });
+document.addEventListener('dragend', () => { document.body.classList.remove('pkdrag'); document.querySelectorAll('.hot').forEach((x) => x.classList.remove('hot')); });
+document.addEventListener('dragover', (e) => { const b = e.target.closest && e.target.closest('[data-pks]'); if (b && !['*', '~'].includes(b.dataset.pks)) { e.preventDefault(); document.querySelectorAll('.hot').forEach((x) => x !== b && x.classList.remove('hot')); b.classList.add('hot'); } });
+document.addEventListener('drop', (e) => { const b = e.target.closest && e.target.closest('[data-pks]'); if (!b) return; e.preventDefault(); b.classList.remove('hot'); pkAssign(pkTicked(), b.dataset.pks); });
