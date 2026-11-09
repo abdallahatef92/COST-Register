@@ -1,0 +1,90 @@
+{
+ "sniff:cji3.xlsx": {
+  "kind": "cji3",
+  "proj": "SUTH"
+ },
+ "sniff:zscprg01.xlsx": {
+  "kind": "zscprg01",
+  "proj": "SUTH"
+ },
+ "sniff:zscsrv1.xlsx": {
+  "kind": "zscsrv1",
+  "proj": "SUTH"
+ },
+ "sniff:zintc1-2025.xlsx": {
+  "kind": "zintc1",
+  "proj": "SUTH"
+ },
+ "sniff:zintc1-2026.xlsx": {
+  "kind": "zintc1",
+  "proj": "SUTH"
+ },
+ "sniff:mb52-other-project.xlsx": {
+  "kind": "mb52",
+  "proj": "SBAY"
+ },
+ "project": "SUTH",
+ "cost": 700197301.18,
+ "lines": 54069,
+ "lineSum": 728218783.58,
+ "items": 2941,
+ "bucketItems": [
+  "Material:1942",
+  "Subcontractor:643",
+  "Subcontractor deductions:2",
+  "Other direct cost:2",
+  "Labor:1",
+  "Equipment / fuel:37",
+  "Fleet / transportation:27",
+  "House rent:247",
+  "Asset depreciation:10",
+  "G&A:30"
+ ],
+ "toDate": 699214225.28,
+ "clientDeductions": 983075.9,
+ "bucketToDate": [
+  "Material:250905090",
+  "Subcontractor:262592943",
+  "Subcontractor deductions:-10591550",
+  "Other direct cost:22846222",
+  "Labor:8729762",
+  "Equipment / fuel:17015728",
+  "Fleet / transportation:13157312",
+  "House rent:12259472",
+  "Asset depreciation:9250805",
+  "G&A:113048440"
+ ],
+ "presetItems": 347,
+ "presetCodes": {
+  "Equipment / fuel SE-11": 10,
+  "Equipment / fuel SE-03": 3,
+  "Equipment / fuel SE-17": 5,
+  "Equipment / fuel SE-18": 17,
+  "Equipment / fuel SE-19": 2,
+  "Fleet / transportation TR-01": 26,
+  "Fleet / transportation TR-02": 1,
+  "House rent SP-02": 246,
+  "Asset depreciation SE-16": 1,
+  "Asset depreciation SE-13": 1,
+  "Asset depreciation SE-17": 4,
+  "Asset depreciation SP-02": 1,
+  "Asset depreciation SP-09": 2,
+  "Asset depreciation SP-15": 1,
+  "G&A SF-01": 4,
+  "G&A Sponsorship": 8,
+  "G&A SF-02": 1,
+  "G&A SP-17": 3,
+  "G&A SP-28": 3,
+  "G&A CO-01": 1,
+  "G&A SS-01": 2,
+  "G&A SP-19": 1,
+  "G&A SP-15": 1,
+  "G&A SP-16": 1,
+  "G&A SP-14": 1,
+  "G&A SP-18": 1
+ },
+ "openingBalance": [
+  54,
+  39277647
+ ]
+}

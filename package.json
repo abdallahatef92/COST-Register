@@ -7,7 +7,10 @@
     "register": "bin/register.js"
   },
   "scripts": {
-    "build": "node bin/register.js"
+    "build": "node bin/register.js",
+    "test": "node test/run.js",
+    "test:quick": "node test/run.js --quick",
+    "build:tool": "node tools/build-app.js"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

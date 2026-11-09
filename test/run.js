@@ -1,0 +1,143 @@
+#!/usr/bin/env node
+'use strict';
+// Release checks for the Cost Register Tool – run before every release:  npm test   (add --quick to skip the start-page build, --update to rewrite test/expected.json)
+// Data: test/data = a MASKED copy of the SUTH SAP files (tools/mask-sap.js): names and texts replaced, every number kept.
+// Needs Playwright with Chromium (npm i -D playwright && npx playwright install chromium, if it is not on the machine).
+const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
+const ROOT = path.join(__dirname, '..'), DATA = path.join(__dirname, 'data'), OUT = path.join(ROOT, 'out', 'test'), EXP = path.join(__dirname, 'expected.json');
+const args = process.argv.slice(2), UPDATE = args.includes('--update'), QUICK = args.includes('--quick');
+const F = { cji3: 'cji3.xlsx', zscprg01: 'zscprg01.xlsx', zscsrv1: 'zscsrv1.xlsx', zintc1: ['zintc1-2025.xlsx', 'zintc1-2026.xlsx'], mb52: 'mb52-other-project.xlsx' };
+const files = () => Object.values(F).flat().map((f) => path.join(DATA, f));
+
+// ---------------------------------------------------------------------------------------------- tiny test kit
+const results = []; let section = '';
+const ok = (name, pass, detail = '') => { results.push({ section, name, pass: !!pass, detail }); console.log(`  ${pass ? '✓' : '✗'} ${name}${detail && !pass ? '  →  ' + detail : ''}`); };
+const eq = (name, got, want, tol = 0.01) => ok(name, typeof want === 'number' ? Math.abs(got - want) <= tol : JSON.stringify(got) === JSON.stringify(want), `got ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
+const head = (s) => { section = s; console.log('\n' + s); };
+const r2 = (x) => Math.round(x * 100) / 100;
+
+(async () => {
+  const t0 = Date.now(); fs.mkdirSync(OUT, { recursive: true });
+  const exp = fs.existsSync(EXP) ? JSON.parse(fs.readFileSync(EXP, 'utf8')) : {}, got = {};
+  const want = (k, v) => { got[k] = v; return UPDATE || exp[k] === undefined ? v : exp[k]; };
+  if (!files().every((f) => fs.existsSync(f))) { console.error('Test data missing in test/data – see test/README.md'); process.exit(2); }
+
+  // ---------------------------------------------------------------------------- 1. files are recognised by their content
+  head('1. File recognition');
+  const { sniffInfo } = require('../src/sniff');
+  const kinds = files().map((f) => [path.basename(f), sniffInfo(f)]);
+  for (const [n, s] of kinds) eq(`${n} → ${s.kind} · ${s.proj}`, s, want('sniff:' + n, s));
+
+  // ---------------------------------------------------------------------------- 2. engine: CJI3 split into buckets
+  head('2. Engine');
+  const { prepare } = require('../src/prepare'), { toAppData } = require('../src/appdata');
+  const o = { cji3: path.join(DATA, F.cji3), zscprg01: path.join(DATA, F.zscprg01), zscsrv1: path.join(DATA, F.zscsrv1), zintc1: F.zintc1.map((f) => path.join(DATA, f)), mb52: path.join(DATA, F.mb52), log: () => {} };
+  const D = toAppData(prepare(o), o); let sum = 0; for (const a of D.L.amt) sum += a;
+  eq('project from the WBS', D.META.project, want('project', D.META.project));
+  eq('CJI3 cost', D.META.cost, want('cost', D.META.cost));
+  eq('CJI3 lines', D.L.b.length, want('lines', D.L.b.length), 0);
+  eq('sum of all line amounts', r2(sum), want('lineSum', r2(sum)));
+  eq('items', D.BK.reduce((x, b) => x + b.items.length, 0), want('items', D.BK.reduce((x, b) => x + b.items.length, 0)), 0);
+  eq('items per bucket', D.BK.map((b) => b.id + ':' + b.items.length), want('bucketItems', D.BK.map((b) => b.id + ':' + b.items.length)));
+  eq('no unclassified lines', D.META.unclassified || 0, 0, 0);
+  eq('no duplicate line keys', D.META.dupes || 0, 0, 0);
+
+  // ---------------------------------------------------------------------------- 3. build the Tool and a test app with the data inside
+  head('3. Build');
+  execFileSync('node', ['tools/build-app.js'], { cwd: ROOT, stdio: 'pipe' });
+  const VER = fs.readFileSync(path.join(ROOT, 'VERSION'), 'utf8').trim(), TOOL = path.join(ROOT, 'out', `Cost_Register_Tool_v${VER}.html`), APP = path.join(OUT, 'test_app.html');
+  ok('Tool built: ' + path.basename(TOOL), fs.existsSync(TOOL));
+  ok('Tool has its version, no placeholder', fs.readFileSync(TOOL, 'utf8').includes('v' + VER) && !fs.readFileSync(TOOL, 'utf8').includes('__VER__'));
+  execFileSync('node', ['tools/proto-app.js', '--cji3', o.cji3, '--zscprg01', o.zscprg01, '--zscsrv1', o.zscsrv1, '--zintc1', o.zintc1[0], '--zintc1', o.zintc1[1], '--mb52', o.mb52, '--out', APP], { cwd: ROOT, stdio: 'pipe' });
+  ok('test app built', fs.existsSync(APP));
+
+  // ---------------------------------------------------------------------------- 4. the app in a browser
+  let chromium; try { ({ chromium } = require('playwright')); } catch (e) { console.error('Playwright is not installed – npm i -D playwright'); process.exit(2); }
+  const browser = await chromium.launch(), errs = [];
+  const open = async (url, ctxOpt = {}) => { const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true, ...ctxOpt }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => d.dismiss()); await p.goto('file://' + url); await p.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p.waitForTimeout(1200); return { ctx, p }; };
+  const { ctx, p } = await open(APP);
+  head('4. Opening the register');
+  eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
+  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'sub', 'adj', 'chk', 'rep']);
+  const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
+  eq('difference to CJI3 = 0', R0.diff, 0);
+  eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
+  eq('client deductions', r2(R0.cd), want('clientDeductions', r2(R0.cd)));
+  ok('footer: Saved (the automatic indirect fill is not an unsaved change)', await p.$eval('#sbar', (e) => /Saved/.test(e.textContent) && !/Unsaved/.test(e.textContent)), await p.$eval('#sbar', (e) => e.textContent.slice(0, 200)));
+  const bkTd = await p.evaluate(() => __BK.map((b) => b.id + ':' + Math.round(b.items.reduce((s, it) => s + it.td, 0))));
+  eq('to date per bucket', bkTd, want('bucketToDate', bkTd));
+
+  head('5. Indirect presets and opening balance');
+  const ind = await p.evaluate(() => { const m = {}; __BK.forEach((b) => b.items.forEach((it) => { if (it.pkg === 'Indirect') m[b.id + ' ' + it.ce] = (m[b.id + ' ' + it.ce] || 0) + 1; })); return m; });
+  eq('indirect items coded by the presets', Object.values(ind).reduce((x, y) => x + y, 0), want('presetItems', Object.values(ind).reduce((x, y) => x + y, 0)), 0);
+  eq('indirect codes per bucket', ind, want('presetCodes', ind));
+  const ob = await p.evaluate(() => { const { L, S, N } = __D; let m = 0; for (let i = 0; i < N; i++) if (L.d[i] && (!m || L.d[i] < m)) m = L.d[i]; let n = 0, a = 0; for (let i = 0; i < N; i++) if (S[L.ty[i]] === 'UE' && (/^OB\b/i.test(S[L.hdr[i]] || '') || L.d[i] === m)) { n++; a += L.amt[i]; } return [n, Math.round(a)]; });
+  eq('opening-balance lines (UE / OB)', ob, want('openingBalance', ob));
+
+  head('6. Every page opens');
+  const pages = await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s));
+  for (const s of pages) {
+    await p.click(`#tabs [data-s="${s}"]`); await p.waitForTimeout(300);
+    const side = await p.$$eval('#side [data-gt]', (x) => [...new Set(x.map((y) => y.dataset.gt + '|' + (y.dataset.bk || '') + '|' + (y.dataset.uv || '') + '|' + (y.dataset.sv || '')))]);
+    for (const k of side) { const [gt, bk, uv, sv] = k.split('|'); const n0 = errs.length;
+      await p.click(`#side [data-gt="${gt}"]${bk ? `[data-bk="${bk}"]` : ''}${uv ? `[data-uv="${uv}"]` : ''}${sv ? `[data-sv="${sv}"]` : ''}`); await p.waitForTimeout(250);
+      const filled = await p.evaluate(() => { const pg = document.querySelector('#pages .page.on'); return pg ? pg.innerText.trim().length : 0; });
+      ok(`${s} › ${gt}${bk ? ' · bucket ' + bk : ''}${uv ? ' · ' + uv : ''}${sv ? ' · ' + sv : ''}`, errs.length === n0 && filled > 20, errs.slice(n0).join(' | ') || 'empty page'); }
+  }
+  // Check page: every reconciliation check OK
+  await p.click('#tabs [data-s="chk"]'); await p.click('#side [data-gt="chk"]'); await p.waitForTimeout(300);
+  eq('Check › no reconciliation line asks for a look', await p.$$eval('#chk .chk', (x) => x.length), 0, 0);
+
+  head('7. Coding, undo, Lines');
+  await p.click('#tabs [data-s="cod"]'); await p.click('#side [data-gt="cod"][data-bk="0"]'); await p.waitForTimeout(400);
+  ok('Start here guide on the Code page', await p.$eval('#guide', (g) => !g.hidden));
+  const first = await p.$('#tb input[data-f="pkg"]'); await first.fill('T01'); await first.press('Enter'); await p.waitForTimeout(500);
+  const it0 = await p.evaluate(() => __BK[0].items.find((x) => x.pkg === 'T01') ? 1 : 0);
+  ok('typing a PKG codes the item', it0 === 1);
+  ok('footer shows the unsaved change', await p.$eval('#sbar', (e) => /Unsaved/.test(e.textContent)));
+  eq('difference stays 0 after coding', await p.evaluate(() => R.diff), 0);
+  await p.keyboard.press('Control+z'); await p.waitForTimeout(400);
+  ok('Ctrl+Z takes the code back', await p.evaluate(() => !__BK[0].items.some((x) => x.pkg === 'T01')));
+  await p.click('[data-cv="lines"]:visible'); await p.waitForTimeout(800);
+  ok('Code › Lines (CJI3) shows the lines with their header text', await p.$$eval('#th th', (x) => x.some((t) => /Document header text/.test(t.textContent))) && await p.$$eval('#tb tr', (x) => x.length > 10));
+  await p.click('[data-cv="mrate"]:visible'); await p.waitForTimeout(800);
+  ok('Code › Rate analysis (Material) opens', await p.$eval('#pg-mr', (e) => e.classList.contains('on') && e.innerText.length > 100));
+  await p.click('[data-cv="cod"]:visible'); await p.waitForTimeout(300);
+
+  head('8. Save codes and read them back');
+  const it1 = await p.$('#tb input[data-f="pkg"]'); await it1.fill('T02'); await it1.press('Enter'); await p.waitForTimeout(400);
+  const [dlS] = await Promise.all([p.waitForEvent('download'), p.click('#bSave')]); const codes = path.join(OUT, 'codes.json'); await dlS.saveAs(codes);
+  ok('Save writes a codes file', fs.statSync(codes).size > 100);
+  const { ctx: ctx2, p: p2 } = await open(APP); await p2.evaluate(() => { localStorage.clear(); }); await p2.reload(); await p2.waitForFunction(() => document.querySelector('#tabs button')); await p2.waitForTimeout(1500);
+  ok('a fresh browser has no T02 yet', await p2.evaluate(() => !__BK[0].items.some((x) => x.pkg === 'T02')));
+  await p2.setInputFiles('#file', codes); await p2.waitForTimeout(2500);
+  ok('Import brings the code back', await p2.evaluate(() => __BK[0].items.some((x) => x.pkg === 'T02')));
+  eq('difference stays 0 after import', await p2.evaluate(() => R.diff), 0); await ctx2.close();
+
+  head('9. Excel export');
+  const [dlX] = await Promise.all([p.waitForEvent('download', { timeout: 180000 }), p.click('#bExport')]); const xl = path.join(OUT, 'export.xlsx'); await dlX.saveAs(xl);
+  const ExcelJS = require('exceljs'), wb = new ExcelJS.Workbook(); await wb.xlsx.readFile(xl); const sheets = wb.worksheets.map((w) => w.name);
+  ok('the export opens in Excel format', sheets.length > 5, sheets.join(', '));
+  for (const n of ['Summary', 'Expenses', 'PKG summary', 'Lines', 'Checks']) ok(`sheet "${n}"`, sheets.includes(n));
+  await ctx.close();
+
+  // ---------------------------------------------------------------------------- 10. the empty Tool: drop the files, build
+  if (!QUICK) {
+    head('10. Tool start page: drop files and build');
+    const ctx3 = await browser.newContext({ viewport: { width: 1600, height: 900 } }), p3 = await ctx3.newPage(); p3.on('pageerror', (e) => errs.push(e.message)); p3.on('dialog', (d) => d.dismiss());
+    await p3.goto('file://' + TOOL); await p3.waitForSelector('#pick', { state: 'attached' });
+    await p3.setInputFiles('#pick', files()); await p3.waitForFunction(() => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''), null, { timeout: 120000 });
+    ok('warns that the MB52 is another project', await p3.$eval('.stchk', (e) => /is project SBAY/.test(e.textContent)));
+    await p3.click('#sBuild'); await p3.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 180000 }); await p3.waitForTimeout(1500);
+    eq('built from the start page: difference 0', await p3.evaluate(() => R.diff), 0);
+    eq('same to date as the test app', r2(await p3.evaluate(() => R.toDate)), r2(R0.toDate));
+    await ctx3.close();
+  }
+  await browser.close();
+  head('Page errors'); ok('no JavaScript errors on any page', errs.length === 0, [...new Set(errs)].slice(0, 5).join(' | '));
+
+  if (UPDATE) { fs.writeFileSync(EXP, JSON.stringify(got, null, 1) + '\n'); console.log('\nexpected.json updated'); }
+  const bad = results.filter((r) => !r.pass);
+  console.log(`\n${results.length - bad.length} passed · ${bad.length} failed · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  if (bad.length) { console.log('FAILED:'); bad.forEach((r) => console.log(`  ${r.section} › ${r.name}: ${r.detail}`)); process.exit(1); }
+})().catch((e) => { console.error(e); process.exit(1); });
