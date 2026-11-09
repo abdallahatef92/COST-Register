@@ -151,3 +151,6 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 ## v08 – Second project (SBAY)
 - Rules: **Cash consultancy** and **Security expenses** (cost elements first seen on SBAY) are G&A › Site running costs; the "Other labour / payroll" rule now matches any project's WBS …IN-02-1, not only SUTH.
 - Tests: `npm test` runs both projects – SUTH (91 checks) and SBAY (87 checks, masked copy in test/data-sbay).
+
+## v09 – Direct groups in the PKG summary
+- The Direct section starts with four empty groups: **Civil, Architecture, MEP, Infrastructure**. Put your PKGs in them in Reports › PKG summary › Codes & groups (rename, add or remove groups there). A register that already has its own groups keeps them.
