@@ -127,3 +127,8 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 - Adjust in plain words: add to the cost / take out, Added / Not added, "Add none" / "Add all to <month>".
 - Save and Export Excel keep their words on a laptop screen.
 - Start page: each file shows its project (from WBS or Plant); a file of another project than the CJI3 is shown in red with a warning.
+
+## v04 – Tabs: Dashboard first, Lines next to Coding
+- Tabs: **1 Dashboard** (Summary, Cost drivers) · **2 Code** · 3 Subcontractor · 4 Adjust · 5 Check · **6 Reports** (PKG summary, Per Month, By PKG, GL, WBS). The Tool opens on the Dashboard – it does not depend on coding.
+- **Code** has one switch for the bucket: **Coding | Lines (CJI3) | Rate analysis** (Rate analysis on Material). Lines shows the bucket's CJI3 transactions (name, document header text, WBS, PO …) one click from coding; the bucket list stays on the left, with "All buckets" on top to search any document.
+- The top bar stays on one line from 1366 to 1920 px wide.
