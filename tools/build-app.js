@@ -15,7 +15,12 @@ function page(dataJs) {
 const engine = esbuild.buildSync({ entryPoints: [path.join(__dirname, '..', 'app', 'engine-entry.js')], bundle: true, format: 'iife', platform: 'browser', external: ['xlsx'], minify: true, write: false }).outputFiles[0].text;
 const VER = 'v' + fs.readFileSync(path.join(__dirname, '..', 'VERSION'), 'utf8').trim().padStart(2, '0');
 const tpl = assemble().replace(/__VER__/g, VER);
-const lib = fs.readFileSync(require.resolve('xlsx/dist/xlsx.mini.min.js'), 'utf8'), xl = fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'), 'utf8');
+const lib = fs.readFileSync(require.resolve('xlsx/dist/xlsx.mini.min.js'), 'utf8'), xl0 = fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'), 'utf8');
+// ExcelJS writes <pageSetUpPr> before <outlinePr> inside <sheetPr>; Excel wants the other order and "repairs" the sheet (PKG summary: fit to page + outline).
+// Swap the two calls in the library text; stop the build if the library changed and the text is not found.
+const XL_BAD = /(\w=this\.map\.pageSetUpPr\.render\(\w,\w\.pageSetup\)\|\|\w),(\w=this\.map\.outlinePr\.render\(\w,\w\.outlineProperties\)\|\|\w)/;
+if (!XL_BAD.test(xl0)) throw new Error('build-app: the ExcelJS sheetPr order fix no longer matches the library – check <sheetPr> order by hand');
+const xl = xl0.replace(XL_BAD, '$2,$1');
 return tpl.replace('/*__XLSX__*/', () => lib).replace('/*__EXCELJS__*/', () => xl).replace('/*__ENGINE__*/', () => engine).replace('/*__DATA__*/', () => dataJs || 'const DATA0 = null;');
 }
 if (require.main === module) { const VER = 'v' + fs.readFileSync(path.join(__dirname, '..', 'VERSION'), 'utf8').trim().padStart(2, '0'), out = process.argv[2] || `out/Cost_Register_Tool_${VER}.html`, html = page(); fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, html); console.log(`${out}: ${(html.length / 1e6).toFixed(2)} MB (no data inside – drop the SAP files)`); }

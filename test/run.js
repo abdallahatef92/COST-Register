@@ -223,6 +223,11 @@ const r2 = (x) => Math.round(x * 100) / 100;
     await ctx3.close();
   }
   await browser.close();
+  { const JSZip = require('jszip'), z = await JSZip.loadAsync(fs.readFileSync(path.join(OUT, 'export.xlsx'))), bad = [], ORD = ['tabColor', 'outlinePr', 'pageSetUpPr'];
+    for (const n of Object.keys(z.files)) { if (!/^xl\/worksheets\/sheet\d+\.xml$/.test(n)) continue; const x = await z.files[n].async('string'), m = x.match(/<sheetPr>(.*?)<\/sheetPr>/); if (/<v>(NaN|-?Infinity|undefined|null)<\/v>/.test(x)) bad.push(n + ': a cell holds a value that is not a number');
+      if (m) { const tags = [...m[1].matchAll(/<(\w+)/g)].map((t) => ORD.indexOf(t[1])); if (tags.some((v, i) => v < 0 || (i && v < tags[i - 1]))) bad.push(n + ': ' + m[0]); } }
+    ok('Excel opens every sheet without repair (sheet settings in Excel\'s order, no broken numbers)', !bad.length, bad.join(' · ')); }
+
   head('Page errors'); ok('no JavaScript errors on any page', errs.length === 0, [...new Set(errs)].slice(0, 5).join(' | '));
 
   if (UPDATE) { fs.writeFileSync(EXP, JSON.stringify(got, null, 1) + '\n'); console.log('\n' + path.basename(EXP) + ' updated'); }

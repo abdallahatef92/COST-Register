@@ -176,3 +176,7 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 - One switch **To code · Coded · All** replaces the status chips and "Next to code"; **Items · Lines (CJI3)** stays next to it.
 - Bigger code boxes; a pick list under PKG and Cost element shows your codes with their names (type to filter, ↑ ↓ and Enter, or click).
 - Rate analysis moved to Dashboard; Rules moved to Check. Auto-save status moved to the top bar; the footer only shows what is not zero.
+
+## v15
+- Excel export: the PKG summary sheet no longer makes Excel "repair" the file (two sheet settings were written in the wrong order by the Excel library; fixed at build, with a check).
+- Pick list: with PKG = Indirect, the cost element list shows the whole template list, used or not. With no PKG on the row yet, it shows every cost element with its name and PKG; picking one fills both.
