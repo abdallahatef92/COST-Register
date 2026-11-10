@@ -115,8 +115,12 @@ function lists() { const s = { div: new Set(['DIV 03', 'DIV 0302', 'DIV 04', 'DI
   ['div', 'mnl'].forEach((f) => { $('dl-' + f).innerHTML = [...s[f]].sort().map((x) => `<option value="${esc(x)}">`).join(''); });
   $('dl-pkg').innerHTML = [...s.pkg].sort().map((x) => `<option value="${esc(x)}" label="${esc(isIndPkg(x) ? 'Indirect cost (G&A, site, equipment, fleet, house rent)' : pkgLabel(x) || 'no name yet – name it in Codes & groups')}">`).join(''); R.ceAll = [...s.ce].sort(); ceList(''); R.pkgs = [...s.pkg].sort(); }
 // the cost element dropdown shows the cost elements of the row's PKG (defined ones and ones already used under it), else all
-function ceCodes(pkg) { const p = isIndPkg(pkg) ? IND_PKG : pkg, m = new Map(); if (p) { Object.keys(psCe()).forEach((k) => { if (k.startsWith(p + '|')) m.set(k.slice(p.length + 1), 1); }); BK.forEach((b) => b.items.forEach((it) => { if (it.ce && (isIndPkg(it.pkg) ? IND_PKG : it.pkg) === p) m.set(it.ce, 1); })); }
+function ceCodes(pkg) { const p = isIndPkg(pkg) ? IND_PKG : pkg, m = new Map(); if (p === IND_PKG) psCfg().indirect.forEach((g) => g.c.forEach((c) => m.set(c, 1)));   // Indirect: the whole template list, used or not
+  if (p) { Object.keys(psCe()).forEach((k) => { if (k.startsWith(p + '|')) m.set(k.slice(p.length + 1), 1); }); BK.forEach((b) => b.items.forEach((it) => { if (it.ce && (isIndPkg(it.pkg) ? IND_PKG : it.pkg) === p) m.set(it.ce, 1); })); }
   return { p, list: m.size ? [...m.keys()].sort() : R.ceAll || [] }; }
+// no PKG on the row yet: every cost element you have, each with its PKG and name
+function ceAll() { const m = new Map(), add = (p, c) => { if (p && c) m.set(p + '|' + c, { c, p }); }; psCfg().indirect.forEach((g) => g.c.forEach((c) => add(IND_PKG, c))); Object.keys(psCe()).forEach((k) => add(k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)));
+  BK.forEach((b) => b.items.forEach((it) => add(isIndPkg(it.pkg) ? IND_PKG : it.pkg, it.ce))); return [...m.values()].sort((x, y) => x.c.localeCompare(y.c) || x.p.localeCompare(y.p)); }
 function ceList(pkg) { const { p, list } = ceCodes(pkg); $('dl-ce').innerHTML = list.map((c) => `<option value="${esc(c)}" label="${esc(p ? ceLabel(p, c) : '')}">`).join(''); }
 document.addEventListener('focusin', (e) => { const t = e.target; if (!t.matches || !t.matches('input[list="dl-ce"]')) return; let pkg = '';
   const tr = t.closest('tr'); if (tr && tr.dataset.k) { const r = rowOf(tr); if (r && r.it) { const o = r.i !== undefined ? OVR[L.id[r.i]] : null; pkg = (o && o.pkg !== undefined ? o.pkg : r.it.pkg) || ''; } }
