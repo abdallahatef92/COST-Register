@@ -5,7 +5,7 @@ function renderChecks() {
   add('Duplicate line keys', META.dupes, 'zero', 'A key that appears twice would be double-counted.');
   (META.cjiFiles || []).forEach((f) => add(`CJI3 file ${f.name} (${f.first} → ${f.last}, ${f.lines.toLocaleString('en-US')} lines): lines vs its grand-total row`, r2(f.sum - (f.grand || 0)), 'abs', f.dropped ? f.dropped.toLocaleString('en-US') + ' lines were already in an earlier file and are counted once.' : 'Sum of the file\'s lines minus its own grand-total row.'));
   if ((META.cjiFiles || []).length > 1) add('CJI3 lines with a different amount in two files', META.cjiConflictN || 0, 'zero', (META.cjiConflicts || []).slice(0, 3).map((c) => `${c.id}: ${c.wasFile} ${c.was} → ${c.nowFile} ${c.now}`).join(' · ') || 'The later download wins; none found.');
-  add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule – Code › Rules (bottom of the list): make a rule and apply it.');
+  add('Lines with no bucket (Unclassified)', META.unclassified, 'zero', 'A cost element without a rule – Check › Rules (bottom of the list): make a rule and apply it.');
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
   if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - R.bkUns[SUBI] - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
   BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });

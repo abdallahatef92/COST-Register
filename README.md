@@ -168,3 +168,11 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 
 ## v13
 - Code › Lines (CJI3) follows the group / family chosen in the side list, like Coding.
+
+## v14 – coding first
+- The Tool opens on **Coding › To code**, the largest cost first. The top bar shows one number: how much of the cost is coded and how many items are left.
+- Dashboard, Subcontractor, Adjust, Check and Reports sit in one menu at the top right (with VAT, Import, Save and New build). A yellow **Back to coding** button shows on every other page.
+- The side list is a work list: each bucket shows what is left to code; finished buckets move to "Done". Groups show how many items are left.
+- One switch **To code · Coded · All** replaces the status chips and "Next to code"; **Items · Lines (CJI3)** stays next to it.
+- Bigger code boxes; a pick list under PKG and Cost element shows your codes with their names (type to filter, ↑ ↓ and Enter, or click).
+- Rate analysis moved to Dashboard; Rules moved to Check. Auto-save status moved to the top bar; the footer only shows what is not zero.
