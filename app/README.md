@@ -16,7 +16,7 @@ Parts `01`–`23` sit inside one function, `boot(DATA)` (opened in `00`, closed 
 | 02-state-undo | state (cut, VAT, codes, overrides), change / undo / redo, saving in the browser |
 | 03-autosave | auto-save to the chosen codes file |
 | 04-compute | the engine on screen: everything from the lines + codes + cut date |
-| 05-tabs-side-status | the 6 tabs, the side list, the footer, render() |
+| 05-tabs-side-status | the top bar (progress, menu), the work list at the side, the footer, render() |
 | 06-colors | bucket colours |
 | 07-cost-drivers | Dashboard › Cost drivers |
 | 08-pkg-summary | Reports › PKG summary + Codes & groups |
@@ -31,6 +31,7 @@ Parts `01`–`23` sit inside one function, `boot(DATA)` (opened in `00`, closed 
 | 17-material-rates | Code › Rate analysis |
 | 18-sub-packages-assign | putting POs / work items into packages |
 | 19-table-render | the table itself: widths, sorting, groups, tick boxes, events, bulk coding |
+| 20-code-picker | the pick list under a PKG / cost element box |
 | 20-filter-popup | the Excel-like filter |
 | 21-drawer-drilldown | item drawer, double-click drill-down |
 | 22-topbar-import-export | Import, Save, Export Excel |

@@ -63,13 +63,13 @@ const r2 = (x) => Math.round(x * 100) / 100;
   const open = async (url, ctxOpt = {}) => { const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true, ...ctxOpt }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => (d.type() === 'beforeunload' ? d.accept() : d.dismiss())); await p.goto('file://' + url); await p.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p.waitForTimeout(1200); return { ctx, p }; };
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
-  eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
-  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'sub', 'adj', 'chk', 'rep']);
+  eq('opens on Coding', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'cod');
+  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['cod', 'dash', 'sub', 'adj', 'chk', 'rep']);
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
   eq('client deductions', r2(R0.cd), want('clientDeductions', r2(R0.cd)));
-  ok('footer: "Not saved to a file", no change counted (the automatic indirect fill is not a change of yours)', await p.$eval('#sbar', (e) => /Not saved to a file/.test(e.textContent) && !/change/.test(e.textContent)), await p.$eval('#sbar', (e) => e.textContent.slice(0, 300)));
+  ok('footer: "Not saved to a file", no change counted (the automatic indirect fill is not a change of yours)', await p.$eval('#hasv', (e) => /Not saved to a file/.test(e.textContent) && !/change/.test(e.textContent)), await p.$eval('#hasv', (e) => e.textContent.slice(0, 300)));
   ok('no auto-save question before any coding', !(await p.$('#asm')));
   const bkTd = await p.evaluate(() => __BK.map((b) => b.id + ':' + Math.round(b.items.reduce((s, it) => s + it.td, 0))));
   eq('to date per bucket', bkTd, want('bucketToDate', bkTd));
@@ -84,7 +84,7 @@ const r2 = (x) => Math.round(x * 100) / 100;
   head('6. Every page opens');
   const pages = await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s));
   for (const s of pages) {
-    await p.click(`#tabs [data-s="${s}"]`); await p.waitForTimeout(300);
+    await p.$eval(`#tabs [data-s="${s}"]`, (b) => b.click()); await p.waitForTimeout(300);
     const side = await p.$$eval('#side [data-gt]', (x) => [...new Set(x.map((y) => y.dataset.gt + '|' + (y.dataset.bk || '') + '|' + (y.dataset.uv || '') + '|' + (y.dataset.sv || '')))]);
     for (const k of side) { const [gt, bk, uv, sv] = k.split('|'); const n0 = errs.length;
       await p.click(`#side [data-gt="${gt}"]${bk ? `[data-bk="${bk}"]` : ''}${uv ? `[data-uv="${uv}"]` : ''}${sv ? `[data-sv="${sv}"]` : ''}`); await p.waitForTimeout(250);
@@ -92,18 +92,18 @@ const r2 = (x) => Math.round(x * 100) / 100;
       ok(`${s} › ${gt}${bk ? ' · bucket ' + bk : ''}${uv ? ' · ' + uv : ''}${sv ? ' · ' + sv : ''}`, errs.length === n0 && filled > 20, errs.slice(n0).join(' | ') || 'empty page'); }
   }
   // Check page: every reconciliation check OK
-  await p.click('#tabs [data-s="chk"]'); await p.click('#side [data-gt="chk"]'); await p.waitForTimeout(300);
+  await p.$eval('#tabs [data-s=\"chk\"]', (b) => b.click()); await p.click('#side [data-gt="chk"]'); await p.waitForTimeout(300);
   eq('Check › no reconciliation line asks for a look', await p.$$eval('#chk .chk', (x) => x.length), 0, 0);
 
   head('7. Coding, undo, Lines');
-  await p.click('#tabs [data-s="cod"]'); await p.click('#side [data-gt="cod"][data-bk="0"]'); await p.waitForTimeout(400);
+  await p.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p.click('#side [data-gt="cod"][data-bk="0"]'); await p.waitForTimeout(400);
   ok('Start here guide on the Code page', await p.$eval('#guide', (g) => !g.hidden));
   const first = await p.$('#tb input[data-f="pkg"]'); await first.fill('T01'); await first.press('Enter'); await p.waitForTimeout(900);
   ok('first coding asks: Save your codes automatically?', !!(await p.$('#asm')) && /Save your codes automatically/.test(await p.$eval('#asm', (e) => e.textContent)));
   await p.click('#asLater'); await p.waitForTimeout(200); ok('Later closes it', !(await p.$('#asm')));
   const it0 = await p.evaluate(() => __BK[0].items.find((x) => x.pkg === 'T01') ? 1 : 0);
   ok('typing a PKG codes the item', it0 === 1);
-  ok('footer: not saved to a file · 1 change (on hover)', await p.$eval('#sbar .asv.red', (e) => /1 change/.test(e.title)));
+  ok('footer: not saved to a file · 1 change (on hover)', await p.$eval('#hasv .asv.red', (e) => /1 change/.test(e.title)));
   eq('difference stays 0 after coding', await p.evaluate(() => R.diff), 0);
   await p.keyboard.press('Control+z'); await p.waitForTimeout(400);
   ok('Ctrl+Z takes the code back', await p.evaluate(() => !__BK[0].items.some((x) => x.pkg === 'T01')));
@@ -112,14 +112,14 @@ const r2 = (x) => Math.round(x * 100) / 100;
   { const n0 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, '')); const g = await p.$$eval('#side [data-grp]', (x) => (x.find((y) => y.dataset.grp) || {}).dataset?.grp || '');
     if (g) { await p.click(`#side [data-grp="${g}"]`); await p.waitForTimeout(700); const n1 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, ''));
       ok('Lines follow the group chosen in the side list', n1 > 0 && n1 < n0, n0 + ' → ' + n1); await p.click('#side [data-grp=""]'); await p.waitForTimeout(400); } }
-  await p.click('[data-cv="mrate"]:visible'); await p.waitForTimeout(800);
+  await p.$eval('#tabs [data-s="dash"]', (b) => b.click()); await p.click('#side [data-gt="mrate"]'); await p.waitForTimeout(800);
   ok('Code › Rate analysis (Material) opens', await p.$eval('#pg-mr', (e) => e.classList.contains('on') && e.innerText.length > 100));
-  await p.click('[data-cv="cod"]:visible'); await p.waitForTimeout(300);
+  await p.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p.click('[data-cv="cod"]:visible'); await p.waitForTimeout(300);
 
   head('7b. Next to code: biggest first, suggestions, keys');
-  { const { ctx: c5, p: p5 } = await open(APP); await p5.click('#tabs [data-s="cod"]'); await p5.click('#side [data-gt="cod"][data-bk="0"]'); await p5.waitForTimeout(300);
-    await p5.evaluate(() => { const th = [...document.querySelectorAll('#th th')].find((x) => /^Material/.test(x.textContent.trim())); if (th) th.click(); }); await p5.waitForTimeout(400);   // a sort set in All items must not carry over
-    await p5.click('[data-nx="1"]:visible'); await p5.waitForTimeout(600);
+  { const { ctx: c5, p: p5 } = await open(APP); await p5.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p5.click('#side [data-gt="cod"][data-bk="0"]'); await p5.waitForTimeout(300);
+    await p5.click('[data-cm="all"]:visible'); await p5.waitForTimeout(400); await p5.evaluate(() => { const th = [...document.querySelectorAll('#th th')].find((x) => /^Material/.test(x.textContent.trim())); if (th) th.click(); }); await p5.waitForTimeout(400);   // a sort set in All items must not carry over
+    await p5.click('[data-cm="todo"]:visible'); await p5.waitForTimeout(600);
     const tds = await p5.evaluate(() => [...document.querySelectorAll('#tb tr.it')].slice(0, 15).map((tr) => Math.abs(__BK[0].items[+tr.dataset.k.split(':')[1]].td)));
     ok('Next to code lists the not-coded items, biggest first', tds.length > 10 && tds.every((v, i) => !i || tds[i - 1] >= v));
     ok('progress: how many items bring the bucket to 80%', /bring you to 80%/.test(await p5.$eval('#nxbar', (e) => e.textContent)));
@@ -136,13 +136,13 @@ const r2 = (x) => Math.round(x * 100) / 100;
     // Subcontractor: same PO
     const si = await p5.evaluate(() => __BK.findIndex((b) => b.id === 'Subcontractor')); await p5.click(`#side [data-gt="cod"][data-bk="${si}"]`); await p5.waitForTimeout(600);
     const sp = await p5.evaluate((si) => { const { L, S, N } = __D, m = new Map(); for (let i = 0; i < N; i++) if (L.b[i] === si) { const po = S[L.po[i]]; if (po && po[0] !== '(') { const s = m.get(po) || m.set(po, new Set()).get(po); s.add(L.it[i]); } } const hit = [...m].find(([, s]) => s.size > 1); return hit ? [hit[0], [...hit[1]].slice(0, 2)] : null; }, si);
-    if (sp) { await p5.evaluate(([si, ii]) => { const it = __BK[si].items[ii]; it.pkg = 'T07'; it.ce = 'TSC'; it.div = it.div || 'DIV 03'; it.mnl = it.mnl || 'SUB'; }, [si, sp[1][0]]); await p5.click('[data-nx="0"]:visible'); await p5.click('[data-nx="1"]:visible'); await p5.waitForTimeout(600);
+    if (sp) { await p5.evaluate(([si, ii]) => { const it = __BK[si].items[ii]; it.pkg = 'T07'; it.ce = 'TSC'; it.div = it.div || 'DIV 03'; it.mnl = it.mnl || 'SUB'; }, [si, sp[1][0]]); await p5.click('[data-cm="all"]:visible'); await p5.click('[data-cm="todo"]:visible'); await p5.waitForTimeout(600);
       ok('Subcontractor: an item on the same PO gets the suggestion', await p5.evaluate(([si, ii]) => { const tr = document.querySelector(`#tb tr.it[data-k="${si}:${ii}"]`); return !!tr && !!tr.querySelector('input.sug'); }, [si, sp[1][1]]) );
     } else ok('Subcontractor: a PO with two items exists', false);
     eq('difference stays 0', await p5.evaluate(() => R.diff), 0); await c5.close(); }
 
   head('7c. Codes in one spelling');
-  { const { ctx: c6, p: p6 } = await open(APP); await p6.click('#tabs [data-s="cod"]'); await p6.click('#side [data-gt="cod"][data-bk="0"]'); await p6.waitForTimeout(300);
+  { const { ctx: c6, p: p6 } = await open(APP); await p6.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p6.click('#side [data-gt="cod"][data-bk="0"]'); await p6.waitForTimeout(300);
     const ks = await p6.$$eval('#tb tr.it', (x) => x.slice(0, 2).map((tr) => tr.dataset.k));
     const i1 = (await p6.$$('#tb input[data-f="ce"]'))[0]; await i1.fill('sf-02x'); await i1.press('Tab'); await p6.waitForTimeout(400); const m6 = await p6.$('#asLater'); if (m6) await m6.click();
     eq('a typed code is kept in capitals (sf-02x → SF-02X)', await p6.evaluate((k) => __BK[0].items[+k.split(':')[1]].ce, ks[0]), 'SF-02X');
@@ -152,13 +152,33 @@ const r2 = (x) => Math.round(x * 100) / 100;
     await p6.evaluate((k) => { __BK[0].items[+k.split(':')[1]].ce = 'sp-17'; }, ks[0]); const i3 = (await p6.$$('#tb input[data-f="pkg"]'))[2]; await i3.fill('T09'); await i3.press('Tab'); await p6.waitForTimeout(500);
     await p6.reload(); await p6.waitForFunction(() => document.querySelector('#tabs button')); await p6.waitForTimeout(2500);
     eq('an old lowercase code is in capitals after reopening (sp-17 → SP-17)', await p6.evaluate((k) => __BK[0].items[+k.split(':')[1]].ce, ks[0]), 'SP-17');
-    await p6.click('#tabs [data-s="chk"]'); await p6.click('#side [data-gt="log"]'); await p6.waitForTimeout(400);
+    await p6.$eval('#tabs [data-s=\"chk\"]', (b) => b.click()); await p6.click('#side [data-gt="log"]'); await p6.waitForTimeout(400);
     ok('…and it is in the Changes log', /Codes in capitals/.test(await p6.$eval('#pages .page.on', (e) => e.innerText)));
     eq('difference stays 0', await p6.evaluate(() => R.diff), 0); await c6.close(); }
 
+  head('7d. Coding first: progress, work list, menu, pick list');
+  { const { ctx: c7, p: p7 } = await open(APP);
+    ok('opens on Coding › To code, largest cost first', await p7.$eval('#tools [data-cm="todo"]', (b) => b.classList.contains('on')) && await p7.evaluate(() => { const t = [...document.querySelectorAll('#tb tr.it')].slice(0, 10).map((tr) => { const [bi, ii] = tr.dataset.k.split(':'); return Math.abs(__BK[+bi].items[+ii].td); }); return t.length > 1 && t.every((v, i) => !i || v <= t[i - 1]); }));
+    const left = await p7.evaluate(() => { let n = 0; __BK.forEach((b) => b.items.forEach((it) => { if (it.inc !== 'No' && !(it.pkg && it.mnl && it.ce && (b.id !== 'Subcontractor' || it.div))) n++; })); return n; });
+    ok('top bar: % of the cost coded and the items left', await p7.$eval('#hprog', (e, n) => /% of the cost is coded/.test(e.textContent) && e.textContent.includes(n.toLocaleString('en-US') + ' item'), left), await p7.$eval('#hprog', (e) => e.textContent) + ' · expected ' + left);
+    ok('work list: every bucket with something left shows it', await p7.$$eval('#side .rk .r1', (x) => x.length > 0 && x.some((e) => / left/.test(e.textContent))));
+    const closed = await p7.$eval('#menu', (m) => m.hidden); await p7.click('#bMenu');
+    ok('the menu is closed until you click it, then lists the other pages', closed && await p7.$eval('#menu', (m) => !m.hidden && /Dashboard/.test(m.textContent) && /Reports/.test(m.textContent)));
+    await p7.click('#tabs [data-s="dash"]'); await p7.waitForTimeout(500);
+    ok('on another page: a Back to coding button', await p7.$eval('#bHome', (b) => !b.hidden) && await p7.$eval('#menu', (m) => m.hidden)); await p7.click('#bHome'); await p7.waitForTimeout(400);
+    ok('…and it goes back to Coding', await p7.$eval('#tabs button.on', (b) => b.dataset.s) === 'cod' && await p7.$eval('#bHome', (b) => b.hidden));
+    // pick list: code one item, then the next PKG box offers that code; ↓ + Enter takes it
+    const k1 = await p7.$eval('#tb tr.it', (tr) => tr.dataset.k); const i1 = await p7.$('#tb input[data-f="pkg"]'); await i1.fill('T11'); await i1.press('Tab'); await p7.waitForTimeout(400); const m7 = await p7.$('#asLater'); if (m7) await m7.click();
+    const i2 = (await p7.$$('#tb input[data-f="pkg"]'))[1], k2 = await i2.evaluate((x) => x.closest('tr').dataset.k); await i2.click(); await i2.fill('t1'); await p7.waitForTimeout(300);
+    ok('the pick list shows your PKG codes, filtered as you type', await p7.$eval('#pkl', (e) => !e.hidden && [...e.querySelectorAll('[data-i] b')].some((b) => b.textContent === 'T11')), await p7.evaluate(() => (document.getElementById('pkl') || {}).textContent));
+    await i2.press('ArrowDown'); await i2.press('Enter'); await p7.waitForTimeout(500);
+    eq('↓ and Enter take the code from the list', await p7.evaluate((k) => { const [bi, ii] = k.split(':'); return __BK[+bi].items[+ii].pkg; }, k2), 'T11');
+    ok('the first item kept its code', await p7.evaluate((k) => { const [bi, ii] = k.split(':'); return __BK[+bi].items[+ii].pkg === 'T11'; }, k1));
+    eq('difference stays 0', await p7.evaluate(() => R.diff), 0); await c7.close(); }
+
   head('8. Save codes and read them back');
   const it1 = await p.$('#tb input[data-f="pkg"]'); await it1.fill('T02'); await it1.press('Enter'); await p.waitForTimeout(400);
-  const [dlS] = await Promise.all([p.waitForEvent('download'), p.click('#bSave')]); const codes = path.join(OUT, 'codes.json'); await dlS.saveAs(codes);
+  const [dlS] = await Promise.all([p.waitForEvent('download'), p.$eval('#bSave', (b) => b.click())]); const codes = path.join(OUT, 'codes.json'); await dlS.saveAs(codes);
   ok('Save writes a codes file', fs.statSync(codes).size > 100);
   const { ctx: ctx2, p: p2 } = await open(APP); await p2.evaluate(() => { localStorage.clear(); }); await p2.reload(); await p2.waitForFunction(() => document.querySelector('#tabs button')); await p2.waitForTimeout(1500);
   ok('a fresh browser has no T02 yet', await p2.evaluate(() => !__BK[0].items.some((x) => x.pkg === 'T02')));
@@ -173,10 +193,10 @@ const r2 = (x) => Math.round(x * 100) / 100;
       window.showSaveFilePicker = async () => ({ name: window.__file.name, queryPermission: async () => 'granted', requestPermission: async () => 'granted', getFile: async () => ({ text: async () => window.__file.text }),
         createWritable: async () => { let buf = ''; return { write: async (t) => { buf += t; }, close: async () => { window.__file.text = buf; window.__file.writes++; } }; } }); });
     const p4 = await ctx4.newPage(); p4.on('pageerror', (e) => errs.push(e.message)); await p4.goto('file://' + APP); await p4.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p4.waitForTimeout(1200);
-    await p4.click('#tabs [data-s="cod"]'); await p4.waitForTimeout(300); const i4 = await p4.$('#tb input[data-f="pkg"]'); await i4.fill('T03'); await i4.press('Enter'); await p4.waitForTimeout(900);
+    await p4.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p4.waitForTimeout(300); const i4 = await p4.$('#tb input[data-f="pkg"]'); await i4.fill('T03'); await i4.press('Enter'); await p4.waitForTimeout(900);
     await p4.click('#asPick'); await p4.waitForTimeout(1200);
     ok('Choose file → the codes are written to it', await p4.evaluate(() => window.__file.writes > 0 && JSON.stringify(JSON.parse(window.__file.text).codes).includes('"T03"')));
-    ok('footer: ✓ Auto-saved · SUTH_codes.json', await p4.$eval('#sbar', (e) => /Auto-saved · SUTH_codes\.json/.test(e.textContent)), await p4.$eval('#sbar', (e) => e.textContent.slice(0, 300)));
+    ok('footer: ✓ Auto-saved · SUTH_codes.json', await p4.$eval('#hasv', (e) => /Auto-saved · SUTH_codes\.json/.test(e.textContent)), await p4.$eval('#hasv', (e) => e.textContent.slice(0, 300)));
     const w0 = await p4.evaluate(() => window.__file.writes); const i5 = (await p4.$$('#tb input[data-f="pkg"]'))[1]; await i5.fill('T04'); await i5.press('Enter'); await p4.waitForTimeout(1500);
     ok('the next change saves itself', await p4.evaluate((w) => window.__file.writes > w && window.__file.text.includes('"T04"'), w0));
     ok('no second question once a file is chosen', !(await p4.$('#asm')));

@@ -11,17 +11,24 @@
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div class="ttl"><h1>Cost Register <span class="ver" title="Tool version">__VER__</span></h1><div class="sub" id="hsub"></div></div>
-  <nav class="secs" id="tabs"></nav>
+  <div class="ttl"><h1>Cost Register <span class="ver" title="Tool version">__VER__</span></h1><div class="sub"><span id="hsub"></span> · to <select id="cut" title="Cut date – the month you are closing"></select></div></div>
+  <button id="bHome" hidden title="Back to the coding work list">← Back to coding</button>
+  <div id="hprog" title="Share of the to-date cost on fully coded items – click to carry on coding"></div>
   <div class="sp"></div>
-  <label><span class="bl">Cut </span><select id="cut"></select></label>
-  <select id="vat" title="VAT on subcontractor certificates"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none">
-  <button id="bHelp" title="Show / hide the coding guide (Start here)">?</button><button id="bUndo" title="Undo (Ctrl+Z)">↶</button><button id="bRedo" title="Redo (Ctrl+Y)">↷</button>
-  <span class="hsep"></span>
-  <button id="bNew" title="Build from new SAP files">⟳<span class="bl"> New build</span></button>
-  <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪<span class="bl"> Import</span></button>
-  <button id="bSave" title="Save all codes (and line overrides) as a small file">💾<span class="bl"> Save</span></button>
-  <button id="bExport" class="hp" title="Light Excel report: values, formatted, cut date as now">⇩<span class="bl"> Export Excel</span></button>
+  <span id="hasv"></span>
+  <button id="bUndo" title="Undo (Ctrl+Z)">↶<span class="bl"> Undo</span></button><button id="bRedo" title="Redo (Ctrl+Y)">↷</button>
+  <div class="mwrap"><button id="bMenu" title="Dashboard, subcontractor packages, adjustments, checks, reports, files">Dashboard &amp; reports ▾</button>
+    <div id="menu" hidden>
+      <nav class="secs" id="tabs"></nav>
+      <div class="msep"></div>
+      <label class="mrow">VAT on certificates <select id="vat" title="VAT on subcontractor certificates"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none"></label>
+      <div class="msep"></div>
+      <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪ Import codes…</button>
+      <button id="bSave" title="Save all codes (and line overrides) as a small file">💾 Save codes to a file</button>
+      <button id="bNew" title="Build from new SAP files">⟳ New build from SAP files</button>
+      <button id="bHelp" title="Show / hide the coding guide (Start here)">? Coding guide</button>
+    </div></div>
+  <button id="bExport" class="hp" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
   <input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden><span id="saved" hidden></span>
 </header>
 <div id="mainrow"><aside id="side"></aside><div id="pages">
