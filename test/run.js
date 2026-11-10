@@ -109,6 +109,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
   ok('Ctrl+Z takes the code back', await p.evaluate(() => !__BK[0].items.some((x) => x.pkg === 'T01')));
   await p.click('[data-cv="lines"]:visible'); await p.waitForTimeout(800);
   ok('Code › Lines (CJI3) shows the lines with their header text', await p.$$eval('#th th', (x) => x.some((t) => /Document header text/.test(t.textContent))) && await p.$$eval('#tb tr', (x) => x.length > 10));
+  { const n0 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, '')); const g = await p.$$eval('#side [data-grp]', (x) => (x.find((y) => y.dataset.grp) || {}).dataset?.grp || '');
+    if (g) { await p.click(`#side [data-grp="${g}"]`); await p.waitForTimeout(700); const n1 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, ''));
+      ok('Lines follow the group chosen in the side list', n1 > 0 && n1 < n0, n0 + ' → ' + n1); await p.click('#side [data-grp=""]'); await p.waitForTimeout(400); } }
   await p.click('[data-cv="mrate"]:visible'); await p.waitForTimeout(800);
   ok('Code › Rate analysis (Material) opens', await p.$eval('#pg-mr', (e) => e.classList.contains('on') && e.innerText.length > 100));
   await p.click('[data-cv="cod"]:visible'); await p.waitForTimeout(300);

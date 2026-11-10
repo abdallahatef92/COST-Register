@@ -165,3 +165,6 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 
 ## v12
 - Code › Lines (CJI3): **WBS element** and **Document header text** right after Name (CJI3).
+
+## v13
+- Code › Lines (CJI3) follows the group / family chosen in the side list, like Coding.

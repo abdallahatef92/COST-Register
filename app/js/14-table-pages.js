@@ -93,7 +93,8 @@ function pageDef() {
   }
   if (ST.tab === 'lines') {
     // one bucket, or every line of every bucket (bi = -1); grouped by item; tick lines (header ☐ = all lines that pass the filters) and code them
-    const all = bi < 0, idx = []; for (let i = 0; i < N; i++) if ((all && (!XB.size || XB.has(L.b[i]))) || L.b[i] === bi) idx.push(i);
+    const all = bi < 0, idx = [], gs = all ? '' : ST.grpSel[bi] || '', gOk = (i) => { if (!gs) return true; const g = BK[bi].items[L.it[i]].grp; return gs.startsWith('F:') ? famOf(g) === gs.slice(2) : g === gs; };   // the side list's group / family, as on Coding
+    for (let i = 0; i < N; i++) if ((all && (!XB.size || XB.has(L.b[i]))) || (L.b[i] === bi && gOk(i))) idx.push(i);
     const it = (i) => BK[L.b[i]].items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
     const anyQ = all ? true : b.qty, isMat = !all && bi === MATI, isS = !all && isSub(bi);
     const tx = (k, l, w, arr) => ({ k, l, w, v: (r) => S[arr[r.i]], h: (r) => `<td dir="auto" title="${esc(S[arr[r.i]])}">${esc(S[arr[r.i]])}</td>` });
