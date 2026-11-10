@@ -162,3 +162,6 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 ## v11 – Lines (CJI3) as a flat list, like Coding
 - Code › Lines (CJI3): one row per CJI3 line, no item rows. Columns: **Posting date, Period**, then the Coding columns of the bucket (e.g. Group, Material, Description, Name (CJI3), Unit), **PKG, MNL, Cost element, Status, Include**, then Qty, Amount and every line detail (line text, PO, subcontractor, source, WBS element, document header text, offsetting account, document, type, cost element, cost element name).
 - Status is the line's own (its codes or its item's); the All / Not coded / Coded chips filter lines by it. A code typed on a line codes that line only, as before.
+
+## v12
+- Code › Lines (CJI3): **WBS element** and **Document header text** right after Name (CJI3).

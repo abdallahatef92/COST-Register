@@ -125,6 +125,7 @@ function pageDef() {
       tx('hdr', 'Document header text', 200, L.hdr), tx('off', 'Offsetting account', 180, L.off),
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 64, v: (r) => S[L.ty[r.i]] + (isOB(r.i) ? ' · OB' : ''), h: (r) => `<td>${esc(S[L.ty[r.i]])}${isOB(r.i) ? ' ' + OBTAG : ''}</td>` },
       { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` });
+    { const mv = ['wbs', 'hdr'].map((k) => cols.splice(cols.findIndex((c) => c.k === k), 1)[0]); cols.splice(cols.findIndex((c) => c.k === 'name') + 1, 0, ...mv); }   // WBS and document header text right after the name
     return { cols, rows: idx.map((i) => ({ i, it: it(i), g: '' })), lines: true, sel: true, status: true, groups: false, extraTools: codSeg('lines'), rowCls: (r) => (isOB(r.i) ? 'obr' : ''),
       foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)), ...(anyQ ? { qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)) } : {}) }) };
   }
