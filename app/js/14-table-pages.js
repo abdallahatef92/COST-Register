@@ -26,6 +26,7 @@ function sugIndex() { const m = new Map();
   const best = new Map(); m.forEach((e, k) => best.set(k, [...e.values()].sort((x, y) => y.a - x.a)[0])); return best; }
 function sugOf(it) { if (it.pkg && it.ce) return null; if (!SUG) SUG = sugIndex(); for (const k of sugKeys(it)) { const x = SUG.get(k); if (!x) continue; const s = x.src, by = k[0] === 'G' ? 'material group ' + it.vals[2] : k[0] === 'S' ? 'PO ' + subPo(it) + ' · ' + it.vals[1] : 'PO ' + subPo(it);
     return { pkg: x.pkg, ce: x.ce, why: `like ${itemCode(s)} ${itemDesc(s)}`.slice(0, 60) + ` – same ${by}` + (x.n > 1 ? ` · ${x.n} items coded` : '') + (CODED0.has(s.bi + ':' + s.ii) ? ' · last month' : '') }; } return null; }
+const lineStatusOf = (i) => { const it = BK[L.b[i]].items[L.it[i]], o = OVR[L.id[i]]; return codeF(L.b[i]).every((f) => (o && o[f] !== undefined ? o[f] : it[f])) ? 'Coded' : 'Not coded'; };
 const codeInput = (it, f, ovrVal) => { const v = ovrVal !== undefined ? ovrVal : it[f], sg = !v && ovrVal === undefined && (f === 'pkg' || f === 'ce') ? sugOf(it) : null, sv = sg ? sg[f] : '';
   return `<td class="c"><input data-f="${f}" value="${esc(v)}" list="dl-${f}" class="${v ? '' : 'miss'}${sv ? ' sug' : ''}${ovrVal !== undefined && ovrVal !== it[f] ? ' ovr' : ''}"${sv ? ` placeholder="${esc(sv)} ↵" data-sug="${esc(sv)}" title="Suggested – Enter accepts"` : ''}></td>`; };
 const stCell = (it) => { const s = statusOf(it); return `<td><span class="st ${s.split(' ')[0]}">${s}</span></td>`; };
@@ -96,27 +97,36 @@ function pageDef() {
     const it = (i) => BK[L.b[i]].items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
     const anyQ = all ? true : b.qty, isMat = !all && bi === MATI, isS = !all && isSub(bi);
     const tx = (k, l, w, arr) => ({ k, l, w, v: (r) => S[arr[r.i]], h: (r) => `<td dir="auto" title="${esc(S[arr[r.i]])}">${esc(S[arr[r.i]])}</td>` });
-    const cols = [{ k: 'item', l: all ? 'Item' : b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 106, fz: 1, v: (r) => itemCode(it(r.i)), h: (r) => `<td class="help" title="${esc(itemCode(it(r.i)))}">${isOB(r.i) ? OBTAG : ''}</td>` }];
-    if (all) cols.push({ k: 'bk', l: 'Bucket', w: 130, v: (r) => BK[L.b[r.i]].id, h: (r) => `<td class="help">${esc(BK[L.b[r.i]].short)}</td>` });
-    cols.push({ k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
-      { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` });
+    // flat, like Coding: one row per CJI3 line – the item's Coding columns first, then the line's codes, status, include, and every line detail
+    const GN = META.grpNames || {}, iv = (r, j) => it(r.i).vals[j] || '', cols = [];
+    if (all) cols.push({ k: 'bk', l: 'Bucket', w: 130, v: (r) => BK[L.b[r.i]].id, h: (r) => `<td class="help">${isOB(r.i) ? OBTAG + ' ' : ''}${esc(BK[L.b[r.i]].short)}</td>` },
+      { k: 'item', l: 'Item', w: 120, fz: 1, v: (r) => itemCode(it(r.i)), h: (r) => `<td><a class="lk open2" data-bi="${L.b[r.i]}" data-ii="${L.it[r.i]}">${esc(itemCode(it(r.i)))}</a></td>` },
+      { k: 'idesc', l: 'Description', w: 240, v: (r) => itemDesc(it(r.i)), h: (r) => `<td dir="auto" title="${esc(itemDesc(it(r.i)))}">${esc(itemDesc(it(r.i)))}</td>` });
+    else b.cols.forEach((lab, j) => { if (isMat && j < 2) return; const code = j === (isMat ? 3 : isS ? 1 : 0);
+      if (isMat && lab === 'Unit') cols.push(tx('name', 'Name (CJI3)', 210, L.name));
+      cols.push({ k: 'c' + j, l: lab, w: lab === 'Unit' ? 58 : isMat && lab === 'Group' ? 190 : lab === 'Description' || /name/i.test(lab) ? 260 : lab === 'Type of works' ? 170 : 100, ...(code ? { fz: 1 } : {}), v: (r) => (isMat && lab === 'Group' ? iv(r, j) + (GN[iv(r, j)] ? ' · ' + GN[iv(r, j)] : '') : iv(r, j)),
+        h: (r) => (lab === 'Unit' ? `<td>${iv(r, j) ? `<span class="u" style="background:${unitCol(iv(r, j))}">${esc(iv(r, j))}</span>` : ''}</td>`
+          : isMat && lab === 'Group' ? `<td title="${esc(iv(r, j))} ${esc(GN[iv(r, j)] || '')}">${isOB(r.i) ? OBTAG + ' ' : ''}${esc(iv(r, j))} <span class="help">${esc(GN[iv(r, j)] || '')}</span></td>`
+          : code ? `<td>${!isMat && j === 0 && isOB(r.i) ? OBTAG + ' ' : ''}<a class="lk open2" data-bi="${L.b[r.i]}" data-ii="${L.it[r.i]}">${esc(iv(r, j))}</a></td>`
+          : `<td dir="auto" title="${esc(iv(r, j))}">${!isMat && j === 0 && isOB(r.i) ? OBTAG + ' ' : ''}${esc(iv(r, j))}</td>`) }); });
+    if (all || !isMat) cols.push(tx('name', 'Name (CJI3)', 210, L.name));
+    ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 104 : 80) + 18, code: 1, v: (r) => ef(r.i, f) || '(blank)', h: (r) => { const o = OVR[L.id[r.i]]; return codeInput(it(r.i), f, o && o[f] !== undefined ? o[f] : undefined); } }));
+    cols.push({ k: 'st', l: 'Status', tip: 'Coded = the line has every code (its own or its item\'s)', w: 118, v: (r) => lineStatusOf(r.i), h: (r) => `<td><span class="st ${lineStatusOf(r.i).split(' ')[0]}">${lineStatusOf(r.i)}</span></td>` },
+      { k: 'inc', l: 'Include', w: 92, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` });
+    if (anyQ) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
+    cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
+    cols.unshift({ k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
+      { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` });   // the posting date and period first
     if (!isMat) cols.push(tx('desc', 'Line text', 220, L.desc));
     if (isS || all) cols.push({ k: 'po', l: 'PO', w: 96, v: (r) => S[L.po[r.i]], h: (r) => `<td>${esc(S[L.po[r.i]])}</td>` }, { k: 'sup', l: 'Subcontractor', w: 160, v: (r) => S[L.sup[r.i]], h: (r) => `<td dir="auto">${esc(S[L.sup[r.i]])}</td>` });
     if (isS || (!all && BK[bi].zint)) cols.push({ k: 'src', l: 'Source', w: 120, v: (r) => SRC[r.i], h: (r) => `<td>${esc(SRC[r.i])}</td>` });
-    if (anyQ) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
-    cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
-    ['pkg', 'mnl', 'ce'].forEach((f) => cols.push({ k: f, l: FN[f], w: f === 'ce' ? 104 : 80, code: 1, v: (r) => ef(r.i, f) || '(blank)', h: (r) => { const o = OVR[L.id[r.i]]; return codeInput(it(r.i), f, o && o[f] !== undefined ? o[f] : undefined); } }));
-    cols.push({ k: 'inc', l: 'Include', w: 70, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` },
-      { k: 'wbs', l: 'WBS element', w: 150, v: (r) => S[L.wbs[r.i]], h: (r) => `<td>${esc(S[L.wbs[r.i]])}</td>` },
+    cols.push({ k: 'wbs', l: 'WBS element', w: 150, v: (r) => S[L.wbs[r.i]], h: (r) => `<td>${esc(S[L.wbs[r.i]])}</td>` },
       // the CJI3 text columns – the allocation information (as on the Excel Data sheets)
-      tx('name', 'Name (CJI3)', 220, L.name), tx('hdr', 'Document header text', 200, L.hdr), tx('off', 'Offsetting account', 180, L.off),
+      tx('hdr', 'Document header text', 200, L.hdr), tx('off', 'Offsetting account', 180, L.off),
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 64, v: (r) => S[L.ty[r.i]] + (isOB(r.i) ? ' · OB' : ''), h: (r) => `<td>${esc(S[L.ty[r.i]])}${isOB(r.i) ? ' ' + OBTAG : ''}</td>` },
       { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` });
-    const lastLab = cols[cols.findIndex((c) => c.k === (anyQ ? 'qty' : 'amt')) - 1].k;
-    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: L.b[i] + ':' + L.it[i] })), lines: true, sel: true, groups: true, extraTools: codSeg('lines'), rowCls: (r) => (isOB(r.i) ? 'obr' : ''), gSpanK: lastLab, gColor: () => '#E4E8EE',
-      gLabel: (g, rs) => { const [gb, gi] = g.split(':').map(Number), x = BK[gb].items[gi]; return `${all ? `<span class="u" style="background:#DDE5EE">${esc(BK[gb].short)}</span> ` : ''}<a class="lk open2" data-bi="${gb}" data-ii="${gi}">${esc(itemCode(x))}</a> &nbsp;<span dir="auto" style="unicode-bidi:isolate">${esc(itemDesc(x))}</span><span class="gm">${rs.length} lines${itemUnit(x) ? ' · ' + esc(itemUnit(x)) : ''}</span>${((ob) => (ob.length ? ` ${OBTAG}<span class="gm">${fmt(ob.reduce((s0, r) => s0 + R.amt[r.i], 0))}</span>` : ''))(rs.filter((r) => isOB(r.i)))}`; },
-      gCells: (g, rs) => ({ qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)), amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }),
-      foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)) }) };
+    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: '' })), lines: true, sel: true, status: true, groups: false, extraTools: codSeg('lines'), rowCls: (r) => (isOB(r.i) ? 'obr' : ''),
+      foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)), ...(anyQ ? { qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)) } : {}) }) };
   }
   if (ST.tab === 'gl' || ST.tab === 'wbs') {
     // month columns (Opening · months folding into quarters / years · Pending) + To date, amounts only
