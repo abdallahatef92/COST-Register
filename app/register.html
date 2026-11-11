@@ -11,26 +11,26 @@
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div class="ttl"><h1>Cost Register <span class="ver" title="Tool version">__VER__</span></h1><div class="sub"><span id="hsub"></span> · to <select id="cut" title="Cut date – the month you are closing"></select></div></div>
-  <button id="bHome" hidden title="Back to the coding work list">← Back to coding</button>
-  <div id="hprog" title="Share of the to-date cost on fully coded items – click to carry on coding"></div>
+  <div class="logo"><i>CR</i><h1>Cost Register <span class="ver" title="Tool version">__VER__</span></h1></div>
+  <div class="crumb"><span id="hsub"></span> &nbsp;›&nbsp; <b id="hpage"></b></div>
+  <label class="cut" title="Cut date – the month you are closing. Click to change"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><small>CUT DATE</small><select id="cut"></select></span></label>
   <div class="sp"></div>
   <span id="hasv"></span>
   <button id="bUndo" title="Undo (Ctrl+Z)">↶<span class="bl"> Undo</span></button><button id="bRedo" title="Redo (Ctrl+Y)">↷</button>
-  <div class="mwrap"><button id="bMenu" title="Dashboard, subcontractor packages, adjustments, checks, reports, files">Dashboard &amp; reports ▾</button>
-    <div id="menu" hidden>
-      <nav class="secs" id="tabs"></nav>
-      <div class="msep"></div>
-      <label class="mrow">VAT on certificates <select id="vat" title="VAT on subcontractor certificates"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none"></label>
-      <div class="msep"></div>
-      <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file">⇪ Import codes…</button>
-      <button id="bSave" title="Save all codes (and line overrides) as a small file">💾 Save codes to a file</button>
-      <button id="bNew" title="Build from new SAP files">⟳ New build from SAP files</button>
-      <button id="bHelp" title="Show / hide the coding guide (Start here)">? Coding guide</button>
-    </div></div>
   <button id="bExport" class="hp" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
   <input type="file" id="file" accept=".xlsx,.xlsm,.json" hidden><span id="saved" hidden></span>
 </header>
+<nav id="nav"><div class="nin">
+  <div class="nhd"><span>THIS MONTH</span><button id="bPin" title="Keep the list open / let it hide by itself"></button></div>
+  <div class="secs" id="tabs"></div>
+  <div class="nsp"></div>
+  <div class="nft">
+    <label class="nvat" title="VAT on subcontractor certificates"><span class="ni"></span><select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none"></label>
+    <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file"><span class="ni"></span><span class="tx">Import codes…</span></button>
+    <button id="bSave" title="Save all codes (and line overrides) as a small file"><span class="ni"></span><span class="tx">Save codes to a file</span></button>
+    <button id="bNew" title="Build from new SAP files"><span class="ni"></span><span class="tx">New build from SAP files</span></button>
+    <button id="bHelp" title="Show / hide the coding guide (Start here)"><span class="ni"></span><span class="tx">Coding guide</span></button>
+  </div></div></nav>
 <div id="mainrow"><aside id="side"></aside><div id="pages">
 <!-- Summary -->
 <div class="page" id="pg-sum"><div class="dash" id="sum"></div></div>
@@ -48,6 +48,7 @@
 <div class="page" id="pg-pkg"><div id="pkg" class="pkroot"></div></div>
 <div class="page" id="pg-mr"><div id="mr" class="pkroot"></div></div>
 <div class="page" id="pg-psum"><div class="dash" id="psum"></div></div>
+<div class="page" id="pg-flow"><div class="dash" id="flow"></div></div>
 <div class="page" id="pg-drv"><div class="dash" id="drvp"></div></div>
 <div class="page" id="pg-log"><div class="dash" id="log"></div></div>
 <div class="page" id="pg-chk"><div class="dash" id="chk"></div></div>

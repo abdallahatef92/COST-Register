@@ -16,10 +16,11 @@ Parts `01`–`23` sit inside one function, `boot(DATA)` (opened in `00`, closed 
 | 02-state-undo | state (cut, VAT, codes, overrides), change / undo / redo, saving in the browser |
 | 03-autosave | auto-save to the chosen codes file |
 | 04-compute | the engine on screen: everything from the lines + codes + cut date |
-| 05-tabs-side-status | the top bar (progress, menu), the work list at the side, the footer, render() |
+| 05-tabs-side-status | the side navigation, the work list, the footer, the footer, render() |
 | 06-colors | bucket colours |
 | 07-cost-drivers | Dashboard › Cost drivers |
 | 08-pkg-summary | Reports › PKG summary + Codes & groups |
+| 09-cost-flow | Dashboard › Cost flow (the Sankey) |
 | 09-summary | Dashboard › Summary |
 | 10-checks | Check › All checks |
 | 11-changes-log | Check › Changes |

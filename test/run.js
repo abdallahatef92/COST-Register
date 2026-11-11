@@ -63,8 +63,8 @@ const r2 = (x) => Math.round(x * 100) / 100;
   const open = async (url, ctxOpt = {}) => { const ctx = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true, ...ctxOpt }), p = await ctx.newPage(); p.on('pageerror', (e) => errs.push(e.message)); p.on('dialog', (d) => (d.type() === 'beforeunload' ? d.accept() : d.dismiss())); await p.goto('file://' + url); await p.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p.waitForTimeout(1200); return { ctx, p }; };
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
-  eq('opens on Coding', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'cod');
-  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['cod', 'dash', 'sub', 'adj', 'chk', 'rep']);
+  eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
+  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'sub', 'adj', 'chk', 'rep']);
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
@@ -156,17 +156,24 @@ const r2 = (x) => Math.round(x * 100) / 100;
     ok('…and it is in the Changes log', /Codes in capitals/.test(await p6.$eval('#pages .page.on', (e) => e.innerText)));
     eq('difference stays 0', await p6.evaluate(() => R.diff), 0); await c6.close(); }
 
-  head('7d. Coding first: progress, work list, menu, pick list');
+  head('7d. Navigation, Cost flow, coding work list, pick list');
   { const { ctx: c7, p: p7 } = await open(APP);
-    ok('opens on Coding › To code, largest cost first', await p7.$eval('#tools [data-cm="todo"]', (b) => b.classList.contains('on')) && await p7.evaluate(() => { const t = [...document.querySelectorAll('#tb tr.it')].slice(0, 10).map((tr) => { const [bi, ii] = tr.dataset.k.split(':'); return Math.abs(__BK[+bi].items[+ii].td); }); return t.length > 1 && t.every((v, i) => !i || v <= t[i - 1]); }));
+    ok('top bar: project › page name and the cut date', await p7.$eval('header.top .crumb', (e) => /Dashboard/.test(e.textContent)) && await p7.$eval('header.top .cut', (e) => /CUT DATE/.test(e.textContent) && !!e.querySelector('#cut').value));
+    const w0 = await p7.$eval('#nav', (e) => e.getBoundingClientRect().width); await p7.hover('#nav'); await p7.waitForTimeout(500); const w1 = await p7.$eval('#nav', (e) => e.getBoundingClientRect().width);
+    ok('the side navigation hides to a strip and opens under the mouse', w0 < 70 && w1 > 200, w0 + ' → ' + w1);
+    await p7.click('#bPin'); await p7.mouse.move(900, 500); await p7.waitForTimeout(500);
+    ok('pin keeps it open (and the page moves aside)', await p7.$eval('#nav', (e) => e.getBoundingClientRect().width) > 200 && await p7.$eval('#mainrow', (e) => e.getBoundingClientRect().left) > 200);
+    await p7.click('#bPin'); await p7.mouse.move(900, 500); await p7.waitForTimeout(500); ok('unpinned, it hides again', await p7.$eval('#nav', (e) => e.getBoundingClientRect().width) < 70);
+    // Cost flow: the bands (plus the credits that cannot be drawn) are the cost to date
+    await p7.click('#side [data-gt="flow"]'); await p7.waitForTimeout(700);
+    const fl = await p7.evaluate(() => { const t = document.querySelector('#flow .flh').textContent, n = (document.querySelector('#flow .fln') || {}).textContent || '', num = (x) => +String(x).replace(/,/g, ''); const bands = num((t.match(/· ([\d,]+) ·/) || [])[1] || 0), cr = num((n.match(/Not drawn: (-[\d,]+)/) || [])[1] || 0); return { bands, cr, td: Math.round(R.toDate), paths: document.querySelectorAll('#flsvg path.fb').length, nodes: document.querySelectorAll('#flsvg g.fn').length }; });
+    ok('Cost flow draws the buckets, Direct / Indirect and the packages', fl.paths > 5 && fl.nodes > 5, JSON.stringify(fl));
+    ok('Cost flow ties to the cost to date (bands + credits)', Math.abs(fl.bands + fl.cr - fl.td) <= 2, JSON.stringify(fl));
+    await p7.hover('#nav'); await p7.waitForTimeout(400); await p7.click('#tabs [data-s="cod"]'); await p7.mouse.move(900, 500); await p7.waitForTimeout(600);
+    ok('Coding opens on To code, largest cost first', await p7.$eval('#tools [data-cm="todo"]', (b) => b.classList.contains('on')) && await p7.evaluate(() => { const t = [...document.querySelectorAll('#tb tr.it')].slice(0, 10).map((tr) => { const [bi, ii] = tr.dataset.k.split(':'); return Math.abs(__BK[+bi].items[+ii].td); }); return t.length > 1 && t.every((v, i) => !i || v <= t[i - 1]); }));
     const left = await p7.evaluate(() => { let n = 0; __BK.forEach((b) => b.items.forEach((it) => { if (it.inc !== 'No' && !(it.pkg && it.mnl && it.ce && (b.id !== 'Subcontractor' || it.div))) n++; })); return n; });
-    ok('top bar: % of the cost coded and the items left', await p7.$eval('#hprog', (e, n) => /% of the cost is coded/.test(e.textContent) && e.textContent.includes(n.toLocaleString('en-US') + ' item'), left), await p7.$eval('#hprog', (e) => e.textContent) + ' · expected ' + left);
+    ok('navigation: Coding shows the % coded and the items left', await p7.$eval('#tabs [data-s="cod"]', (e, n) => /%/.test(e.querySelector('.nb').textContent) && e.querySelector('small').textContent.includes(n.toLocaleString('en-US') + ' item'), left), await p7.$eval('#tabs [data-s="cod"]', (e) => e.textContent) + ' · expected ' + left);
     ok('work list: every bucket with something left shows it', await p7.$$eval('#side .rk .r1', (x) => x.length > 0 && x.some((e) => / left/.test(e.textContent))));
-    const closed = await p7.$eval('#menu', (m) => m.hidden); await p7.click('#bMenu');
-    ok('the menu is closed until you click it, then lists the other pages', closed && await p7.$eval('#menu', (m) => !m.hidden && /Dashboard/.test(m.textContent) && /Reports/.test(m.textContent)));
-    await p7.click('#tabs [data-s="dash"]'); await p7.waitForTimeout(500);
-    ok('on another page: a Back to coding button', await p7.$eval('#bHome', (b) => !b.hidden) && await p7.$eval('#menu', (m) => m.hidden)); await p7.click('#bHome'); await p7.waitForTimeout(400);
-    ok('…and it goes back to Coding', await p7.$eval('#tabs button.on', (b) => b.dataset.s) === 'cod' && await p7.$eval('#bHome', (b) => b.hidden));
     // pick list: code one item, then the next PKG box offers that code; ↓ + Enter takes it
     const k1 = await p7.$eval('#tb tr.it', (tr) => tr.dataset.k); const i1 = await p7.$('#tb input[data-f="pkg"]'); await i1.fill('T11'); await i1.press('Tab'); await p7.waitForTimeout(400); const m7 = await p7.$('#asLater'); if (m7) await m7.click();
     const i2 = (await p7.$$('#tb input[data-f="pkg"]'))[1], k2 = await i2.evaluate((x) => x.closest('tr').dataset.k); await i2.click(); await i2.fill('t1'); await p7.waitForTimeout(300);

@@ -180,3 +180,9 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 ## v15
 - Excel export: the PKG summary sheet no longer makes Excel "repair" the file (two sheet settings were written in the wrong order by the Excel library; fixed at build, with a check).
 - Pick list: with PKG = Indirect, the cost element list shows the whole template list, used or not. With no PKG on the row yet, it shows every cost element with its name and PKG; picking one fills both.
+
+## v16 – navigation and Cost flow
+- Dark top bar: logo, **project › page name**, and the **cut date** as a gold button.
+- Side navigation with every page and its status in words. It hides to a strip of icons, opens under the mouse, and **pin** keeps it open. The one menu of v14 is gone; VAT, Import, Save and New build sit at the bottom of the navigation.
+- The Tool opens on the **Dashboard**; "Code" is now **Coding** (it still opens on To code, largest cost first).
+- New **Dashboard › Cost flow**: a Sankey of the actual cost, SAP bucket → Direct / Indirect → package or indirect group, with "Not coded yet" in red. To date or this month; packages or groups. Credits that cannot be drawn are listed under it, so it ties to the cost to date.
