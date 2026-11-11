@@ -7,7 +7,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cost Register v19</title>
+<title>Cost Register v20</title>
 <style>
 :root{--navy:#1F3864;--navy2:#2F5597;--gold:#BF8F00;--line:#DDE2EA;--bg:#F3F5F9;--txt:#1d2433;--mut:#6b7280;--ok:#E2EFDA;--okT:#2e6b1f;--part:#FFF2CC;--partT:#8a6500;--not:#FCE4D6;--notT:#a33a00;--sel:#DCE9F9;--code:#EEF3FB;--codeB:#C9D6EA;--miss:#FFF0E8;--missB:#F2B79A;--ovr:#F8CBAD}
 *{box-sizing:border-box}
@@ -320,12 +320,13 @@ header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUn
 .ctabs button{display:block;text-align:left;border:1px solid transparent;border-bottom:3px solid transparent;background:transparent;border-radius:9px 9px 0 0;padding:7px 18px 8px;color:#4B5563} .ctabs button b{display:block;font-size:15px;color:#374151} .ctabs button small{font-size:11.5px;white-space:nowrap}
 .ctabs button:hover{background:#EEF2F8} .ctabs button.on{background:#fff;border-color:#D5DCE6;border-bottom:3px solid #FFD966} .ctabs button.on b{color:#14254A}
 .bkc{display:inline-flex;align-items:center;gap:6px;font-weight:600} .bkc i{width:10px;height:10px;border-radius:3px;flex:none}
+.t td.xph{background:#FDF1EA} .t td.xph b{color:#8A3500}
 </style>
 </head>
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div class="logo"><i>CR</i><h1>Cost Register <span class="ver" title="Tool version">v19</span></h1></div>
+  <div class="logo"><i>CR</i><h1>Cost Register <span class="ver" title="Tool version">v20</span></h1></div>
   <div class="crumb"><span id="hsub"></span> &nbsp;›&nbsp; <b id="hpage"></b></div>
   <label class="cut" title="Cut date – the month you are closing. Click to change"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><small>CUT DATE</small><select id="cut"></select></span></label>
   <div class="sp"></div>
@@ -488,7 +489,7 @@ function change(list, label) { list = list.map(canonCh); const rec = list.map((c
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); setDirty(DIRTY + 1); logIt('Undone: ' + u.label, u.rec.length); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); setDirty(DIRTY + 1); logIt('Redone: ' + u.label, u.rec.length); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
-function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: 'v19', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null, indOff: ST.indOff }; }
+function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: 'v20', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null, indOff: ST.indOff }; }
 function setSaved(t) { $('saved').textContent = t; $('bSave').title = 'Save all codes (and line overrides) as a small file · ' + t; }
 function persist() { asSoon(); try { localStorage.setItem(LSK, JSON.stringify(snapshot())); setSaved('Saved in this browser ' + new Date().toLocaleTimeString()); } catch (e) { setSaved('Not saved here – use Save codes'); } }
 // =====================================================================================  Auto-save: the codes go to a file the user chose once (Chrome / Edge); the file is linked per project, so next month's build finds it
@@ -558,7 +559,7 @@ function compute() {
       if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } }
     else if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } R.inc[i] = 1;
     const p = per[i]; it.p[p] += amt[i]; it.q[p] += L.qty[i]; R.bkP[b][p] += amt[i]; R.vatIn += vin[i];
-    const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP) })); e.p[p] += amt[i]; if (hand) e.hand = true;
+    const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP), q: new Float64Array(NP) })); e.p[p] += amt[i]; e.q[p] += L.qty[i]; if (hand) e.hand = true;
   }
   const td = (arr) => { let s = 0; for (let p = 0; p < NP - 1; p++) s += arr[p]; return s; };
   BK.forEach((b) => b.items.forEach((it) => { it.td = r2(td(it.p)); it.tm = rep > 0 ? r2(it.p[rep]) : 0; it.qtd = td(it.q); it.pe = r2(it.p[NP - 1]); }));
@@ -1168,19 +1169,19 @@ function pageDef() {
   }
   if (ST.tab === 'pm' || ST.tab === 'xpm') {
     const X = ST.tab === 'xpm', xb = X ? ((ST.xpb ?? -1) < 0 ? BK.map((x, k) => k) : [ST.xpb]) : null;
-    const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? ST.pmMode : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = slotsOf(), lead = [];
+    const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? (X ? ST.xpMode || 'All' : ST.pmMode) : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = slotsOf(), lead = [];
     if (X) { lead.push({ k: 'bk', l: 'Bucket', w: 140, fz: 1, v: (r) => BK[r.it.bi].id, h: (r) => `<td title="${esc(BK[r.it.bi].id)}"><span class="bkc"><i style="background:${bkColor(r.it.bi)}"></i>${esc(BK[r.it.bi].short)}</span></td>` });
-      ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 112 : f === 'mnl' ? 66 : 96) + 18, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => (r.it[f] ? `<td><b>${esc(r.it[f])}</b></td>` : '<td class="help">–</td>') }));
+      ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 112 : f === 'mnl' ? 66 : 96) + 18, code: 1, v: (r) => r.e[f] || '(blank)', h: (r) => (r.e[f] ? `<td${r.e.hand ? ' class="xph" title="Coded on its CJI3 lines (not the item code)"' : ''}><b>${esc(r.e[f])}</b>${r.e.hand && f === 'pkg' ? ' <span class="help">✎</span>' : ''}</td>` : '<td class="help">–</td>') }));
       lead.push({ k: 'code', l: 'Item', w: 130, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}"><a class="lk open">${esc(itemCode(r.it))}</a></td>` }, { k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` }); }
     else {
     lead.push({ k: 'code', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 110, fz: 1, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` });
     if (itemDesc(b.items[0]) !== '' || bi === MATI || isSub(bi)) lead.push({ k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` });
     ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 66, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` })); }
-    const agg = (it, idx, sub) => { let a = 0, q = 0; for (const p of idx) { a += it.p[p]; q += it.q[p]; } return sub === 'Qty' ? q : sub === 'Rate' ? (Math.abs(q) > 1e-9 ? a / q : 0) : a; };
+    const agg = (it, idx, sub, e) => { const s = e || it; let a = 0, q = 0; for (const p of idx) { a += s.p[p]; q += s.q[p]; } return sub === 'Qty' ? q : sub === 'Rate' ? (Math.abs(q) > 1e-9 ? a / q : 0) : a; };
     const fmtOf = (sub) => (sub === 'Qty' ? fq : sub === 'Rate' ? fmt2 : fmt), tdIdx = PER.slice(0, NP - 1).map((x, k) => k), cols = [...lead];
-    slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub), { f: fmtOf(sub), pl: sl.label, th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
+    slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub, r.e), { f: fmtOf(sub), pl: sl.label, th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
       cls: () => (sl.idx.includes(rep) ? 'cutc' : sl.kind !== 'open' && sl.kind !== 'pend' && rep > 0 && Math.min(...sl.idx) > rep ? 'after' : ''), slot: si, sub, pidx: sl.idx }))));
-    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub), { f: fmtOf(sub), pl: 'To date', h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub))}</b></td>`, slot: 'td', sub, pidx: tdIdx })));
+    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub, r.e), { f: fmtOf(sub), pl: 'To date', h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub, r.e))}</b></td>`, slot: 'td', sub, pidx: tdIdx })));
     // header bands: years › quarters (› month when Qty · Rate · Amount)
     const nL = lead.length, bands = [], yr = [], qr = [], mr = [];
     const spanOf = (pred) => slots.filter(pred).length * subs.length;
@@ -1191,9 +1192,9 @@ function pageDef() {
       mr.push({ l: sl.label, span: subs.length, cls: sl.idx.includes(rep) ? 'cutb' : '' }); });
     [yr, qr, mr].forEach((row) => row.push({ l: mode === 'All' ? 'To date' : '', span: subs.length, cls: 'blank' }));
     bands.push(yr, qr); if (mode === 'All') bands.push(mr);
-    const rows = X ? xb.flatMap((k) => BK[k].items.map((it) => ({ it, g: '' }))) : b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
-    const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.slot === 'td' ? tdIdx : slots[c.slot].idx; let a = 0, q = 0; rs.forEach((r) => idx.forEach((p) => { a += r.it.p[p]; q += r.it.q[p]; })); o[c.k] = X && c.sub !== 'Amount' ? '' : c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
-    const pmSeg = (q) => (q ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>`;
+    const rows = X ? [...R.exp.values()].filter((e) => xb.includes(e.b) && e.p.some((v) => Math.abs(v) >= 0.005)).sort((x, y) => x.b - y.b || x.ii - y.ii).map((e) => ({ it: BK[e.b].items[e.ii], e, g: '', stx: e.pkg && e.mnl && e.ce ? 'Coded' : 'Not coded' })) : b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
+    const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.slot === 'td' ? tdIdx : slots[c.slot].idx; let a = 0, q = 0; rs.forEach((r) => { const s = r.e || r.it; idx.forEach((p) => { a += s.p[p]; q += s.q[p]; }); }); o[c.k] = X && c.sub !== 'Amount' ? '' : c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
+    const pmSeg = (q) => (q ? `<span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>`;
     if (X) return { cols, rows, bands, groups: false, sel: false, status: true, foot: footF, extraTools: pmSeg(xb.some((k) => BK[k].qty)) + ' <button id="bXpX" class="hp" title="This report as it is on screen (the rows that pass your filters), as an Excel file">⇩ Export to Excel</button>' };
     const fam = hasFam(b);
     return { cols, rows, bands, groups: b.tree, noGroupBtns: !!b.tree, fam: fam ? famOf : null, fLabel: famLabel, gCells: b.tree ? (g, rs) => footF(rs) : null, gSpanK: 'auto', gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${rs.length} items</span>`,
@@ -1792,7 +1793,7 @@ function renderTable() {
   else $('tools').innerHTML = `${D.noFilter && !D.search ? '' : `<input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">`} ${D.status ? ['All', 'Not coded', 'Coded'].map((s) => `<button class="chip ${S0.st === s ? 'on' : ''}" data-st="${s}">${s}</button>`).join(' ') + ((n) => (n ? ` <button class="chip new ${S0.st === 'New' ? 'on' : ''}" data-st="New" title="Items that first appear this month – code them first">New this month · ${n}</button>` : ''))(D.rows.filter((r) => r.it && r.it.nw).length) : ''}
     ${D.extraTools || ''} ${D.groups && !D.noGroupBtns ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : `<button id="bClr" class="clr">✕ Clear filters</button>`} ${D.bands ? '' : '<button id="bCols" title="Show or hide columns">Columns ▾</button>'}<button id="bFit" title="Fit every column to its content (drops the widths you dragged)">↔ Fit</button> <span class="help" id="cnt"></span>`;
   const cols = D.cols, q = S0.q.trim().toLowerCase();
-  let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && (S0.st === 'New' ? !r.it.nw : (r.i !== undefined ? lineStatusOf(r.i) : statusOf(r.it)) !== S0.st)) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
+  let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && (S0.st === 'New' ? !r.it.nw : (r.stx !== undefined ? r.stx : r.i !== undefined ? lineStatusOf(r.i) : statusOf(r.it)) !== S0.st)) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
     if (q && !D.tree) { const t = r.sq !== undefined ? r.sq : D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.ce ? [r.ce, r.x.name].join(' ') : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce, r.it.nameS || '', (META.grpNames || {})[r.it.vals[2]] || ''].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
     return true; });
   if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
@@ -1879,7 +1880,7 @@ $('bkbar').addEventListener('click', (e) => { const c = e.target.closest('[data-
   else { const bi = +v; if (multi && (e.ctrlKey || e.metaKey)) { if (!XB.size && cur >= 0) XB.add(cur); XB.has(bi) ? XB.delete(bi) : XB.add(bi); if (XB.size === 1) { set([...XB][0]); XB.clear(); } else set(-1); } else { XB.clear(); set(bi); } }
   sel.clear(); render(); $('wrap').scrollTop = 0; });
 $('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
-  if (t.dataset.st) { S0.st = t.dataset.st; render(); } if (t.dataset.pm) { ST.pmMode = t.dataset.pm; render(); }
+  if (t.dataset.st) { S0.st = t.dataset.st; render(); } if (t.dataset.pm) { if (ST.tab === 'xpm') ST.xpMode = t.dataset.pm; else ST.pmMode = t.dataset.pm; render(); }
   if (t.dataset.lvl) { const S1 = vs(); S1.fold = new Set(R.treeNodes.filter((n) => n.depth >= +t.dataset.lvl && n.kids.size).map((n) => n.code)); S1.lv = 1; render(); }
   if (t.dataset.gm) { ST.glMode = t.dataset.gm; render(); }
   if (t.dataset.pv) { PF.clear(); if (t.dataset.pv !== 'Months') MI.forEach((m) => PF.add(t.dataset.pv === 'Years' ? 'Y' + m.y : 'Q' + m.y + '-' + m.q)); render(); } if (t.dataset.sv) { goSub(t.dataset.sv); }
@@ -2032,7 +2033,7 @@ $('bExport').onclick = async () => {
   const title = (ws, t, n) => { ws.getCell('A1').value = t; ws.getCell('A1').font = { name: A, bold: true, size: 14, color: { argb: NAVY } }; ws.getCell('A2').value = n; ws.getCell('A2').font = { name: A, size: 9, color: { argb: 'FF7F7F7F' } }; };
   const head = (ws, row, labels, gold = []) => { labels.forEach((l, i) => { const c = ws.getCell(row, i + 1); c.value = l; c.font = { name: A, bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = fill(gold.includes(l) ? GOLD : NAVY); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = box; }); ws.getRow(row).height = 30; };
   const put = (ws, row, vals, fmts = {}, o = {}) => vals.forEach((v, i) => { const c = ws.getCell(row, i + 1); c.value = v === '' ? null : v; c.border = box; c.font = { name: A, size: 10, bold: !!o.bold, color: o.color ? { argb: o.color } : undefined }; if (fmts[i]) c.numFmt = fmts[i]; if (o.fill) c.fill = fill(o.fill); });
-  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register Tool v19 · values (not live)`;
+  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register Tool v20 · values (not live)`;
   // Summary
   const ws = wb.addWorksheet('Summary', { properties: { tabColor: { argb: NAVY } } }); title(ws, 'Project Cost Register — ' + META.project, note);
   [['Previous', R.toDate - R.thisM], ['This month · ' + R.repLab, R.thisM], ['To date', R.toDate], ['Pending', R.pend], ['Excluded', R.excl], ['Difference to CJI3', R.diff]].forEach(([l, v], i) => { const a = ws.getCell(4, i + 1), b2 = ws.getCell(5, i + 1); a.value = l; a.font = { name: A, bold: true, size: 9, color: { argb: 'FFFFFFFF' } }; a.fill = fill(i === 1 ? GOLD : i === 5 ? 'FFC00000' : NAVY); a.alignment = { horizontal: 'center', wrapText: true }; b2.value = r2(v); b2.numFmt = i === 5 ? NUM2 : NUM; b2.font = { name: A, bold: true, size: 13, color: { argb: NAVY } }; b2.alignment = { horizontal: 'center' }; b2.border = box; });
