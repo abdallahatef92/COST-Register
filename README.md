@@ -190,3 +190,7 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 ## v17 – Cost flow: breakdown layer and time
 - A last layer breaks each package (and each indirect head) down by the SAP bucket its cost came from. **Breakdown: Hide · Main · All** hides it, labels the main parts, or labels every part.
 - Any period, not only the cut date: **To date · This year · the cut month**, a From / To month, and ◀ ▶ to move the period one month. The line under the chart ties the bands and the credits to the cost of that period.
+
+## The Tool as a browser app (own window and icon)
+`npm run build:site` writes `out/site/`: the same Tool page plus a manifest, an icon and an offline cache. Published at a web address (GitHub Pages, branch `gh-pages`), Edge or Chrome can install it: **⋯ › Apps › Install this site as an app**. It then opens from its own icon, works offline, and picks up a new version by itself.
+The published page is the empty Tool; the SAP files you drop are read on your PC and never uploaded.

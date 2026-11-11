@@ -10,7 +10,8 @@
     "build": "node bin/register.js",
     "test": "node test/run.js --set suth && node test/run.js --set sbay",
     "test:quick": "node test/run.js --set suth --quick && node test/run.js --set sbay --quick",
-    "build:tool": "node tools/build-app.js"
+    "build:tool": "node tools/build-app.js",
+    "build:site": "node tools/build-site.js"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
