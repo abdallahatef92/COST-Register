@@ -1,0 +1,28 @@
+{
+ "name": "Cost Register",
+ "short_name": "Cost Register",
+ "description": "Project cost register from SAP CJI3 – coding, checks, reports. Your files stay on your PC.",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#14254A",
+ "theme_color": "#14254A",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}
