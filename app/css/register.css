@@ -299,7 +299,7 @@ header.top label.cut #cut{background:transparent;color:#1B2A41;border:0;border-r
 header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUndo .bl,header.top .logo h1{display:none} header.top .asv{max-width:150px} }
 /* Cost flow */
 .flc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px 12px} .flh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px} .flh h3{margin:0;font-size:17px;color:var(--navy)} .flh .sp{flex:1}
-.flcol{display:flex;font-size:11px;letter-spacing:.08em;color:#8A93A3;padding:6px 0 4px;white-space:nowrap} #flsvg{display:block} #flsvg text{fill:#1B2A41;font-family:"Segoe UI",Arial,sans-serif} #flsvg .mu{fill:#6B7280;font-weight:400}
+.flcol{position:relative;height:22px;font-size:11px;letter-spacing:.08em;color:#8A93A3;white-space:nowrap} #flsvg{display:block} #flsvg text{fill:#1B2A41;font-family:"Segoe UI",Arial,sans-serif} #flsvg .mu{fill:#6B7280;font-weight:400}
 #flsvg .fb{opacity:.34;transition:opacity .12s} #flsvg .fb:hover{opacity:.62} #flsvg .fn.go{cursor:pointer} #flsvg .fn.go:hover text tspan:first-child,#flsvg .fn.go:hover text:first-of-type{text-decoration:underline}
 .fln{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);color:#4B5563;font-size:12.5px}
 #nav #bPin{width:auto;flex:none} #nav .tx,#nav .nb,#nav .nvat select,#nav .nvat input{transition:opacity .12s} body:not(.navpin) #nav:not(:hover) .tx,body:not(.navpin) #nav:not(:hover) .nb,body:not(.navpin) #nav:not(:hover) .nvat select,body:not(.navpin) #nav:not(:hover) .nvat input{opacity:0}
