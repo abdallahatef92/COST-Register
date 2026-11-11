@@ -197,20 +197,31 @@ const r2 = (x) => Math.round(x * 100) / 100;
     eq('Coding has two tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines']);
     ok('Expenses is a page of its own in the navigation', await p8.$$eval('#tabs button', (x) => x.some((b) => b.dataset.s === 'xp' && /Expenses/.test(b.textContent))));
     await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.waitForTimeout(1200);
-    const nIt = await p8.evaluate(() => __BK.reduce((t, b) => t + b.items.length, 0));
-    ok('Expenses lists every item of every bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nIt), await p8.$eval('#cnt', (e) => e.textContent) + ' · expected ' + nIt);
-    ok('…bucket, then PKG, MNL, Cost element, then the item and the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.some((v) => /^[A-Z][a-z]{2}-\d\d$/.test(v)); }));
+    const nIt = await p8.evaluate(() => [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) >= 0.005)).length);
+    ok('Expenses opens on Qty · Rate · Amount', await p8.$eval('[data-pm="All"]', (b) => b.classList.contains('on')));
+    ok('Expenses lists every item + code of every bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nIt), await p8.$eval('#cnt', (e) => e.textContent) + ' · expected ' + nIt);
+    ok('…bucket, then PKG, MNL, Cost element, then the item and the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.includes('Qty') && t.includes('Rate') && t.includes('Amount'); }) && await p8.$$eval('#th th', (x) => x.some((e) => /^[A-Z][a-z]{2}-\d\d$/.test(e.textContent.replace(/[▾\s]+$/g, '').trim()))));
     ok('it is a report: no code boxes', await p8.$$eval('#tb input[data-f]', (x) => x.length === 0));
     const tot = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); });
     ok('the To date total of Expenses is the cost to date', Math.abs(tot - await p8.evaluate(() => R.toDate)) <= 2, String(tot));
     const bi8 = await p8.evaluate(() => __BK.findIndex((b) => b.id === 'Material')); await p8.click(`#side [data-xb="${bi8}"]`); await p8.waitForTimeout(800);
-    ok('the side list narrows it to one bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), await p8.evaluate((k) => __BK[k].items.length, bi8)));
-    await p8.click(`#side [data-xb="-1"]`); await p8.waitForTimeout(800); await p8.click('[data-pm="All"]'); await p8.waitForTimeout(900);
+    ok('the side list narrows it to one bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), await p8.evaluate((k) => [...R.exp.values()].filter((e) => e.b === k && e.p.some((v) => Math.abs(v) >= 0.005)).length, bi8)));
+    await p8.click(`#side [data-xb="-1"]`); await p8.waitForTimeout(800);
     ok('Qty · Rate · Amount per month', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.trim()); return t.filter((v) => /^Qty/.test(v)).length > 3 && t.filter((v) => /^Rate/.test(v)).length > 3; }));
     const [dx] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fx = path.join(OUT, 'expenses.xlsx'); await dx.saveAs(fx);
     const XL = require('xlsx'), wx = XL.readFile(fx), sx = wx.Sheets[wx.SheetNames[0]], ax = XL.utils.sheet_to_json(sx, { header: 1, defval: '' });
     ok('Export to Excel: one sheet, Expenses, every item', wx.SheetNames.length === 1 && wx.SheetNames[0] === 'Expenses' && ax.length >= nIt + 4, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
     { const h = ax[3], ci = h.lastIndexOf('Amount'), last = ax.slice(4).filter((r) => r[0] && r[0] !== 'TOTAL').reduce((t, r) => t + (+r[ci] || 0), 0); ok('…its To date amounts add up to the cost to date', Math.abs(last - await p8.evaluate(() => R.toDate)) <= 5, String(last)); }
+    // a CJI3 line coded by hand: its own row in Expenses, with the line's code
+    { const it0 = await p8.evaluate(() => { const b = __BK.findIndex((x) => x.id === 'Material'); const it = __BK[b].items.slice().sort((x, y) => Math.abs(y.td) - Math.abs(x.td))[0]; return { b, ii: it.ii, code: it.vals[3] }; });
+      await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400); await p8.click(`#side [data-gt="cod"][data-bk="${it0.b}"]`); await p8.waitForTimeout(400); await p8.click('[data-cm="all"]:visible'); await p8.waitForTimeout(300);
+      await p8.fill('#q', it0.code); await p8.waitForTimeout(500); const ip = await p8.$('#tb tr.it input[data-f="pkg"]'); await ip.fill('T31'); await ip.press('Tab'); await p8.waitForTimeout(400); const m9 = await p8.$('#asLater'); if (m9) await m9.click();
+      await p8.click('.ctabs [data-cv="lines"]'); await p8.waitForTimeout(800); await p8.fill('#q', it0.code); await p8.waitForTimeout(600); const lp = await p8.$('#tb tr.it input[data-f="pkg"]'); await lp.fill('T32'); await lp.press('Tab'); await p8.waitForTimeout(500);
+      await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.waitForTimeout(900); await p8.fill('#q', it0.code); await p8.waitForTimeout(700);
+      const pk = await p8.$$eval('#tb tr.it', (x) => x.map((tr) => tr.cells[1].textContent.replace(/[✎\s]/g, '')).sort());
+      eq('a line coded by hand makes its own row with the line\'s code', pk, ['T31', 'T32']);
+      const t2 = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); }), w2 = await p8.evaluate((x) => __BK[x.b].items[x.ii].td, it0);
+      ok('…and the two rows add up to the item', Math.abs(t2 - w2) <= 1, t2 + ' vs ' + w2); }
     eq('difference stays 0', await p8.evaluate(() => R.diff), 0); await c8.close(); }
 
   head('8. Save codes and read them back');

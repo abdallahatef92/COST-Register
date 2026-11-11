@@ -198,4 +198,5 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 ## v19 – Expenses as its own page (v18 had it inside Coding)
 - **Coding** has two tabs: **Items** and **SAP transaction lines** – the CJI3 lines of the bucket you are coding, with the bucket's colour and the codes (code Material → Material's lines).
 - **Expenses** is its own page in the navigation: every item of every bucket by month (or one bucket, from the side list). Bucket, PKG, MNL, Cost element, the item, then the months as Amount, Qty, Rate or all three; months, quarters or years. It is a report: the codes are shown, you code in Coding.
+- (v20) Expenses opens on **Qty · Rate · Amount**, and takes the codes from the CJI3 lines: a line coded by hand (different from its item) makes its own row, marked ✎. So each row is an item + its codes, as in the Expenses sheet of the full Excel.
 - **Export to Excel** on the Expenses page gives this report only, as on screen, with a total row (amounts) and filters.

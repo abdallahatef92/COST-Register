@@ -35,7 +35,7 @@ function compute() {
       if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } }
     else if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } R.inc[i] = 1;
     const p = per[i]; it.p[p] += amt[i]; it.q[p] += L.qty[i]; R.bkP[b][p] += amt[i]; R.vatIn += vin[i];
-    const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP) })); e.p[p] += amt[i]; if (hand) e.hand = true;
+    const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP), q: new Float64Array(NP) })); e.p[p] += amt[i]; e.q[p] += L.qty[i]; if (hand) e.hand = true;
   }
   const td = (arr) => { let s = 0; for (let p = 0; p < NP - 1; p++) s += arr[p]; return s; };
   BK.forEach((b) => b.items.forEach((it) => { it.td = r2(td(it.p)); it.tm = rep > 0 ? r2(it.p[rep]) : 0; it.qtd = td(it.q); it.pe = r2(it.p[NP - 1]); }));
