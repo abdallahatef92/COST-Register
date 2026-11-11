@@ -64,7 +64,7 @@ const r2 = (x) => Math.round(x * 100) / 100;
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
   eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
-  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'sub', 'adj', 'chk', 'rep']);
+  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'xp', 'sub', 'adj', 'chk', 'rep']);
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
@@ -108,8 +108,7 @@ const r2 = (x) => Math.round(x * 100) / 100;
   await p.keyboard.press('Control+z'); await p.waitForTimeout(400);
   ok('Ctrl+Z takes the code back', await p.evaluate(() => !__BK[0].items.some((x) => x.pkg === 'T01')));
   await p.click('[data-cv="lines"]:visible'); await p.waitForTimeout(800);
-  ok('SAP transaction lines open on every bucket together, with the bucket and its colour', await p.evaluate(() => document.querySelectorAll('#tb tr.it .bkc i').length > 5 && /All buckets/.test(document.querySelector('#tools .tt').textContent)) && await p.$eval('#tools', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), await p.evaluate(() => __D.N)));
-  await p.click('#side [data-gt="lines"][data-bk="0"]'); await p.waitForTimeout(700);
+  ok('SAP transaction lines are the lines of the bucket being coded (Material)', await p.evaluate(() => /Material/.test(document.querySelector('#tools .tt').textContent) && [...document.querySelectorAll('#tb tr.it')].length > 5));
   ok('Code › Lines (CJI3) shows the lines with their header text', await p.$$eval('#th th', (x) => x.some((t) => /Document header text/.test(t.textContent))) && await p.$$eval('#tb tr', (x) => x.length > 10));
   { const n0 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, '')); const g = await p.$$eval('#side [data-grp]', (x) => (x.find((y) => y.dataset.grp) || {}).dataset?.grp || '');
     if (g) { await p.click(`#side [data-grp="${g}"]`); await p.waitForTimeout(700); const n1 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, ''));
@@ -193,19 +192,25 @@ const r2 = (x) => Math.round(x * 100) / 100;
     ok('the first item kept its code', await p7.evaluate((k) => { const [bi, ii] = k.split(':'); return __BK[+bi].items[+ii].pkg === 'T11'; }, k1));
     eq('difference stays 0', await p7.evaluate(() => R.diff), 0); await c7.close(); }
 
-  head('7e. Expenses: every item of every bucket, by month');
-  { const { ctx: c8, p: p8 } = await open(APP); await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400);
-    eq('Coding has three tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines', 'Expenses']);
-    await p8.click('.ctabs [data-cv="xpm"]'); await p8.waitForTimeout(1200);
+  head('7e. Expenses: its own page, every item of every bucket by month, export');
+  { const { ctx: c8, p: p8 } = await open(APP, { acceptDownloads: true }); await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400);
+    eq('Coding has two tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines']);
+    ok('Expenses is a page of its own in the navigation', await p8.$$eval('#tabs button', (x) => x.some((b) => b.dataset.s === 'xp' && /Expenses/.test(b.textContent))));
+    await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.waitForTimeout(1200);
     const nIt = await p8.evaluate(() => __BK.reduce((t, b) => t + b.items.length, 0));
-    ok('Expenses lists every item of every bucket', await p8.$eval('#tools', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nIt), await p8.$eval('#cnt', (e) => e.textContent) + ' · expected ' + nIt);
-    ok('…bucket with its colour, then PKG, MNL, Cost element, then the item and the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.some((v) => /^[A-Z][a-z]{2}-\d\d$/.test(v)); }), (await p8.$$eval('#th tr:last-child th', (x) => x.map((e) => e.textContent.trim()).slice(0, 9))).join(' | '));
+    ok('Expenses lists every item of every bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nIt), await p8.$eval('#cnt', (e) => e.textContent) + ' · expected ' + nIt);
+    ok('…bucket, then PKG, MNL, Cost element, then the item and the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.some((v) => /^[A-Z][a-z]{2}-\d\d$/.test(v)); }));
+    ok('it is a report: no code boxes', await p8.$$eval('#tb input[data-f]', (x) => x.length === 0));
     const tot = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); });
     ok('the To date total of Expenses is the cost to date', Math.abs(tot - await p8.evaluate(() => R.toDate)) <= 2, String(tot));
-    const kx = await p8.$eval('#tb tr.it', (tr) => tr.dataset.k); const ix = await p8.$('#tb input[data-f="pkg"]'); await ix.fill('T21'); await ix.press('Tab'); await p8.waitForTimeout(500); const m8 = await p8.$('#asLater'); if (m8) await m8.click();
-    eq('a code typed in Expenses codes the item', await p8.evaluate((k) => { const [bi, ii] = k.split(':'); return __BK[+bi].items[+ii].pkg; }, kx), 'T21');
-    await p8.click('[data-pm="All"]'); await p8.waitForTimeout(900);
+    const bi8 = await p8.evaluate(() => __BK.findIndex((b) => b.id === 'Material')); await p8.click(`#side [data-xb="${bi8}"]`); await p8.waitForTimeout(800);
+    ok('the side list narrows it to one bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), await p8.evaluate((k) => __BK[k].items.length, bi8)));
+    await p8.click(`#side [data-xb="-1"]`); await p8.waitForTimeout(800); await p8.click('[data-pm="All"]'); await p8.waitForTimeout(900);
     ok('Qty · Rate · Amount per month', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.trim()); return t.filter((v) => /^Qty/.test(v)).length > 3 && t.filter((v) => /^Rate/.test(v)).length > 3; }));
+    const [dx] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fx = path.join(OUT, 'expenses.xlsx'); await dx.saveAs(fx);
+    const XL = require('xlsx'), wx = XL.readFile(fx), sx = wx.Sheets[wx.SheetNames[0]], ax = XL.utils.sheet_to_json(sx, { header: 1, defval: '' });
+    ok('Export to Excel: one sheet, Expenses, every item', wx.SheetNames.length === 1 && wx.SheetNames[0] === 'Expenses' && ax.length >= nIt + 4, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
+    { const h = ax[3], ci = h.lastIndexOf('Amount'), last = ax.slice(4).filter((r) => r[0] && r[0] !== 'TOTAL').reduce((t, r) => t + (+r[ci] || 0), 0); ok('…its To date amounts add up to the cost to date', Math.abs(last - await p8.evaluate(() => R.toDate)) <= 5, String(last)); }
     eq('difference stays 0', await p8.evaluate(() => R.diff), 0); await c8.close(); }
 
   head('8. Save codes and read them back');

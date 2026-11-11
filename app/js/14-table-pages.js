@@ -11,7 +11,7 @@ function slotsOf() {
       else qm.forEach((m) => out.push({ label: m.label, idx: [m.idx], kind: 'm', y, q })); } }
   out.push({ label: 'Pending', idx: [NP - 1], kind: 'pend' }); return out;
 }
-const VS = {}; const vsKey = () => ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') + [...XB].join('.') : ST.bk + (ST.tab === 'lines' ? [...XB].join('.') : '') + (ST.tab === 'cod' && ST.next ? ':next' : '')); const vs = () => { const k = vsKey(); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
+const VS = {}; const vsKey = () => ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ST.tab === 'xpm' ? 'x' + (ST.xpb ?? -1) : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') + [...XB].join('.') : ST.bk + (ST.tab === 'lines' ? [...XB].join('.') : '') + (ST.tab === 'cod' && ST.next ? ':next' : '')); const vs = () => { const k = vsKey(); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
 const sel = new Set(); let lastClick = null;
 const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v ?? ''));
 const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));
@@ -33,7 +33,7 @@ const stCell = (it) => { const s = statusOf(it); return `<td><span class="st ${s
 const numC = (k, l, w, get, o = {}) => ({ k, l, w, num: 1, v: get, h: (r) => `<td class="num${o.cls ? ' ' + o.cls(r) : ''}">${o.f ? o.f(get(r)) : fmt(get(r))}</td>`, ...o });
 // ---- page definitions: rows, columns, groups
 // the three pages of Coding, as tabs: each says what it is
-const codTabs = (cur) => `<div class="ctabs">${[['cod', 'Items', 'one row per item – code here'], ['lines', 'SAP transaction lines', 'CJI3 + the bucket + the codes, every bucket'], ['xpm', 'Expenses', 'every item by month: qty · rate · amount']].map(([k, l, h]) => `<button data-cv="${k}" class="${cur === k ? 'on' : ''}"><b>${l}</b><small>${h}</small></button>`).join('')}</div>`;
+const codTabs = (cur) => `<div class="ctabs">${[['cod', 'Items', 'one row per item – code here'], ['lines', 'SAP transaction lines', 'the CJI3 lines of this bucket, with their codes']].map(([k, l, h]) => `<button data-cv="${k}" class="${cur === k ? 'on' : ''}"><b>${l}</b><small>${h}</small></button>`).join('')}</div>`;
 function pageDef() {
   if (ST.tab !== 'lines' && ST.tab !== 'xpm' && ST.bk < 0) ST.bk = Math.max(0, MATI);
   const bi = ST.bk, b = bi >= 0 ? BK[bi] : null, rep = R.rep;
@@ -67,10 +67,10 @@ function pageDef() {
       foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
   }
   if (ST.tab === 'pm' || ST.tab === 'xpm') {
-    const X = ST.tab === 'xpm', xb = X ? (bi < 0 ? BK.map((x, k) => k) : [bi]) : null;
+    const X = ST.tab === 'xpm', xb = X ? ((ST.xpb ?? -1) < 0 ? BK.map((x, k) => k) : [ST.xpb]) : null;
     const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? ST.pmMode : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = slotsOf(), lead = [];
     if (X) { lead.push({ k: 'bk', l: 'Bucket', w: 140, fz: 1, v: (r) => BK[r.it.bi].id, h: (r) => `<td title="${esc(BK[r.it.bi].id)}"><span class="bkc"><i style="background:${bkColor(r.it.bi)}"></i>${esc(BK[r.it.bi].short)}</span></td>` });
-      ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 112 : f === 'mnl' ? 66 : 96) + 18, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) }));
+      ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 112 : f === 'mnl' ? 66 : 96) + 18, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => (r.it[f] ? `<td><b>${esc(r.it[f])}</b></td>` : '<td class="help">–</td>') }));
       lead.push({ k: 'code', l: 'Item', w: 130, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}"><a class="lk open">${esc(itemCode(r.it))}</a></td>` }, { k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` }); }
     else {
     lead.push({ k: 'code', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 110, fz: 1, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` });
@@ -78,9 +78,9 @@ function pageDef() {
     ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 66, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` })); }
     const agg = (it, idx, sub) => { let a = 0, q = 0; for (const p of idx) { a += it.p[p]; q += it.q[p]; } return sub === 'Qty' ? q : sub === 'Rate' ? (Math.abs(q) > 1e-9 ? a / q : 0) : a; };
     const fmtOf = (sub) => (sub === 'Qty' ? fq : sub === 'Rate' ? fmt2 : fmt), tdIdx = PER.slice(0, NP - 1).map((x, k) => k), cols = [...lead];
-    slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub), { f: fmtOf(sub), th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
+    slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub), { f: fmtOf(sub), pl: sl.label, th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
       cls: () => (sl.idx.includes(rep) ? 'cutc' : sl.kind !== 'open' && sl.kind !== 'pend' && rep > 0 && Math.min(...sl.idx) > rep ? 'after' : ''), slot: si, sub, pidx: sl.idx }))));
-    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub), { f: fmtOf(sub), h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub))}</b></td>`, slot: 'td', sub, pidx: tdIdx })));
+    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub), { f: fmtOf(sub), pl: 'To date', h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub))}</b></td>`, slot: 'td', sub, pidx: tdIdx })));
     // header bands: years › quarters (› month when Qty · Rate · Amount)
     const nL = lead.length, bands = [], yr = [], qr = [], mr = [];
     const spanOf = (pred) => slots.filter(pred).length * subs.length;
@@ -94,7 +94,7 @@ function pageDef() {
     const rows = X ? xb.flatMap((k) => BK[k].items.map((it) => ({ it, g: '' }))) : b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
     const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.slot === 'td' ? tdIdx : slots[c.slot].idx; let a = 0, q = 0; rs.forEach((r) => idx.forEach((p) => { a += r.it.p[p]; q += r.it.q[p]; })); o[c.k] = X && c.sub !== 'Amount' ? '' : c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
     const pmSeg = (q) => (q ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>`;
-    if (X) return { cols, rows, bands, groups: false, sel: true, status: true, foot: footF, extraTools: pmSeg(xb.some((k) => BK[k].qty)) };
+    if (X) return { cols, rows, bands, groups: false, sel: false, status: true, foot: footF, extraTools: pmSeg(xb.some((k) => BK[k].qty)) + ' <button id="bXpX" class="hp" title="This report as it is on screen (the rows that pass your filters), as an Excel file">⇩ Export to Excel</button>' };
     const fam = hasFam(b);
     return { cols, rows, bands, groups: b.tree, noGroupBtns: !!b.tree, fam: fam ? famOf : null, fLabel: famLabel, gCells: b.tree ? (g, rs) => footF(rs) : null, gSpanK: 'auto', gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${rs.length} items</span>`,
       foot: footF, extraTools: zoomSeg(b) + ' ' + (b.qty ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '')

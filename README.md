@@ -195,7 +195,7 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 `npm run build:site` writes `out/site/`: the same Tool page plus a manifest, an icon and an offline cache. Published at a web address (GitHub Pages, branch `gh-pages`), Edge or Chrome can install it: **⋯ › Apps › Install this site as an app**. It then opens from its own icon, works offline, and picks up a new version by itself.
 The published page is the empty Tool; the SAP files you drop are read on your PC and never uploaded.
 
-## v18 – Coding in three tabs; Expenses
-- The pages of Coding are tabs, each with a line that says what it is: **Items**, **SAP transaction lines**, **Expenses**.
-- **SAP transaction lines** (was "Lines (CJI3)"): opens on every bucket together – CJI3 + the bucket with its colour + the codes. The side list narrows it to one bucket.
-- **Expenses** (new): every item of every bucket in one list, always by month. Bucket, then PKG, MNL and Cost element (type over them to code the item), then the item and the months as Amount, Qty, Rate or all three; months, quarters or years.
+## v19 – Expenses as its own page (v18 had it inside Coding)
+- **Coding** has two tabs: **Items** and **SAP transaction lines** – the CJI3 lines of the bucket you are coding, with the bucket's colour and the codes (code Material → Material's lines).
+- **Expenses** is its own page in the navigation: every item of every bucket by month (or one bucket, from the side list). Bucket, PKG, MNL, Cost element, the item, then the months as Amount, Qty, Rate or all three; months, quarters or years. It is a report: the codes are shown, you code in Coding.
+- **Export to Excel** on the Expenses page gives this report only, as on screen, with a total row (amounts) and filters.
