@@ -186,3 +186,7 @@ Certificate documents whose CJI3 lines fall in more than one month get one adjus
 - Side navigation with every page and its status in words. It hides to a strip of icons, opens under the mouse, and **pin** keeps it open. The one menu of v14 is gone; VAT, Import, Save and New build sit at the bottom of the navigation.
 - The Tool opens on the **Dashboard**; "Code" is now **Coding** (it still opens on To code, largest cost first).
 - New **Dashboard › Cost flow**: a Sankey of the actual cost, SAP bucket → Direct / Indirect → package or indirect group, with "Not coded yet" in red. To date or this month; packages or groups. Credits that cannot be drawn are listed under it, so it ties to the cost to date.
+
+## v17 – Cost flow: breakdown layer and time
+- A last layer breaks each package (and each indirect head) down by the SAP bucket its cost came from. **Breakdown: Hide · Main · All** hides it, labels the main parts, or labels every part.
+- Any period, not only the cut date: **To date · This year · the cut month**, a From / To month, and ◀ ▶ to move the period one month. The line under the chart ties the bands and the credits to the cost of that period.
