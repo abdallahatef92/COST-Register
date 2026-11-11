@@ -32,9 +32,10 @@ const codeInput = (it, f, ovrVal) => { const v = ovrVal !== undefined ? ovrVal :
 const stCell = (it) => { const s = statusOf(it); return `<td><span class="st ${s.split(' ')[0]}">${s}</span></td>`; };
 const numC = (k, l, w, get, o = {}) => ({ k, l, w, num: 1, v: get, h: (r) => `<td class="num${o.cls ? ' ' + o.cls(r) : ''}">${o.f ? o.f(get(r)) : fmt(get(r))}</td>`, ...o });
 // ---- page definitions: rows, columns, groups
-const codSeg = (cur) => `<span class="seg big" title="The same bucket: its items, or every CJI3 line behind them"><button data-cv="cod" class="${cur === 'cod' ? 'on' : ''}">Items</button><button data-cv="lines" class="${cur === 'lines' ? 'on' : ''}" title="Every CJI3 line of this bucket: name, document header text, WBS, PO …">Lines (CJI3)</button></span> `;
+// the three pages of Coding, as tabs: each says what it is
+const codTabs = (cur) => `<div class="ctabs">${[['cod', 'Items', 'one row per item – code here'], ['lines', 'SAP transaction lines', 'CJI3 + the bucket + the codes, every bucket'], ['xpm', 'Expenses', 'every item by month: qty · rate · amount']].map(([k, l, h]) => `<button data-cv="${k}" class="${cur === k ? 'on' : ''}"><b>${l}</b><small>${h}</small></button>`).join('')}</div>`;
 function pageDef() {
-  if (ST.tab !== 'lines' && ST.bk < 0) ST.bk = Math.max(0, MATI);
+  if (ST.tab !== 'lines' && ST.tab !== 'xpm' && ST.bk < 0) ST.bk = Math.max(0, MATI);
   const bi = ST.bk, b = bi >= 0 ? BK[bi] : null, rep = R.rep;
   if (ST.tab === 'cod') {
     const GN = META.grpNames || {}, gName = (g) => (GN[g] ? g + ' · ' + GN[g] : g || ''), grpCol2 = { k: 'c2', l: 'Group', w: 190, v: (r) => gName(r.it.vals[2]), h: (r) => `<td title="${esc(gName(r.it.vals[2]))}">${esc(r.it.vals[2])} <span class="help">${esc(GN[r.it.vals[2]] || '')}</span></td>` };
@@ -65,11 +66,16 @@ function pageDef() {
     return { cols, rows, sel: true, status: true, cm, groups: b.tree, noGroupBtns: !!b.tree, extraTools: zoom, fam: fam ? famOf : null, gCells: b.tree ? (g, rs) => sumC(rs) : null, gSpanK: 'auto', fLabel: famLabel, rowCls: (r) => (r.it.uns && !r.it.td && r.it.exc ? 'uns exc' : ''), gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0), un = its.filter((x) => x.uns), unx = un.reduce((s, x) => s + x.exc, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length}${b.tree ? '' : ' · to date ' + fmt(td)}${un.length ? ` · not settled, left out ${fmt(unx)}` : ''}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
       foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
   }
-  if (ST.tab === 'pm') {
-    const mode = b.qty ? ST.pmMode : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = slotsOf(), lead = [];
+  if (ST.tab === 'pm' || ST.tab === 'xpm') {
+    const X = ST.tab === 'xpm', xb = X ? (bi < 0 ? BK.map((x, k) => k) : [bi]) : null;
+    const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? ST.pmMode : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = slotsOf(), lead = [];
+    if (X) { lead.push({ k: 'bk', l: 'Bucket', w: 140, fz: 1, v: (r) => BK[r.it.bi].id, h: (r) => `<td title="${esc(BK[r.it.bi].id)}"><span class="bkc"><i style="background:${bkColor(r.it.bi)}"></i>${esc(BK[r.it.bi].short)}</span></td>` });
+      ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 112 : f === 'mnl' ? 66 : 96) + 18, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => codeInput(r.it, f) }));
+      lead.push({ k: 'code', l: 'Item', w: 130, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}"><a class="lk open">${esc(itemCode(r.it))}</a></td>` }, { k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` }); }
+    else {
     lead.push({ k: 'code', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 110, fz: 1, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` });
     if (itemDesc(b.items[0]) !== '' || bi === MATI || isSub(bi)) lead.push({ k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` });
-    ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 66, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` }));
+    ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 66, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` })); }
     const agg = (it, idx, sub) => { let a = 0, q = 0; for (const p of idx) { a += it.p[p]; q += it.q[p]; } return sub === 'Qty' ? q : sub === 'Rate' ? (Math.abs(q) > 1e-9 ? a / q : 0) : a; };
     const fmtOf = (sub) => (sub === 'Qty' ? fq : sub === 'Rate' ? fmt2 : fmt), tdIdx = PER.slice(0, NP - 1).map((x, k) => k), cols = [...lead];
     slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub), { f: fmtOf(sub), th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
@@ -85,8 +91,10 @@ function pageDef() {
       mr.push({ l: sl.label, span: subs.length, cls: sl.idx.includes(rep) ? 'cutb' : '' }); });
     [yr, qr, mr].forEach((row) => row.push({ l: mode === 'All' ? 'To date' : '', span: subs.length, cls: 'blank' }));
     bands.push(yr, qr); if (mode === 'All') bands.push(mr);
-    const rows = b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
-    const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.slot === 'td' ? tdIdx : slots[c.slot].idx; let a = 0, q = 0; rs.forEach((r) => idx.forEach((p) => { a += r.it.p[p]; q += r.it.q[p]; })); o[c.k] = c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
+    const rows = X ? xb.flatMap((k) => BK[k].items.map((it) => ({ it, g: '' }))) : b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
+    const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.slot === 'td' ? tdIdx : slots[c.slot].idx; let a = 0, q = 0; rs.forEach((r) => idx.forEach((p) => { a += r.it.p[p]; q += r.it.q[p]; })); o[c.k] = X && c.sub !== 'Amount' ? '' : c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
+    const pmSeg = (q) => (q ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>`;
+    if (X) return { cols, rows, bands, groups: false, sel: true, status: true, foot: footF, extraTools: pmSeg(xb.some((k) => BK[k].qty)) };
     const fam = hasFam(b);
     return { cols, rows, bands, groups: b.tree, noGroupBtns: !!b.tree, fam: fam ? famOf : null, fLabel: famLabel, gCells: b.tree ? (g, rs) => footF(rs) : null, gSpanK: 'auto', gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${rs.length} items</span>`,
       foot: footF, extraTools: zoomSeg(b) + ' ' + (b.qty ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '')
@@ -101,7 +109,7 @@ function pageDef() {
     const tx = (k, l, w, arr) => ({ k, l, w, v: (r) => S[arr[r.i]], h: (r) => `<td dir="auto" title="${esc(S[arr[r.i]])}">${esc(S[arr[r.i]])}</td>` });
     // flat, like Coding: one row per CJI3 line – the item's Coding columns first, then the line's codes, status, include, and every line detail
     const GN = META.grpNames || {}, iv = (r, j) => it(r.i).vals[j] || '', cols = [];
-    if (all) cols.push({ k: 'bk', l: 'Bucket', w: 130, v: (r) => BK[L.b[r.i]].id, h: (r) => `<td class="help">${isOB(r.i) ? OBTAG + ' ' : ''}${esc(BK[L.b[r.i]].short)}</td>` },
+    if (all) cols.push({ k: 'bk', l: 'Bucket', w: 130, v: (r) => BK[L.b[r.i]].id, h: (r) => `<td title="${esc(BK[L.b[r.i]].id)}">${isOB(r.i) ? OBTAG + ' ' : ''}<span class="bkc"><i style="background:${bkColor(L.b[r.i])}"></i>${esc(BK[L.b[r.i]].short)}</span></td>` },
       { k: 'item', l: 'Item', w: 120, fz: 1, v: (r) => itemCode(it(r.i)), h: (r) => `<td><a class="lk open2" data-bi="${L.b[r.i]}" data-ii="${L.it[r.i]}">${esc(itemCode(it(r.i)))}</a></td>` },
       { k: 'idesc', l: 'Description', w: 240, v: (r) => itemDesc(it(r.i)), h: (r) => `<td dir="auto" title="${esc(itemDesc(it(r.i)))}">${esc(itemDesc(it(r.i)))}</td>` });
     else b.cols.forEach((lab, j) => { if (isMat && j < 2) return; const code = j === (isMat ? 3 : isS ? 1 : 0);

@@ -58,7 +58,7 @@ function renderMRate() {
   fxScan($('mr'));
   const qi = $('mrQ'); qi.oninput = () => { ST.mrQ = qi.value; const ps = qi.selectionStart; renderMRate(); const n = $('mrQ'); n.focus(); n.setSelectionRange(ps, ps); };
 }
-document.addEventListener('click', (e) => { const cv = e.target.closest('[data-cv]'); if (!cv) return; const v = cv.dataset.cv; if (v === ST.tab) return; if (v === 'mrate') ST.bk = MATI; if (v !== 'lines' && ST.bk < 0) ST.bk = Math.max(0, MATI); XB.clear(); ST.tab = v; sel.clear(); render(); });
+document.addEventListener('click', (e) => { const cv = e.target.closest('[data-cv]'); if (!cv) return; const v = cv.dataset.cv; if (v === ST.tab) return; if (v === 'mrate') ST.bk = MATI; if (v === 'lines' || v === 'xpm') ST.bk = -1; else if (ST.bk < 0) ST.bk = Math.max(0, MATI); XB.clear(); ST.tab = v; sel.clear(); render(); });
 document.addEventListener('click', (e) => { const t = e.target; const sw = t.closest('[data-mr]'); if (sw) { ST.tab = sw.dataset.mr === '1' ? 'mrate' : 'cod'; ST.bk = MATI; render(); return; }
   if (!$('mr').contains(t)) return;
   const fl = t.closest('[data-mrf]'); if (fl) { ST.mrF = fl.dataset.mrf; renderMRate(); return; } if (t.id === 'mrMore') { ST.mrAll = true; renderMRate(); return; }
