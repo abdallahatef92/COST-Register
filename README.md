@@ -221,3 +221,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - **Indirect per month:** as before, plus **Avg per month** (all months to the cut) and a + on each cost element to show its items; an item opens its CJI3 lines.
 - Excel of Summary and Indirect: the heads with their items below (outline levels), header frozen.
 - The column filter no longer opens under the side navigation.
+
+## v24
+- On a report page (Expenses 1–3, PO register) the top-bar button reads **Export this report** and exports only that report; on every other page it is the full register Excel as before (Shift+click on a report page also gives the full register).

@@ -35,7 +35,9 @@ const stamp = () => new Date().toISOString().slice(0, 10);
 try { localStorage.removeItem('cr-focus'); } catch (e) {}
 $('bSave').onclick = () => { if (AS.h && AS.st === 'ok') asWrite(); dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`); setDirty(0); renderStatus(); toast('Codes saved to a file – keep it with this month\'s files'); };
 // ---- light Excel report (values, formatted)
-$('bExport').onclick = async () => {
+// on a report page (Expenses 1–3, PO register) the top-bar button exports only that report; elsewhere the full register
+const isReportPage = () => ST.tab === 'xpm' || (ST.tab === 'sub' && ST.sub === 'reg');
+$('bExport').onclick = async (ev) => { if (isReportPage() && !(ev && ev.shiftKey)) { const b = $('bXpX'); if (b) { b.click(); return; } }
   toast('Building the Excel report…'); await new Promise((r) => setTimeout(r, 30));
   const wb = new ExcelJS.Workbook(), NAVY = 'FF1F3864', GOLD = 'FFBF8F00', bd = { style: 'thin', color: { argb: 'FFD9D9D9' } }, box = { top: bd, bottom: bd, left: bd, right: bd }, A = 'Arial';
   const fill = (c) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), hx = (c) => 'FF' + c.replace('#', '').toUpperCase(), NUM = '#,##0;[Red]-#,##0;"-"', NUM2 = '#,##0.00;[Red]-#,##0.00;"-"';

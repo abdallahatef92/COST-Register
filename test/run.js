@@ -240,6 +240,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await p8.click('[data-pv="Months"]'); await p8.waitForTimeout(600);
     const [dx] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fx = path.join(OUT, 'expenses.xlsx'); await dx.saveAs(fx);
     const XL = require('xlsx'), wx = XL.readFile(fx), ax = XL.utils.sheet_to_json(wx.Sheets[wx.SheetNames[0]], { header: 1, defval: '' });
+    { const [dt] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bExport')]); ok('the top-bar button on a report page exports only that report', /^Expenses_per_month_/.test(dt.suggestedFilename()) && /this report/.test(await p8.$eval('#bExport', (e) => e.textContent)), dt.suggestedFilename()); }
     ok('Export: one sheet, a flat list with every row (no group rows)', wx.SheetNames.length === 1 && ax.length === nIt + 5, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
     { const h = ax[3], ci = h.lastIndexOf('Amount'), last = ax.slice(4).filter((r) => r[0] && r[0] !== 'TOTAL').reduce((t, r) => t + (+r[ci] || 0), 0); ok('…its To date amounts add up to the cost to date', Math.abs(last - td8) <= 5, String(last)); }
     // 3 Indirect per month
