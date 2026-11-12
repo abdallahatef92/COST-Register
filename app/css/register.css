@@ -335,3 +335,8 @@ header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUn
 #pg-tbl.xpind .t tr.grp.sub td .gl{padding-left:2px} #pg-tbl.xpind .t tr.grp.sub .tg{color:#9AA5B5;font-weight:400} #pg-tbl.xpind .t tr.grp.sub b{color:#1B2A41}
 #pg-tbl.xpind .t tr.it td{color:#4B5563;font-size:12px} #pg-tbl.xpind .t td.xi{padding-left:34px}
 .xlf{display:inline-flex;align-items:center;gap:6px;background:#FFF6DA;border:1px solid #E8C766;border-radius:14px;padding:3px 6px 3px 11px;font-size:12.5px;max-width:520px;overflow:hidden;white-space:nowrap} .xlf b{overflow:hidden;text-overflow:ellipsis} .xlf a{cursor:pointer;color:#8A6D1F;font-weight:700;padding:0 4px}
+header.top .logo .lg{width:34px;height:34px;flex:none;display:block} header.top .logo .lg svg{width:34px;height:34px;display:block}
+#nav .ncr{padding:8px 10px 2px 41px;font-size:11px;color:#7F92BF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .12s} body:not(.navpin) #nav:not(:hover) .ncr{opacity:0}
+/* report pages: a two-line toolbar, nothing hidden off the edge */
+#tools.rpt{display:block;overflow:visible;padding:8px 12px 7px} #tools.rpt .rr1,#tools.rpt .rr2{display:flex;align-items:center;gap:8px;flex-wrap:wrap} #tools.rpt .rr1{margin-bottom:7px} #tools.rpt .rr1 .help{font-size:12px}
+#tools.rpt .xpt{font-size:17px} #tools.rpt .seg.fold button{font-weight:600;color:#14254A} #tools.rpt #q{width:240px} #tools.rpt .sp{flex:1 1 auto} #tools.rpt #bClr:not(.on){display:none}

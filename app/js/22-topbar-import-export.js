@@ -148,33 +148,55 @@ $('bExport').onclick = async (ev) => { if (isReportPage() && !(ev && ev.shiftKey
   const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Cost_Register_${META.project}_${R.repLab}_${stamp()}.xlsx`); toast('Excel report exported (your codes are in it)'); setDirty(0); renderStatus();
 };
 
-// Export to Excel of a report page (Expenses 1–3, PO register): the rows and columns as on screen.
-// A grouped page keeps its heads, each with its items below (folded or not); Expenses per month stays a flat list.
+// Export to Excel of a report page (Expenses 1–4, PO register): the rows and columns as on screen, laid out to read and print.
+// A grouped page keeps its heads, each with its items below (outline levels, + / − in Excel); Expenses per month stays a flat list.
 document.addEventListener('click', async (e) => { if (!e.target.closest('#bXpX') || !(ST.tab === 'xpm' || ST.tab === 'sub')) return; const D = R.D, rows = R.rows || []; if (!D) return;
-  const name = ST.tab === 'sub' ? 'PO register' : (XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1], tree = !!D.groups && !(ST.tab === 'xpm' && xpPage() === 'month');
-  const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet(name.slice(0, 31), { views: [{ state: 'frozen', xSplit: 1, ySplit: 4 }], properties: { outlineProperties: { summaryBelow: false } } }), A2 = 'Arial', NAV = 'FF1F3864', cols = D.cols;
+  const name = ST.tab === 'sub' ? 'PO register' : (XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1], tree = !!D.groups && !(ST.tab === 'xpm' && (xpPage() === 'month' || xpPage() === 'lines'));
+  const cols = D.cols, nC = cols.length, F = 'Calibri', NAV = 'FF14254A', NAV2 = 'FF2F4A7C', GOLD = 'FFFFE9A8', LINE = 'FFD9DEE7', HR = 5;   // HR = the column-name row
+  const wb = new ExcelJS.Workbook(); wb.creator = 'Cost Register · by A. Atef';
+  const ws = wb.addWorksheet(name.slice(0, 31), { views: [{ state: 'frozen', xSplit: 1, ySplit: HR, showGridLines: false, zoomScale: 90 }], properties: { tabColor: { argb: NAV }, outlineProperties: { summaryBelow: false } },
+    pageSetup: { paperSize: 8, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: `${HR - 1}:${HR}`, margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } },
+    headerFooter: { oddFooter: `&L&8${name} – ${META.project}&C&8Page &P of &N&R&8Cost Register · CJI3 is the source` } });
   const cut = new Date(ST.cut + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
-  ws.getCell(1, 1).value = `${name} – ${META.project}`; ws.getCell(1, 1).font = { name: A2, size: 14, bold: true, color: { argb: NAV } };
-  ws.getCell(2, 1).value = `Cut date ${cut} · ${rows.length.toLocaleString('en-US')} rows · CJI3 is the source`; ws.getCell(2, 1).font = { name: A2, size: 10, color: { argb: 'FF595959' } };
-  const hdr = (r, c, v, fill) => { const x = ws.getCell(r, c); x.value = v; x.font = { name: A2, bold: true, color: { argb: 'FF1B2A41' } }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } }; x.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; x.border = { bottom: { style: 'thin', color: { argb: 'FF9AA5B5' } } }; };
-  cols.forEach((c, j) => { const m = c.slot !== undefined; hdr(3, j + 1, m ? c.pl : '', m ? (c.th && /cut/.test(c.th) ? 'FFFBF0D4' : 'FFE8EDF4') : 'FFF1F4F8'); hdr(4, j + 1, m && c.sub && c.l !== c.pl ? c.sub : c.l, c.code ? 'FFFBF0D4' : m && c.th && /cut/.test(c.th) ? 'FFFBF0D4' : 'FFF1F4F8');
-    ws.getColumn(j + 1).width = j === 0 && tree ? 46 : c.slot !== undefined ? (c.sub === 'Rate' ? 11 : 14) : c.k === 'desc' || c.k === 'item' || c.k === 'title' ? 40 : c.k === 'bk' ? 22 : c.code ? 13 : 16; });
-  for (let j = 0; j < cols.length;) { const c = cols[j]; let k = j; while (k + 1 < cols.length && cols[k + 1].slot !== undefined && cols[k + 1].slot === c.slot && c.slot !== undefined) k++; if (k > j) ws.mergeCells(3, j + 1, 3, k + 1); j = k + 1; }
-  const nf = (c) => (c.k === 'sh' ? '0.0%' : c.sub === 'Qty' ? '#,##0.###;[Red]-#,##0.###;"-"' : c.sub === 'Rate' ? '#,##0.00;[Red]-#,##0.00;"-"' : '#,##0;[Red]-#,##0;"-"');
-  const isNum = (c) => c.num || c.slot !== undefined, adds = (c) => isNum(c) && c.sub !== 'Qty' && c.sub !== 'Rate' && c.k !== 'qty';   // quantities and rates of different units do not add up
-  let rn = 5; const put = (cells, o = {}) => { const rr = ws.getRow(rn++); cells.forEach((v, j) => { const c = cols[j], x = rr.getCell(j + 1); if (isNum(c) && v !== '' && v != null) { const n = Number(v) || 0; x.value = Math.abs(n) < 0.005 ? null : c.sub === 'Qty' ? Math.round(n * 1000) / 1000 : Math.round(n * 100) / 100; x.numFmt = nf(c); } else x.value = v ?? '';
-      x.font = { name: A2, size: 10, bold: !!o.b || c.k === 'bk', color: { argb: o.fc || 'FF1B2A41' } }; if (o.f) x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: o.f } }; if (j === 0 && o.i) x.alignment = { indent: o.i }; }); if (o.lvl) rr.outlineLevel = o.lvl; };
-  const item = (r, lvl) => put(cols.map((c) => { const v = c.v(r); return isNum(c) ? v : v === '(blank)' ? '' : String(v ?? ''); }), { lvl, i: lvl ? lvl * 2 : 0 });
+  const txt = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const fill = (c) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), thin = { style: 'thin', color: { argb: LINE } }, box = { top: thin, bottom: thin, left: thin, right: thin };
+  // title block
+  ws.mergeCells(1, 1, 1, Math.min(nC, 8)); const t1 = ws.getCell(1, 1); t1.value = name; t1.font = { name: F, size: 18, bold: true, color: { argb: NAV } }; ws.getRow(1).height = 28;
+  ws.mergeCells(2, 1, 2, Math.min(nC, 8)); const t2 = ws.getCell(2, 1); t2.value = `${META.project}  ·  cut date ${cut}  ·  ${rows.length.toLocaleString('en-US')} rows  ·  CJI3 is the source  ·  ${D.rpt && D.rpt.hint ? txt(D.rpt.hint) : ''}`.replace(/\s+·\s+$/, ''); t2.font = { name: F, size: 10, color: { argb: 'FF5B6576' } };
+  const lf = ST.tab === 'xpm' && xpPage() === 'lines' && ST.xpLF; if (lf) { ws.mergeCells(3, 1, 3, Math.min(nC, 8)); const t3 = ws.getCell(3, 1); t3.value = 'Lines of ' + ST.xpLF.label; t3.font = { name: F, size: 10, bold: true, color: { argb: 'FF8A6D1F' } }; }
+  // two header rows: the period over its Qty / Rate / Amount, then the column names
+  const per = HR - 1, isCut = (c) => c.th && /cut/.test(c.th), isNum = (c) => c.num || c.slot !== undefined;
+  const band = cols.some((c) => c.slot !== undefined && c.pl && c.pl !== c.l);   // a period row only when there are periods over Qty / Rate / Amount
+  cols.forEach((c, j) => { const m = c.slot !== undefined, a = ws.getCell(per, j + 1), b = ws.getCell(HR, j + 1);
+    if (band) a.value = m && c.pl && c.pl !== c.l ? c.pl : ''; if (band) { a.font = { name: F, size: 10, bold: true, color: { argb: isCut(c) ? 'FF5C4600' : 'FFFFFFFF' } }; a.fill = fill(isCut(c) ? GOLD : NAV2); a.alignment = { horizontal: 'center', vertical: 'middle' }; }
+    b.value = m && c.sub && c.pl && c.l !== c.pl ? c.sub : c.l; b.font = { name: F, size: 10, bold: true, color: { argb: c.code ? 'FF5C4600' : isCut(c) ? 'FF5C4600' : 'FFFFFFFF' } }; b.fill = fill(c.code ? 'FFFBE7B0' : isCut(c) ? GOLD : NAV);
+    b.alignment = { horizontal: isNum(c) ? 'right' : 'left', vertical: 'middle', wrapText: true, indent: isNum(c) ? 0 : 1 }; b.border = { bottom: { style: 'medium', color: { argb: 'FF0B1730' } } }; });
+  if (band) for (let j = 0; j < nC;) { const c = cols[j]; let k = j; while (k + 1 < nC && c.slot !== undefined && cols[k + 1].slot === c.slot) k++; if (k > j) ws.mergeCells(per, j + 1, per, k + 1); j = k + 1; }
+  ws.getRow(per).height = band ? 18 : 8; ws.getRow(HR).height = 30;
+  const nf = (c) => (c.k === 'sh' ? '0.0%;[Red]-0.0%;"–"' : c.sub === 'Qty' || c.k === 'qty' ? '#,##0.###;[Red]-#,##0.###;"–"' : c.sub === 'Rate' ? '#,##0.00;[Red]-#,##0.00;"–"' : '#,##0;[Red]-#,##0;"–"');
+  const adds = (c) => isNum(c) && c.sub !== 'Qty' && c.sub !== 'Rate' && c.k !== 'qty';   // quantities and rates of different units do not add up
+  const wid = cols.map((c) => Math.min(48, Math.max(isNum(c) ? 11 : 9, String(c.l).length * 0.9 + 2)));
+  let rn = HR + 1, zebra = 0;
+  const put = (vals, o = {}) => { const rr = ws.getRow(rn++); rr.height = o.h || 17; vals.forEach((v, j) => { const c = cols[j], x = rr.getCell(j + 1);
+      if (isNum(c) && v !== '' && v != null) { const n = Number(v) || 0; x.value = Math.abs(n) < 0.005 ? null : c.sub === 'Qty' || c.k === 'qty' ? Math.round(n * 1000) / 1000 : c.k === 'sh' ? n : Math.round(n * 100) / 100; x.numFmt = nf(c); x.alignment = { horizontal: 'right', vertical: 'middle' }; }
+      else { x.value = v ?? ''; x.alignment = { horizontal: 'left', vertical: 'middle', indent: j === 0 && o.i ? o.i : 0, readingOrder: /[؀-ۿ]/.test(String(v || '')) ? 'rtl' : 'ltr' }; if (!isNum(c)) wid[j] = Math.max(wid[j], Math.min(48, String(v || '').length * 1.05 + (j === 0 && o.i ? o.i * 2 : 0) + 2)); }
+      x.font = { name: F, size: 10, bold: !!o.b || (c.slot === 'td' && c.sub === 'Amount') || c.k === 'cu', color: { argb: o.fc || 'FF1B2A41' } };
+      x.fill = fill(o.f || (isCut(c) ? 'FFFFF8E1' : c.k === 'cu' || c.slot === 'td' ? 'FFF2F5FA' : o.z ? 'FFF8FAFC' : 'FFFFFFFF')); x.border = o.top ? { ...box, top: { style: 'thin', color: { argb: 'FF9AA5B5' } } } : box; });
+    if (o.lvl) { rr.outlineLevel = o.lvl; if (o.hide) rr.hidden = false; } };
+  const item = (r, lvl) => put(cols.map((c) => { const v = c.v(r); return isNum(c) ? v : v === '(blank)' ? '' : txt(v); }), { lvl, i: lvl ? lvl * 2 : 0, z: !tree && (zebra++ % 2) });
   const sums = (rs, label) => cols.map((c, j) => (j === 0 ? label : adds(c) ? rs.reduce((t, r) => t + (Number(c.v(r)) || 0), 0) : ''));
-  const txt = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
   if (!tree) rows.forEach((r) => item(r, 0));
   else { const G = new Map(); rows.forEach((r) => (G.get(r.g) || G.set(r.g, []).get(r.g)).push(r)); let lastF = null;
     const fo = []; if (D.fam) for (const g of G.keys()) { const f = D.fam(g); if (!fo.includes(f)) fo.push(f); }
     const order = D.fam ? [...G.keys()].sort((a, b) => fo.indexOf(D.fam(a)) - fo.indexOf(D.fam(b))) : [...G.keys()];
-    order.forEach((g) => { if (D.fam) { const f = D.fam(g); if (f !== lastF) { lastF = f; put(sums(rows.filter((r) => D.fam(r.g) === f), f), { b: 1, f: 'FFDCE5F2', fc: 'FF14254A' }); } }
-      put(sums(G.get(g), txt(D.gLabel ? D.gLabel(g, G.get(g)) : g)), { b: 1, f: 'FFEEF2F8', lvl: D.fam ? 1 : 0, i: D.fam ? 2 : 0 }); G.get(g).forEach((r) => item(r, D.fam ? 2 : 1)); }); }
-  const tr = ws.getRow(rn); tr.getCell(1).value = 'TOTAL'; cols.forEach((c, j) => { const x = tr.getCell(j + 1); if (adds(c)) { const t = rows.reduce((s2, r) => s2 + (Number(c.v(r)) || 0), 0);
-      x.value = tree ? Math.round(t * 100) / 100 : { formula: `SUBTOTAL(9,${ws.getColumn(j + 1).letter}5:${ws.getColumn(j + 1).letter}${rn - 1})`, result: t }; x.numFmt = nf(c); } x.font = { name: A2, bold: true, color: { argb: 'FFFFFFFF' } }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAV } }; });
-  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: rn - 1, column: cols.length } };
+    order.forEach((g) => { if (D.fam) { const f = D.fam(g); if (f !== lastF) { lastF = f; put(sums(rows.filter((r) => D.fam(r.g) === f), f), { b: 1, f: 'FFDCE5F2', fc: NAV, h: 20, top: 1 }); } }
+      put(sums(G.get(g), txt(D.gLabel ? D.gLabel(g, G.get(g)) : g)), { b: 1, f: D.fam ? 'FFF4F7FB' : 'FFE8EEF7', fc: NAV, lvl: D.fam ? 1 : 0, i: D.fam ? 2 : 0, h: 19, top: !D.fam });
+      G.get(g).forEach((r) => item(r, D.fam ? 2 : 1)); }); }
+  // total
+  const tr = ws.getRow(rn); tr.height = 22; cols.forEach((c, j) => { const x = tr.getCell(j + 1); if (j === 0) x.value = 'TOTAL'; else if (adds(c)) { const t = rows.reduce((s2, r) => s2 + (Number(c.v(r)) || 0), 0);
+      x.value = tree ? Math.round(t * 100) / 100 : { formula: `SUBTOTAL(9,${ws.getColumn(j + 1).letter}${HR + 1}:${ws.getColumn(j + 1).letter}${rn - 1})`, result: t }; x.numFmt = nf(c); x.alignment = { horizontal: 'right', vertical: 'middle' }; }
+    x.font = { name: F, size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } }; x.fill = fill(NAV); x.border = { top: { style: 'medium', color: { argb: 'FF0B1730' } } }; });
+  wid.forEach((w, j) => { ws.getColumn(j + 1).width = Math.round(w * 10) / 10; });
+  ws.autoFilter = { from: { row: HR, column: 1 }, to: { row: rn - 1, column: nC } };
   const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${name.replace(/ /g, '_')}_${META.project}_${ST.cut}.xlsx`); toast(name + ' exported – ' + rows.length.toLocaleString('en-US') + ' rows');
 });

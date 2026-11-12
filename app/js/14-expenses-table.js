@@ -9,6 +9,7 @@ const xpPage = () => ST.xpPage || 'sum';
 // kept for the table code: an Expenses row is never a CJI3 line selection
 const xpLinesOf = () => [];
 const xpExport = () => ' <button id="bXpX" class="hp" title="This page as it is on screen (filters and folds apply), as an Excel file">⇩ Export</button>';
+const xpPv = () => `<span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}" class="${(v === 'Months' && !PF.size) || (v === 'Years' && [...PF].some((x) => x[0] === 'Y')) || (v === 'Quarters' && PF.size && ![...PF].some((x) => x[0] === 'Y')) ? 'on' : ''}">${v}</button>`).join('')}</span>`;
 const xpTitle = () => `<b class="xpt">${esc((XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1])}</b>`;
 const xpLive = () => [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) >= 0.005));
 // a border on the left of every month block (and of To date)
@@ -39,7 +40,7 @@ function xpReport() {
     const foot = (rs) => ({ pc: fmt(rs.reduce((t, r) => t + sumIdx(r.e, PC), 0)), tm: fmt(rs.reduce((t, r) => t + sumIdx(r.e, TM), 0)), cu: fmt(rs.reduce((t, r) => t + sumIdx(r.e, CU), 0)), sh: (100 * rs.reduce((t, r) => t + sumIdx(r.e, CU), 0) / tot).toFixed(1) + '%' });
     return { cols, rows, groups: true, sel: false, status: false, foot, gCells: (g, rs) => foot(rs), gSpanK: 'auto',
       gLabel: xpGLabel,
-      extraTools: xpTitle() + xpGrpSeg() + `<span class="help">cumulative to the cut date · rows = item + the codes of its CJI3 lines (✎ = coded by hand)</span>` + xpExport() };
+      rpt: { title: xpTitle(), lead: xpGrpSeg(), hint: 'cumulative to the cut date · a row = an item + the codes of its CJI3 lines (✎ = coded by hand) · click an item for its CJI3 lines' } };
   }
   // 3. Indirect per month: indirect head › cost element › item (PKG = Indirect), amount; an item opens its CJI3 lines
   const head = new Map(), ord = new Map(); psCfg().indirect.forEach((g, gi) => g.c.forEach((c) => { head.set(c, g.n); ord.set(g.n, gi); }));
@@ -56,10 +57,9 @@ function xpReport() {
   const foot = (rs) => { const o = {}; cols.forEach((c) => { if (c.num) o[c.k] = fmt(rs.reduce((t, r) => t + c.v(r), 0)); }); return o; };
   return { cols, rows, groups: true, sel: false, status: false, foot, gCells: (g, rs) => foot(rs), gSpanK: 'auto', fam: famOfCe, fLabel: (f, rs) => `<b>${esc(f)}</b><span class="gm">${new Set(rs.map((x) => x.g)).size} cost element${new Set(rs.map((x) => x.g)).size === 1 ? '' : 's'}</span>`,
     gLabel: (g, rs) => `<b>${esc(g)}</b>&nbsp;<span class="help">${esc(ceLabel(IND_PKG, g))}${rs.length > 1 ? ' · ' + rs.length + ' items' : ''}</span>`,
-    extraTools: xpTitle() + `<span class="help">PKG = Indirect only · amount · + opens a cost element, the item opens its CJI3 lines</span> <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}" class="${(v === 'Months' && !PF.size) || (v === 'Years' && [...PF].some((x) => x[0] === 'Y')) || (v === 'Quarters' && PF.size && ![...PF].some((x) => x[0] === 'Y')) ? 'on' : ''}">${v}</button>`).join('')}</span>` + xpExport() };
+    rpt: { title: xpTitle(), hint: 'PKG = Indirect only · amount · + opens a cost element · click an item for its CJI3 lines', tools: xpPv() } };
 }
 // 2. Expenses per month: the page definition in 14-table-pages (pm / xpm) ends here
 const xpMonthDef = (o) => { xpFoldInit(o.rows); return { cols: o.cols, rows: o.rows, bands: o.bands, groups: true, sel: false, status: false, foot: o.footF, gCells: (g, rs) => o.footF(rs), gSpanK: 'auto', gLabel: xpGLabel,
-  extraTools: xpTitle() + xpGrpSeg() + (o.hasQ ? ` <span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount']].map(([m, l]) => `<button data-pm="${m}" class="${o.mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '')
-    + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}" class="${(v === 'Months' && !PF.size) || (v === 'Years' && [...PF].some((x) => x[0] === 'Y')) || (v === 'Quarters' && PF.size && ![...PF].some((x) => x[0] === 'Y')) ? 'on' : ''}">${v}</button>`).join('')}</span>` + xpExport() }; };
+  rpt: { title: xpTitle(), lead: xpGrpSeg(), hint: 'every item by month · click an item for its CJI3 lines', tools: (o.hasQ ? `<span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount']].map(([m, l]) => `<button data-pm="${m}" class="${o.mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + xpPv() } }; };
 document.addEventListener('click', (e) => { if (ST.tab !== 'xpm') return; const b = e.target.closest('[data-xsm]'); if (b) { ST.xsm = b.dataset.xsm; render(); $('wrap').scrollTop = 0; } });

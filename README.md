@@ -232,3 +232,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v26
 - App icon: the Alshorouk "Actual Cost Register" badge – the browser-tab icon of the Tool and the icon of the installed browser app (app/pwa/icon-192.png, icon-512.png).
+
+## v27
+- New icon (a register sheet with a gold coin) – the app / taskbar icon, the browser-tab icon and the logo at the top left of the Tool. "Cost Register vNN · by A. Atef" at the bottom of the side navigation.
+- Report pages (Expenses 1–4, PO register) have a two-line toolbar: title, **− Collapse all / + Expand all**, grouping and a short note on the first line; search, status, Qty · Rate · Amount, Months · Quarters · Years, Columns, Fit and Export on the second. Nothing is hidden off the edge any more.
+- A more polished Excel for every report: title and a line with project, cut date, row count; navy headers (period over its Qty / Rate / Amount, cut month in gold, code columns in gold); light borders; widths fitted to the content; Arabic text right-to-left; group rows shaded with + / − outline in Excel; navy total row; frozen header and first column; prints landscape on A3, fit to width, with the header on every page and page numbers.
