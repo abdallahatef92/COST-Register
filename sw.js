@@ -1,4 +1,4 @@
-const C = 'cost-register-v26', FILES = ['./', 'manifest.webmanifest', 'icon-192-df7b3797.png', 'icon-512-df7b3797.png'];
+const C = 'cost-register-v27', FILES = ['./', 'manifest.webmanifest', 'icon-192-88d1293a.png', 'icon-512-88d1293a.png'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(C).then((c) => c.addAll(FILES))); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => { if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
