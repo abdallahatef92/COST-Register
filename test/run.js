@@ -297,6 +297,17 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   await p2.setInputFiles('#file', codes); await p2.waitForTimeout(2500);
   ok('Import brings the code back', await p2.evaluate(() => __BK[0].items.some((x) => x.pkg === 'T02')));
   eq('difference stays 0 after import', await p2.evaluate(() => R.diff), 0); await ctx2.close();
+  // the reports of the earlier offline tools (Inventory / Subcontract Cost Report): a 'Coding' sheet, header a few rows down
+  { const ExcelJS = require('exceljs'), pick = await p.evaluate(() => { const m = __BK.find((x) => x.id === 'Material'), s2 = __BK.find((x) => x.id === 'Subcontractor'); return { mat: m.items.slice(0, 3).map((i) => [i.vals[2], i.vals[3], i.vals[4]]), sub: s2.items.slice(0, 3).map((i) => [i.vals[0], i.vals[1], i.vals[2]]) }; });
+    const mk = async (fn, head, rows) => { const wb = new ExcelJS.Workbook(); wb.addWorksheet('Summary').addRow(['old report']); const ws = wb.addWorksheet('Coding'); ws.addRow(['Materials still to code']); ws.addRow(['0']); ws.addRow(['Live']); ws.addRow(head); rows.forEach((r) => ws.addRow(r)); const f = path.join(OUT, fn); await wb.xlsx.writeFile(f); return f; };
+    const fi = await mk('old_inventory_coding.xlsx', ['Family', 'Division', 'Material group (SAP)', 'Material', 'Description', 'Unit', 'CSI', 'MNL', 'Cost element', 'Status'], pick.mat.map(([g, m, d], k) => ['M', 'M03', g, m, d, 'TO', 'S.03' + k, 'MAT', 'MAT-' + k, 'Coded']));
+    const fs2 = await mk('old_subcontract_coding.xlsx', ['Type of works (SAP)', 'Service', 'Description', 'Unit', 'DIV', 'PKG', 'MNL', 'Cost element', 'Status'], pick.sub.map(([t, sv, d], k) => [t, sv, d, 'M3', 'DIV 03', 'S.0' + k, 'SUB', 'SUB-' + k, 'Coded']));
+    const { ctx: c9, p: p9 } = await open(APP); await p9.evaluate(() => localStorage.clear()); await p9.reload(); await p9.waitForFunction(() => document.querySelector('#tabs button')); await p9.waitForTimeout(1500);
+    await p9.setInputFiles('#file', fi); await p9.waitForTimeout(2000);
+    eq('earlier Inventory report: CSI → PKG, MNL and cost element read by material', await p9.evaluate((ms) => ms.map((m) => { const it = __BK.find((x) => x.id === 'Material').items.find((i) => i.vals[3] === m); return [it.pkg, it.mnl, it.ce].join('/'); }), pick.mat.map((x) => x[1])), ['S.030/MAT/MAT-0', 'S.031/MAT/MAT-1', 'S.032/MAT/MAT-2']);
+    await p9.setInputFiles('#file', fs2); await p9.waitForTimeout(2000);
+    eq('earlier Subcontract Cost Report: DIV, PKG, MNL, cost element read by service', await p9.evaluate((ss) => ss.map((sv) => { const it = __BK.find((x) => x.id === 'Subcontractor').items.find((i) => i.vals[1] === sv[1] && i.vals[2] === sv[2]); return [it.div, it.pkg, it.mnl, it.ce].join('/'); }), pick.sub), ['DIV 03/S.00/SUB/SUB-0', 'DIV 03/S.01/SUB/SUB-1', 'DIV 03/S.02/SUB/SUB-2']);
+    eq('difference stays 0 after reading them', await p9.evaluate(() => R.diff), 0); await c9.close(); }
   }
 
   if (RUN('8b')) {

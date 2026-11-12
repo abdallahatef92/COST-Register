@@ -241,3 +241,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 ## v28 – POs on Expenses per month
 - Subcontractor rows are split **one row per PO**, with **PO** and **Subcontractor** columns and that PO's own qty, rate and amount; the repeated item columns are grey. On SUTH: subcontractor 630 → 1,381 rows (2,717 → 3,470 in all); the totals do not change. The Excel export follows the screen.
 - Clicking an item on a PO row opens SAP CJI3 transactions with the lines of that item, those codes and that PO.
+
+## v29 – codes from the earlier offline tools
+- **Import codes…** also reads the Coding sheet of the earlier offline reports: the **Inventory** report (Material → CSI as PKG, MNL, Cost element) and the **Subcontract Cost Report** (Service + Description → DIV, PKG, MNL, Cost element; a service with one set of codes also matches on the service alone). Blank cells never wipe a code; Ctrl+Z undoes the import.

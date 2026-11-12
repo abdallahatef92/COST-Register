@@ -14,12 +14,20 @@ $('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value 
   try {
     if (f.name.toLowerCase().endsWith('.json')) { const s = JSON.parse(await f.text()); const n = applySnap(s, true); undo = []; redo = []; after(`Loaded ${f.name}: codes of ${n} items`); return; }
     const wb = XLSX.read(await f.arrayBuffer()), ch = []; let matched = 0, sheets = 0;
-    BK.forEach((b, bi) => { const name = wb.SheetNames.find((n) => n === b.short + ' Coding') || (isSub(bi) ? wb.SheetNames.find((n) => n === 'Coding') : null); if (!name) return; sheets++;
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: '' }), hi = rows.findIndex((r) => r.includes('PKG') && r.includes('MNL')); if (hi < 0) return;
-      const h = rows[hi], c = (n) => h.findIndex((x) => String(x).trim() === n), ce = c('Cost element code') >= 0 ? c('Cost element code') : c('Cost element'), byKey = new Map(), bySd = new Map();
-      for (const r of rows.slice(hi + 1)) { const o = { pkg: String(r[c('PKG')]).trim(), mnl: String(r[c('MNL')]).trim(), ce: String(r[ce] ?? '').trim(), inc: c('Include') >= 0 ? String(r[c('Include')]).trim() : '', div: c('DIV') >= 0 ? String(r[c('DIV')]).trim() : '' };
-        if (c('Item key') >= 0 && r[c('Item key')]) byKey.set(String(r[c('Item key')]), o); if (isSub(bi) && c('Service') >= 0) bySd.set(String(r[c('Service')]).trim() + '|' + norm(r[c('Description')]), o); }
-      b.items.forEach((it) => { const o = byKey.get(it.k) || (isSub(bi) ? bySd.get(it.vals[1] + '|' + norm(it.vals[2])) : null); if (!o) return; matched++; ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((fl) => { if (o[fl] && (fl !== 'div' || isSub(bi))) ch.push({ t: 'item', bi, ii: it.ii, f: fl, v: o[fl] }); }); }); });
+    // Coding sheets: this register's own export ('<bucket> Coding', 'Coding'), and the reports of the earlier offline tools –
+    // Subcontract Cost Report ('Coding': Service, Description, DIV, PKG, MNL, Cost element) and Inventory report ('Coding': Material, CSI = the PKG, MNL, Cost element)
+    const hdrOf = (n) => { const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, defval: '' }), hi = rows.findIndex((r) => (r.includes('PKG') || r.includes('CSI')) && r.includes('MNL')); return { rows, hi, h: hi >= 0 ? rows[hi].map((x) => String(x).trim()) : [] }; };
+    const old = []; BK.forEach((b, bi) => { let name = wb.SheetNames.find((n) => n === b.short + ' Coding');
+      if (!name && wb.SheetNames.includes('Coding')) { const t = hdrOf('Coding'); if (t.hi >= 0 && ((bi === MATI && t.h.includes('Material')) || (isSub(bi) && t.h.includes('Service') && !t.h.includes('Material')))) name = 'Coding'; }
+      if (!name) return; const { rows, hi, h } = hdrOf(name); if (hi < 0) return; sheets++; if (name === 'Coding' && !h.includes('Item key')) old.push(b.short);
+      const c = (n) => h.indexOf(n), cp = c('PKG') >= 0 ? c('PKG') : c('CSI'), ce = c('Cost element code') >= 0 ? c('Cost element code') : c('Cost element'), byKey = new Map(), bySd = new Map(), bySvc = new Map(), byMat = new Map();
+      for (const r of rows.slice(hi + 1)) { const o = { pkg: String(r[cp] ?? '').trim(), mnl: String(r[c('MNL')] ?? '').trim(), ce: ce >= 0 ? String(r[ce] ?? '').trim() : '', inc: c('Include') >= 0 ? String(r[c('Include')]).trim() : '', div: c('DIV') >= 0 ? String(r[c('DIV')]).trim() : '' };
+        if (!o.pkg && !o.mnl && !o.ce && !o.div) continue;
+        if (c('Item key') >= 0 && r[c('Item key')]) byKey.set(String(r[c('Item key')]), o);
+        if (isSub(bi) && c('Service') >= 0) { const sv = String(r[c('Service')]).trim(); bySd.set(sv + '|' + norm(r[c('Description')]), o); const k = JSON.stringify(o), pv = bySvc.get(sv); bySvc.set(sv, pv === undefined ? { k, o } : pv && pv.k === k ? pv : null); }   // one service, one set of codes – else only Service + Description match
+        if (bi === MATI && c('Material') >= 0) byMat.set(String(r[c('Material')]).trim(), o); }
+      b.items.forEach((it) => { const sv = isSub(bi) ? bySvc.get(it.vals[1]) : null, o = byKey.get(it.k) || (isSub(bi) ? bySd.get(it.vals[1] + '|' + norm(it.vals[2])) || (sv ? sv.o : null) : bi === MATI ? byMat.get(String(it.vals[3]).trim()) : null); if (!o) return; matched++;
+        ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((fl) => { if (o[fl] && (fl !== 'div' || isSub(bi))) ch.push({ t: 'item', bi, ii: it.ii, f: fl, v: o[fl] }); }); }); });
     if (wb.SheetNames.includes('Lines')) { const rows = XLSX.utils.sheet_to_json(wb.Sheets.Lines, { header: 1, defval: '' }), hi = rows.findIndex((r) => r.includes('Line ID') && r.includes('Item PKG'));
       if (hi >= 0) { const h = rows[hi], c = (n) => h.indexOf(n), ix2 = new Map(L.id.map((id, i) => [id, i]));
         for (const r of rows.slice(hi + 1)) { const i = ix2.get(String(r[c('Line ID')])); if (i === undefined) continue;
@@ -27,7 +35,7 @@ $('file').onchange = async (e) => { const f = e.target.files[0]; e.target.value 
     const lo = wb.SheetNames.includes('Line overrides') ? XLSX.utils.sheet_to_json(wb.Sheets['Line overrides'], { defval: '' }) : []; const ix = new Map(L.id.map((id, i) => [id, i]));
     lo.forEach((r) => { const i = ix.get(String(r['Line ID'])); if (i === undefined) return; [['PKG', 'pkg'], ['MNL', 'mnl'], ['Cost element code', 'ce'], ['Include', 'inc']].forEach(([n, fl]) => { if (String(r[n]).trim()) ch.push({ t: 'line', i, f: fl, v: String(r[n]).trim() }); }); });
     if (!sheets) return toast('No Coding sheet found in ' + f.name);
-    change(ch, 'Imported ' + f.name); toast(`Imported ${f.name}: ${matched} items matched on ${sheets} Coding sheets${lo.length ? ', ' + lo.length + ' line overrides' : ''} (blank cells never wipe a code)`);
+    change(ch, 'Imported ' + f.name); toast(`Imported ${f.name}${old.length ? ' (earlier ' + old.join(' / ') + ' report)' : ''}: ${matched} items matched on ${sheets} Coding sheet${sheets === 1 ? '' : 's'}${lo.length ? ', ' + lo.length + ' line overrides' : ''} (blank cells never wipe a code)`);
   } catch (err) { toast('Could not read ' + f.name + ': ' + err.message); }
 };
 const dl = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); };
