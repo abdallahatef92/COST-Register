@@ -7,7 +7,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cost Register v20</title>
+<title>Cost Register v21</title>
 <style>
 :root{--navy:#1F3864;--navy2:#2F5597;--gold:#BF8F00;--line:#DDE2EA;--bg:#F3F5F9;--txt:#1d2433;--mut:#6b7280;--ok:#E2EFDA;--okT:#2e6b1f;--part:#FFF2CC;--partT:#8a6500;--not:#FCE4D6;--notT:#a33a00;--sel:#DCE9F9;--code:#EEF3FB;--codeB:#C9D6EA;--miss:#FFF0E8;--missB:#F2B79A;--ovr:#F8CBAD}
 *{box-sizing:border-box}
@@ -321,12 +321,29 @@ header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUn
 .ctabs button:hover{background:#EEF2F8} .ctabs button.on{background:#fff;border-color:#D5DCE6;border-bottom:3px solid #FFD966} .ctabs button.on b{color:#14254A}
 .bkc{display:inline-flex;align-items:center;gap:6px;font-weight:600} .bkc i{width:10px;height:10px;border-radius:3px;flex:none}
 .t td.xph{background:#FDF1EA} .t td.xph b{color:#8A3500}
+/* ===== v21: Expenses as an analytical table ===== */
+#tools .xt{font-size:16px;font-weight:600;color:#14254A;white-space:nowrap;margin-right:4px} #tools .xt small{font-size:12px;font-weight:400;color:#6B7280}
+#tools .xsep{width:1px;height:22px;background:#E1E6EE;margin:0 4px} #tools .sp{flex:1 1 auto}
+#tools .xb{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid transparent;border-radius:7px;background:transparent;color:#0A6ED1;font-weight:600;cursor:pointer}
+#tools .xb:hover{background:#EBF5FE} #tools .xb.on{background:#EBF5FE;border-color:#BFDDF8} #tools .xb i{font-style:normal;background:#0A6ED1;color:#fff;border-radius:9px;font-size:10.5px;padding:0 6px;line-height:16px}
+#tools .xtc button{display:inline-flex;align-items:center;gap:6px} #tools .xv{display:inline-flex;align-items:center;gap:6px;color:#6B7280;font-size:12.5px} #tools .xv select{border:1px solid #89919A;border-radius:6px;padding:5px 8px;font:inherit;color:#32363A;max-width:220px}
+#bkbar.xpchips{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 14px;background:#F7F9FC;border-bottom:1px solid #E5E9F0;font-size:12.5px}
+.xc{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #BCC3CA;border-radius:13px;padding:2px 6px 2px 10px;color:#32363A} .xc b{font-weight:600;color:#4B5563} .xc i{font-style:normal;color:#89919A;cursor:pointer;padding:0 3px} .xc i:hover{color:#C00000} .xca{color:#0A6ED1;font-weight:600;cursor:pointer;margin-left:4px}
+.xpop{position:fixed;z-index:90;min-width:330px;background:#fff;border:1px solid #C9D3E3;border-radius:10px;box-shadow:0 14px 36px rgba(20,40,80,.22);padding:4px 0 0;font-size:13px;color:#1B2A41}
+.xpop h4{margin:0;padding:10px 14px 6px;font-size:14px;color:#14254A} .xpop .xr{display:flex;align-items:center;gap:8px;padding:6px 14px} .xpop .xr>span:first-child{min-width:62px;color:#6B7280} .xpop .xr.help{display:block;font-size:12px;color:#8A93A3}
+.xpop select{border:1px solid #89919A;border-radius:6px;padding:4px 6px;font:inherit;max-width:240px} .xpop .xf{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:1px solid #EEF1F5;margin-top:6px} .xpop .xf button{border:1px solid #C9D3E3;border-radius:6px;padding:5px 14px;background:#fff;color:#0A6ED1;font-weight:600} .xpop .xf .pri{background:#0A6ED1;border-color:#0A6ED1;color:#fff}
+.xpop .xg{display:block;width:calc(100% - 16px);margin:2px 8px;text-align:left;border:0;background:transparent;border-radius:6px;padding:7px 10px;font:inherit;color:#1B2A41} .xpop .xg:hover{background:#EBF5FE} .xpop .xg.on{background:#0A6ED1;color:#fff;font-weight:600}
+#pg-tbl .t th.mb,#pg-tbl .t td.mb{border-left:2px solid #C9D3E3} #pg-tbl .t thead tr.band th:not(.blank){border-left:2px solid #C9D3E3;border-bottom:1px solid #DDE3EC;background:#F4F6FA;color:#14254A;font-weight:600}
+#pg-tbl .t thead tr.band th.blank{background:#fff;border:0} #pg-tbl .t thead tr.band th.cutb{background:#FFF3C4;color:#5C4600} #pg-tbl .t thead tr.band th.cumb,#pg-tbl .t th.cumh{background:#EEF2F8} #pg-tbl .t td.cumc{background:#F4F7FB}
+.xup{color:#9B5B00} .xdn{color:#2F6B3A} #xpch{flex:1;overflow:auto;padding:14px} .xpc{background:#fff;border:1px solid #DDE3EC;border-radius:10px;padding:12px 16px} .xpl{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;font-size:12.5px} .xpl span{display:inline-flex;align-items:center;gap:6px} .xpl i{width:10px;height:10px;border-radius:2px;display:inline-block}
+#pg-tbl.xpmode>*{order:3} #pg-tbl.xpmode>#tools{order:1} #pg-tbl.xpmode>#bkbar{order:2;border-bottom:1px solid #E5E9F0}
+#tools .xq{width:200px} #bkbar.xpchips .sp{flex:1} #bkbar.xpchips .seg button{padding:3px 10px;font-size:12.5px}
 </style>
 </head>
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div class="logo"><i>CR</i><h1>Cost Register <span class="ver" title="Tool version">v20</span></h1></div>
+  <div class="logo"><i>CR</i><h1>Cost Register <span class="ver" title="Tool version">v21</span></h1></div>
   <div class="crumb"><span id="hsub"></span> &nbsp;›&nbsp; <b id="hpage"></b></div>
   <label class="cut" title="Cut date – the month you are closing. Click to change"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><small>CUT DATE</small><select id="cut"></select></span></label>
   <div class="sp"></div>
@@ -489,7 +506,7 @@ function change(list, label) { list = list.map(canonCh); const rec = list.map((c
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); setDirty(DIRTY + 1); logIt('Undone: ' + u.label, u.rec.length); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); setDirty(DIRTY + 1); logIt('Redone: ' + u.label, u.rec.length); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
-function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: 'v20', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null, indOff: ST.indOff }; }
+function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: 'v21', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null, indOff: ST.indOff }; }
 function setSaved(t) { $('saved').textContent = t; $('bSave').title = 'Save all codes (and line overrides) as a small file · ' + t; }
 function persist() { asSoon(); try { localStorage.setItem(LSK, JSON.stringify(snapshot())); setSaved('Saved in this browser ' + new Date().toLocaleTimeString()); } catch (e) { setSaved('Not saved here – use Save codes'); } }
 // =====================================================================================  Auto-save: the codes go to a file the user chose once (Chrome / Edge); the file is linked per project, so next month's build finds it
@@ -1099,6 +1116,78 @@ function renderRules() {
       const data = Engine.build(fl, { project: META.project, rules: ur }); await idbSet('lastBuild', data); location.reload(); }
     catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not rebuild: ' + esc(err.message || err) + '</span>'; } };
 }
+// =====================================================================================  Expenses: an analytical table
+// toolbar Table · Chart · Filter · Sort · Group · Export · Mass Edit · View; flat by default; a border round every month block
+const XIC = ((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${v}</svg>`])))({
+  tbl: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 10h18M3 15h18M9 4v16"/>', chart: '<path d="M4 20V10M10 20V5M16 20v-8M3 20h18"/>', filter: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+  sort: '<path d="M8 4v16M4 16l4 4 4-4M16 20V4M12 8l4-4 4 4"/>', group: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', exp: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>' });
+const XGRP = { bk: 'Bucket', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' };
+const xpGrpOf = (e) => (!ST.xpGroup ? '' : ST.xpGroup === 'bk' ? BK[e.b].id : e[ST.xpGroup] || '(no ' + XGRP[ST.xpGroup] + ')');
+// the CJI3 lines behind an Expenses row: its item's lines that carry the row's codes (built once per render, only while Mass Edit is on)
+let XPL = null; const xpLinesOf = (k) => (XPL && XPL.get(k)) || [];
+function xpBuildLines(rows) { XPL = new Map(); const ix = new Map(); rows.forEach((r) => ix.set(r.e.b + '|' + r.e.ii + '|' + r.e.pkg + '|' + r.e.mnl + '|' + r.e.ce, r.xk));
+  for (let i = 0; i < N; i++) { if (!R.inc[i]) continue; const it = BK[L.b[i]].items[L.it[i]], o = OVR[L.id[i]], g = (f) => (o && o[f] !== undefined ? o[f] : it[f]), k = ix.get(L.b[i] + '|' + L.it[i] + '|' + g('pkg') + '|' + g('mnl') + '|' + g('ce')); if (k) (XPL.get(k) || XPL.set(k, []).get(k)).push(i); } }
+// the summary view: Previous cumulative · Previous month · This month · Cumulative, then Change and Trend
+function xpSumCols(cols, subs, mode, agg, fmtOf, tdIdx) { const rep = Math.max(1, R.rep), G = [['pc', 'Previous cumulative', PER.slice(0, rep).map((x, k) => k)], ['pm', 'Previous month · ' + PER[rep - 1], [rep - 1]], ['tm', 'This month · ' + PER[rep], [rep]], ['cu', 'Cumulative', tdIdx]];
+  G.forEach(([k, l, idx]) => subs.forEach((sub) => cols.push(numC('x' + k + sub, mode === 'All' ? sub : l, mode === 'All' ? (sub === 'Rate' ? 82 : 96) : 120, (r) => agg(r.it, idx, sub, r.e), { f: fmtOf(sub), pl: l, slot: k, sub, pidx: idx, th: k === 'tm' ? 'cut' : k === 'cu' ? 'cumh' : '', cls: () => (k === 'tm' ? 'cutc' : k === 'cu' ? 'cumc' : '') }))));
+  cols.push(numC('xchg', 'Change vs ' + PER[rep - 1], 118, (r) => agg(r.it, [rep], 'Amount', r.e) - agg(r.it, [rep - 1], 'Amount', r.e), { h: (r) => { const d = agg(r.it, [rep], 'Amount', r.e) - agg(r.it, [rep - 1], 'Amount', r.e); return `<td class="num">${Math.abs(d) < 0.5 ? '<span class="help">–</span>' : `<span class="${d > 0 ? 'xup' : 'xdn'}">${d > 0 ? '▲' : '▼'} ${fmt(Math.abs(d))}</span>`}</td>`; } }));
+  const ms = MI.filter((m) => m.idx <= rep).slice(-14);
+  cols.push({ k: 'xtr', l: 'Trend · ' + ms[0].label + ' – ' + PER[rep], w: 130, v: () => 0, h: (r) => { const s = r.e || r.it, v = ms.map((m) => s.p[m.idx]), mx = Math.max(1, ...v.map(Math.abs)), W = 110, bw = W / ms.length;
+    return `<td title="${esc(ms.map((m, k) => m.label + ' ' + fmt(v[k])).join('\n'))}"><svg width="${W}" height="20" style="display:block">${v.map((x, k) => { const h = Math.max(Math.abs(x) / mx * 17, x ? 1.5 : 0); return `<rect x="${(k * bw + 0.5).toFixed(1)}" y="${(19 - h).toFixed(1)}" width="${(bw - 1.5).toFixed(1)}" height="${h.toFixed(1)}" rx="1" fill="${ms[k].idx === rep ? '#E9B400' : x < 0 ? '#D99A9A' : '#B7C3D5'}"/>`; }).join('')}</svg></td>`; } }); }
+const xpSumBand = (nL, subs) => { const rep = Math.max(1, R.rep); return [{ l: '', span: nL, cls: 'blank' }, ...[['Previous cumulative', ''], ['Previous month · ' + PER[rep - 1], ''], ['This month · ' + PER[rep], 'cutb'], ['Cumulative', 'cumb']].map(([l, c]) => ({ l, span: subs.length, cls: c })), { l: '', span: 2, cls: 'blank' }]; };
+// a border on the left of every month block (and of To date)
+function xpBlocks(cols, subs) { cols.forEach((c) => { if (c.slot === undefined || c.sub !== subs[0]) return; c.th = (c.th || '') + ' mb'; const h0 = c.h; c.h = (r) => h0(r).replace(/^<td( class=")?/, (m0, a) => (a ? '<td class="mb ' : '<td class="mb"')); }); }
+// Table · Chart · Filter · Sort · Group · Export · Mass Edit · View
+function xpDef(o) { const { cols, rows, footF } = o; R.xpRow = new Map(rows.map((r) => [r.xk, r])); XPL = null; if (ST.xpEdit) xpBuildLines(rows);
+  const nF = [ST.xpFrom != null || ST.xpTo != null, (vs().st || 'All') !== 'All', PF.size > 0].filter(Boolean).length + Object.values(vs().f).filter((f) => f && f.set).length, nS = [vs().sort, vs().sort2].filter(Boolean).length;
+  const bt = (a, l, n, on) => `<button class="xb${on ? ' on' : ''}" data-xa="${a}">${XIC[a] || ''}<span>${l}</span>${n ? `<i>${n}</i>` : ''}</button>`;
+  return { cols, rows, bands: o.bands, sel: !!ST.xpEdit, status: true, foot: footF, noGroupBtns: true, groups: !!ST.xpGroup, gCells: (g, rs) => footF(rs), gSpanK: 'auto', gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate"><b>${esc(g)}</b></span><span class="gm">${rs.length.toLocaleString('en-US')} rows</span>`,
+    fiori: (S0) => `<span class="xt">Expenses <small id="cnt"></small></span><span class="seg xtc"><button data-xa="tbl" class="${ST.xpChart ? '' : 'on'}">${XIC.tbl} Table</button><button data-xa="chart" class="${ST.xpChart ? 'on' : ''}">${XIC.chart} Chart</button></span><span class="xsep"></span>`
+      + bt('filter', 'Filter', nF) + bt('sort', 'Sort', nS) + bt('group', 'Group', ST.xpGroup ? 1 : 0) + `<button class="xb" id="bXpX" title="This report as it is on screen (the rows that pass your filters), as an Excel file">${XIC.exp}<span>Export</span></button>` + bt('edit', 'Mass Edit', 0, ST.xpEdit)
+      + `<span class="sp"></span><input type="search" id="q" class="xq" placeholder="Search…  ( / )" value="${esc(S0.q)}">`,
+    right: () => `<span class="sp"></span>${o.pmSeg(o.hasQ).replace(/ <span class="seg">[^]*$/, '')}<label class="xv">View <select id="xpView"><option value="month"${ST.xpView === 'sum' ? '' : ' selected'}>By month</option><option value="sum"${ST.xpView === 'sum' ? ' selected' : ''}>Summary: previous · this month · cumulative</option></select></label>`,
+    chips: (S0) => { const c = []; const ch = (k, l) => c.push(`<span class="xc">${l}<i data-xc="${k}" title="Remove">✕</i></span>`);
+      if (ST.xpGroup) ch('g', `<b>Grouped by</b> ${XGRP[ST.xpGroup]}`); if ((ST.xpb ?? -1) >= 0) ch('b', `<b>Bucket</b> ${esc(BK[ST.xpb].id)}`); if ((S0.st || 'All') !== 'All') ch('st', `<b>Status</b> ${S0.st}`);
+      if (ST.xpFrom != null || ST.xpTo != null) ch('m', `<b>Months</b> ${PER[ST.xpFrom ?? 0]} – ${PER[ST.xpTo ?? NP - 1]}`); if (PF.size) ch('pv', '<b>Periods</b> quarters / years folded');
+      Object.entries(S0.f).forEach(([k, f]) => { if (f && f.set) { const cc = cols.find((x) => x.k === k); ch('f:' + k, `<b>${esc(cc ? cc.l : k)}</b> ${f.set.size} value${f.set.size > 1 ? 's' : ''}`); } });
+      [S0.sort, S0.sort2].forEach((s, k) => { if (!s) return; const cc = cols.find((x) => x.k === s.k); ch('s' + (k + 1), `<b>${k ? 'Then by' : 'Sorted by'}</b> ${esc(cc ? (cc.pl && cc.pl !== cc.l ? cc.pl + ' · ' : '') + cc.l : s.k)} ${s.d > 0 ? '↑' : '↓'}`); });
+      if (S0.q) ch('q', `<b>Search</b> “${esc(S0.q)}”`);
+      return (c.length ? c.join('') + '<a class="xca" data-xc="all">Clear all</a>' : '<span class="help">Flat list – every item with the codes of its CJI3 lines</span>') + R.D.right(); },
+    after: (rs) => { let el = $('xpch'); if (!el) { el = document.createElement('div'); el.id = 'xpch'; $('wrap').after(el); } $('pg-tbl').classList.add('xpmode'); el.style.display = ST.xpChart ? '' : 'none'; $('wrap').style.display = ST.xpChart ? 'none' : ''; if (ST.xpChart) xpChart(el, rs, o.slots); } }; }
+// Chart: the amount of every month (as filtered), stacked by bucket
+function xpChart(el, rs, slots) { const ss = slots.filter((s) => s.kind !== 'open' && s.kind !== 'pend'), bks = [...new Set(rs.map((r) => r.e.b))], v = ss.map((s) => bks.map((b) => rs.reduce((t, r) => (r.e.b === b ? t + s.idx.reduce((x, k) => x + r.e.p[k], 0) : t), 0)));
+  const W = Math.max(600, (el.parentNode.clientWidth || 1200) - 40), H = 330, pad = 56, bw = (W - pad - 10) / Math.max(1, ss.length), mx = Math.max(1, ...v.map((x) => x.reduce((a, b) => a + Math.max(0, b), 0))), sc = (H - 50) / mx;
+  let s = ''; for (let g = 0; g <= 4; g++) { const y = H - 30 - (H - 50) * g / 4; s += `<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#EEF1F5"/><text x="${pad - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#8A93A3">${fmtM(mx * g / 4)}</text>`; }
+  ss.forEach((sl, i) => { let y = H - 30; bks.forEach((b, j) => { const a = Math.max(0, v[i][j]), h = a * sc; if (h > 0) s += `<rect x="${pad + i * bw + bw * 0.18}" y="${(y - h).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${h.toFixed(1)}" fill="${bkColor(b)}"><title>${esc(sl.label + ' · ' + BK[b].id + ': ' + fmt(v[i][j]))}</title></rect>`; y -= h; });
+    s += `<text x="${pad + i * bw + bw / 2}" y="${H - 12}" text-anchor="middle" font-size="11" fill="${sl.idx.includes(R.rep) ? '#8A6D1F' : '#6B7280'}" font-weight="${sl.idx.includes(R.rep) ? 700 : 400}">${esc(sl.label)}</text>`; });
+  el.innerHTML = `<div class="xpc"><div class="xpl">${bks.map((b) => `<span><i style="background:${bkColor(b)}"></i>${esc(BK[b].short)}</span>`).join('')}<span class="help">amount per month of the rows on screen (filters apply)</span></div><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${s}</svg></div>`; }
+// the dialogs (one at a time, under their button)
+let XPOP = null; const xpClose = () => { if (XPOP) { XPOP.remove(); XPOP = null; } };
+function xpOpen(kind, btn) { xpClose(); const S0 = vs(), D = R.D, cs = (D.allCols || D.cols).filter((c) => c.v), opt = (sel0) => '<option value="">—</option>' + cs.map((c) => `<option value="${esc(c.k)}"${sel0 === c.k ? ' selected' : ''}>${esc((c.pl && c.pl !== c.l ? c.pl + ' · ' : '') + c.l)}</option>`).join('');
+  const per = (cur, def) => PER.map((l, k) => `<option value="${k}"${(cur ?? def) === k ? ' selected' : ''}>${esc(l)}</option>`).join('');
+  let h = '';
+  if (kind === 'filter') h = `<h4>Filter</h4><div class="xr"><span>Status</span><span class="seg">${['All', 'Not coded', 'Coded'].map((s) => `<button data-xst="${s}" class="${(S0.st || 'All') === s ? 'on' : ''}">${s}</button>`).join('')}</span></div>
+      <div class="xr"><span>Months</span><select id="xpF">${per(ST.xpFrom, 0)}</select><span>to</span><select id="xpT">${per(ST.xpTo, NP - 1)}</select></div>
+      <div class="xr"><span>Periods</span><span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-xpv="${v}" class="${(v === 'Months' && !PF.size) || (v === 'Years' && [...PF].some((x) => x[0] === 'Y')) || (v === 'Quarters' && PF.size && ![...PF].some((x) => x[0] === 'Y')) ? 'on' : ''}">${v}</button>`).join('')}</span></div>
+      <div class="xr help">Bucket: the list at the side · any column: the ▾ in its header</div><div class="xf"><button data-xfc="1">Reset</button><button class="pri" data-xok="1">Done</button></div>`;
+  if (kind === 'sort') h = `<h4>Sort</h4><div class="xr"><span>Sort by</span><select id="xs1">${opt(S0.sort && S0.sort.k)}</select><select id="xd1"><option value="-1">↓ Largest first</option><option value="1"${S0.sort && S0.sort.d > 0 ? ' selected' : ''}>↑ Smallest first</option></select></div>
+      <div class="xr"><span>Then by</span><select id="xs2">${opt(S0.sort2 && S0.sort2.k)}</select><select id="xd2"><option value="-1">↓ Largest first</option><option value="1"${S0.sort2 && S0.sort2.d > 0 ? ' selected' : ''}>↑ Smallest first</option></select></div><div class="xf"><button data-xsc="1">Reset</button><button class="pri" data-xso="1">OK</button></div>`;
+  if (kind === 'group') h = `<h4>Group by</h4>${[['', 'No grouping (flat list)'], ['bk', 'Bucket'], ['pkg', 'PKG'], ['mnl', 'MNL'], ['ce', 'Cost element']].map(([k, l]) => `<button class="xg${(ST.xpGroup || '') === k ? ' on' : ''}" data-xg="${k}">${l}</button>`).join('')}<div class="xr help">Each group shows its totals; click a group row to fold it</div>`;
+  XPOP = document.createElement('div'); XPOP.className = 'xpop'; XPOP.innerHTML = h; document.body.appendChild(XPOP); const r = btn.getBoundingClientRect(); XPOP.style.left = Math.min(r.left, innerWidth - XPOP.offsetWidth - 10) + 'px'; XPOP.style.top = (r.bottom + 6) + 'px'; }
+document.addEventListener('click', (e) => { if (ST.tab !== 'xpm') return; const t = e.target, S0 = vs();
+  const pm = t.closest('#bkbar [data-pm]'); if (pm) { ST.xpMode = pm.dataset.pm; render(); return; }
+  const a = t.closest('[data-xa]'); if (a) { const k = a.dataset.xa; if (k === 'tbl' || k === 'chart') { ST.xpChart = k === 'chart'; xpClose(); render(); return; } if (k === 'edit') { ST.xpEdit = !ST.xpEdit; sel.clear(); xpClose(); render(); toast(ST.xpEdit ? 'Mass Edit: tick rows, then type the codes in the bar and Apply – the codes go on their CJI3 lines' : 'Mass Edit off'); return; } if (XPOP && XPOP.dataset.k === k) { xpClose(); return; } xpOpen(k, a); XPOP.dataset.k = k; return; }
+  if (XPOP && XPOP.contains(t)) { const d = t.dataset;
+    if (d.xst) { S0.st = d.xst; sel.clear(); render(); xpOpen('filter', document.querySelector('[data-xa="filter"]')); XPOP.dataset.k = 'filter'; return; }
+    if (d.xpv) { PF.clear(); if (d.xpv !== 'Months') MI.forEach((m) => PF.add(d.xpv === 'Years' ? 'Y' + m.y : 'Q' + m.y + '-' + m.q)); render(); xpOpen('filter', document.querySelector('[data-xa="filter"]')); XPOP.dataset.k = 'filter'; return; }
+    if (d.xfc) { ST.xpFrom = null; ST.xpTo = null; S0.st = 'All'; PF.clear(); xpClose(); render(); return; } if (d.xok) { xpClose(); return; }
+    if (d.xso) { const k1 = $('xs1').value, k2 = $('xs2').value; S0.sort = k1 ? { k: k1, d: +$('xd1').value } : null; S0.sort2 = k2 ? { k: k2, d: +$('xd2').value } : null; xpClose(); render(); return; } if (d.xsc) { S0.sort = null; S0.sort2 = null; xpClose(); render(); return; }
+    if (d.xg !== undefined) { ST.xpGroup = d.xg; S0.fold.clear(); xpClose(); render(); return; } return; }
+  if (XPOP && !t.closest('.xpop')) xpClose();
+  const c = t.closest('[data-xc]'); if (c) { const k = c.dataset.xc; if (k === 'g' || k === 'all') ST.xpGroup = ''; if (k === 'b' || k === 'all') ST.xpb = -1; if (k === 'st' || k === 'all') S0.st = 'All'; if (k === 'm' || k === 'all') { ST.xpFrom = null; ST.xpTo = null; } if (k === 'pv' || k === 'all') PF.clear();
+    if (k.startsWith('f:')) delete S0.f[k.slice(2)]; if (k === 'all') S0.f = {}; if (k === 's1' || k === 'all') { S0.sort = S0.sort2 || null; S0.sort2 = null; } if (k === 's2') S0.sort2 = null; if (k === 'q' || k === 'all') S0.q = ''; sel.clear(); render(); } });
+document.addEventListener('change', (e) => { if (ST.tab !== 'xpm') return; const t = e.target; if (t.id === 'xpView') { ST.xpView = t.value; vs().sort = null; vs().sort2 = null; sel.clear(); render(); return; }
+  if (t.id === 'xpF' || t.id === 'xpT') { let f = +$('xpF').value, to = +$('xpT').value; if (f > to) { if (t.id === 'xpF') to = f; else f = to; } ST.xpFrom = f === 0 ? null : f; ST.xpTo = to === NP - 1 ? null : to; render(); xpOpen('filter', document.querySelector('[data-xa="filter"]')); XPOP.dataset.k = 'filter'; } });
 // =====================================================================================  generic table pages (filters like Excel, groups that fold, selection, inline codes)
 // Per Month columns: Opening · months (folding into quarters and years) · Pending
 const PF = new Set();
@@ -1169,7 +1258,7 @@ function pageDef() {
   }
   if (ST.tab === 'pm' || ST.tab === 'xpm') {
     const X = ST.tab === 'xpm', xb = X ? ((ST.xpb ?? -1) < 0 ? BK.map((x, k) => k) : [ST.xpb]) : null;
-    const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? (X ? ST.xpMode || 'All' : ST.pmMode) : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = slotsOf(), lead = [];
+    const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? (X ? ST.xpMode || 'All' : ST.pmMode) : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = X ? slotsOf().filter((sl) => sl.idx.some((k) => k >= (ST.xpFrom ?? 0) && k <= (ST.xpTo ?? NP - 1))) : slotsOf(), lead = [], XS = X && ST.xpView === 'sum';
     if (X) { lead.push({ k: 'bk', l: 'Bucket', w: 140, fz: 1, v: (r) => BK[r.it.bi].id, h: (r) => `<td title="${esc(BK[r.it.bi].id)}"><span class="bkc"><i style="background:${bkColor(r.it.bi)}"></i>${esc(BK[r.it.bi].short)}</span></td>` });
       ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 112 : f === 'mnl' ? 66 : 96) + 18, code: 1, v: (r) => r.e[f] || '(blank)', h: (r) => (r.e[f] ? `<td${r.e.hand ? ' class="xph" title="Coded on its CJI3 lines (not the item code)"' : ''}><b>${esc(r.e[f])}</b>${r.e.hand && f === 'pkg' ? ' <span class="help">✎</span>' : ''}</td>` : '<td class="help">–</td>') }));
       lead.push({ k: 'code', l: 'Item', w: 130, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}"><a class="lk open">${esc(itemCode(r.it))}</a></td>` }, { k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` }); }
@@ -1179,9 +1268,9 @@ function pageDef() {
     ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], w: f === 'ce' ? 96 : 66, code: 1, v: (r) => r.it[f] || '(blank)', h: (r) => `<td><b>${esc(r.it[f])}</b></td>` })); }
     const agg = (it, idx, sub, e) => { const s = e || it; let a = 0, q = 0; for (const p of idx) { a += s.p[p]; q += s.q[p]; } return sub === 'Qty' ? q : sub === 'Rate' ? (Math.abs(q) > 1e-9 ? a / q : 0) : a; };
     const fmtOf = (sub) => (sub === 'Qty' ? fq : sub === 'Rate' ? fmt2 : fmt), tdIdx = PER.slice(0, NP - 1).map((x, k) => k), cols = [...lead];
-    slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub, r.e), { f: fmtOf(sub), pl: sl.label, th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
+    if (XS) xpSumCols(cols, subs, mode, agg, fmtOf, tdIdx); else slots.forEach((sl, si) => subs.forEach((sub) => cols.push(numC('s' + si + sub, mode === 'All' ? sub : sl.label, mode === 'All' ? (sub === 'Rate' ? 78 : 90) : 98, (r) => agg(r.it, sl.idx, sub, r.e), { f: fmtOf(sub), pl: sl.label, th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''),
       cls: () => (sl.idx.includes(rep) ? 'cutc' : sl.kind !== 'open' && sl.kind !== 'pend' && rep > 0 && Math.min(...sl.idx) > rep ? 'after' : ''), slot: si, sub, pidx: sl.idx }))));
-    subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub, r.e), { f: fmtOf(sub), pl: 'To date', h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub, r.e))}</b></td>`, slot: 'td', sub, pidx: tdIdx })));
+    if (!XS) subs.forEach((sub) => cols.push(numC('td' + sub, mode === 'All' ? sub : sub === 'Amount' ? 'To date' : sub + ' to date', 104, (r) => agg(r.it, tdIdx, sub, r.e), { f: fmtOf(sub), pl: 'To date', h: (r) => `<td class="num"><b>${fmtOf(sub)(agg(r.it, tdIdx, sub, r.e))}</b></td>`, slot: 'td', sub, pidx: tdIdx })));
     // header bands: years › quarters (› month when Qty · Rate · Amount)
     const nL = lead.length, bands = [], yr = [], qr = [], mr = [];
     const spanOf = (pred) => slots.filter(pred).length * subs.length;
@@ -1191,11 +1280,11 @@ function pageDef() {
         if (sl.kind === 'y') qr.push({ l: 'year total', span: subs.length, cls: 'q' }); else if (si === 0 || slots[si - 1].q !== sl.q || slots[si - 1].y !== sl.y) qr.push({ l: `${PF.has('Q' + sl.y + '-' + sl.q) ? '+' : '−'} Q${sl.q}-${String(sl.y).slice(2)}`, span: spanOf((x) => x.y === sl.y && x.q === sl.q && (x.kind === 'm' || x.kind === 'q')), cls: 'tog q', tog: 'Q' + sl.y + '-' + sl.q }); }
       mr.push({ l: sl.label, span: subs.length, cls: sl.idx.includes(rep) ? 'cutb' : '' }); });
     [yr, qr, mr].forEach((row) => row.push({ l: mode === 'All' ? 'To date' : '', span: subs.length, cls: 'blank' }));
-    bands.push(yr, qr); if (mode === 'All') bands.push(mr);
-    const rows = X ? [...R.exp.values()].filter((e) => xb.includes(e.b) && e.p.some((v) => Math.abs(v) >= 0.005)).sort((x, y) => x.b - y.b || x.ii - y.ii).map((e) => ({ it: BK[e.b].items[e.ii], e, g: '', stx: e.pkg && e.mnl && e.ce ? 'Coded' : 'Not coded' })) : b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
-    const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.slot === 'td' ? tdIdx : slots[c.slot].idx; let a = 0, q = 0; rs.forEach((r) => { const s = r.e || r.it; idx.forEach((p) => { a += s.p[p]; q += s.q[p]; }); }); o[c.k] = X && c.sub !== 'Amount' ? '' : c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
+    if (X) { bands.length = 0; if (mode === 'All') bands.push(XS ? xpSumBand(nL, subs) : mr); xpBlocks(cols, subs); } else { bands.push(yr, qr); if (mode === 'All') bands.push(mr); }
+    const rows = X ? [...R.exp.values()].filter((e) => xb.includes(e.b) && e.p.some((v) => Math.abs(v) >= 0.005)).sort((x, y) => x.b - y.b || x.ii - y.ii).map((e, n) => ({ it: BK[e.b].items[e.ii], e, g: xpGrpOf(e), xk: 'X' + n, stx: e.pkg && e.mnl && e.ce ? 'Coded' : 'Not coded' })) : b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
+    const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.pidx || (c.slot === 'td' ? tdIdx : slots[c.slot].idx); let a = 0, q = 0; rs.forEach((r) => { const s = r.e || r.it; idx.forEach((p) => { a += s.p[p]; q += s.q[p]; }); }); o[c.k] = X && c.sub !== 'Amount' ? '' : c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
     const pmSeg = (q) => (q ? `<span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>`;
-    if (X) return { cols, rows, bands, groups: false, sel: false, status: true, foot: footF, extraTools: pmSeg(xb.some((k) => BK[k].qty)) + ' <button id="bXpX" class="hp" title="This report as it is on screen (the rows that pass your filters), as an Excel file">⇩ Export to Excel</button>' };
+    if (X) return xpDef({ cols, rows, bands, footF, mode, slots, hasQ: xb.some((k) => BK[k].qty), pmSeg });
     const fam = hasFam(b);
     return { cols, rows, bands, groups: b.tree, noGroupBtns: !!b.tree, fam: fam ? famOf : null, fLabel: famLabel, gCells: b.tree ? (g, rs) => footF(rs) : null, gSpanK: 'auto', gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${rs.length} items</span>`,
       foot: footF, extraTools: zoomSeg(b) + ' ' + (b.qty ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '')
@@ -1782,8 +1871,9 @@ function renderTable() {
   // bucket bar (not for Expenses / Subcontractor)
   if (['gl', 'wbs'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = bkChips({ all: 1, cur: ST.xbk, fig: (bi) => fmtM(BK[bi].items.reduce((x, it) => x + it.td, 0)), extra: ST.tab === 'gl' ? `<button class="dvc ${ST.xbk === -2 ? 'on' : ''}" data-bkc="rev" style="--bc:#5F6B7A"><i style="background:#5F6B7A"></i>Revenue</button>` : '' }); }
   else if (ST.tab === 'pm') { $('bkbar').style.display = ''; $('bkbar').innerHTML = bkChips({ all: false, cur: ST.bk, fig: codedOf }); } else if (CODM) { $('bkbar').style.display = ''; $('bkbar').innerHTML = codTabs(ST.tab); } else $('bkbar').style.display = 'none';
-  $('bkbar').classList.toggle('tabbar', CODM);
-  if (CODM) {   // the coding desk: bucket · To code / Coded / All · Items / Lines · search
+  $('bkbar').classList.toggle('tabbar', CODM); $('bkbar').classList.toggle('xpchips', !!D.chips); if (D.chips) { $('bkbar').style.display = ''; $('bkbar').innerHTML = D.chips(S0); }
+  if (D.fiori) $('tools').innerHTML = D.fiori(S0);
+  else if (CODM) {   // the coding desk: bucket · To code / Coded / All · Items / Lines · search
     const ln = ST.tab !== 'cod', cm = D.cm || (() => { let t = 0; D.rows.forEach((r) => { if ((r.i !== undefined ? lineStatusOf(r.i) : statusOf(r.it)) !== 'Coded') t++; }); return { todo: t, coded: D.rows.length - t, all: D.rows.length }; })();
     const cur = ln ? (S0.st === 'Not coded' ? 'todo' : S0.st === 'Coded' ? 'coded' : 'all') : ST.next ? 'todo' : S0.st === 'Coded' ? 'coded' : 'all', nf = (n) => n.toLocaleString('en-US'), nNew = !ln && !ST.next ? D.rows.filter((r) => r.it && r.it.nw).length : 0;
     $('tools').innerHTML = `<b class="tt">${esc(ST.bk < 0 ? 'All buckets' : BK[ST.bk].id)}</b><span class="help ts">${ST.tab === 'lines' ? 'every CJI3 line' : ST.tab === 'xpm' ? 'every item, by month' : ST.next ? 'largest cost first' : ''}</span>
@@ -1796,8 +1886,9 @@ function renderTable() {
   let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && (S0.st === 'New' ? !r.it.nw : (r.stx !== undefined ? r.stx : r.i !== undefined ? lineStatusOf(r.i) : statusOf(r.it)) !== S0.st)) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
     if (q && !D.tree) { const t = r.sq !== undefined ? r.sq : D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.ce ? [r.ce, r.x.name].join(' ') : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce, r.it.nameS || '', (META.grpNames || {})[r.it.vals[2]] || ''].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
     return true; });
-  if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
-  R.rows = rows; fitCols(D);
+  { const keys = [S0.sort, S0.sort2].filter(Boolean).map((s) => ({ c: cols.find((x) => x.k === s.k), d: s.d })).filter((x) => x.c);   // sort, then by
+    if (keys.length) rows = rows.slice().sort((a, b) => { for (const { c, d } of keys) { const x = c.v(a), y = c.v(b), o = (c.num ? x - y : String(x).localeCompare(String(y))) * d; if (o) return o; } return 0; }); }
+  R.rows = rows; fitCols(D); { const ch = $('xpch'); if (ch && !D.after) ch.style.display = 'none'; if (!D.after) { $('wrap').style.display = ''; $('pg-tbl').classList.remove('xpmode'); } } if (D.after) D.after(rows);
   $('cg').innerHTML = (D.sel ? '<col style="width:34px">' : '') + cols.map((c) => `<col data-k="${esc(c.k)}" style="width:${c.w}px">`).join('');
   $('tbl').style.width = (D.sel ? 34 : 0) + cols.reduce((t, c) => t + c.w, 0) + 'px';   // exact width: keeps the fixed layout, so columns never move and frozen columns line up
   // frozen columns: left offsets
@@ -1835,7 +1926,7 @@ function renderTable() {
   $('bsel').textContent = (selLines().length ? selLines().length.toLocaleString('en-US') + ' lines selected · ' + fmt2(selLines().reduce((s0, i) => s0 + R.amt[i], 0)) : sel.size + ' selected');
   const a = $('all'); if (a) a.checked = rows.length > 0 && rows.every((r) => sel.has(selKey(r)));
 }
-const selKey = (r) => (r.i !== undefined ? 'L' + r.i : r.it ? r.it.bi + ':' + r.it.ii : '');
+const selKey = (r) => (r.xk ? r.xk : r.i !== undefined ? 'L' + r.i : r.it ? r.it.bi + ':' + r.it.ii : '');
 function rowHtml(D, r, gc) { const it = r.it, exc = r.i !== undefined ? !R.inc[r.i] : it && it.inc === 'No', k = it ? selKey(r) : '';
   return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}${D.rowCls ? ' ' + D.rowCls(r) : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`; }
 function renderVirtual() {   // only the rows on screen are drawn (fast with thousands of rows)
@@ -1847,7 +1938,7 @@ function renderVirtual() {   // only the rows on screen are drawn (fast with tho
 }
 let vt = 0, lastTop = -1; $('wrap').addEventListener('scroll', () => { if (vt || $('wrap').scrollTop === lastTop) return; lastTop = $('wrap').scrollTop; vt = requestAnimationFrame(() => { vt = 0; renderVirtual(); }); });
 // ---- events on the table pages
-const rowOf = (tr) => { const k = tr.dataset.k; if (!k) return null; if (k[0] === 'L') return { i: +k.slice(1), it: BK[L.b[+k.slice(1)]].items[L.it[+k.slice(1)]] }; const [bi, ii] = k.split(':').map(Number); return { it: BK[bi].items[ii] }; };
+const rowOf = (tr) => { const k = tr.dataset.k; if (!k) return null; if (k[0] === 'X') return (R.xpRow && R.xpRow.get(k)) || null; if (k[0] === 'L') return { i: +k.slice(1), it: BK[L.b[+k.slice(1)]].items[L.it[+k.slice(1)]] }; const [bi, ii] = k.split(':').map(Number); return { it: BK[bi].items[ii] }; };
 $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr);
   if (e.target.matches('input[data-f]')) { const f = e.target.dataset.f, v = e.target.value.trim();
     if (r.i !== undefined) { const tg = sel.has('L' + r.i) && selLines().length > 1 ? selLines() : [r.i]; change(tg.map((i) => lineCh(i, f, v)), (tg.length > 1 ? tg.length + ' lines ' : 'Line ') + FN[f] + ' = ' + (v || '(blank)')); }
@@ -1889,8 +1980,8 @@ $('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
 $('tools').addEventListener('input', (e) => { if (e.target.id === 'q') { vs().q = e.target.value; render(); const q = $('q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
 $('tb').addEventListener('click', (e) => { const a = e.target.closest('.gopo'); if (a) { e.preventDefault(); ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); render(); } });
 // bulk coding
-const selItems = () => [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number));
-const selLines = () => [...sel].filter((x) => x[0] === 'L').map((x) => +x.slice(1));
+const selItems = () => [...sel].filter((x) => x[0] !== 'L' && x[0] !== 'X').map((x) => x.split(':').map(Number));
+const selLines = () => [...sel].flatMap((x) => (x[0] === 'L' ? [+x.slice(1)] : x[0] === 'X' ? xpLinesOf(x) : []));   // an Expenses row = the CJI3 lines of its item that carry its codes
 const lineCh = (i, f, v) => ({ t: 'line', i, f, v: v === BK[L.b[i]].items[L.it[i]][f] ? undefined : v });
 $('bApply').onclick = () => { if (selLines().length) { const ch = []; [['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selLines().forEach((i) => ch.push(lineCh(i, f, v))); }); if (!ch.length) return toast('Type at least one code in the bar'); return change(ch, 'Lines coded'); }
   const ch = []; [['div', 'bDIV'], ['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selItems().forEach(([bi, ii]) => { if (f !== 'div' || isSub(bi)) ch.push({ t: 'item', bi, ii, f, v }); }); }); if (!ch.length) return toast('Type at least one code in the bar'); change(ch, 'Bulk coding'); };
@@ -2033,7 +2124,7 @@ $('bExport').onclick = async () => {
   const title = (ws, t, n) => { ws.getCell('A1').value = t; ws.getCell('A1').font = { name: A, bold: true, size: 14, color: { argb: NAVY } }; ws.getCell('A2').value = n; ws.getCell('A2').font = { name: A, size: 9, color: { argb: 'FF7F7F7F' } }; };
   const head = (ws, row, labels, gold = []) => { labels.forEach((l, i) => { const c = ws.getCell(row, i + 1); c.value = l; c.font = { name: A, bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = fill(gold.includes(l) ? GOLD : NAVY); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = box; }); ws.getRow(row).height = 30; };
   const put = (ws, row, vals, fmts = {}, o = {}) => vals.forEach((v, i) => { const c = ws.getCell(row, i + 1); c.value = v === '' ? null : v; c.border = box; c.font = { name: A, size: 10, bold: !!o.bold, color: o.color ? { argb: o.color } : undefined }; if (fmts[i]) c.numFmt = fmts[i]; if (o.fill) c.fill = fill(o.fill); });
-  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register Tool v20 · values (not live)`;
+  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register Tool v21 · values (not live)`;
   // Summary
   const ws = wb.addWorksheet('Summary', { properties: { tabColor: { argb: NAVY } } }); title(ws, 'Project Cost Register — ' + META.project, note);
   [['Previous', R.toDate - R.thisM], ['This month · ' + R.repLab, R.thisM], ['To date', R.toDate], ['Pending', R.pend], ['Excluded', R.excl], ['Difference to CJI3', R.diff]].forEach(([l, v], i) => { const a = ws.getCell(4, i + 1), b2 = ws.getCell(5, i + 1); a.value = l; a.font = { name: A, bold: true, size: 9, color: { argb: 'FFFFFFFF' } }; a.fill = fill(i === 1 ? GOLD : i === 5 ? 'FFC00000' : NAVY); a.alignment = { horizontal: 'center', wrapText: true }; b2.value = r2(v); b2.numFmt = i === 5 ? NUM2 : NUM; b2.font = { name: A, bold: true, size: 13, color: { argb: NAVY } }; b2.alignment = { horizontal: 'center' }; b2.border = box; });
