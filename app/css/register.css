@@ -340,3 +340,4 @@ header.top .logo .lg{width:34px;height:34px;flex:none;display:block} header.top 
 /* report pages: a two-line toolbar, nothing hidden off the edge */
 #tools.rpt{display:block;overflow:visible;padding:8px 12px 7px} #tools.rpt .rr1,#tools.rpt .rr2{display:flex;align-items:center;gap:8px;flex-wrap:wrap} #tools.rpt .rr1{margin-bottom:7px} #tools.rpt .rr1 .help{font-size:12px}
 #tools.rpt .xpt{font-size:17px} #tools.rpt .seg.fold button{font-weight:600;color:#14254A} #tools.rpt #q{width:240px} #tools.rpt .sp{flex:1 1 auto} #tools.rpt #bClr:not(.on){display:none}
+#pg-tbl .t td.xpo{color:#0A4FA0} #pg-tbl .t tr.xrep td:nth-child(-n+7){color:#B0B6C0} #pg-tbl .t tr.xrep td:nth-child(-n+7) a{color:#9FB3D1}

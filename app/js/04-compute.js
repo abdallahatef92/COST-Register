@@ -20,7 +20,7 @@ function compute() {
   R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.bkUns = BK.map(() => 0); R.vatIn = 0; R.unsIn = 0; R.unsExc = 0; R.unsMk = { o: new Map(), c: new Map() }; R.unsInK = { o: 0, c: 0 }; R.unsExcK = { o: 0, c: 0 }; R.depExc = 0; R.depM = new Map();
   const dpk = new Set(ST.depx.pick || []), depOff = (k) => ST.depx.mode === 'all' || (ST.depx.mode === 'pick' && dpk.has(k)); R.depOff = depOff;
   const pkK = { o: new Set(ST.uns.pick || []), c: new Set(ST.unsc.pick || []) }, stK = { o: ST.uns, c: ST.unsc }, mStart = (k) => { const [mn, yy] = PER[+k].split('-'); return (2000 + +yy) * 10000 + (MON.indexOf(mn) + 1) * 100 + 1; },
-    keyOnK = (v, k) => (stK[v].mode === 'cut' ? k !== 'a' && mStart(k) <= cutI : stK[v].mode === 'pick' ? pkK[v].has(String(k)) : false); R.keyOnK = keyOnK; R.exp = new Map();
+    keyOnK = (v, k) => (stK[v].mode === 'cut' ? k !== 'a' && mStart(k) <= cutI : stK[v].mode === 'pick' ? pkK[v].has(String(k)) : false); R.keyOnK = keyOnK; R.exp = new Map(); R.expPo = new Map();
   for (let i = 0; i < N; i++) {
     const b = L.b[i], it = BK[b].items[L.it[i]], o = OVR[L.id[i]];
     const pkg = o && o.pkg !== undefined ? o.pkg : it.pkg, mnl = o && o.mnl !== undefined ? o.mnl : it.mnl, ce = o && o.ce !== undefined ? o.ce : it.ce, inc = o && o.inc !== undefined ? o.inc : it.inc;
@@ -37,6 +37,7 @@ function compute() {
     else if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } R.inc[i] = 1;
     const p = per[i]; it.p[p] += amt[i]; it.q[p] += L.qty[i]; R.bkP[b][p] += amt[i]; R.vatIn += vin[i];
     const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP), q: new Float64Array(NP) })); e.p[p] += amt[i]; e.q[p] += L.qty[i]; if (hand) e.hand = true;
+    if (b === SUBI) { const po = S[L.po[i]] || '(no PO)', k2 = k + '\u0001' + po; let f = R.expPo.get(k2); if (!f) R.expPo.set(k2, (f = { b, ii: L.it[i], pkg, mnl, ce, hand, po, sup: S[L.sup[i]] || '', p: new Float64Array(NP), q: new Float64Array(NP) })); f.p[p] += amt[i]; f.q[p] += L.qty[i]; if (hand) f.hand = true; }   // Expenses per month: one row per PO
   }
   const td = (arr) => { let s = 0; for (let p = 0; p < NP - 1; p++) s += arr[p]; return s; };
   BK.forEach((b) => b.items.forEach((it) => { it.td = r2(td(it.p)); it.tm = rep > 0 ? r2(it.p[rep]) : 0; it.qtd = td(it.q); it.pe = r2(it.p[NP - 1]); }));

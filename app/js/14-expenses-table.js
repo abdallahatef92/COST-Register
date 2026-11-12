@@ -3,7 +3,7 @@
 // every row is an item + the codes of its CJI3 lines, so a hand-coded line makes its own row (as in the Expenses sheet)
 const XPAGES = [['sum', 'Summary', 'cumulative · bucket › item or PKG › bucket › item'], ['month', 'Expenses per month', 'every item · qty · rate · amount · quarters, years'], ['ind', 'Indirect per month', 'indirect heads › cost elements, month by month'], ['lines', 'SAP CJI3 transactions', 'every CJI3 line, flat, with its bucket and codes']];
 // an Expenses row opens its CJI3 lines here: the item's lines that carry the row's codes (the same amount as the row)
-const xpGoLines = (it, e) => { ST.tab = 'xpm'; ST.xpPage = 'lines'; ST.xpLF = { b: it.bi, ii: it.ii, codes: e ? { pkg: e.pkg, mnl: e.mnl, ce: e.ce } : null, label: itemCode(it) + ' · ' + itemDesc(it) + (e ? ' · ' + [e.pkg, e.mnl, e.ce].filter(Boolean).join(' / ') : '') }; const S0 = vs(); S0.f = {}; S0.q = ''; S0.st = 'All'; sel.clear(); $('drawer').classList.remove('open'); render(); $('wrap').scrollTop = 0; };
+const xpGoLines = (it, e) => { ST.tab = 'xpm'; ST.xpPage = 'lines'; ST.xpLF = { b: it.bi, ii: it.ii, codes: e ? { pkg: e.pkg, mnl: e.mnl, ce: e.ce } : null, po: e && e.po !== undefined ? e.po : null, label: itemCode(it) + ' · ' + itemDesc(it) + (e ? ' · ' + [e.pkg, e.mnl, e.ce].filter(Boolean).join(' / ') : '') + (e && e.po !== undefined ? ' · PO ' + e.po : '') }; const S0 = vs(); S0.f = {}; S0.q = ''; S0.st = 'All'; sel.clear(); $('drawer').classList.remove('open'); render(); $('wrap').scrollTop = 0; };
 document.addEventListener('click', (e) => { const x = e.target.closest('[data-xlf]'); if (x) { ST.xpLF = null; render(); } });
 const xpPage = () => ST.xpPage || 'sum';
 // kept for the table code: an Expenses row is never a CJI3 line selection
@@ -60,6 +60,6 @@ function xpReport() {
     rpt: { title: xpTitle(), hint: 'PKG = Indirect only · amount · + opens a cost element · click an item for its CJI3 lines', tools: xpPv() } };
 }
 // 2. Expenses per month: the page definition in 14-table-pages (pm / xpm) ends here
-const xpMonthDef = (o) => { xpFoldInit(o.rows); return { cols: o.cols, rows: o.rows, bands: o.bands, groups: true, sel: false, status: false, foot: o.footF, gCells: (g, rs) => o.footF(rs), gSpanK: 'auto', gLabel: xpGLabel,
-  rpt: { title: xpTitle(), lead: xpGrpSeg(), hint: 'every item by month · click an item for its CJI3 lines', tools: (o.hasQ ? `<span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount']].map(([m, l]) => `<button data-pm="${m}" class="${o.mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + xpPv() } }; };
+const xpMonthDef = (o) => { xpFoldInit(o.rows); return { cols: o.cols, rows: o.rows, rowCls: (r) => (r.rep ? 'xrep' : ''), bands: o.bands, groups: true, sel: false, status: false, foot: o.footF, gCells: (g, rs) => o.footF(rs), gSpanK: 'auto', gLabel: xpGLabel,
+  rpt: { title: xpTitle(), lead: xpGrpSeg(), hint: 'every item by month · subcontractor: one row per PO (the item repeats in grey) · click an item for its CJI3 lines', tools: (o.hasQ ? `<span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount']].map(([m, l]) => `<button data-pm="${m}" class="${o.mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + xpPv() } }; };
 document.addEventListener('click', (e) => { if (ST.tab !== 'xpm') return; const b = e.target.closest('[data-xsm]'); if (b) { ST.xsm = b.dataset.xsm; render(); $('wrap').scrollTop = 0; } });

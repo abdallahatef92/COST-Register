@@ -237,3 +237,7 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - New icon (a register sheet with a gold coin) – the app / taskbar icon, the browser-tab icon and the logo at the top left of the Tool. "Cost Register vNN · by A. Atef" at the bottom of the side navigation.
 - Report pages (Expenses 1–4, PO register) have a two-line toolbar: title, **− Collapse all / + Expand all**, grouping and a short note on the first line; search, status, Qty · Rate · Amount, Months · Quarters · Years, Columns, Fit and Export on the second. Nothing is hidden off the edge any more.
 - A more polished Excel for every report: title and a line with project, cut date, row count; navy headers (period over its Qty / Rate / Amount, cut month in gold, code columns in gold); light borders; widths fitted to the content; Arabic text right-to-left; group rows shaded with + / − outline in Excel; navy total row; frozen header and first column; prints landscape on A3, fit to width, with the header on every page and page numbers.
+
+## v28 – POs on Expenses per month
+- Subcontractor rows are split **one row per PO**, with **PO** and **Subcontractor** columns and that PO's own qty, rate and amount; the repeated item columns are grey. On SUTH: subcontractor 630 → 1,381 rows (2,717 → 3,470 in all); the totals do not change. The Excel export follows the screen.
+- Clicking an item on a PO row opens SAP CJI3 transactions with the lines of that item, those codes and that PO.
