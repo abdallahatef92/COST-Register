@@ -61,9 +61,8 @@ function renderSide() {
   else if (sec === 'chk') { head = 'Check'; const ok = Math.abs(R.diff) < 0.01;
     items.push(['data-gt="chk"', ST.tab === 'chk', ok ? '#2F6B3A' : '#9B2C2C', 'All checks', ok ? '✓' : '!', 'Difference to CJI3 ' + (ok ? '0.00' : fmt2(R.diff)), '', undefined, 'Chk']); items.push(['data-gt="log"', ST.tab === 'log', '#5F6B7A', 'Changes', String(ST.log.length), 'every change you made, with time', '', undefined, 'Log']);
     items.push(['data-gt="rules"', ST.tab === 'rules', '#9CA3AF', 'Rules', META.unclassified ? `<span style="color:#9B2C2C">${META.unclassified}</span>` : '✓', META.unclassified ? 'lines without a bucket' : 'every line has a bucket', '', undefined, 'Rul']); }
-  else if (sec === 'xp') { head = 'Expenses'; const xb = ST.xpb ?? -1, nI = BK.reduce((t, b) => t + b.items.length, 0);
-    items.push(['data-gt="xpm" data-xb="-1"', xb < 0, '#14254A', 'All buckets', fmtM(BK.reduce((t, b) => t + b.items.reduce((x, it) => x + it.td, 0), 0)), nI.toLocaleString('en-US') + ' items', '', undefined, 'All']);
-    BK.forEach((b, bi) => items.push([`data-gt="xpm" data-xb="${bi}"`, xb === bi, bkColor(bi), b.id, fmtM(b.items.reduce((x, it) => x + it.td, 0)), b.items.length.toLocaleString('en-US') + ' items', '', undefined, abbr(b.short)])); }
+  else if (sec === 'xp') { head = 'Expenses · reports';
+    XPAGES.forEach(([k, l, d], n) => items.push([`data-gt="xpm" data-xp="${k}"`, ST.tab === 'xpm' && xpPage() === k, PAL[n], (n + 1) + '  ' + l, '', d, '', undefined, String(n + 1)])); }
   else if (sec === 'dash') { head = 'Dashboard';
     [['sum', 'Summary', 'one-screen view'], ['flow', 'Cost flow', 'where the cost goes: bucket › PKG'], ['drv', 'Cost drivers', 'rates and monthly costs behind the cost'], ...(MATI >= 0 ? [['mrate', 'Rate analysis', 'rate per month for every material']] : [])].forEach(([k, l, d], i) => items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)])); }
   else { head = 'Reports';
@@ -74,7 +73,7 @@ function renderSide() {
 }
 $('side').addEventListener('click', (e) => { if (e.target.closest('[data-side]')) { SIDEC = !SIDEC; try { localStorage.setItem('cr-side', SIDEC ? '1' : '0'); } catch (x) { /* none */ } render(); return; }
   const g = e.target.closest('[data-grp]'); if (g) { ST.grpSel[ST.bk] = g.dataset.grp; sel.clear(); render(); $('wrap').scrollTop = 0; return; }
-  const a = e.target.closest('[data-gt]'); if (!a) return; ST.tab = a.dataset.gt; if (a.dataset.bk) { ST.bk = +a.dataset.bk; } if (ST.tab === 'mrate') ST.bk = MATI; if (a.dataset.xb !== undefined) ST.xpb = +a.dataset.xb; if (a.dataset.uv) ST.unsView = a.dataset.uv; sel.clear();
+  const a = e.target.closest('[data-gt]'); if (!a) return; ST.tab = a.dataset.gt; if (a.dataset.bk) { ST.bk = +a.dataset.bk; } if (ST.tab === 'mrate') ST.bk = MATI; if (a.dataset.xp) ST.xpPage = a.dataset.xp; if (a.dataset.uv) ST.unsView = a.dataset.uv; sel.clear();
   if (a.dataset.sv) { goSub(a.dataset.sv); return; } render(); $('wrap').scrollTop = 0; });
 // status bar: the totals of the register and everything you included / excluded, on every tab
 function renderStatus() {

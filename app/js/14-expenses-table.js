@@ -1,72 +1,52 @@
-// =====================================================================================  Expenses: an analytical table
-// toolbar Table · Chart · Filter · Sort · Group · Export · Mass Edit · View; flat by default; a border round every month block
-const XIC = ((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${v}</svg>`])))({
-  tbl: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M3 10h18M3 15h18M9 4v16"/>', chart: '<path d="M4 20V10M10 20V5M16 20v-8M3 20h18"/>', filter: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
-  sort: '<path d="M8 4v16M4 16l4 4 4-4M16 20V4M12 8l4-4 4 4"/>', group: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>', exp: '<path d="M12 4v11M7 10l5 5 5-5M4 20h16"/>', edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>' });
-const XGRP = { bk: 'Bucket', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' };
-const xpGrpOf = (e) => (!ST.xpGroup ? '' : ST.xpGroup === 'bk' ? BK[e.b].id : e[ST.xpGroup] || '(no ' + XGRP[ST.xpGroup] + ')');
-// the CJI3 lines behind an Expenses row: its item's lines that carry the row's codes (built once per render, only while Mass Edit is on)
-let XPL = null; const xpLinesOf = (k) => (XPL && XPL.get(k)) || [];
-function xpBuildLines(rows) { XPL = new Map(); const ix = new Map(); rows.forEach((r) => ix.set(r.e.b + '|' + r.e.ii + '|' + r.e.pkg + '|' + r.e.mnl + '|' + r.e.ce, r.xk));
-  for (let i = 0; i < N; i++) { if (!R.inc[i]) continue; const it = BK[L.b[i]].items[L.it[i]], o = OVR[L.id[i]], g = (f) => (o && o[f] !== undefined ? o[f] : it[f]), k = ix.get(L.b[i] + '|' + L.it[i] + '|' + g('pkg') + '|' + g('mnl') + '|' + g('ce')); if (k) (XPL.get(k) || XPL.set(k, []).get(k)).push(i); } }
-// the summary view: Previous cumulative · Previous month · This month · Cumulative, then Change and Trend
-function xpSumCols(cols, subs, mode, agg, fmtOf, tdIdx) { const rep = Math.max(1, R.rep), G = [['pc', 'Previous cumulative', PER.slice(0, rep).map((x, k) => k)], ['pm', 'Previous month · ' + PER[rep - 1], [rep - 1]], ['tm', 'This month · ' + PER[rep], [rep]], ['cu', 'Cumulative', tdIdx]];
-  G.forEach(([k, l, idx]) => subs.forEach((sub) => cols.push(numC('x' + k + sub, mode === 'All' ? sub : l, mode === 'All' ? (sub === 'Rate' ? 82 : 96) : 120, (r) => agg(r.it, idx, sub, r.e), { f: fmtOf(sub), pl: l, slot: k, sub, pidx: idx, th: k === 'tm' ? 'cut' : k === 'cu' ? 'cumh' : '', cls: () => (k === 'tm' ? 'cutc' : k === 'cu' ? 'cumc' : '') }))));
-  cols.push(numC('xchg', 'Change vs ' + PER[rep - 1], 118, (r) => agg(r.it, [rep], 'Amount', r.e) - agg(r.it, [rep - 1], 'Amount', r.e), { h: (r) => { const d = agg(r.it, [rep], 'Amount', r.e) - agg(r.it, [rep - 1], 'Amount', r.e); return `<td class="num">${Math.abs(d) < 0.5 ? '<span class="help">–</span>' : `<span class="${d > 0 ? 'xup' : 'xdn'}">${d > 0 ? '▲' : '▼'} ${fmt(Math.abs(d))}</span>`}</td>`; } }));
-  const ms = MI.filter((m) => m.idx <= rep).slice(-14);
-  cols.push({ k: 'xtr', l: 'Trend · ' + ms[0].label + ' – ' + PER[rep], w: 130, v: () => 0, h: (r) => { const s = r.e || r.it, v = ms.map((m) => s.p[m.idx]), mx = Math.max(1, ...v.map(Math.abs)), W = 110, bw = W / ms.length;
-    return `<td title="${esc(ms.map((m, k) => m.label + ' ' + fmt(v[k])).join('\n'))}"><svg width="${W}" height="20" style="display:block">${v.map((x, k) => { const h = Math.max(Math.abs(x) / mx * 17, x ? 1.5 : 0); return `<rect x="${(k * bw + 0.5).toFixed(1)}" y="${(19 - h).toFixed(1)}" width="${(bw - 1.5).toFixed(1)}" height="${h.toFixed(1)}" rx="1" fill="${ms[k].idx === rep ? '#E9B400' : x < 0 ? '#D99A9A' : '#B7C3D5'}"/>`; }).join('')}</svg></td>`; } }); }
-const xpSumBand = (nL, subs) => { const rep = Math.max(1, R.rep); return [{ l: '', span: nL, cls: 'blank' }, ...[['Previous cumulative', ''], ['Previous month · ' + PER[rep - 1], ''], ['This month · ' + PER[rep], 'cutb'], ['Cumulative', 'cumb']].map(([l, c]) => ({ l, span: subs.length, cls: c })), { l: '', span: 2, cls: 'blank' }]; };
+// =====================================================================================  Expenses: three report pages (the side list picks the page)
+// 1 Summary – cumulative, compact: bucket › item (or PKG › bucket › item)   2 Expenses per month   3 Indirect per month
+// every row is an item + the codes of its CJI3 lines, so a hand-coded line makes its own row (as in the Expenses sheet)
+const XPAGES = [['sum', 'Summary', 'cumulative · bucket › item or PKG › bucket › item'], ['month', 'Expenses per month', 'every item · qty · rate · amount · quarters, years'], ['ind', 'Indirect per month', 'indirect heads › cost elements, month by month']];
+const xpPage = () => ST.xpPage || 'sum';
+// kept for the table code: an Expenses row is never a CJI3 line selection
+const xpLinesOf = () => [];
+const xpExport = () => ' <button id="bXpX" class="hp" title="This page as it is on screen (filters and folds apply), as an Excel file">⇩ Export</button>';
+const xpTitle = () => `<b class="xpt">${esc((XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1])}</b>`;
+const xpLive = () => [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) >= 0.005));
 // a border on the left of every month block (and of To date)
 function xpBlocks(cols, subs) { cols.forEach((c) => { if (c.slot === undefined || c.sub !== subs[0]) return; c.th = (c.th || '') + ' mb'; const h0 = c.h; c.h = (r) => h0(r).replace(/^<td( class=")?/, (m0, a) => (a ? '<td class="mb ' : '<td class="mb"')); }); }
-// Table · Chart · Filter · Sort · Group · Export · Mass Edit · View
-function xpDef(o) { const { cols, rows, footF } = o; R.xpRow = new Map(rows.map((r) => [r.xk, r])); XPL = null; if (ST.xpEdit) xpBuildLines(rows);
-  const nF = [ST.xpFrom != null || ST.xpTo != null, (vs().st || 'All') !== 'All', PF.size > 0].filter(Boolean).length + Object.values(vs().f).filter((f) => f && f.set).length, nS = [vs().sort, vs().sort2].filter(Boolean).length;
-  const bt = (a, l, n, on) => `<button class="xb${on ? ' on' : ''}" data-xa="${a}">${XIC[a] || ''}<span>${l}</span>${n ? `<i>${n}</i>` : ''}</button>`;
-  return { cols, rows, bands: o.bands, sel: !!ST.xpEdit, status: true, foot: footF, noGroupBtns: true, groups: !!ST.xpGroup, gCells: (g, rs) => footF(rs), gSpanK: 'auto', gLabel: (g, rs) => `<span dir="auto" style="unicode-bidi:isolate"><b>${esc(g)}</b></span><span class="gm">${rs.length.toLocaleString('en-US')} rows</span>`,
-    fiori: (S0) => `<span class="xt">Expenses <small id="cnt"></small></span><span class="seg xtc"><button data-xa="tbl" class="${ST.xpChart ? '' : 'on'}">${XIC.tbl} Table</button><button data-xa="chart" class="${ST.xpChart ? 'on' : ''}">${XIC.chart} Chart</button></span><span class="xsep"></span>`
-      + bt('filter', 'Filter', nF) + bt('sort', 'Sort', nS) + bt('group', 'Group', ST.xpGroup ? 1 : 0) + `<button class="xb" id="bXpX" title="This report as it is on screen (the rows that pass your filters), as an Excel file">${XIC.exp}<span>Export</span></button>` + bt('edit', 'Mass Edit', 0, ST.xpEdit)
-      + `<span class="sp"></span><input type="search" id="q" class="xq" placeholder="Search…  ( / )" value="${esc(S0.q)}">`,
-    right: () => `<span class="sp"></span>${o.pmSeg(o.hasQ).replace(/ <span class="seg">[^]*$/, '')}<label class="xv">View <select id="xpView"><option value="month"${ST.xpView === 'sum' ? '' : ' selected'}>By month</option><option value="sum"${ST.xpView === 'sum' ? ' selected' : ''}>Summary: previous · this month · cumulative</option></select></label>`,
-    chips: (S0) => { const c = []; const ch = (k, l) => c.push(`<span class="xc">${l}<i data-xc="${k}" title="Remove">✕</i></span>`);
-      if (ST.xpGroup) ch('g', `<b>Grouped by</b> ${XGRP[ST.xpGroup]}`); if ((ST.xpb ?? -1) >= 0) ch('b', `<b>Bucket</b> ${esc(BK[ST.xpb].id)}`); if ((S0.st || 'All') !== 'All') ch('st', `<b>Status</b> ${S0.st}`);
-      if (ST.xpFrom != null || ST.xpTo != null) ch('m', `<b>Months</b> ${PER[ST.xpFrom ?? 0]} – ${PER[ST.xpTo ?? NP - 1]}`); if (PF.size) ch('pv', '<b>Periods</b> quarters / years folded');
-      Object.entries(S0.f).forEach(([k, f]) => { if (f && f.set) { const cc = cols.find((x) => x.k === k); ch('f:' + k, `<b>${esc(cc ? cc.l : k)}</b> ${f.set.size} value${f.set.size > 1 ? 's' : ''}`); } });
-      [S0.sort, S0.sort2].forEach((s, k) => { if (!s) return; const cc = cols.find((x) => x.k === s.k); ch('s' + (k + 1), `<b>${k ? 'Then by' : 'Sorted by'}</b> ${esc(cc ? (cc.pl && cc.pl !== cc.l ? cc.pl + ' · ' : '') + cc.l : s.k)} ${s.d > 0 ? '↑' : '↓'}`); });
-      if (S0.q) ch('q', `<b>Search</b> “${esc(S0.q)}”`);
-      return (c.length ? c.join('') + '<a class="xca" data-xc="all">Clear all</a>' : '<span class="help">Flat list – every item with the codes of its CJI3 lines</span>') + R.D.right(); },
-    after: (rs) => { let el = $('xpch'); if (!el) { el = document.createElement('div'); el.id = 'xpch'; $('wrap').after(el); } $('pg-tbl').classList.add('xpmode'); el.style.display = ST.xpChart ? '' : 'none'; $('wrap').style.display = ST.xpChart ? 'none' : ''; if (ST.xpChart) xpChart(el, rs, o.slots); } }; }
-// Chart: the amount of every month (as filtered), stacked by bucket
-function xpChart(el, rs, slots) { const ss = slots.filter((s) => s.kind !== 'open' && s.kind !== 'pend'), bks = [...new Set(rs.map((r) => r.e.b))], v = ss.map((s) => bks.map((b) => rs.reduce((t, r) => (r.e.b === b ? t + s.idx.reduce((x, k) => x + r.e.p[k], 0) : t), 0)));
-  const W = Math.max(600, (el.parentNode.clientWidth || 1200) - 40), H = 330, pad = 56, bw = (W - pad - 10) / Math.max(1, ss.length), mx = Math.max(1, ...v.map((x) => x.reduce((a, b) => a + Math.max(0, b), 0))), sc = (H - 50) / mx;
-  let s = ''; for (let g = 0; g <= 4; g++) { const y = H - 30 - (H - 50) * g / 4; s += `<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#EEF1F5"/><text x="${pad - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#8A93A3">${fmtM(mx * g / 4)}</text>`; }
-  ss.forEach((sl, i) => { let y = H - 30; bks.forEach((b, j) => { const a = Math.max(0, v[i][j]), h = a * sc; if (h > 0) s += `<rect x="${pad + i * bw + bw * 0.18}" y="${(y - h).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${h.toFixed(1)}" fill="${bkColor(b)}"><title>${esc(sl.label + ' · ' + BK[b].id + ': ' + fmt(v[i][j]))}</title></rect>`; y -= h; });
-    s += `<text x="${pad + i * bw + bw / 2}" y="${H - 12}" text-anchor="middle" font-size="11" fill="${sl.idx.includes(R.rep) ? '#8A6D1F' : '#6B7280'}" font-weight="${sl.idx.includes(R.rep) ? 700 : 400}">${esc(sl.label)}</text>`; });
-  el.innerHTML = `<div class="xpc"><div class="xpl">${bks.map((b) => `<span><i style="background:${bkColor(b)}"></i>${esc(BK[b].short)}</span>`).join('')}<span class="help">amount per month of the rows on screen (filters apply)</span></div><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${s}</svg></div>`; }
-// the dialogs (one at a time, under their button)
-let XPOP = null; const xpClose = () => { if (XPOP) { XPOP.remove(); XPOP = null; } };
-function xpOpen(kind, btn) { xpClose(); const S0 = vs(), D = R.D, cs = (D.allCols || D.cols).filter((c) => c.v), opt = (sel0) => '<option value="">—</option>' + cs.map((c) => `<option value="${esc(c.k)}"${sel0 === c.k ? ' selected' : ''}>${esc((c.pl && c.pl !== c.l ? c.pl + ' · ' : '') + c.l)}</option>`).join('');
-  const per = (cur, def) => PER.map((l, k) => `<option value="${k}"${(cur ?? def) === k ? ' selected' : ''}>${esc(l)}</option>`).join('');
-  let h = '';
-  if (kind === 'filter') h = `<h4>Filter</h4><div class="xr"><span>Status</span><span class="seg">${['All', 'Not coded', 'Coded'].map((s) => `<button data-xst="${s}" class="${(S0.st || 'All') === s ? 'on' : ''}">${s}</button>`).join('')}</span></div>
-      <div class="xr"><span>Months</span><select id="xpF">${per(ST.xpFrom, 0)}</select><span>to</span><select id="xpT">${per(ST.xpTo, NP - 1)}</select></div>
-      <div class="xr"><span>Periods</span><span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-xpv="${v}" class="${(v === 'Months' && !PF.size) || (v === 'Years' && [...PF].some((x) => x[0] === 'Y')) || (v === 'Quarters' && PF.size && ![...PF].some((x) => x[0] === 'Y')) ? 'on' : ''}">${v}</button>`).join('')}</span></div>
-      <div class="xr help">Bucket: the list at the side · any column: the ▾ in its header</div><div class="xf"><button data-xfc="1">Reset</button><button class="pri" data-xok="1">Done</button></div>`;
-  if (kind === 'sort') h = `<h4>Sort</h4><div class="xr"><span>Sort by</span><select id="xs1">${opt(S0.sort && S0.sort.k)}</select><select id="xd1"><option value="-1">↓ Largest first</option><option value="1"${S0.sort && S0.sort.d > 0 ? ' selected' : ''}>↑ Smallest first</option></select></div>
-      <div class="xr"><span>Then by</span><select id="xs2">${opt(S0.sort2 && S0.sort2.k)}</select><select id="xd2"><option value="-1">↓ Largest first</option><option value="1"${S0.sort2 && S0.sort2.d > 0 ? ' selected' : ''}>↑ Smallest first</option></select></div><div class="xf"><button data-xsc="1">Reset</button><button class="pri" data-xso="1">OK</button></div>`;
-  if (kind === 'group') h = `<h4>Group by</h4>${[['', 'No grouping (flat list)'], ['bk', 'Bucket'], ['pkg', 'PKG'], ['mnl', 'MNL'], ['ce', 'Cost element']].map(([k, l]) => `<button class="xg${(ST.xpGroup || '') === k ? ' on' : ''}" data-xg="${k}">${l}</button>`).join('')}<div class="xr help">Each group shows its totals; click a group row to fold it</div>`;
-  XPOP = document.createElement('div'); XPOP.className = 'xpop'; XPOP.innerHTML = h; document.body.appendChild(XPOP); const r = btn.getBoundingClientRect(); XPOP.style.left = Math.min(r.left, innerWidth - XPOP.offsetWidth - 10) + 'px'; XPOP.style.top = (r.bottom + 6) + 'px'; }
-document.addEventListener('click', (e) => { if (ST.tab !== 'xpm') return; const t = e.target, S0 = vs();
-  const pm = t.closest('#bkbar [data-pm]'); if (pm) { ST.xpMode = pm.dataset.pm; render(); return; }
-  const a = t.closest('[data-xa]'); if (a) { const k = a.dataset.xa; if (k === 'tbl' || k === 'chart') { ST.xpChart = k === 'chart'; xpClose(); render(); return; } if (k === 'edit') { ST.xpEdit = !ST.xpEdit; sel.clear(); xpClose(); render(); toast(ST.xpEdit ? 'Mass Edit: tick rows, then type the codes in the bar and Apply – the codes go on their CJI3 lines' : 'Mass Edit off'); return; } if (XPOP && XPOP.dataset.k === k) { xpClose(); return; } xpOpen(k, a); XPOP.dataset.k = k; return; }
-  if (XPOP && XPOP.contains(t)) { const d = t.dataset;
-    if (d.xst) { S0.st = d.xst; sel.clear(); render(); xpOpen('filter', document.querySelector('[data-xa="filter"]')); XPOP.dataset.k = 'filter'; return; }
-    if (d.xpv) { PF.clear(); if (d.xpv !== 'Months') MI.forEach((m) => PF.add(d.xpv === 'Years' ? 'Y' + m.y : 'Q' + m.y + '-' + m.q)); render(); xpOpen('filter', document.querySelector('[data-xa="filter"]')); XPOP.dataset.k = 'filter'; return; }
-    if (d.xfc) { ST.xpFrom = null; ST.xpTo = null; S0.st = 'All'; PF.clear(); xpClose(); render(); return; } if (d.xok) { xpClose(); return; }
-    if (d.xso) { const k1 = $('xs1').value, k2 = $('xs2').value; S0.sort = k1 ? { k: k1, d: +$('xd1').value } : null; S0.sort2 = k2 ? { k: k2, d: +$('xd2').value } : null; xpClose(); render(); return; } if (d.xsc) { S0.sort = null; S0.sort2 = null; xpClose(); render(); return; }
-    if (d.xg !== undefined) { ST.xpGroup = d.xg; S0.fold.clear(); xpClose(); render(); return; } return; }
-  if (XPOP && !t.closest('.xpop')) xpClose();
-  const c = t.closest('[data-xc]'); if (c) { const k = c.dataset.xc; if (k === 'g' || k === 'all') ST.xpGroup = ''; if (k === 'b' || k === 'all') ST.xpb = -1; if (k === 'st' || k === 'all') S0.st = 'All'; if (k === 'm' || k === 'all') { ST.xpFrom = null; ST.xpTo = null; } if (k === 'pv' || k === 'all') PF.clear();
-    if (k.startsWith('f:')) delete S0.f[k.slice(2)]; if (k === 'all') S0.f = {}; if (k === 's1' || k === 'all') { S0.sort = S0.sort2 || null; S0.sort2 = null; } if (k === 's2') S0.sort2 = null; if (k === 'q' || k === 'all') S0.q = ''; sel.clear(); render(); } });
-document.addEventListener('change', (e) => { if (ST.tab !== 'xpm') return; const t = e.target; if (t.id === 'xpView') { ST.xpView = t.value; vs().sort = null; vs().sort2 = null; sel.clear(); render(); return; }
-  if (t.id === 'xpF' || t.id === 'xpT') { let f = +$('xpF').value, to = +$('xpT').value; if (f > to) { if (t.id === 'xpF') to = f; else f = to; } ST.xpFrom = f === 0 ? null : f; ST.xpTo = to === NP - 1 ? null : to; render(); xpOpen('filter', document.querySelector('[data-xa="filter"]')); XPOP.dataset.k = 'filter'; } });
+const codeCells = (f) => ({ k: f, l: FN[f], w: f === 'ce' ? 112 : f === 'mnl' ? 66 : 92, v: (r) => r.e[f] || '(blank)', h: (r) => (r.e[f] ? `<td${r.e.hand ? ' class="xph" title="Coded on its CJI3 lines (not the item code)"' : ''}><b>${esc(r.e[f])}</b>${r.e.hand && f === 'pkg' ? ' <span class="help">✎</span>' : ''}</td>` : '<td class="help">–</td>') });
+const sumIdx = (e, idx, q) => { let a = 0; for (const k of idx) a += q ? e.q[k] : e.p[k]; return a; };
+function xpReport() {
+  const pg = xpPage(), rep = Math.max(1, R.rep), PC = PER.slice(0, rep).map((x, k) => k), TM = [rep], CU = PER.slice(0, NP - 1).map((x, k) => k), A3 = [rep - 2, rep - 1, rep].filter((k) => k >= 1);
+  const S0 = vs();
+  if (pg === 'sum') {   // 1. Summary
+    const byPkg = ST.xsm === 'pkg', tot = R.toDate || 1;
+    const rows = xpLive().map((e) => ({ it: BK[e.b].items[e.ii], e, g: byPkg ? (e.pkg || '(no PKG)') + ' › ' + BK[e.b].id : BK[e.b].id, a: sumIdx(e, CU) }))
+      .sort((x, y) => (byPkg ? x.g.localeCompare(y.g) : x.e.b - y.e.b) || Math.abs(y.a) - Math.abs(x.a));
+    if (!S0.init) { S0.init = 1; new Set(rows.map((r) => r.g)).forEach((g) => S0.fold.add(g)); }   // compact: groups folded
+    const amt = (k, l, idx, o = {}) => numC(k, l, o.w || 118, (r) => sumIdx(r.e, idx), { f: fmt, ...o });
+    const cols = [{ k: 'item', l: 'Item', w: 330, fz: 1, v: (r) => itemCode(r.it) + ' ' + itemDesc(r.it), h: (r) => `<td title="${esc(itemDesc(r.it))}"><a class="lk open">${esc(itemCode(r.it))}</a> <span class="help" dir="auto">${esc(itemDesc(r.it))}</span></td>` },
+      codeCells('pkg'), codeCells('mnl'), codeCells('ce'),
+      numC('qty', 'Qty cumulative', 112, (r) => sumIdx(r.e, CU, 1), { f: fq }),
+      amt('pc', 'Previous cumulative', PC), amt('tm', 'This month · ' + PER[rep], TM, { th: 'cut', cls: () => 'cutc' }), amt('cu', 'Cumulative', CU, { th: 'cumh', cls: () => 'cumc', h: (r) => `<td class="num cumc"><b>${fmt(sumIdx(r.e, CU))}</b></td>` }),
+      numC('sh', 'Share', 74, (r) => sumIdx(r.e, CU) / tot, { f: (v) => (Math.abs(v) < 0.0005 ? '-' : (100 * v).toFixed(1) + '%') })];
+    const foot = (rs) => ({ pc: fmt(rs.reduce((t, r) => t + sumIdx(r.e, PC), 0)), tm: fmt(rs.reduce((t, r) => t + sumIdx(r.e, TM), 0)), cu: fmt(rs.reduce((t, r) => t + sumIdx(r.e, CU), 0)), sh: (100 * rs.reduce((t, r) => t + sumIdx(r.e, CU), 0) / tot).toFixed(1) + '%' });
+    const bkOf = (g) => BK.findIndex((b) => b.id === (byPkg ? g.split(' › ').slice(1).join(' › ') : g));
+    return { cols, rows, groups: true, sel: false, status: false, foot, gCells: (g, rs) => foot(rs), gSpanK: 'auto',
+      gLabel: (g, rs) => `<span class="bkc"><i style="background:${bkColor(bkOf(g))}"></i>${esc(g)}</span><span class="gm">${rs.length.toLocaleString('en-US')} rows</span>`,
+      extraTools: xpTitle() + `<span class="seg">${[['', 'Bucket › Item'], ['pkg', 'PKG › Bucket › Item']].map(([k, l]) => `<button data-xsm="${k}" class="${(ST.xsm || '') === k ? 'on' : ''}">${l}</button>`).join('')}</span><span class="help">cumulative to the cut date · rows = item + the codes of its CJI3 lines (✎ = coded by hand)</span>` + xpExport() };
+  }
+  // 3. Indirect per month: indirect heads › cost elements (PKG = Indirect), amount
+  const head = new Map(), ord = new Map(); psCfg().indirect.forEach((g, gi) => g.c.forEach((c) => { head.set(c, g.n); ord.set(g.n, gi); }));
+  const agg = new Map(); xpLive().forEach((e) => { if (!isIndPkg(e.pkg)) return; const k = e.ce || '(no cost element)'; let x = agg.get(k); if (!x) agg.set(k, (x = { ce: k, p: new Float64Array(NP), q: new Float64Array(NP), n: 0 })); e.p.forEach((v, j) => { x.p[j] += v; }); x.n++; });
+  const rows = [...agg.values()].map((x) => ({ e: x, g: head.get(x.ce) || 'Other indirect', sq: x.ce + ' ' + ceLabel(IND_PKG, x.ce) })).sort((x, y) => (ord.has(x.g) ? ord.get(x.g) : 99) - (ord.has(y.g) ? ord.get(y.g) : 99) || x.e.ce.localeCompare(y.e.ce));
+  const slots = slotsOf(), cols = [{ k: 'ce', l: 'Cost element', w: 300, fz: 1, v: (r) => r.e.ce + ' ' + ceLabel(IND_PKG, r.e.ce), h: (r) => `<td><b>${esc(r.e.ce)}</b> <span class="help">${esc(ceLabel(IND_PKG, r.e.ce))}</span>${r.e.n > 1 ? ` <span class="help">· ${r.e.n} items</span>` : ''}</td>` }];
+  slots.forEach((sl, si) => cols.push(numC('s' + si, sl.label, 104, (r) => sumIdx(r.e, sl.idx), { f: fmt, slot: si, sub: 'Amount', pl: sl.label, pidx: sl.idx, th: (sl.idx.includes(rep) ? 'cut' : sl.kind === 'pend' ? 'pend' : '') + (sl.kind === 'q' || sl.kind === 'y' ? ' agg' : ''), cls: () => (sl.idx.includes(rep) ? 'cutc' : '') })));
+  cols.push(numC('td', 'To date', 116, (r) => sumIdx(r.e, CU), { f: fmt, slot: 'td', sub: 'Amount', pl: 'To date', th: 'cumh', h: (r) => `<td class="num cumc"><b>${fmt(sumIdx(r.e, CU))}</b></td>` }),
+    numC('a3', `Avg last 3 months (${PER[A3[0]]} – ${PER[rep]})`, 150, (r) => sumIdx(r.e, A3) / A3.length, { f: fmt }));
+  xpBlocks(cols, ['Amount']);
+  const foot = (rs) => { const o = {}; cols.forEach((c) => { if (c.num) o[c.k] = fmt(rs.reduce((t, r) => t + c.v(r), 0)); }); return o; };
+  return { cols, rows, groups: true, sel: false, status: false, foot, gCells: (g, rs) => foot(rs), gSpanK: 'auto', gLabel: (g, rs) => `<b>${esc(g)}</b><span class="gm">${rs.length} cost element${rs.length === 1 ? '' : 's'}</span>`,
+    extraTools: xpTitle() + `<span class="help">PKG = Indirect only · amount</span> <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}" class="${(v === 'Months' && !PF.size) || (v === 'Years' && [...PF].some((x) => x[0] === 'Y')) || (v === 'Quarters' && PF.size && ![...PF].some((x) => x[0] === 'Y')) ? 'on' : ''}">${v}</button>`).join('')}</span>` + xpExport() };
+}
+// 2. Expenses per month: the page definition in 14-table-pages (pm / xpm) ends here
+const xpMonthDef = (o) => ({ cols: o.cols, rows: o.rows, bands: o.bands, groups: false, sel: false, status: false, foot: o.footF,
+  extraTools: xpTitle() + (o.hasQ ? ` <span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount']].map(([m, l]) => `<button data-pm="${m}" class="${o.mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '')
+    + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}" class="${(v === 'Months' && !PF.size) || (v === 'Years' && [...PF].some((x) => x[0] === 'Y')) || (v === 'Quarters' && PF.size && ![...PF].some((x) => x[0] === 'Y')) ? 'on' : ''}">${v}</button>`).join('')}</span>` + xpExport() });
+document.addEventListener('click', (e) => { if (ST.tab !== 'xpm') return; const b = e.target.closest('[data-xsm]'); if (b) { ST.xsm = b.dataset.xsm; render(); $('wrap').scrollTop = 0; } });

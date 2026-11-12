@@ -212,51 +212,50 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   }
 
   if (RUN('7e')) {
-  head('7e. Expenses: its own page, every item of every bucket by month, export');
+  head('7e. Expenses: three report pages, export, hand-coded lines');
   { const { ctx: c8, p: p8 } = await open(APP, { acceptDownloads: true }); await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400);
     eq('Coding has two tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines']);
-    ok('Expenses is a page of its own in the navigation', await p8.$$eval('#tabs button', (x) => x.some((b) => b.dataset.s === 'xp' && /Expenses/.test(b.textContent))));
     await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.waitForTimeout(1200);
-    const nIt = await p8.evaluate(() => [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) >= 0.005)).length);
-    ok('Expenses opens on Qty · Rate · Amount', await p8.$eval('[data-pm="All"]', (b) => b.classList.contains('on')));
-    ok('Expenses lists every item + code of every bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nIt), await p8.$eval('#cnt', (e) => e.textContent) + ' · expected ' + nIt);
-    ok('…bucket, then PKG, MNL, Cost element, then the item and the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.includes('Qty') && t.includes('Rate') && t.includes('Amount'); }) && await p8.$$eval('#th th', (x) => x.some((e) => /^[A-Z][a-z]{2}-\d\d$/.test(e.textContent.replace(/[▾\s]+$/g, '').trim()))));
+    eq('the side list holds the three pages', await p8.$$eval('#side [data-xp]', (x) => x.map((e) => e.dataset.xp)), ['sum', 'month', 'ind']);
+    const nIt = await p8.evaluate(() => [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) >= 0.005)).length), td8 = await p8.evaluate(() => R.toDate), tm8 = await p8.evaluate(() => R.thisM);
+    const ftot = (k) => p8.evaluate((k2) => { const c = R.D.cols.find((x) => x.k === k2); return R.rows.reduce((t, r) => t + c.v(r), 0); }, k);
+    // 1 Summary
+    ok('1 Summary opens first, compact (every bucket folded)', await p8.evaluate(() => /Summary/.test(document.querySelector('#tools .xpt').textContent) && document.querySelectorAll('#tb tr.it').length === 0 && document.querySelectorAll('#tb tr.grp').length >= 5));
+    ok('…Item, PKG, MNL, Cost element, Qty, then the amounts', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()); return t[0] === 'Item' && t[1] === 'PKG' && t[2] === 'MNL' && t[3] === 'Cost element' && /^Qty/.test(t[4]) && t.some((v) => /^Previous cumulative/.test(v)) && t.some((v) => /^This month/.test(v)) && t.some((v) => /^Cumulative/.test(v)); }));
+    { const pc = await ftot('pc'), tm = await ftot('tm'), cu = await ftot('cu'); ok('previous cumulative + this month = cumulative = cost to date', Math.abs(pc + tm - cu) < 1 && Math.abs(cu - td8) < 2 && Math.abs(tm - tm8) < 2, [pc, tm, cu, td8, tm8].join(' · ')); }
+    eq('every item + code combination is a row', await p8.evaluate(() => R.rows.length), nIt, 0);
+    await p8.click('#bOpen'); await p8.waitForTimeout(600); ok('Expand all opens the items', await p8.$$eval('#tb tr.it', (x) => x.length > 5));
+    await p8.click('[data-xsm="pkg"]'); await p8.waitForTimeout(700); ok('PKG › Bucket › Item: groups are PKG › bucket', await p8.evaluate(() => R.rows.every((r) => / › /.test(r.g))));
+    await p8.click('[data-xsm=""]'); await p8.waitForTimeout(500);
+    // 2 Expenses per month
+    await p8.click('#side [data-xp="month"]'); await p8.waitForTimeout(1000);
+    ok('2 Expenses per month: opens on Qty · Rate · Amount', await p8.$eval('[data-pm="All"]', (b) => b.classList.contains('on')));
+    ok('…every item + code of every bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nIt), await p8.$eval('#cnt', (e) => e.textContent));
+    ok('…bucket, PKG, MNL, Cost element, item, then the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.includes('Qty') && t.includes('Rate'); }));
     ok('it is a report: no code boxes', await p8.$$eval('#tb input[data-f]', (x) => x.length === 0));
-    const tot = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); });
-    ok('the To date total of Expenses is the cost to date', Math.abs(tot - await p8.evaluate(() => R.toDate)) <= 2, String(tot));
-    const bi8 = await p8.evaluate(() => __BK.findIndex((b) => b.id === 'Material')); await p8.click(`#side [data-xb="${bi8}"]`); await p8.waitForTimeout(800);
-    ok('the side list narrows it to one bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), await p8.evaluate((k) => [...R.exp.values()].filter((e) => e.b === k && e.p.some((v) => Math.abs(v) >= 0.005)).length, bi8)));
-    await p8.click(`#side [data-xb="-1"]`); await p8.waitForTimeout(800);
-    ok('Qty · Rate · Amount per month', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.trim()); return t.filter((v) => /^Qty/.test(v)).length > 3 && t.filter((v) => /^Rate/.test(v)).length > 3; }));
+    { const tot = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); }); ok('the To date total is the cost to date', Math.abs(tot - td8) <= 2, String(tot)); }
+    await p8.click('[data-pv="Quarters"]'); await p8.waitForTimeout(700); ok('Quarters fold the months', await p8.$$eval('#th th', (x) => x.some((e) => /^Q\d-\d\d total/.test(e.textContent.trim()))));
+    await p8.click('[data-pv="Months"]'); await p8.waitForTimeout(600);
     const [dx] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fx = path.join(OUT, 'expenses.xlsx'); await dx.saveAs(fx);
-    const XL = require('xlsx'), wx = XL.readFile(fx), sx = wx.Sheets[wx.SheetNames[0]], ax = XL.utils.sheet_to_json(sx, { header: 1, defval: '' });
-    ok('Export to Excel: one sheet, Expenses, every item', wx.SheetNames.length === 1 && wx.SheetNames[0] === 'Expenses' && ax.length >= nIt + 4, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
-    { const h = ax[3], ci = h.lastIndexOf('Amount'), last = ax.slice(4).filter((r) => r[0] && r[0] !== 'TOTAL').reduce((t, r) => t + (+r[ci] || 0), 0); ok('…its To date amounts add up to the cost to date', Math.abs(last - await p8.evaluate(() => R.toDate)) <= 5, String(last)); }
-    // the analytical-table tools: group, sort, summary view, mass edit
-    await p8.click('[data-xa="group"]'); await p8.click('[data-xg="bk"]'); await p8.waitForTimeout(700);
-    ok('Group › Bucket: one group per bucket, with a group row and its total', await p8.$$eval('#tb tr.grp', (x) => x.length) >= 1 && await p8.evaluate(() => new Set(R.rows.map((r) => r.g)).size === new Set(R.rows.map((r) => r.e.b)).size && R.rows.length > 0) && /Grouped by/.test(await p8.$eval('#bkbar', (e) => e.textContent)));
-    await p8.click('#bkbar [data-xc="g"]'); await p8.waitForTimeout(500); ok('…and its chip takes the grouping away (flat again)', await p8.$$eval('#tb tr.grp', (x) => x.length) === 0);
-    await p8.click('[data-xa="sort"]'); await p8.selectOption('#xs1', 'tdAmount'); await p8.selectOption('#xd1', '-1'); await p8.click('[data-xso]'); await p8.waitForTimeout(700);
-    ok('Sort › To date amount, largest first', await p8.evaluate(() => { const v = R.rows.slice(0, 20).map((r) => R.D.cols.find((c) => c.k === 'tdAmount').v(r)); return v.every((x, i) => !i || x <= v[i - 1]); }));
-    await p8.selectOption('#xpView', 'sum'); await p8.waitForTimeout(900);
-    { const g = await p8.evaluate(() => { const c = R.D.cols, s = (k) => R.rows.reduce((t, r) => t + c.find((x) => x.k === k).v(r), 0); return { pc: s('xpcAmount'), tm: s('xtmAmount'), cu: s('xcuAmount'), td: R.toDate, thisM: R.thisM }; });
-      ok('Summary view: previous cumulative + this month = cumulative = cost to date', Math.abs(g.pc + g.tm - g.cu) < 1 && Math.abs(g.cu - g.td) < 2 && Math.abs(g.tm - g.thisM) < 2, JSON.stringify(g)); }
-    await p8.selectOption('#xpView', 'month'); await p8.waitForTimeout(700);
-    await p8.click('[data-xa="edit"]'); await p8.waitForTimeout(500); const xk = await p8.locator('#tb tr.it').nth(5).getAttribute('data-k'); await p8.locator('#tb tr.it').nth(5).locator('input.ck').click(); await p8.waitForTimeout(400);
-    const nl = await p8.evaluate((k) => { const r = R.xpRow.get(k), n = []; for (let i = 0; i < __D.N; i++) if (__D.L.b[i] === r.e.b && __D.L.it[i] === r.e.ii) n.push(i); return n.length; }, xk);
-    ok('Mass Edit: ticking a row selects its CJI3 lines', new RegExp(nl.toLocaleString('en-US') + ' lines? selected').test(await p8.$eval('#bsel', (e) => e.textContent)), await p8.$eval('#bsel', (e) => e.textContent) + ' · expected ' + nl);
-    await p8.fill('#bPKG', 'T41'); await p8.click('#bApply'); await p8.waitForTimeout(800); { const ml = await p8.$('#asLater'); if (ml) await ml.click(); }
-    ok('…Apply codes them (the row now shows T41)', await p8.evaluate(() => R.rows.some((r) => r.e.pkg === 'T41')));
-    eq('difference stays 0 after Mass Edit', await p8.evaluate(() => R.diff), 0);
-    await p8.click('[data-xa="edit"]'); await p8.waitForTimeout(400); await p8.click('#bkbar [data-xc="all"]').catch(() => {}); await p8.waitForTimeout(400);
-    // a CJI3 line coded by hand: its own row in Expenses, with the line's code
+    const XL = require('xlsx'), wx = XL.readFile(fx), ax = XL.utils.sheet_to_json(wx.Sheets[wx.SheetNames[0]], { header: 1, defval: '' });
+    ok('Export: one sheet with every row', wx.SheetNames.length === 1 && ax.length >= nIt + 4, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
+    { const h = ax[3], ci = h.lastIndexOf('Amount'), last = ax.slice(4).filter((r) => r[0] && r[0] !== 'TOTAL').reduce((t, r) => t + (+r[ci] || 0), 0); ok('…its To date amounts add up to the cost to date', Math.abs(last - td8) <= 5, String(last)); }
+    // 3 Indirect per month
+    await p8.click('#side [data-xp="ind"]'); await p8.waitForTimeout(1000);
+    { const g = await p8.evaluate(() => { let ind = 0; for (const e of R.exp.values()) if (String(e.pkg).toLowerCase() === 'indirect') for (let k = 0; k < e.p.length - 1; k++) ind += e.p[k]; const c = R.D.cols.find((x) => x.k === 'td'); return { ind, tot: R.rows.reduce((t, r) => t + c.v(r), 0), heads: new Set(R.rows.map((r) => r.g)).size }; });
+      ok('3 Indirect per month: only PKG = Indirect, by indirect head', g.heads >= 2 && Math.abs(g.ind - g.tot) < 1, JSON.stringify(g)); }
+    ok('…with an "Avg last 3 months" column', await p8.$$eval('#th th', (x) => x.some((e) => /Avg last 3 months/.test(e.textContent))));
+    { const a = await p8.evaluate(() => { const r = R.rows.find((x) => Math.abs(R.D.cols.find((c) => c.k === 'td').v(x)) > 1000), c = R.D.cols.find((x) => x.k === 'a3'), k = R.rep; return [c.v(r), (r.e.p[k] + r.e.p[k - 1] + r.e.p[k - 2]) / 3]; }); ok('…= the last three months / 3', Math.abs(a[0] - a[1]) < 0.01, a.join(' vs ')); }
+    // a CJI3 line coded by hand: its own row in Summary and per month, with the line's code
     { const it0 = await p8.evaluate(() => { const b = __BK.findIndex((x) => x.id === 'Material'); const it = __BK[b].items.slice().sort((x, y) => Math.abs(y.td) - Math.abs(x.td))[0]; return { b, ii: it.ii, code: it.vals[3] }; });
       await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400); await p8.click(`#side [data-gt="cod"][data-bk="${it0.b}"]`); await p8.waitForTimeout(400); await p8.click('[data-cm="all"]:visible'); await p8.waitForTimeout(300);
       await p8.fill('#q', it0.code); await p8.waitForTimeout(500); const ip = await p8.$('#tb tr.it input[data-f="pkg"]'); await ip.fill('T31'); await ip.press('Tab'); await p8.waitForTimeout(400); const m9 = await p8.$('#asLater'); if (m9) await m9.click();
       await p8.click('.ctabs [data-cv="lines"]'); await p8.waitForTimeout(800); await p8.fill('#q', it0.code); await p8.waitForTimeout(600); const lp = await p8.$('#tb tr.it input[data-f="pkg"]'); await lp.fill('T32'); await lp.press('Tab'); await p8.waitForTimeout(500);
-      await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.waitForTimeout(900); await p8.fill('#q', it0.code); await p8.waitForTimeout(700);
+      await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.click('#side [data-xp="sum"]'); await p8.waitForTimeout(800);
+      eq('Summary respects a hand-coded line: its own row with the line\'s code', await p8.evaluate((x) => R.rows.filter((r) => r.e.b === x.b && r.e.ii === x.ii).map((r) => r.e.pkg).sort(), it0), ['T31', 'T32']);
+      await p8.click('#side [data-xp="month"]'); await p8.waitForTimeout(800); await p8.fill('#q', it0.code); await p8.waitForTimeout(700);
       const pk = await p8.$$eval('#tb tr.it', (x) => x.map((tr) => tr.cells[1].textContent.replace(/[✎\s]/g, '')).sort());
-      eq('a line coded by hand makes its own row with the line\'s code', pk, ['T31', 'T32']);
+      eq('Expenses per month: the same two rows', pk, ['T31', 'T32']);
       const t2 = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); }), w2 = await p8.evaluate((x) => __BK[x.b].items[x.ii].td, it0);
       ok('…and the two rows add up to the item', Math.abs(t2 - w2) <= 1, t2 + ' vs ' + w2); }
     eq('difference stays 0', await p8.evaluate(() => R.diff), 0); await c8.close(); }

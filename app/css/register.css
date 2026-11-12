@@ -327,3 +327,4 @@ header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUn
 .xup{color:#9B5B00} .xdn{color:#2F6B3A} #xpch{flex:1;overflow:auto;padding:14px} .xpc{background:#fff;border:1px solid #DDE3EC;border-radius:10px;padding:12px 16px} .xpl{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;font-size:12.5px} .xpl span{display:inline-flex;align-items:center;gap:6px} .xpl i{width:10px;height:10px;border-radius:2px;display:inline-block}
 #pg-tbl.xpmode>*{order:3} #pg-tbl.xpmode>#tools{order:1} #pg-tbl.xpmode>#bkbar{order:2;border-bottom:1px solid #E5E9F0}
 #tools .xq{width:200px} #bkbar.xpchips .sp{flex:1} #bkbar.xpchips .seg button{padding:3px 10px;font-size:12.5px}
+#tools .xpt{font-size:16px;color:#14254A;margin-right:4px;white-space:nowrap}

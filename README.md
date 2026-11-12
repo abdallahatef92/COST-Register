@@ -207,3 +207,10 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - **Filter:** status, a From / To month range, months / quarters / years. **Sort:** sort by, then by. **Group:** by bucket, PKG, MNL or cost element, with group totals.
 - **Mass Edit:** tick rows, type codes in the bar, Apply – the codes go on the CJI3 lines of those rows.
 - **Chart:** the amount of every month, stacked by bucket, for the rows on screen.
+
+## v22 – Expenses as three report pages
+- The side list picks the page; fewer options on each. The v21 analytical toolbar (chips, group/sort dialogs, chart, mass edit) is gone.
+- **1 Summary:** cumulative to the cut date, compact – buckets folded (or PKG › bucket). Item, PKG, MNL, Cost element, Qty cumulative, Previous cumulative, This month, Cumulative, Share.
+- **2 Expenses per month:** every item with PKG, MNL, Cost element; Qty · Rate · Amount or Amount; months, quarters or years.
+- **3 Indirect per month:** PKG = Indirect only, by indirect head › cost element, amount per month, To date and the average of the last 3 months.
+- Every page takes the codes from the CJI3 lines: a hand-coded line is its own row (✎). Each page has its own Export.
