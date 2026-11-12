@@ -15,7 +15,8 @@ html = html.replace(head, headAdd);
 const reg = `<script>if (location.protocol.indexOf('http') === 0 && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () { /* the Tool works without it */ });</script>\n`;
 const i = html.lastIndexOf('</body>'); if (i < 0) throw new Error('build-site: </body> not found'); html = html.slice(0, i) + reg + html.slice(i);
 const manifest = { name: 'Cost Register', short_name: 'Cost Register', description: 'Project cost register from SAP CJI3 – coding, checks, reports. Your files stay on your PC.', start_url: './', scope: './', display: 'standalone', background_color: '#14254A', theme_color: '#14254A',
-  id: './', icons: [{ src: I192, sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: I512, sizes: '512x512', type: 'image/png', purpose: 'any' }] };
+  id: '/COST-Register/', icons:   // './' resolves against the github.io origin and clashed with other apps there
+  [{ src: I192, sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: I512, sizes: '512x512', type: 'image/png', purpose: 'any' }] };
 // newest page first when online (so a new version shows by itself), the saved copy when offline
 const sw = `const C = 'cost-register-${VER}', FILES = ['./', 'manifest.webmanifest', '${I192}', '${I512}'];
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(C).then((c) => c.addAll(FILES))); });
