@@ -7,7 +7,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cost Register v23</title>
+<title>Cost Register v24</title>
 <style>
 :root{--navy:#1F3864;--navy2:#2F5597;--gold:#BF8F00;--line:#DDE2EA;--bg:#F3F5F9;--txt:#1d2433;--mut:#6b7280;--ok:#E2EFDA;--okT:#2e6b1f;--part:#FFF2CC;--partT:#8a6500;--not:#FCE4D6;--notT:#a33a00;--sel:#DCE9F9;--code:#EEF3FB;--codeB:#C9D6EA;--miss:#FFF0E8;--missB:#F2B79A;--ovr:#F8CBAD}
 *{box-sizing:border-box}
@@ -350,7 +350,7 @@ header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUn
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div class="logo"><i>CR</i><h1>Cost Register <span class="ver" title="Tool version">v23</span></h1></div>
+  <div class="logo"><i>CR</i><h1>Cost Register <span class="ver" title="Tool version">v24</span></h1></div>
   <div class="crumb"><span id="hsub"></span> &nbsp;›&nbsp; <b id="hpage"></b></div>
   <label class="cut" title="Cut date – the month you are closing. Click to change"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><small>CUT DATE</small><select id="cut"></select></span></label>
   <div class="sp"></div>
@@ -513,7 +513,7 @@ function change(list, label) { list = list.map(canonCh); const rec = list.map((c
 function doUndo() { const u = undo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.old)); redo.push(u); setDirty(DIRTY + 1); logIt('Undone: ' + u.label, u.rec.length); after('Undone: ' + u.label); }
 function doRedo() { const u = redo.pop(); if (!u) return; u.rec.forEach((c) => setC(c, c.v)); undo.push(u); setDirty(DIRTY + 1); logIt('Redone: ' + u.label, u.rec.length); after('Redone: ' + u.label); }
 function after(msg) { persist(); compute(); render(); if (msg) toast(msg); }
-function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: 'v23', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null, indOff: ST.indOff }; }
+function snapshot() { const codes = {}; BK.forEach((b) => { codes[b.id] = {}; b.items.forEach((it) => { codes[b.id][it.k] = { pkg: it.pkg, mnl: it.mnl, ce: it.ce, inc: it.inc, ...(isSub(it.bi) ? { div: it.div } : {}) }; }); }); return { project: META.project, cut: ST.cut, vat: ST.vat, vatFrom: ST.vatFrom, at: new Date().toISOString(), tool: 'v24', codes, lines: OVR, rules: ST.rules, uns: ST.uns, unsc: ST.unsc, depx: ST.depx, pk: ST.pk, crules: ST.crules, log: ST.log, psg: ST.psg || null, indOff: ST.indOff }; }
 function setSaved(t) { $('saved').textContent = t; $('bSave').title = 'Save all codes (and line overrides) as a small file · ' + t; }
 function persist() { asSoon(); try { localStorage.setItem(LSK, JSON.stringify(snapshot())); setSaved('Saved in this browser ' + new Date().toLocaleTimeString()); } catch (e) { setSaved('Not saved here – use Save codes'); } }
 // =====================================================================================  Auto-save: the codes go to a file the user chose once (Chrome / Edge); the file is linked per project, so next month's build finds it
@@ -707,6 +707,7 @@ function renderGuide() { const g = $('guide'); if (ST.tab === 'cod' && ST.next) 
   $('gHide').onclick = () => { GUIDE_OFF = true; try { localStorage.setItem('crt:guideOff', '1'); } catch (e) { /* none */ } renderGuide(); };
   $('gPk').onclick = () => { ST.tab = 'psum'; ST.psEd = true; render(); $('wrap').scrollTop = 0; }; }
 function render() {
+  { const rp = ST.tab === 'xpm' || (ST.tab === 'sub' && ST.sub === 'reg'); $('bExport').innerHTML = rp ? '⇩ Export this report' : '⇩ Export Excel'; $('bExport').title = rp ? 'This report only, as on screen – as an Excel file (Shift+click: the full register)' : 'Light Excel report: values, formatted, cut date as now'; }
   if (!(ST.tab === 'sub' && ST.sub === 'pkg')) { LASTT[secOf(ST.tab)] = ST.tab; if (ST.tab === 'sub') LASTS[secOf('sub')] = ST.sub; }   /* Dashboard reopens its own pages, not the packages */ renderGuide(); navBadges(); renderProg(); document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === secOf(ST.tab)));
   const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
   ['sum', 'tbl', 'chk', 'rul', 'mr', 'log', 'drv', 'psum', 'flow'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'flow' && ST.tab === 'flow') || (p === 'drv' && ST.tab === 'drv') || (p === 'psum' && ST.tab === 'psum') || (p === 'chk' && ST.tab === 'chk') || (p === 'log' && ST.tab === 'log') || (p === 'rul' && ST.tab === 'rules') || (p === 'mr' && ST.tab === 'mrate') || (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'flow'].includes(ST.tab)))));
@@ -2119,14 +2120,16 @@ const stamp = () => new Date().toISOString().slice(0, 10);
 try { localStorage.removeItem('cr-focus'); } catch (e) {}
 $('bSave').onclick = () => { if (AS.h && AS.st === 'ok') asWrite(); dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`); setDirty(0); renderStatus(); toast('Codes saved to a file – keep it with this month\'s files'); };
 // ---- light Excel report (values, formatted)
-$('bExport').onclick = async () => {
+// on a report page (Expenses 1–3, PO register) the top-bar button exports only that report; elsewhere the full register
+const isReportPage = () => ST.tab === 'xpm' || (ST.tab === 'sub' && ST.sub === 'reg');
+$('bExport').onclick = async (ev) => { if (isReportPage() && !(ev && ev.shiftKey)) { const b = $('bXpX'); if (b) { b.click(); return; } }
   toast('Building the Excel report…'); await new Promise((r) => setTimeout(r, 30));
   const wb = new ExcelJS.Workbook(), NAVY = 'FF1F3864', GOLD = 'FFBF8F00', bd = { style: 'thin', color: { argb: 'FFD9D9D9' } }, box = { top: bd, bottom: bd, left: bd, right: bd }, A = 'Arial';
   const fill = (c) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } }), hx = (c) => 'FF' + c.replace('#', '').toUpperCase(), NUM = '#,##0;[Red]-#,##0;"-"', NUM2 = '#,##0.00;[Red]-#,##0.00;"-"';
   const title = (ws, t, n) => { ws.getCell('A1').value = t; ws.getCell('A1').font = { name: A, bold: true, size: 14, color: { argb: NAVY } }; ws.getCell('A2').value = n; ws.getCell('A2').font = { name: A, size: 9, color: { argb: 'FF7F7F7F' } }; };
   const head = (ws, row, labels, gold = []) => { labels.forEach((l, i) => { const c = ws.getCell(row, i + 1); c.value = l; c.font = { name: A, bold: true, color: { argb: 'FFFFFFFF' }, size: 10 }; c.fill = fill(gold.includes(l) ? GOLD : NAVY); c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; c.border = box; }); ws.getRow(row).height = 30; };
   const put = (ws, row, vals, fmts = {}, o = {}) => vals.forEach((v, i) => { const c = ws.getCell(row, i + 1); c.value = v === '' ? null : v; c.border = box; c.font = { name: A, size: 10, bold: !!o.bold, color: o.color ? { argb: o.color } : undefined }; if (fmts[i]) c.numFmt = fmts[i]; if (o.fill) c.fill = fill(o.fill); });
-  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register Tool v23 · values (not live)`;
+  const note = `Codes in blue can be edited here and imported back into the app (or given to the next build as last report) · ${META.project} · cut date ${ST.cut} (report month ${R.repLab}) · ${ST.vat}${ST.vat === 'Include VAT before date' ? ' ' + ST.vatFrom : ''} · exported ${new Date().toLocaleString()} from the Cost Register Tool v24 · values (not live)`;
   // Summary
   const ws = wb.addWorksheet('Summary', { properties: { tabColor: { argb: NAVY } } }); title(ws, 'Project Cost Register — ' + META.project, note);
   [['Previous', R.toDate - R.thisM], ['This month · ' + R.repLab, R.thisM], ['To date', R.toDate], ['Pending', R.pend], ['Excluded', R.excl], ['Difference to CJI3', R.diff]].forEach(([l, v], i) => { const a = ws.getCell(4, i + 1), b2 = ws.getCell(5, i + 1); a.value = l; a.font = { name: A, bold: true, size: 9, color: { argb: 'FFFFFFFF' } }; a.fill = fill(i === 1 ? GOLD : i === 5 ? 'FFC00000' : NAVY); a.alignment = { horizontal: 'center', wrapText: true }; b2.value = r2(v); b2.numFmt = i === 5 ? NUM2 : NUM; b2.font = { name: A, bold: true, size: 13, color: { argb: NAVY } }; b2.alignment = { horizontal: 'center' }; b2.border = box; });
