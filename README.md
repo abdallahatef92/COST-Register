@@ -229,3 +229,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - A 4th Expenses page: **SAP CJI3 transactions** – every CJI3 line of every bucket, flat, with its bucket and codes (PKG, MNL, Cost element can be corrected here, line by line).
 - Clicking an item on Summary, Expenses per month or Indirect per month opens this page with **only that item's lines that carry the row's codes** – the same amount as the row. The yellow chip says what is shown; ✕ shows every line again. The item window's "show lines" opens it too.
 - Fixed: the number of CJI3 lines per item (and the hand-coded count) showed 0 – a code comment had swallowed the counting.
+
+## v26
+- App icon: the Alshorouk "Actual Cost Register" badge – the browser-tab icon of the Tool and the icon of the installed browser app (app/pwa/icon-192.png, icon-512.png).
