@@ -200,3 +200,10 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - **Expenses** is its own page in the navigation: every item of every bucket by month (or one bucket, from the side list). Bucket, PKG, MNL, Cost element, the item, then the months as Amount, Qty, Rate or all three; months, quarters or years. It is a report: the codes are shown, you code in Coding.
 - (v20) Expenses opens on **Qty · Rate · Amount**, and takes the codes from the CJI3 lines: a line coded by hand (different from its item) makes its own row, marked ✎. So each row is an item + its codes, as in the Expenses sheet of the full Excel.
 - **Export to Excel** on the Expenses page gives this report only, as on screen, with a total row (amounts) and filters.
+
+## v21 – Expenses as an analytical table
+- One toolbar: **Table · Chart · Filter · Sort · Group · Export · Mass Edit**, with search; under it a line of chips that says what is grouped, filtered and sorted (✕ removes one, *Clear all* removes all), then Qty · Rate · Amount and **View**.
+- Starts as a **flat list by month**; a border marks every month block. **View: Summary** gives Previous cumulative · Previous month · This month · Cumulative, Change and a trend.
+- **Filter:** status, a From / To month range, months / quarters / years. **Sort:** sort by, then by. **Group:** by bucket, PKG, MNL or cost element, with group totals.
+- **Mass Edit:** tick rows, type codes in the bar, Apply – the codes go on the CJI3 lines of those rows.
+- **Chart:** the amount of every month, stacked by bucket, for the rows on screen.

@@ -90,8 +90,9 @@ function renderTable() {
   // bucket bar (not for Expenses / Subcontractor)
   if (['gl', 'wbs'].includes(ST.tab)) { $('bkbar').style.display = ''; $('bkbar').innerHTML = bkChips({ all: 1, cur: ST.xbk, fig: (bi) => fmtM(BK[bi].items.reduce((x, it) => x + it.td, 0)), extra: ST.tab === 'gl' ? `<button class="dvc ${ST.xbk === -2 ? 'on' : ''}" data-bkc="rev" style="--bc:#5F6B7A"><i style="background:#5F6B7A"></i>Revenue</button>` : '' }); }
   else if (ST.tab === 'pm') { $('bkbar').style.display = ''; $('bkbar').innerHTML = bkChips({ all: false, cur: ST.bk, fig: codedOf }); } else if (CODM) { $('bkbar').style.display = ''; $('bkbar').innerHTML = codTabs(ST.tab); } else $('bkbar').style.display = 'none';
-  $('bkbar').classList.toggle('tabbar', CODM);
-  if (CODM) {   // the coding desk: bucket · To code / Coded / All · Items / Lines · search
+  $('bkbar').classList.toggle('tabbar', CODM); $('bkbar').classList.toggle('xpchips', !!D.chips); if (D.chips) { $('bkbar').style.display = ''; $('bkbar').innerHTML = D.chips(S0); }
+  if (D.fiori) $('tools').innerHTML = D.fiori(S0);
+  else if (CODM) {   // the coding desk: bucket · To code / Coded / All · Items / Lines · search
     const ln = ST.tab !== 'cod', cm = D.cm || (() => { let t = 0; D.rows.forEach((r) => { if ((r.i !== undefined ? lineStatusOf(r.i) : statusOf(r.it)) !== 'Coded') t++; }); return { todo: t, coded: D.rows.length - t, all: D.rows.length }; })();
     const cur = ln ? (S0.st === 'Not coded' ? 'todo' : S0.st === 'Coded' ? 'coded' : 'all') : ST.next ? 'todo' : S0.st === 'Coded' ? 'coded' : 'all', nf = (n) => n.toLocaleString('en-US'), nNew = !ln && !ST.next ? D.rows.filter((r) => r.it && r.it.nw).length : 0;
     $('tools').innerHTML = `<b class="tt">${esc(ST.bk < 0 ? 'All buckets' : BK[ST.bk].id)}</b><span class="help ts">${ST.tab === 'lines' ? 'every CJI3 line' : ST.tab === 'xpm' ? 'every item, by month' : ST.next ? 'largest cost first' : ''}</span>
@@ -104,8 +105,9 @@ function renderTable() {
   let rows = D.rows.filter((r) => { if (D.status && S0.st !== 'All' && (S0.st === 'New' ? !r.it.nw : (r.stx !== undefined ? r.stx : r.i !== undefined ? lineStatusOf(r.i) : statusOf(r.it)) !== S0.st)) return false; for (const c of cols) if (!passF(c, r, S0.f[c.k])) return false;
     if (q && !D.tree) { const t = r.sq !== undefined ? r.sq : D.lines ? [S[L.desc[r.i]], itemCode(r.it), S[L.po[r.i]], S[L.sup[r.i]], S[L.doc[r.i]], S[L.wbs[r.i]]].join(' ') : r.e ? [itemCode(r.it), itemDesc(r.it), r.g, r.g2, r.e.ce].join(' ') : r.x ? [r.x.po, r.it.vals[1], r.it.vals[2], SUB.supn[r.x.po] || '', SUB.title[r.x.po] || ''].join(' ') : r.po ? [r.po, SUB.title[r.po] || '', SUB.supn[r.po] || ''].join(' ') : r.l ? r.l : r.ce ? [r.ce, r.x.name].join(' ') : r.it ? r.it.vals.join(' ') + ' ' + [r.it.pkg, r.it.ce, r.it.nameS || '', (META.grpNames || {})[r.it.vals[2]] || ''].join(' ') : ''; if (!t.toLowerCase().includes(q)) return false; }
     return true; });
-  if (S0.sort) { const c = cols.find((x) => x.k === S0.sort.k); if (c) rows = rows.slice().sort((a, b) => { const x = c.v(a), y = c.v(b); return (c.num ? x - y : String(x).localeCompare(String(y))) * S0.sort.d; }); }
-  R.rows = rows; fitCols(D);
+  { const keys = [S0.sort, S0.sort2].filter(Boolean).map((s) => ({ c: cols.find((x) => x.k === s.k), d: s.d })).filter((x) => x.c);   // sort, then by
+    if (keys.length) rows = rows.slice().sort((a, b) => { for (const { c, d } of keys) { const x = c.v(a), y = c.v(b), o = (c.num ? x - y : String(x).localeCompare(String(y))) * d; if (o) return o; } return 0; }); }
+  R.rows = rows; fitCols(D); { const ch = $('xpch'); if (ch && !D.after) ch.style.display = 'none'; if (!D.after) { $('wrap').style.display = ''; $('pg-tbl').classList.remove('xpmode'); } } if (D.after) D.after(rows);
   $('cg').innerHTML = (D.sel ? '<col style="width:34px">' : '') + cols.map((c) => `<col data-k="${esc(c.k)}" style="width:${c.w}px">`).join('');
   $('tbl').style.width = (D.sel ? 34 : 0) + cols.reduce((t, c) => t + c.w, 0) + 'px';   // exact width: keeps the fixed layout, so columns never move and frozen columns line up
   // frozen columns: left offsets
@@ -143,7 +145,7 @@ function renderTable() {
   $('bsel').textContent = (selLines().length ? selLines().length.toLocaleString('en-US') + ' lines selected · ' + fmt2(selLines().reduce((s0, i) => s0 + R.amt[i], 0)) : sel.size + ' selected');
   const a = $('all'); if (a) a.checked = rows.length > 0 && rows.every((r) => sel.has(selKey(r)));
 }
-const selKey = (r) => (r.i !== undefined ? 'L' + r.i : r.it ? r.it.bi + ':' + r.it.ii : '');
+const selKey = (r) => (r.xk ? r.xk : r.i !== undefined ? 'L' + r.i : r.it ? r.it.bi + ':' + r.it.ii : '');
 function rowHtml(D, r, gc) { const it = r.it, exc = r.i !== undefined ? !R.inc[r.i] : it && it.inc === 'No', k = it ? selKey(r) : '';
   return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}${D.rowCls ? ' ' + D.rowCls(r) : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`; }
 function renderVirtual() {   // only the rows on screen are drawn (fast with thousands of rows)
@@ -155,7 +157,7 @@ function renderVirtual() {   // only the rows on screen are drawn (fast with tho
 }
 let vt = 0, lastTop = -1; $('wrap').addEventListener('scroll', () => { if (vt || $('wrap').scrollTop === lastTop) return; lastTop = $('wrap').scrollTop; vt = requestAnimationFrame(() => { vt = 0; renderVirtual(); }); });
 // ---- events on the table pages
-const rowOf = (tr) => { const k = tr.dataset.k; if (!k) return null; if (k[0] === 'L') return { i: +k.slice(1), it: BK[L.b[+k.slice(1)]].items[L.it[+k.slice(1)]] }; const [bi, ii] = k.split(':').map(Number); return { it: BK[bi].items[ii] }; };
+const rowOf = (tr) => { const k = tr.dataset.k; if (!k) return null; if (k[0] === 'X') return (R.xpRow && R.xpRow.get(k)) || null; if (k[0] === 'L') return { i: +k.slice(1), it: BK[L.b[+k.slice(1)]].items[L.it[+k.slice(1)]] }; const [bi, ii] = k.split(':').map(Number); return { it: BK[bi].items[ii] }; };
 $('tb').addEventListener('change', (e) => { const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr);
   if (e.target.matches('input[data-f]')) { const f = e.target.dataset.f, v = e.target.value.trim();
     if (r.i !== undefined) { const tg = sel.has('L' + r.i) && selLines().length > 1 ? selLines() : [r.i]; change(tg.map((i) => lineCh(i, f, v)), (tg.length > 1 ? tg.length + ' lines ' : 'Line ') + FN[f] + ' = ' + (v || '(blank)')); }
@@ -197,8 +199,8 @@ $('tools').addEventListener('click', (e) => { const S0 = vs(), t = e.target;
 $('tools').addEventListener('input', (e) => { if (e.target.id === 'q') { vs().q = e.target.value; render(); const q = $('q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
 $('tb').addEventListener('click', (e) => { const a = e.target.closest('.gopo'); if (a) { e.preventDefault(); ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); render(); } });
 // bulk coding
-const selItems = () => [...sel].filter((x) => x[0] !== 'L').map((x) => x.split(':').map(Number));
-const selLines = () => [...sel].filter((x) => x[0] === 'L').map((x) => +x.slice(1));
+const selItems = () => [...sel].filter((x) => x[0] !== 'L' && x[0] !== 'X').map((x) => x.split(':').map(Number));
+const selLines = () => [...sel].flatMap((x) => (x[0] === 'L' ? [+x.slice(1)] : x[0] === 'X' ? xpLinesOf(x) : []));   // an Expenses row = the CJI3 lines of its item that carry its codes
 const lineCh = (i, f, v) => ({ t: 'line', i, f, v: v === BK[L.b[i]].items[L.it[i]][f] ? undefined : v });
 $('bApply').onclick = () => { if (selLines().length) { const ch = []; [['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selLines().forEach((i) => ch.push(lineCh(i, f, v))); }); if (!ch.length) return toast('Type at least one code in the bar'); return change(ch, 'Lines coded'); }
   const ch = []; [['div', 'bDIV'], ['pkg', 'bPKG'], ['mnl', 'bMNL'], ['ce', 'bCE']].forEach(([f, id]) => { const v = $(id).value.trim(); if (v) selItems().forEach(([bi, ii]) => { if (f !== 'div' || isSub(bi)) ch.push({ t: 'item', bi, ii, f, v }); }); }); if (!ch.length) return toast('Type at least one code in the bar'); change(ch, 'Bulk coding'); };

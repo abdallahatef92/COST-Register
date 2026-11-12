@@ -212,6 +212,23 @@ const r2 = (x) => Math.round(x * 100) / 100;
     const XL = require('xlsx'), wx = XL.readFile(fx), sx = wx.Sheets[wx.SheetNames[0]], ax = XL.utils.sheet_to_json(sx, { header: 1, defval: '' });
     ok('Export to Excel: one sheet, Expenses, every item', wx.SheetNames.length === 1 && wx.SheetNames[0] === 'Expenses' && ax.length >= nIt + 4, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
     { const h = ax[3], ci = h.lastIndexOf('Amount'), last = ax.slice(4).filter((r) => r[0] && r[0] !== 'TOTAL').reduce((t, r) => t + (+r[ci] || 0), 0); ok('…its To date amounts add up to the cost to date', Math.abs(last - await p8.evaluate(() => R.toDate)) <= 5, String(last)); }
+    // the analytical-table tools: group, sort, summary view, mass edit
+    await p8.click('[data-xa="group"]'); await p8.click('[data-xg="bk"]'); await p8.waitForTimeout(700);
+    ok('Group › Bucket: one group per bucket, with a group row and its total', await p8.$$eval('#tb tr.grp', (x) => x.length) >= 1 && await p8.evaluate(() => new Set(R.rows.map((r) => r.g)).size === new Set(R.rows.map((r) => r.e.b)).size && R.rows.length > 0) && /Grouped by/.test(await p8.$eval('#bkbar', (e) => e.textContent)));
+    await p8.click('#bkbar [data-xc="g"]'); await p8.waitForTimeout(500); ok('…and its chip takes the grouping away (flat again)', await p8.$$eval('#tb tr.grp', (x) => x.length) === 0);
+    await p8.click('[data-xa="sort"]'); await p8.selectOption('#xs1', 'tdAmount'); await p8.selectOption('#xd1', '-1'); await p8.click('[data-xso]'); await p8.waitForTimeout(700);
+    ok('Sort › To date amount, largest first', await p8.evaluate(() => { const v = R.rows.slice(0, 20).map((r) => R.D.cols.find((c) => c.k === 'tdAmount').v(r)); return v.every((x, i) => !i || x <= v[i - 1]); }));
+    await p8.selectOption('#xpView', 'sum'); await p8.waitForTimeout(900);
+    { const g = await p8.evaluate(() => { const c = R.D.cols, s = (k) => R.rows.reduce((t, r) => t + c.find((x) => x.k === k).v(r), 0); return { pc: s('xpcAmount'), tm: s('xtmAmount'), cu: s('xcuAmount'), td: R.toDate, thisM: R.thisM }; });
+      ok('Summary view: previous cumulative + this month = cumulative = cost to date', Math.abs(g.pc + g.tm - g.cu) < 1 && Math.abs(g.cu - g.td) < 2 && Math.abs(g.tm - g.thisM) < 2, JSON.stringify(g)); }
+    await p8.selectOption('#xpView', 'month'); await p8.waitForTimeout(700);
+    await p8.click('[data-xa="edit"]'); await p8.waitForTimeout(500); const xk = await p8.locator('#tb tr.it').nth(5).getAttribute('data-k'); await p8.locator('#tb tr.it').nth(5).locator('input.ck').click(); await p8.waitForTimeout(400);
+    const nl = await p8.evaluate((k) => { const r = R.xpRow.get(k), n = []; for (let i = 0; i < __D.N; i++) if (__D.L.b[i] === r.e.b && __D.L.it[i] === r.e.ii) n.push(i); return n.length; }, xk);
+    ok('Mass Edit: ticking a row selects its CJI3 lines', new RegExp(nl.toLocaleString('en-US') + ' lines? selected').test(await p8.$eval('#bsel', (e) => e.textContent)), await p8.$eval('#bsel', (e) => e.textContent) + ' · expected ' + nl);
+    await p8.fill('#bPKG', 'T41'); await p8.click('#bApply'); await p8.waitForTimeout(800); { const ml = await p8.$('#asLater'); if (ml) await ml.click(); }
+    ok('…Apply codes them (the row now shows T41)', await p8.evaluate(() => R.rows.some((r) => r.e.pkg === 'T41')));
+    eq('difference stays 0 after Mass Edit', await p8.evaluate(() => R.diff), 0);
+    await p8.click('[data-xa="edit"]'); await p8.waitForTimeout(400); await p8.click('#bkbar [data-xc="all"]').catch(() => {}); await p8.waitForTimeout(400);
     // a CJI3 line coded by hand: its own row in Expenses, with the line's code
     { const it0 = await p8.evaluate(() => { const b = __BK.findIndex((x) => x.id === 'Material'); const it = __BK[b].items.slice().sort((x, y) => Math.abs(y.td) - Math.abs(x.td))[0]; return { b, ii: it.ii, code: it.vals[3] }; });
       await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400); await p8.click(`#side [data-gt="cod"][data-bk="${it0.b}"]`); await p8.waitForTimeout(400); await p8.click('[data-cm="all"]:visible'); await p8.waitForTimeout(300);

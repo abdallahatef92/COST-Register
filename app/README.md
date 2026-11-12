@@ -26,6 +26,7 @@ Parts `01`–`23` sit inside one function, `boot(DATA)` (opened in `00`, closed 
 | 11-changes-log | Check › Changes |
 | 12-indirect-presets | SAP GL → indirect code |
 | 13-rules | Code › Rules |
+| 14-expenses-table | Expenses: toolbar, dialogs, chips, summary view, chart, mass edit |
 | 14-table-pages | what each table page shows: Coding, Lines, Per Month, GL, WBS, Adjust … |
 | 15-sub-overview | Subcontractor › Overview |
 | 16-sub-packages | Subcontractor › Packages |

@@ -310,3 +310,20 @@ header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUn
 .ctabs button:hover{background:#EEF2F8} .ctabs button.on{background:#fff;border-color:#D5DCE6;border-bottom:3px solid #FFD966} .ctabs button.on b{color:#14254A}
 .bkc{display:inline-flex;align-items:center;gap:6px;font-weight:600} .bkc i{width:10px;height:10px;border-radius:3px;flex:none}
 .t td.xph{background:#FDF1EA} .t td.xph b{color:#8A3500}
+/* ===== v21: Expenses as an analytical table ===== */
+#tools .xt{font-size:16px;font-weight:600;color:#14254A;white-space:nowrap;margin-right:4px} #tools .xt small{font-size:12px;font-weight:400;color:#6B7280}
+#tools .xsep{width:1px;height:22px;background:#E1E6EE;margin:0 4px} #tools .sp{flex:1 1 auto}
+#tools .xb{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid transparent;border-radius:7px;background:transparent;color:#0A6ED1;font-weight:600;cursor:pointer}
+#tools .xb:hover{background:#EBF5FE} #tools .xb.on{background:#EBF5FE;border-color:#BFDDF8} #tools .xb i{font-style:normal;background:#0A6ED1;color:#fff;border-radius:9px;font-size:10.5px;padding:0 6px;line-height:16px}
+#tools .xtc button{display:inline-flex;align-items:center;gap:6px} #tools .xv{display:inline-flex;align-items:center;gap:6px;color:#6B7280;font-size:12.5px} #tools .xv select{border:1px solid #89919A;border-radius:6px;padding:5px 8px;font:inherit;color:#32363A;max-width:220px}
+#bkbar.xpchips{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 14px;background:#F7F9FC;border-bottom:1px solid #E5E9F0;font-size:12.5px}
+.xc{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #BCC3CA;border-radius:13px;padding:2px 6px 2px 10px;color:#32363A} .xc b{font-weight:600;color:#4B5563} .xc i{font-style:normal;color:#89919A;cursor:pointer;padding:0 3px} .xc i:hover{color:#C00000} .xca{color:#0A6ED1;font-weight:600;cursor:pointer;margin-left:4px}
+.xpop{position:fixed;z-index:90;min-width:330px;background:#fff;border:1px solid #C9D3E3;border-radius:10px;box-shadow:0 14px 36px rgba(20,40,80,.22);padding:4px 0 0;font-size:13px;color:#1B2A41}
+.xpop h4{margin:0;padding:10px 14px 6px;font-size:14px;color:#14254A} .xpop .xr{display:flex;align-items:center;gap:8px;padding:6px 14px} .xpop .xr>span:first-child{min-width:62px;color:#6B7280} .xpop .xr.help{display:block;font-size:12px;color:#8A93A3}
+.xpop select{border:1px solid #89919A;border-radius:6px;padding:4px 6px;font:inherit;max-width:240px} .xpop .xf{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:1px solid #EEF1F5;margin-top:6px} .xpop .xf button{border:1px solid #C9D3E3;border-radius:6px;padding:5px 14px;background:#fff;color:#0A6ED1;font-weight:600} .xpop .xf .pri{background:#0A6ED1;border-color:#0A6ED1;color:#fff}
+.xpop .xg{display:block;width:calc(100% - 16px);margin:2px 8px;text-align:left;border:0;background:transparent;border-radius:6px;padding:7px 10px;font:inherit;color:#1B2A41} .xpop .xg:hover{background:#EBF5FE} .xpop .xg.on{background:#0A6ED1;color:#fff;font-weight:600}
+#pg-tbl .t th.mb,#pg-tbl .t td.mb{border-left:2px solid #C9D3E3} #pg-tbl .t thead tr.band th:not(.blank){border-left:2px solid #C9D3E3;border-bottom:1px solid #DDE3EC;background:#F4F6FA;color:#14254A;font-weight:600}
+#pg-tbl .t thead tr.band th.blank{background:#fff;border:0} #pg-tbl .t thead tr.band th.cutb{background:#FFF3C4;color:#5C4600} #pg-tbl .t thead tr.band th.cumb,#pg-tbl .t th.cumh{background:#EEF2F8} #pg-tbl .t td.cumc{background:#F4F7FB}
+.xup{color:#9B5B00} .xdn{color:#2F6B3A} #xpch{flex:1;overflow:auto;padding:14px} .xpc{background:#fff;border:1px solid #DDE3EC;border-radius:10px;padding:12px 16px} .xpl{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:6px;font-size:12.5px} .xpl span{display:inline-flex;align-items:center;gap:6px} .xpl i{width:10px;height:10px;border-radius:2px;display:inline-block}
+#pg-tbl.xpmode>*{order:3} #pg-tbl.xpmode>#tools{order:1} #pg-tbl.xpmode>#bkbar{order:2;border-bottom:1px solid #E5E9F0}
+#tools .xq{width:200px} #bkbar.xpchips .sp{flex:1} #bkbar.xpchips .seg button{padding:3px 10px;font-size:12.5px}
