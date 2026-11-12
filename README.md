@@ -224,3 +224,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v24
 - On a report page (Expenses 1–3, PO register) the top-bar button reads **Export this report** and exports only that report; on every other page it is the full register Excel as before (Shift+click on a report page also gives the full register).
+
+## v25 – Expenses › SAP CJI3 transactions
+- A 4th Expenses page: **SAP CJI3 transactions** – every CJI3 line of every bucket, flat, with its bucket and codes (PKG, MNL, Cost element can be corrected here, line by line).
+- Clicking an item on Summary, Expenses per month or Indirect per month opens this page with **only that item's lines that carry the row's codes** – the same amount as the row. The yellow chip says what is shown; ✕ shows every line again. The item window's "show lines" opens it too.
+- Fixed: the number of CJI3 lines per item (and the hand-coded count) showed 0 – a code comment had swallowed the counting.

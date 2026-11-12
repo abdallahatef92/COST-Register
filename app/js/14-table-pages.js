@@ -11,7 +11,7 @@ function slotsOf() {
       else qm.forEach((m) => out.push({ label: m.label, idx: [m.idx], kind: 'm', y, q })); } }
   out.push({ label: 'Pending', idx: [NP - 1], kind: 'pend' }); return out;
 }
-const VS = {}; const vsKey = () => ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ST.tab === 'xpm' ? 'x' + xpPage() + (ST.xsm || '') : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') + [...XB].join('.') : ST.bk + (ST.tab === 'lines' ? [...XB].join('.') : '') + (ST.tab === 'cod' && ST.next ? ':next' : '')); const vs = () => { const k = vsKey(); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
+const VS = {}; const vsKey = () => ST.tab + ':' + (ST.tab === 'uns' ? ST.unsView : ST.tab === 'sub' ? ST.sub : ST.tab === 'exp' ? '' : ST.tab === 'xpm' ? 'x' + xpPage() + (ST.xsm || '') + (xpPage() === 'lines' && ST.xpLF ? ':' + ST.xpLF.b + '.' + ST.xpLF.ii : '') : ['gl', 'wbs'].includes(ST.tab) ? ST.xbk + (ST.tab === 'gl' ? ST.glMode : '') + [...XB].join('.') : ST.bk + (ST.tab === 'lines' ? [...XB].join('.') : '') + (ST.tab === 'cod' && ST.next ? ':next' : '')); const vs = () => { const k = vsKey(); return VS[k] || (VS[k] = { q: '', st: 'All', f: {}, sort: null, fold: new Set(), exc: true }); };
 const sel = new Set(); let lastClick = null;
 const keyOf = (c, v) => (c.num ? (Math.abs(v) < 0.005 ? '-' : (Math.abs(v) < 1000 && v % 1 ? Number(v.toFixed(2)) : Math.round(v)).toLocaleString('en-US')) : String(v ?? ''));
 const keyNum = (k) => (k === '-' ? 0 : Number(String(k).replace(/,/g, '')));
@@ -66,8 +66,8 @@ function pageDef() {
     return { cols, rows, sel: true, status: true, cm, groups: b.tree, noGroupBtns: !!b.tree, extraTools: zoom, fam: fam ? famOf : null, gCells: b.tree ? (g, rs) => sumC(rs) : null, gSpanK: 'auto', fLabel: famLabel, rowCls: (r) => (r.it.uns && !r.it.td && r.it.exc ? 'uns exc' : ''), gLabel: (g, rs) => { const its = rs.map((r) => r.it), c = its.filter((x) => statusOf(x) === 'Coded'), td = its.reduce((s, x) => s + x.td, 0), tdc = c.reduce((s, x) => s + x.td, 0), un = its.filter((x) => x.uns), unx = un.reduce((s, x) => s + x.exc, 0); return `<span dir="auto" style="unicode-bidi:isolate">${esc(fam ? grpTail(g) : g)}</span><span class="gm">${its.length} items · coded ${c.length}/${its.length}${b.tree ? '' : ' · to date ' + fmt(td)}${un.length ? ` · not settled, left out ${fmt(unx)}` : ''}</span><span class="gb"><i style="width:${td ? (100 * tdc / td).toFixed(0) : 0}%"></i></span>`; },
       foot: (rs) => { const o = {}; o.td = fmt(rs.reduce((s, r) => s + r.it.td, 0)); o.tm = fmt(rs.reduce((s, r) => s + r.it.tm, 0)); o.pe = fmt(rs.reduce((s, r) => s + r.it.pe, 0)); return o; } };
   }
-  if (ST.tab === 'xpm' && xpPage() !== 'month') return xpReport();
-  if (ST.tab === 'pm' || ST.tab === 'xpm') {
+  if (ST.tab === 'xpm' && xpPage() !== 'month' && xpPage() !== 'lines') return xpReport();
+  if (ST.tab === 'pm' || (ST.tab === 'xpm' && xpPage() === 'month')) {
     const X = ST.tab === 'xpm', xb = X ? BK.map((x, k) => k) : null;
     const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? (X ? ST.xpMode || 'All' : ST.pmMode) : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = X ? slotsOf().filter((sl) => sl.idx.some((k) => k >= (ST.xpFrom ?? 0) && k <= (ST.xpTo ?? NP - 1))) : slotsOf(), lead = [], XS = X && ST.xpView === 'sum';
     if (X) { lead.push({ k: 'bk', l: 'Bucket', w: 140, fz: 1, v: (r) => BK[r.it.bi].id, h: (r) => `<td title="${esc(BK[r.it.bi].id)}"><span class="bkc"><i style="background:${bkColor(r.it.bi)}"></i>${esc(BK[r.it.bi].short)}</span></td>` });
@@ -101,10 +101,11 @@ function pageDef() {
       foot: footF, extraTools: zoomSeg(b) + ' ' + (b.qty ? `<span class="seg">${[['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate'], ['All', 'Qty · Rate · Amount']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '')
         + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>` };
   }
-  if (ST.tab === 'lines') {
+  if (ST.tab === 'lines' || ST.tab === 'xpm') {   // the xpm case is Expenses › SAP CJI3 transactions: every bucket
     // one bucket, or every line of every bucket (bi = -1); grouped by item; tick lines (header ☐ = all lines that pass the filters) and code them
-    const all = bi < 0, idx = [], gs = all ? '' : ST.grpSel[bi] || '', gOk = (i) => { if (!gs) return true; const g = BK[bi].items[L.it[i]].grp; return gs.startsWith('F:') ? famOf(g) === gs.slice(2) : g === gs; };   // the side list's group / family, as on Coding
-    for (let i = 0; i < N; i++) if ((all && (!XB.size || XB.has(L.b[i]))) || (L.b[i] === bi && gOk(i))) idx.push(i);
+    const XL = ST.tab === 'xpm', LF = XL ? ST.xpLF : null, all = XL || bi < 0, idx = [], gs = all ? '' : ST.grpSel[bi] || '', gOk = (i) => { if (!gs) return true; const g = BK[bi].items[L.it[i]].grp; return gs.startsWith('F:') ? famOf(g) === gs.slice(2) : g === gs; };   // the side list's group / family, as on Coding
+    const lfOk = (i) => { if (!LF) return true; if (L.b[i] !== LF.b || L.it[i] !== LF.ii) return false; if (!LF.codes) return true; if (!R.inc[i]) return false; const o = OVR[L.id[i]], t = BK[L.b[i]].items[L.it[i]]; return ['pkg', 'mnl', 'ce'].every((f) => (o && o[f] !== undefined ? o[f] : t[f]) === LF.codes[f]); };
+    for (let i = 0; i < N; i++) if (XL ? lfOk(i) : (all && (!XB.size || XB.has(L.b[i]))) || (L.b[i] === bi && gOk(i))) idx.push(i);
     const it = (i) => BK[L.b[i]].items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
     const anyQ = all ? true : b.qty, isMat = !all && bi === MATI, isS = !all && isSub(bi);
     const tx = (k, l, w, arr) => ({ k, l, w, v: (r) => S[arr[r.i]], h: (r) => `<td dir="auto" title="${esc(S[arr[r.i]])}">${esc(S[arr[r.i]])}</td>` });
@@ -137,7 +138,7 @@ function pageDef() {
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 64, v: (r) => S[L.ty[r.i]] + (isOB(r.i) ? ' · OB' : ''), h: (r) => `<td>${esc(S[L.ty[r.i]])}${isOB(r.i) ? ' ' + OBTAG : ''}</td>` },
       { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` });
     { const mv = ['wbs', 'hdr'].map((k) => cols.splice(cols.findIndex((c) => c.k === k), 1)[0]); cols.splice(cols.findIndex((c) => c.k === 'name') + 1, 0, ...mv); }   // WBS and document header text right after the name
-    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: '' })), lines: true, sel: true, status: true, groups: false, extraTools: '', rowCls: (r) => (isOB(r.i) ? 'obr' : ''),
+    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: '' })), lines: true, sel: true, status: true, groups: false, extraTools: XL ? xpTitle() + (LF ? ` <span class="xlf">Lines of <b dir="auto">${esc(LF.label)}</b> <a data-xlf="1" title="Show every CJI3 line again">✕</a></span>` : ' <span class="help">every CJI3 line of every bucket with its codes · open an item in Expenses to see only its lines</span>') + xpExport() : '', rowCls: (r) => (isOB(r.i) ? 'obr' : ''),
       foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)), ...(anyQ ? { qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)) } : {}) }) };
   }
   if (ST.tab === 'gl' || ST.tab === 'wbs') {

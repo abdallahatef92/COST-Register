@@ -1,7 +1,10 @@
 // =====================================================================================  Expenses: three report pages (the side list picks the page)
 // 1 Summary – cumulative, compact: bucket › item (or PKG › bucket › item)   2 Expenses per month   3 Indirect per month
 // every row is an item + the codes of its CJI3 lines, so a hand-coded line makes its own row (as in the Expenses sheet)
-const XPAGES = [['sum', 'Summary', 'cumulative · bucket › item or PKG › bucket › item'], ['month', 'Expenses per month', 'every item · qty · rate · amount · quarters, years'], ['ind', 'Indirect per month', 'indirect heads › cost elements, month by month']];
+const XPAGES = [['sum', 'Summary', 'cumulative · bucket › item or PKG › bucket › item'], ['month', 'Expenses per month', 'every item · qty · rate · amount · quarters, years'], ['ind', 'Indirect per month', 'indirect heads › cost elements, month by month'], ['lines', 'SAP CJI3 transactions', 'every CJI3 line, flat, with its bucket and codes']];
+// an Expenses row opens its CJI3 lines here: the item's lines that carry the row's codes (the same amount as the row)
+const xpGoLines = (it, e) => { ST.tab = 'xpm'; ST.xpPage = 'lines'; ST.xpLF = { b: it.bi, ii: it.ii, codes: e ? { pkg: e.pkg, mnl: e.mnl, ce: e.ce } : null, label: itemCode(it) + ' · ' + itemDesc(it) + (e ? ' · ' + [e.pkg, e.mnl, e.ce].filter(Boolean).join(' / ') : '') }; const S0 = vs(); S0.f = {}; S0.q = ''; S0.st = 'All'; sel.clear(); $('drawer').classList.remove('open'); render(); $('wrap').scrollTop = 0; };
+document.addEventListener('click', (e) => { const x = e.target.closest('[data-xlf]'); if (x) { ST.xpLF = null; render(); } });
 const xpPage = () => ST.xpPage || 'sum';
 // kept for the table code: an Expenses row is never a CJI3 line selection
 const xpLinesOf = () => [];

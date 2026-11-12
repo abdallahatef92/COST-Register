@@ -24,7 +24,8 @@ function compute() {
   for (let i = 0; i < N; i++) {
     const b = L.b[i], it = BK[b].items[L.it[i]], o = OVR[L.id[i]];
     const pkg = o && o.pkg !== undefined ? o.pkg : it.pkg, mnl = o && o.mnl !== undefined ? o.mnl : it.mnl, ce = o && o.ce !== undefined ? o.ce : it.ce, inc = o && o.inc !== undefined ? o.inc : it.inc;
-    const hand = !!o && ((pkg !== it.pkg && b !== SUBI) || mnl !== it.mnl || ce !== it.ce);   // a subcontractor package set per PO is not hand-coding R.hand[i] = hand ? 1 : 0; it.n++; if (hand) it.nh++;
+    const hand = !!o && ((pkg !== it.pkg && b !== SUBI) || mnl !== it.mnl || ce !== it.ce);   // a subcontractor package set per PO is not hand-coding
+    R.hand[i] = hand ? 1 : 0; it.n++; if (hand) it.nh++;
     if (UNS[i]) {   // not yet in CJI3 (ZINTC1 order charge 'o' / subcontractor certificate 'c'): counted only when its month is switched on (Unsettled tab) and not excluded
       const v = b === SUBI ? 'c' : 'o', k = L.m[i] > 0 ? String(L.m[i]) : 'a', on = keyOnK(v, k) && inc !== 'No'; let e = R.unsMk[v].get(k); if (!e) R.unsMk[v].set(k, (e = { all: 0, on: 0 })); e.all += amt[i]; if (on) e.on += amt[i];
       if (!it.ua) it.ua = new Map(); it.ua.set(k, (it.ua.get(k) || 0) + amt[i]);

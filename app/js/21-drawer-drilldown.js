@@ -35,7 +35,7 @@ function openDrawer(it) {
     <div class="blab">${PER.slice(0, NP - 1).map((p) => `<span>${p.replace('-', ' ')}</span>`).join('')}</div>
     <dl><dt>To date</dt><dd><b>${fmt(it.td)}</b></dd><dt>This month (${R.repLab})</dt><dd>${fmt(it.tm)}</dd><dt>Pending</dt><dd>${fmt(it.pe)}</dd>${b.qty ? `<dt>Qty to date</dt><dd>${fq(it.qtd)} ${esc(itemUnit(it))}</dd><dt>Rate</dt><dd>${Math.abs(it.qtd) > 1e-9 ? fmt2(it.td / it.qtd) : '-'}</dd>` : ''}
     <dt>Lines</dt><dd>${it.n} (${it.nh} hand-coded) · <a class="lk golines">show lines</a></dd><dt>Excluded</dt><dd>${fmt(it.exc)}</dd><dt>Codes</dt><dd>${codeF(it.bi).map((f) => FN[f] + ': <b>' + (esc(it[f]) || '–') + '</b>').join(' · ')}</dd><dt>Status</dt><dd>${statusOf(it)}</dd></dl>${pol}`;
-  $('dBody').querySelector('.golines').onclick = () => { ST.tab = 'lines'; ST.bk = it.bi; const S0 = vs(); S0.f = { item: { set: new Set([keyOf({}, itemCode(it))]) } }; $('drawer').classList.remove('open'); render(); };
+  $('dBody').querySelector('.golines').onclick = () => xpGoLines(it, null);   // Expenses › SAP CJI3 transactions, only this item's lines
   $('dBody').querySelectorAll('.gopo2').forEach((a) => { a.onclick = () => { ST.tab = 'sub'; ST.sub = 'po'; const S0 = vs(); S0.q = a.dataset.po; S0.fold.clear(); $('drawer').classList.remove('open'); render(); }; });
   $('drawer').classList.add('open');
 }

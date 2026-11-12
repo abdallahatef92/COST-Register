@@ -216,7 +216,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   { const { ctx: c8, p: p8 } = await open(APP, { acceptDownloads: true }); await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400);
     eq('Coding has two tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines']);
     await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.waitForTimeout(1200);
-    eq('the side list holds the three pages', await p8.$$eval('#side [data-xp]', (x) => x.map((e) => e.dataset.xp)), ['sum', 'month', 'ind']);
+    eq('the side list holds the four pages', await p8.$$eval('#side [data-xp]', (x) => x.map((e) => e.dataset.xp)), ['sum', 'month', 'ind', 'lines']);
     const nIt = await p8.evaluate(() => [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) >= 0.005)).length), td8 = await p8.evaluate(() => R.toDate), tm8 = await p8.evaluate(() => R.thisM);
     const ftot = (k) => p8.evaluate((k2) => { const c = R.D.cols.find((x) => x.k === k2); return R.rows.reduce((t, r) => t + c.v(r), 0); }, k);
     // 1 Summary
@@ -249,8 +249,11 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ok('3 Indirect per month: only PKG = Indirect, head › cost element › item', g.heads >= 2 && Math.abs(g.ind - g.tot) < 1 && await p8.evaluate(() => !!R.D.fam && document.querySelectorAll('#tb tr.grp.fam').length >= 2), JSON.stringify(g)); }
     { const a = await p8.evaluate(() => { const c = R.D.cols.find((x) => x.k === 'am'), MO = []; for (let k = 1; k <= R.rep; k++) MO.push(k); const r = R.rows.find((x) => Math.abs(x.a) > 1000); return [c.v(r), MO.reduce((t, k) => t + r.e.p[k], 0) / MO.length]; }); ok('…Avg per month = every month to the cut / the number of months', Math.abs(a[0] - a[1]) < 0.01, a.join(' vs ')); }
     await p8.evaluate(() => { const g = document.querySelector('#tb tr.grp.sub'); if (g) g.click(); }); await p8.waitForTimeout(500);
-    ok('…+ on a cost element shows its items; an item opens its CJI3 lines', await p8.$$eval('#tb tr.it a.open', (x) => x.length > 0) && (await p8.click('#tb tr.it a.open'), await p8.waitForTimeout(500), await p8.evaluate(() => document.getElementById('drawer').classList.contains('show') || getComputedStyle(document.getElementById('drawer')).display !== 'none')));
-    await p8.evaluate(() => { const d = document.getElementById('dClose'); if (d) d.click(); }); await p8.waitForTimeout(300);
+    { const want = await p8.evaluate(() => { const k = document.querySelector('#tb tr.it').dataset.k, r = R.rows.find((x) => x.it.bi + ':' + x.it.ii === k); return r.e.p.reduce((t, v) => t + v, 0); });   // every period, pending too
+      ok('…+ on a cost element shows its items', await p8.$$eval('#tb tr.it a.open', (x) => x.length > 0)); await p8.click('#tb tr.it a.open'); await p8.waitForTimeout(800);
+      const got = await p8.evaluate(() => ({ page: __ST.xpPage, sum: R.rows.reduce((t, r) => t + (R.inc[r.i] ? R.amt[r.i] : 0), 0), chip: !!document.querySelector('#tools .xlf') }));
+      ok('an item opens 4 SAP CJI3 transactions with only its lines – the same amount', got.page === 'lines' && got.chip && Math.abs(got.sum - want) < 0.01, JSON.stringify(got) + ' vs ' + want);
+      await p8.click('[data-xlf]'); await p8.waitForTimeout(800); ok('…✕ shows every CJI3 line again (bucket and codes on each)', await p8.evaluate(() => R.rows.length === __D.N && R.D.cols.some((c) => c.k === 'bk') && R.D.cols.some((c) => c.k === 'pkg'))); await p8.click('#side [data-xp="ind"]'); await p8.waitForTimeout(600); }
     { const [di] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fi = path.join(OUT, 'indirect.xlsx'); await di.saveAs(fi); const ai = XL.utils.sheet_to_json(XL.readFile(fi).Sheets[XL.readFile(fi).SheetNames[0]], { header: 1, defval: '' }), n = await p8.evaluate(() => R.rows.length), ng = await p8.evaluate(() => new Set(R.rows.map((r) => r.g)).size + new Set(R.rows.map((r) => R.D.fam(r.g))).size);
       ok('Indirect export: heads and cost elements with their items below', ai.length === n + ng + 5 && ai.some((x) => x[0] === 'Personnel and Manning' || /Personnel/.test(x[0])), ai.length + ' rows · expected ' + (n + ng + 5)); }
     ok('…with an "Avg last 3 months" column', await p8.$$eval('#th th', (x) => x.some((e) => /Avg last 3 months/.test(e.textContent))));

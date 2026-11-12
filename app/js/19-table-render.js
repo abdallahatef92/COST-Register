@@ -169,7 +169,7 @@ $('tb').addEventListener('click', (e) => { const nt = e.target.closest('[data-no
   const tr = e.target.closest('tr.it'); if (!tr) return; const r = rowOf(tr); if (!r) return;
   if (e.target.matches('.incb')) { if (r.i !== undefined) { const cur = (OVR[L.id[r.i]] || {}).inc ?? r.it.inc, nv = cur === 'No' ? 'Yes' : 'No'; change([{ t: 'line', i: r.i, f: 'inc', v: nv === r.it.inc ? undefined : nv }], 'Line include'); } else change([{ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'inc', v: r.it.inc === 'No' ? 'Yes' : 'No' }], 'Include'); return; }
   if (e.target.matches('.rst')) { change(['pkg', 'mnl', 'ce', 'inc'].map((f) => ({ t: 'line', i: r.i, f, v: undefined })), 'Line back to item codes'); return; }
-  if (e.target.matches('a.open')) { e.preventDefault(); openDrawer(r.it); return; }
+  if (e.target.matches('a.open')) { e.preventDefault(); if (ST.tab === 'xpm' && xpPage() !== 'lines') xpGoLines(r.it, r.e && r.e.pkg !== undefined ? r.e : null); else openDrawer(r.it); return; }
   if (e.target.matches('.ck') && e.shiftKey && lastClick) { const ks = R.rows.map(selKey), a = ks.indexOf(lastClick), b = ks.indexOf(tr.dataset.k); ks.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((k) => sel.add(k)); render(); }
   if (e.target.matches('.ck')) lastClick = tr.dataset.k; });
 $('tb').addEventListener('keydown', (e) => { if (!e.target.matches('input[data-f]')) return;
