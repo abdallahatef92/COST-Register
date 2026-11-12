@@ -1,7 +1,7 @@
 // =====================================================================================  the engine: everything from the lines, the codes and the cut date (no formulas)
 let OB0 = 0; for (let i = 0; i < N; i++) if (L.d[i] && (!OB0 || L.d[i] < OB0)) OB0 = L.d[i];
 const isOB = (i) => S[L.ty[i]] === 'UE' && (/^OB\b/i.test(S[L.hdr[i]] || '') || L.d[i] === OB0), OBTAG = '<span class="obt" title="Opening balance (UE) – stays in this bucket until it is reallocated in SAP">OB</span>';
-const R = {}; globalThis.R = R; globalThis.__BK = BK; globalThis.__D = { L, S, N };   // results of compute() (also readable from the browser console)
+const R = {}; globalThis.R = R; globalThis.__ST = ST; globalThis.__BK = BK; globalThis.__D = { L, S, N };   // results of compute() (also readable from the browser console)
 const SRC = L.src.map((x) => S[x]);
 function compute() {
   const cutI = +ST.cut.replace(/-/g, ''), fromI = ST.vatFrom ? +ST.vatFrom.replace(/-/g, '') : 0, rep = PER.indexOf(monLab(ST.cut));

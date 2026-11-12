@@ -214,3 +214,10 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - **2 Expenses per month:** every item with PKG, MNL, Cost element; Qty · Rate · Amount or Amount; months, quarters or years.
 - **3 Indirect per month:** PKG = Indirect only, by indirect head › cost element, amount per month, To date and the average of the last 3 months.
 - Every page takes the codes from the CJI3 lines: a hand-coded line is its own row (✎). Each page has its own Export.
+
+## v23 – Subcontractor spread over the other pages; Expenses detail
+- The Subcontractor section is gone from the navigation: **POs** is a tab in Coding (next to Items and SAP transaction lines, for the Subcontractor bucket); **Rates & coding** (the packages steps) is under Dashboard; **PO register** is in Reports with Export to Excel; **Bridge to CJI3** is in Check; the Overview is removed.
+- Expenses: a **Material group / Type of works** column. **Expenses per month** groups like Summary (bucket › item or PKG › bucket › item, + / −); its Excel stays a flat list.
+- **Indirect per month:** as before, plus **Avg per month** (all months to the cut) and a + on each cost element to show its items; an item opens its CJI3 lines.
+- Excel of Summary and Indirect: the heads with their items below (outline levels), header frozen.
+- The column filter no longer opens under the side navigation.

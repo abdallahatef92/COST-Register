@@ -71,7 +71,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
   eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
-  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'xp', 'sub', 'adj', 'chk', 'rep']);
+  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'xp', 'adj', 'chk', 'rep']);
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
@@ -221,7 +221,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     const ftot = (k) => p8.evaluate((k2) => { const c = R.D.cols.find((x) => x.k === k2); return R.rows.reduce((t, r) => t + c.v(r), 0); }, k);
     // 1 Summary
     ok('1 Summary opens first, compact (every bucket folded)', await p8.evaluate(() => /Summary/.test(document.querySelector('#tools .xpt').textContent) && document.querySelectorAll('#tb tr.it').length === 0 && document.querySelectorAll('#tb tr.grp').length >= 5));
-    ok('…Item, PKG, MNL, Cost element, Qty, then the amounts', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()); return t[0] === 'Item' && t[1] === 'PKG' && t[2] === 'MNL' && t[3] === 'Cost element' && /^Qty/.test(t[4]) && t.some((v) => /^Previous cumulative/.test(v)) && t.some((v) => /^This month/.test(v)) && t.some((v) => /^Cumulative/.test(v)); }));
+    ok('…Item, PKG, MNL, Cost element, Qty, then the amounts', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()); return t[0] === 'Item' && t[1] === 'PKG' && t[2] === 'MNL' && t[3] === 'Cost element' && /Material group/.test(t[4]) && /^Qty/.test(t[5]) && t.some((v) => /^Previous cumulative/.test(v)) && t.some((v) => /^This month/.test(v)) && t.some((v) => /^Cumulative/.test(v)); }));
     { const pc = await ftot('pc'), tm = await ftot('tm'), cu = await ftot('cu'); ok('previous cumulative + this month = cumulative = cost to date', Math.abs(pc + tm - cu) < 1 && Math.abs(cu - td8) < 2 && Math.abs(tm - tm8) < 2, [pc, tm, cu, td8, tm8].join(' · ')); }
     eq('every item + code combination is a row', await p8.evaluate(() => R.rows.length), nIt, 0);
     await p8.click('#bOpen'); await p8.waitForTimeout(600); ok('Expand all opens the items', await p8.$$eval('#tb tr.it', (x) => x.length > 5));
@@ -229,6 +229,8 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await p8.click('[data-xsm=""]'); await p8.waitForTimeout(500);
     // 2 Expenses per month
     await p8.click('#side [data-xp="month"]'); await p8.waitForTimeout(1000);
+    ok('2 Expenses per month: grouped by bucket like Summary (+ / −), folded at first', await p8.evaluate(() => document.querySelectorAll('#tb tr.grp').length >= 5 && document.querySelectorAll('#tb tr.it').length === 0));
+    ok('…a Material group / Type of works column', await p8.$$eval('#th th', (x) => x.some((e) => /Material group \/ Type of works/.test(e.textContent))) && await p8.evaluate(() => { const c = R.D.cols.find((x) => x.k === 'gty'); return R.rows.some((r) => r.it.bi === __BK.findIndex((b) => b.id === 'Material') && /^M/.test(c.v(r))) && R.rows.some((r) => r.it.bi === __BK.findIndex((b) => b.id === 'Subcontractor') && c.v(r)); }));
     ok('2 Expenses per month: opens on Qty · Rate · Amount', await p8.$eval('[data-pm="All"]', (b) => b.classList.contains('on')));
     ok('…every item + code of every bucket', await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nIt), await p8.$eval('#cnt', (e) => e.textContent));
     ok('…bucket, PKG, MNL, Cost element, item, then the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.includes('Qty') && t.includes('Rate'); }));
@@ -238,12 +240,18 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await p8.click('[data-pv="Months"]'); await p8.waitForTimeout(600);
     const [dx] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fx = path.join(OUT, 'expenses.xlsx'); await dx.saveAs(fx);
     const XL = require('xlsx'), wx = XL.readFile(fx), ax = XL.utils.sheet_to_json(wx.Sheets[wx.SheetNames[0]], { header: 1, defval: '' });
-    ok('Export: one sheet with every row', wx.SheetNames.length === 1 && ax.length >= nIt + 4, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
+    ok('Export: one sheet, a flat list with every row (no group rows)', wx.SheetNames.length === 1 && ax.length === nIt + 5, wx.SheetNames.join(',') + ' · ' + ax.length + ' rows');
     { const h = ax[3], ci = h.lastIndexOf('Amount'), last = ax.slice(4).filter((r) => r[0] && r[0] !== 'TOTAL').reduce((t, r) => t + (+r[ci] || 0), 0); ok('…its To date amounts add up to the cost to date', Math.abs(last - td8) <= 5, String(last)); }
     // 3 Indirect per month
     await p8.click('#side [data-xp="ind"]'); await p8.waitForTimeout(1000);
     { const g = await p8.evaluate(() => { let ind = 0; for (const e of R.exp.values()) if (String(e.pkg).toLowerCase() === 'indirect') for (let k = 0; k < e.p.length - 1; k++) ind += e.p[k]; const c = R.D.cols.find((x) => x.k === 'td'); return { ind, tot: R.rows.reduce((t, r) => t + c.v(r), 0), heads: new Set(R.rows.map((r) => r.g)).size }; });
-      ok('3 Indirect per month: only PKG = Indirect, by indirect head', g.heads >= 2 && Math.abs(g.ind - g.tot) < 1, JSON.stringify(g)); }
+      ok('3 Indirect per month: only PKG = Indirect, head › cost element › item', g.heads >= 2 && Math.abs(g.ind - g.tot) < 1 && await p8.evaluate(() => !!R.D.fam && document.querySelectorAll('#tb tr.grp.fam').length >= 2), JSON.stringify(g)); }
+    { const a = await p8.evaluate(() => { const c = R.D.cols.find((x) => x.k === 'am'), MO = []; for (let k = 1; k <= R.rep; k++) MO.push(k); const r = R.rows.find((x) => Math.abs(x.a) > 1000); return [c.v(r), MO.reduce((t, k) => t + r.e.p[k], 0) / MO.length]; }); ok('…Avg per month = every month to the cut / the number of months', Math.abs(a[0] - a[1]) < 0.01, a.join(' vs ')); }
+    await p8.evaluate(() => { const g = document.querySelector('#tb tr.grp.sub'); if (g) g.click(); }); await p8.waitForTimeout(500);
+    ok('…+ on a cost element shows its items; an item opens its CJI3 lines', await p8.$$eval('#tb tr.it a.open', (x) => x.length > 0) && (await p8.click('#tb tr.it a.open'), await p8.waitForTimeout(500), await p8.evaluate(() => document.getElementById('drawer').classList.contains('show') || getComputedStyle(document.getElementById('drawer')).display !== 'none')));
+    await p8.evaluate(() => { const d = document.getElementById('dClose'); if (d) d.click(); }); await p8.waitForTimeout(300);
+    { const [di] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fi = path.join(OUT, 'indirect.xlsx'); await di.saveAs(fi); const ai = XL.utils.sheet_to_json(XL.readFile(fi).Sheets[XL.readFile(fi).SheetNames[0]], { header: 1, defval: '' }), n = await p8.evaluate(() => R.rows.length), ng = await p8.evaluate(() => new Set(R.rows.map((r) => r.g)).size + new Set(R.rows.map((r) => R.D.fam(r.g))).size);
+      ok('Indirect export: heads and cost elements with their items below', ai.length === n + ng + 5 && ai.some((x) => x[0] === 'Personnel and Manning' || /Personnel/.test(x[0])), ai.length + ' rows · expected ' + (n + ng + 5)); }
     ok('…with an "Avg last 3 months" column', await p8.$$eval('#th th', (x) => x.some((e) => /Avg last 3 months/.test(e.textContent))));
     { const a = await p8.evaluate(() => { const r = R.rows.find((x) => Math.abs(R.D.cols.find((c) => c.k === 'td').v(x)) > 1000), c = R.D.cols.find((x) => x.k === 'a3'), k = R.rep; return [c.v(r), (r.e.p[k] + r.e.p[k - 1] + r.e.p[k - 2]) / 3]; }); ok('…= the last three months / 3', Math.abs(a[0] - a[1]) < 0.01, a.join(' vs ')); }
     // a CJI3 line coded by hand: its own row in Summary and per month, with the line's code
@@ -253,11 +261,20 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await p8.click('.ctabs [data-cv="lines"]'); await p8.waitForTimeout(800); await p8.fill('#q', it0.code); await p8.waitForTimeout(600); const lp = await p8.$('#tb tr.it input[data-f="pkg"]'); await lp.fill('T32'); await lp.press('Tab'); await p8.waitForTimeout(500);
       await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.click('#side [data-xp="sum"]'); await p8.waitForTimeout(800);
       eq('Summary respects a hand-coded line: its own row with the line\'s code', await p8.evaluate((x) => R.rows.filter((r) => r.e.b === x.b && r.e.ii === x.ii).map((r) => r.e.pkg).sort(), it0), ['T31', 'T32']);
-      await p8.click('#side [data-xp="month"]'); await p8.waitForTimeout(800); await p8.fill('#q', it0.code); await p8.waitForTimeout(700);
+      await p8.click('#side [data-xp="month"]'); await p8.waitForTimeout(800); await p8.fill('#q', it0.code); await p8.waitForTimeout(700); await p8.click('#bOpen'); await p8.waitForTimeout(500);
       const pk = await p8.$$eval('#tb tr.it', (x) => x.map((tr) => tr.cells[1].textContent.replace(/[✎\s]/g, '')).sort());
       eq('Expenses per month: the same two rows', pk, ['T31', 'T32']);
       const t2 = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); }), w2 = await p8.evaluate((x) => __BK[x.b].items[x.ii].td, it0);
       ok('…and the two rows add up to the item', Math.abs(t2 - w2) <= 1, t2 + ' vs ' + w2); }
+    await p8.$eval('#tabs [data-s="xp"]', (b) => b.click()); await p8.click('#side [data-xp="month"]'); await p8.waitForTimeout(800); await p8.evaluate(() => document.querySelector('#th .fb').click()); await p8.waitForTimeout(300);
+    ok('the column filter opens clear of the side navigation', await p8.evaluate(() => document.getElementById('pop').getBoundingClientRect().left >= document.getElementById('nav').getBoundingClientRect().right)); await p8.mouse.click(900, 880);
+    { const si = await p8.evaluate(() => __BK.findIndex((x) => x.id === 'Subcontractor')); await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(300); await p8.click(`#side .rh[data-bk="${si}"]`); await p8.waitForTimeout(400);
+      await p8.click('.ctabs [data-cv="subpo"]'); await p8.waitForTimeout(800); ok('Coding › Subcontractor has a POs tab (the PO view)', await p8.evaluate(() => __ST.tab === 'sub' && __ST.sub === 'po' && document.querySelectorAll('#tb tr.grp').length > 0 && document.querySelector('#tabs button.on').dataset.s === 'cod'));
+      await p8.$eval('#tabs [data-s="dash"]', (b) => b.click()); await p8.click('#side [data-sv="rate"]'); await p8.waitForTimeout(800); ok('Dashboard › Subcontractor rates & coding', await p8.evaluate(() => __ST.sub === 'pkg' && __ST.pkView === 'rate' && document.getElementById('pg-pkg').classList.contains('on')));
+      await p8.$eval('#tabs [data-s="chk"]', (b) => b.click()); await p8.click('#side [data-sv="bridge"]'); await p8.waitForTimeout(600); ok('Check › Bridge to CJI3', await p8.evaluate(() => __ST.sub === 'bridge' && document.querySelector('#tabs button.on').dataset.s === 'chk'));
+      await p8.$eval('#tabs [data-s="rep"]', (b) => b.click()); await p8.click('#side [data-sv="reg"]'); await p8.waitForTimeout(800); ok('Reports › PO register', await p8.evaluate(() => __ST.sub === 'reg' && document.querySelectorAll('#tb tr.it').length > 5));
+      const [dr] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const frg = path.join(OUT, 'po_register.xlsx'); await dr.saveAs(frg); const wr = XL.readFile(frg);
+      ok('…and it exports to Excel', wr.SheetNames[0] === 'PO register' && XL.utils.sheet_to_json(wr.Sheets['PO register'], { header: 1 }).length > 10); }
     eq('difference stays 0', await p8.evaluate(() => R.diff), 0); await c8.close(); }
   }
 

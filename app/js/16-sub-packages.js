@@ -58,7 +58,7 @@ function renderPkg() {
   if (view === 'alloc' && ST.pkSel === undefined) ST.pkSel = '';
   const sel = ST.pkSel; R.pkList = list; R.pkPos = D0.pos;
   const col = (c) => { const i = list.findIndex((x) => x.c === c); return i < 0 ? '#9ca3af' : PKC[i % PKC.length]; }, tot = (a) => a.reduce((s1, p) => s1 + p.amt, 0);
-  const steps = `<div class="pkst">${[['alloc', 'Packages', 'put each PO in a package'], ['rate', 'Rates & coding', 'one package at a time'], ['review', 'Review', 'check, then export']].map(([k, l, d], i) => `<button data-pkv="${k}" class="${view === k ? 'on' : ''}"><i>${i + 1}</i><span><b>${l}</b><small>${d}</small></span></button>`).join('<span class="pkar">›</span>')}<span style="flex:1"></span><span class="help">More:</span>${[['ov', 'Overview'], ['po', 'POs'], ['reg', 'PO register'], ['bridge', 'Bridge to CJI3']].map(([k, l]) => `<a class="lk" data-sv="${k}">${l}</a>`).join('<span class="help">·</span>')}</div>`;
+  const steps = `<div class="pkst">${[['alloc', 'Packages', 'put each PO in a package'], ['rate', 'Rates & coding', 'one package at a time'], ['review', 'Review', 'check, then export']].map(([k, l, d], i) => `<button data-pkv="${k}" class="${view === k ? 'on' : ''}"><i>${i + 1}</i><span><b>${l}</b><small>${d}</small></span></button>`).join('<span class="pkar">›</span>')}<span style="flex:1"></span><span class="help">More:</span>${[['po', 'POs'], ['reg', 'PO register'], ['bridge', 'Bridge to CJI3']].map(([k, l]) => `<a class="lk" data-sv="${k}">${l}</a>`).join('<span class="help">·</span>')}</div>`;
   let main = '';
   if (view === 'alloc') {
     const tk = ST.pkTick || (ST.pkTick = new Set()); for (const k of [...tk]) if (!D0.pos.some((p) => p.po === k)) tk.delete(k);

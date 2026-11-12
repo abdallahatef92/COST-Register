@@ -84,7 +84,7 @@ table.s{border-collapse:collapse;width:100%} .s th{background:var(--navy);color:
 .s td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:right;font-variant-numeric:tabular-nums} .s td:first-child{text-align:left} .s tr.tt td{background:#DDEBF7;font-weight:700} .s tr.cm td{background:#FFF8E1;font-weight:600}
 .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;margin-top:6px} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
 .okc{background:var(--ok);color:var(--okT);font-weight:700;border-radius:4px;padding:1px 8px} .chk{background:#FFC7CE;color:#9C0006;font-weight:700;border-radius:4px;padding:1px 8px} .inf{color:var(--mut)}
-#pop{position:fixed;z-index:30;background:#fff;border:1px solid #c9d0db;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:270px;display:none;padding:8px;font-size:12px}
+#pop{position:fixed;z-index:95;background:#fff;border:1px solid #c9d0db;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:270px;display:none;padding:8px;font-size:12px}
 #pop.show{display:block} #cpop{position:fixed;z-index:30;background:#fff;border:1px solid #c9d0db;border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);width:230px;display:none;padding:8px;font-size:12.5px;max-height:70vh;overflow:auto} #cpop.show{display:block} #cpop label{display:flex;gap:7px;padding:3px 4px;border-radius:4px;cursor:pointer;white-space:nowrap} #cpop label:hover{background:#F5F7FA} #cpop .h{font-size:11px;color:var(--mut);padding:2px 4px 6px} #pop .row{display:flex;gap:6px;margin-bottom:6px} #pop .row button{flex:1} #pop input[type=search]{width:100%;padding:4px 7px;border:1px solid var(--line);border-radius:5px}
 #pop .vals{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:5px;padding:4px 6px;margin:6px 0} #pop .vals label{display:flex;gap:6px;padding:2px 0;white-space:nowrap;overflow:hidden} #pop .vals .cn{color:var(--mut);margin-left:auto}
 #drawer{position:fixed;right:0;top:0;bottom:0;width:460px;background:#fff;box-shadow:-6px 0 24px rgba(0,0,0,.15);transform:translateX(105%);transition:transform .2s;z-index:10;display:flex;flex-direction:column}
@@ -328,3 +328,9 @@ header.top #bUndo .bl{display:inline} @media (max-width:1250px){ header.top #bUn
 #pg-tbl.xpmode>*{order:3} #pg-tbl.xpmode>#tools{order:1} #pg-tbl.xpmode>#bkbar{order:2;border-bottom:1px solid #E5E9F0}
 #tools .xq{width:200px} #bkbar.xpchips .sp{flex:1} #bkbar.xpchips .seg button{padding:3px 10px;font-size:12.5px}
 #tools .xpt{font-size:16px;color:#14254A;margin-right:4px;white-space:nowrap}
+#pg-tbl .t tr.grp>td:first-child{overflow:hidden;max-width:0} #pg-tbl .t tr.grp>td:first-child .gl{display:flex;overflow:hidden;white-space:nowrap} #pg-tbl .t tr.grp>td:first-child .gl>*{flex:none} #pg-tbl .t tr.grp>td:first-child .gl .help{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#pg-tbl .t td.xi{padding-left:46px}
+/* Indirect per month: the cost element rows look like plain rows (as v22); only their + / − opens the items */
+#pg-tbl.xpind .t tr.grp.sub td{background:#fff;border-top:0;border-bottom:1px solid #EEF1F5;font-weight:400;color:#1B2A41} #pg-tbl.xpind .t tr.grp.sub td.num{font-weight:500} #pg-tbl.xpind .t tr.grp.sub td.cumc{background:#F4F7FB;font-weight:700}
+#pg-tbl.xpind .t tr.grp.sub td .gl{padding-left:2px} #pg-tbl.xpind .t tr.grp.sub .tg{color:#9AA5B5;font-weight:400} #pg-tbl.xpind .t tr.grp.sub b{color:#1B2A41}
+#pg-tbl.xpind .t tr.it td{color:#4B5563;font-size:12px} #pg-tbl.xpind .t td.xi{padding-left:34px}

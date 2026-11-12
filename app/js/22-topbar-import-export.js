@@ -146,21 +146,33 @@ $('bExport').onclick = async () => {
   const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Cost_Register_${META.project}_${R.repLab}_${stamp()}.xlsx`); toast('Excel report exported (your codes are in it)'); setDirty(0); renderStatus();
 };
 
-// Expenses › Export to Excel: only this report, the rows and columns as on screen (filters, search, Qty · Rate · Amount, months / quarters / years)
-document.addEventListener('click', async (e) => { if (!e.target.closest('#bXpX') || ST.tab !== 'xpm') return; const D = R.D, rows = R.rows || []; if (!D) return;
-  const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet((XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1].slice(0, 31), { views: [{ state: 'frozen', xSplit: 0, ySplit: 4 }] }), A2 = 'Arial', NAV = 'FF1F3864', cols = D.cols;
-  const cut = new Date(ST.cut + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }), xb = ST.xpb ?? -1;
-  ws.getCell(1, 1).value = `${(XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1]} – ${META.project}`; ws.getCell(1, 1).font = { name: A2, size: 14, bold: true, color: { argb: NAV } };
-  ws.getCell(2, 1).value = `Cut date ${cut} · ${rows.length.toLocaleString('en-US')} items · CJI3 is the source`; ws.getCell(2, 1).font = { name: A2, size: 10, color: { argb: 'FF595959' } };
+// Export to Excel of a report page (Expenses 1–3, PO register): the rows and columns as on screen.
+// A grouped page keeps its heads, each with its items below (folded or not); Expenses per month stays a flat list.
+document.addEventListener('click', async (e) => { if (!e.target.closest('#bXpX') || !(ST.tab === 'xpm' || ST.tab === 'sub')) return; const D = R.D, rows = R.rows || []; if (!D) return;
+  const name = ST.tab === 'sub' ? 'PO register' : (XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1], tree = !!D.groups && !(ST.tab === 'xpm' && xpPage() === 'month');
+  const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet(name.slice(0, 31), { views: [{ state: 'frozen', xSplit: 1, ySplit: 4 }], properties: { outlineProperties: { summaryBelow: false } } }), A2 = 'Arial', NAV = 'FF1F3864', cols = D.cols;
+  const cut = new Date(ST.cut + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  ws.getCell(1, 1).value = `${name} – ${META.project}`; ws.getCell(1, 1).font = { name: A2, size: 14, bold: true, color: { argb: NAV } };
+  ws.getCell(2, 1).value = `Cut date ${cut} · ${rows.length.toLocaleString('en-US')} rows · CJI3 is the source`; ws.getCell(2, 1).font = { name: A2, size: 10, color: { argb: 'FF595959' } };
   const hdr = (r, c, v, fill) => { const x = ws.getCell(r, c); x.value = v; x.font = { name: A2, bold: true, color: { argb: 'FF1B2A41' } }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } }; x.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; x.border = { bottom: { style: 'thin', color: { argb: 'FF9AA5B5' } } }; };
   cols.forEach((c, j) => { const m = c.slot !== undefined; hdr(3, j + 1, m ? c.pl : '', m ? (c.th && /cut/.test(c.th) ? 'FFFBF0D4' : 'FFE8EDF4') : 'FFF1F4F8'); hdr(4, j + 1, m && c.sub && c.l !== c.pl ? c.sub : c.l, c.code ? 'FFFBF0D4' : m && c.th && /cut/.test(c.th) ? 'FFFBF0D4' : 'FFF1F4F8');
-    ws.getColumn(j + 1).width = c.slot !== undefined ? (c.sub === 'Rate' ? 11 : 14) : c.k === 'desc' ? 40 : c.k === 'bk' ? 22 : c.code ? 13 : 16; });
-  // the same month over its Qty / Rate / Amount: one merged header
+    ws.getColumn(j + 1).width = j === 0 && tree ? 46 : c.slot !== undefined ? (c.sub === 'Rate' ? 11 : 14) : c.k === 'desc' || c.k === 'item' || c.k === 'title' ? 40 : c.k === 'bk' ? 22 : c.code ? 13 : 16; });
   for (let j = 0; j < cols.length;) { const c = cols[j]; let k = j; while (k + 1 < cols.length && cols[k + 1].slot !== undefined && cols[k + 1].slot === c.slot && c.slot !== undefined) k++; if (k > j) ws.mergeCells(3, j + 1, 3, k + 1); j = k + 1; }
   const nf = (c) => (c.k === 'sh' ? '0.0%' : c.sub === 'Qty' ? '#,##0.###;[Red]-#,##0.###;"-"' : c.sub === 'Rate' ? '#,##0.00;[Red]-#,##0.00;"-"' : '#,##0;[Red]-#,##0;"-"');
-  rows.forEach((r, i) => { const rr = ws.getRow(5 + i); cols.forEach((c, j) => { const v = c.v(r), x = rr.getCell(j + 1); if (c.num || c.slot !== undefined) { const n = Number(v) || 0; x.value = Math.abs(n) < 0.005 ? null : c.sub === 'Qty' ? Math.round(n * 1000) / 1000 : Math.round(n * 100) / 100; x.numFmt = nf(c); } else x.value = v === '(blank)' ? '' : String(v ?? ''); x.font = { name: A2, size: 10, bold: c.k === 'bk' || (c.slot === 'td' && c.sub === 'Amount') }; }); });
-  // total: amounts only (quantities and rates of different units do not add up)
-  const tr = ws.getRow(5 + rows.length); tr.getCell(1).value = 'TOTAL'; cols.forEach((c, j) => { const x = tr.getCell(j + 1); if ((c.slot !== undefined || c.num) && c.sub !== 'Qty' && c.sub !== 'Rate' && c.k !== 'qty' && c.k !== 'sh') { x.value = { formula: `SUBTOTAL(9,${ws.getColumn(j + 1).letter}5:${ws.getColumn(j + 1).letter}${4 + rows.length})`, result: rows.reduce((t, r) => t + (Number(c.v(r)) || 0), 0) }; x.numFmt = nf(c); } x.font = { name: A2, bold: true, color: { argb: 'FFFFFFFF' } }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAV } }; });
-  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + rows.length, column: cols.length } };
-  const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${(XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1].replace(/ /g, '_')}_${META.project}_${ST.cut}.xlsx`); toast('Expenses exported – ' + rows.length.toLocaleString('en-US') + ' items');
+  const isNum = (c) => c.num || c.slot !== undefined, adds = (c) => isNum(c) && c.sub !== 'Qty' && c.sub !== 'Rate' && c.k !== 'qty';   // quantities and rates of different units do not add up
+  let rn = 5; const put = (cells, o = {}) => { const rr = ws.getRow(rn++); cells.forEach((v, j) => { const c = cols[j], x = rr.getCell(j + 1); if (isNum(c) && v !== '' && v != null) { const n = Number(v) || 0; x.value = Math.abs(n) < 0.005 ? null : c.sub === 'Qty' ? Math.round(n * 1000) / 1000 : Math.round(n * 100) / 100; x.numFmt = nf(c); } else x.value = v ?? '';
+      x.font = { name: A2, size: 10, bold: !!o.b || c.k === 'bk', color: { argb: o.fc || 'FF1B2A41' } }; if (o.f) x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: o.f } }; if (j === 0 && o.i) x.alignment = { indent: o.i }; }); if (o.lvl) rr.outlineLevel = o.lvl; };
+  const item = (r, lvl) => put(cols.map((c) => { const v = c.v(r); return isNum(c) ? v : v === '(blank)' ? '' : String(v ?? ''); }), { lvl, i: lvl ? lvl * 2 : 0 });
+  const sums = (rs, label) => cols.map((c, j) => (j === 0 ? label : adds(c) ? rs.reduce((t, r) => t + (Number(c.v(r)) || 0), 0) : ''));
+  const txt = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+  if (!tree) rows.forEach((r) => item(r, 0));
+  else { const G = new Map(); rows.forEach((r) => (G.get(r.g) || G.set(r.g, []).get(r.g)).push(r)); let lastF = null;
+    const fo = []; if (D.fam) for (const g of G.keys()) { const f = D.fam(g); if (!fo.includes(f)) fo.push(f); }
+    const order = D.fam ? [...G.keys()].sort((a, b) => fo.indexOf(D.fam(a)) - fo.indexOf(D.fam(b))) : [...G.keys()];
+    order.forEach((g) => { if (D.fam) { const f = D.fam(g); if (f !== lastF) { lastF = f; put(sums(rows.filter((r) => D.fam(r.g) === f), f), { b: 1, f: 'FFDCE5F2', fc: 'FF14254A' }); } }
+      put(sums(G.get(g), txt(D.gLabel ? D.gLabel(g, G.get(g)) : g)), { b: 1, f: 'FFEEF2F8', lvl: D.fam ? 1 : 0, i: D.fam ? 2 : 0 }); G.get(g).forEach((r) => item(r, D.fam ? 2 : 1)); }); }
+  const tr = ws.getRow(rn); tr.getCell(1).value = 'TOTAL'; cols.forEach((c, j) => { const x = tr.getCell(j + 1); if (adds(c)) { const t = rows.reduce((s2, r) => s2 + (Number(c.v(r)) || 0), 0);
+      x.value = tree ? Math.round(t * 100) / 100 : { formula: `SUBTOTAL(9,${ws.getColumn(j + 1).letter}5:${ws.getColumn(j + 1).letter}${rn - 1})`, result: t }; x.numFmt = nf(c); } x.font = { name: A2, bold: true, color: { argb: 'FFFFFFFF' } }; x.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAV } }; });
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: rn - 1, column: cols.length } };
+  const buf = await wb.xlsx.writeBuffer(); dl(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${name.replace(/ /g, '_')}_${META.project}_${ST.cut}.xlsx`); toast(name + ' exported – ' + rows.length.toLocaleString('en-US') + ' rows');
 });
