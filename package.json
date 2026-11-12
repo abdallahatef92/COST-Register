@@ -8,10 +8,11 @@
   },
   "scripts": {
     "build": "node bin/register.js",
-    "test": "node test/run.js --set suth && node test/run.js --set sbay",
-    "test:quick": "node test/run.js --set suth --quick && node test/run.js --set sbay --quick",
+    "test": "node test/all.js",
+    "test:quick": "node test/all.js --quick",
     "build:tool": "node tools/build-app.js",
-    "build:site": "node tools/build-site.js"
+    "build:site": "node tools/build-site.js",
+    "test:only": "node test/all.js --quick --only"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

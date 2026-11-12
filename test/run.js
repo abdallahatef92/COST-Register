@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 'use strict';
 // Release checks for the Cost Register Tool – run before every release:  npm test   (runs both projects)
-//   node test/run.js [--set suth|sbay] [--quick: skip the start-page build] [--update: rewrite that set's expected figures]
+//   node test/run.js [--set suth|sbay] [--quick: skip 9 Excel export and 10 start-page build] [--only 7e,8: run only these sections (1–4 always run)]
+//                    [--built: the Tool is already built (test/all.js builds it once)] [--update: rewrite that set's expected figures]
+//   npm test = test/all.js: both projects at the same time
 // Data: test/data (SUTH) and test/data-sbay (SBAY) = MASKED copies of the SAP files (tools/mask-sap.js): names and texts replaced, every number kept.
 // Needs Playwright with Chromium (npm i -D playwright && npx playwright install chromium, if it is not on the machine).
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
-const args = process.argv.slice(2), UPDATE = args.includes('--update'), QUICK = args.includes('--quick'), SET = (args[args.indexOf('--set') + 1] && args.includes('--set') ? args[args.indexOf('--set') + 1] : 'suth').toLowerCase();
+const args = process.argv.slice(2), UPDATE = args.includes('--update'), QUICK = args.includes('--quick'), BUILT = args.includes('--built'), ONLY = args.includes('--only') ? String(args[args.indexOf('--only') + 1] || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean) : null, SET = (args[args.indexOf('--set') + 1] && args.includes('--set') ? args[args.indexOf('--set') + 1] : 'suth').toLowerCase();
 const SETS = {
   suth: { dir: 'data', exp: 'expected.json', other: 'SBAY', F: { cji3: 'cji3.xlsx', zscprg01: 'zscprg01.xlsx', zscsrv1: 'zscsrv1.xlsx', zintc1: ['zintc1-2025.xlsx', 'zintc1-2026.xlsx'], mb52: 'mb52-other-project.xlsx' } },   // its MB52 is another project on purpose
   sbay: { dir: 'data-sbay', exp: 'expected-sbay.json', other: '', F: { cji3: 'cji3.xlsx', zscprg01: 'zscprg01.xlsx', zscsrv1: 'zscsrv1.xlsx', zintc1: ['zintc1.xlsx'], mb52: 'mb52.xlsx' } },
@@ -21,6 +23,8 @@ const ok = (name, pass, detail = '') => { results.push({ section, name, pass: !!
 const eq = (name, got, want, tol = 0.01) => ok(name, typeof want === 'number' ? Math.abs(got - want) <= tol : JSON.stringify(got) === JSON.stringify(want), `got ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
 const head = (s) => { section = s; console.log('\n' + s); };
 const r2 = (x) => Math.round(x * 100) / 100;
+// which sections run: 1–4 always (they open the register); --only picks sections; --quick leaves out the slow 9 and 10
+const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k === '10'));
 
 (async () => {
   const t0 = Date.now(); fs.mkdirSync(OUT, { recursive: true });
@@ -38,7 +42,10 @@ const r2 = (x) => Math.round(x * 100) / 100;
   head('2. Engine');
   const { prepare } = require('../src/prepare'), { toAppData } = require('../src/appdata');
   const o = { cji3: path.join(DATA, F.cji3), zscprg01: path.join(DATA, F.zscprg01), zscsrv1: path.join(DATA, F.zscsrv1), zintc1: F.zintc1.map((f) => path.join(DATA, f)), mb52: path.join(DATA, F.mb52), log: () => {} };
-  const D = toAppData(prepare(o), o); let sum = 0; for (const a of D.L.amt) sum += a;
+  const CACHE = path.join(OUT, 'engine-cache.json'), SRC = path.join(ROOT, 'src'), stamp = JSON.stringify([...files(), ...fs.readdirSync(SRC).map((x) => path.join(SRC, x))].map((x) => [path.basename(x), fs.statSync(x).mtimeMs, fs.statSync(x).size]));
+  let D = null; try { const c = JSON.parse(fs.readFileSync(CACHE, 'utf8')); if (c.stamp === stamp) D = c.D; } catch (e) { /* no cache yet */ }
+  if (D) console.log('  (engine result reused – no data or engine file changed since the last run)'); else { D = toAppData(prepare(o), o); fs.writeFileSync(CACHE, JSON.stringify({ stamp, D })); }
+  let sum = 0; for (const a of D.L.amt) sum += a;
   eq('project from the WBS', D.META.project, want('project', D.META.project));
   eq('CJI3 cost', D.META.cost, want('cost', D.META.cost));
   eq('CJI3 lines', D.L.b.length, want('lines', D.L.b.length), 0);
@@ -50,11 +57,11 @@ const r2 = (x) => Math.round(x * 100) / 100;
 
   // ---------------------------------------------------------------------------- 3. build the Tool and a test app with the data inside
   head('3. Build');
-  execFileSync('node', ['tools/build-app.js'], { cwd: ROOT, stdio: 'pipe' });
+  if (!BUILT) execFileSync('node', ['tools/build-app.js'], { cwd: ROOT, stdio: 'pipe' });
   const VER = fs.readFileSync(path.join(ROOT, 'VERSION'), 'utf8').trim(), TOOL = path.join(ROOT, 'out', `Cost_Register_Tool_v${VER}.html`), APP = path.join(OUT, 'test_app.html');
   ok('Tool built: ' + path.basename(TOOL), fs.existsSync(TOOL));
   ok('Tool has its version, no placeholder', fs.readFileSync(TOOL, 'utf8').includes('v' + VER) && !fs.readFileSync(TOOL, 'utf8').includes('__VER__'));
-  execFileSync('node', ['tools/proto-app.js', '--cji3', o.cji3, '--zscprg01', o.zscprg01, '--zscsrv1', o.zscsrv1, ...o.zintc1.flatMap((z) => ['--zintc1', z]), '--mb52', o.mb52, '--out', APP], { cwd: ROOT, stdio: 'pipe' });
+  fs.writeFileSync(APP, require('../tools/build-app').page('const DATA0=' + JSON.stringify(D) + ';'));
   ok('test app built', fs.existsSync(APP));
 
   // ---------------------------------------------------------------------------- 4. the app in a browser
@@ -74,13 +81,16 @@ const r2 = (x) => Math.round(x * 100) / 100;
   const bkTd = await p.evaluate(() => __BK.map((b) => b.id + ':' + Math.round(b.items.reduce((s, it) => s + it.td, 0))));
   eq('to date per bucket', bkTd, want('bucketToDate', bkTd));
 
+  if (RUN('5')) {
   head('5. Indirect presets and opening balance');
   const ind = await p.evaluate(() => { const m = {}; __BK.forEach((b) => b.items.forEach((it) => { if (it.pkg === 'Indirect') m[b.id + ' ' + it.ce] = (m[b.id + ' ' + it.ce] || 0) + 1; })); return m; });
   eq('indirect items coded by the presets', Object.values(ind).reduce((x, y) => x + y, 0), want('presetItems', Object.values(ind).reduce((x, y) => x + y, 0)), 0);
   eq('indirect codes per bucket', ind, want('presetCodes', ind));
   const ob = await p.evaluate(() => { const { L, S, N } = __D; let m = 0; for (let i = 0; i < N; i++) if (L.d[i] && (!m || L.d[i] < m)) m = L.d[i]; let n = 0, a = 0; for (let i = 0; i < N; i++) if (S[L.ty[i]] === 'UE' && (/^OB\b/i.test(S[L.hdr[i]] || '') || L.d[i] === m)) { n++; a += L.amt[i]; } return [n, Math.round(a)]; });
   eq('opening-balance lines (UE / OB)', ob, want('openingBalance', ob));
+  }
 
+  if (RUN('6')) {
   head('6. Every page opens');
   const pages = await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s));
   for (const s of pages) {
@@ -94,7 +104,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
   // Check page: every reconciliation check OK
   await p.$eval('#tabs [data-s=\"chk\"]', (b) => b.click()); await p.click('#side [data-gt="chk"]'); await p.waitForTimeout(300);
   eq('Check › no reconciliation line asks for a look', await p.$$eval('#chk .chk', (x) => x.length), 0, 0);
+  }
 
+  if (RUN('7')) {
   head('7. Coding, undo, Lines');
   await p.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p.click('#side [data-gt="cod"][data-bk="0"]'); await p.waitForTimeout(400);
   ok('Start here guide on the Code page', await p.$eval('#guide', (g) => !g.hidden));
@@ -116,7 +128,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
   await p.$eval('#tabs [data-s="dash"]', (b) => b.click()); await p.click('#side [data-gt="mrate"]'); await p.waitForTimeout(800);
   ok('Code › Rate analysis (Material) opens', await p.$eval('#pg-mr', (e) => e.classList.contains('on') && e.innerText.length > 100));
   await p.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p.click('[data-cv="cod"]:visible'); await p.waitForTimeout(300);
+  }
 
+  if (RUN('7b')) {
   head('7b. Next to code: biggest first, suggestions, keys');
   { const { ctx: c5, p: p5 } = await open(APP); await p5.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p5.click('#side [data-gt="cod"][data-bk="0"]'); await p5.waitForTimeout(300);
     await p5.click('[data-cm="all"]:visible'); await p5.waitForTimeout(400); await p5.evaluate(() => { const th = [...document.querySelectorAll('#th th')].find((x) => /^Material/.test(x.textContent.trim())); if (th) th.click(); }); await p5.waitForTimeout(400);   // a sort set in All items must not carry over
@@ -141,7 +155,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
       ok('Subcontractor: an item on the same PO gets the suggestion', await p5.evaluate(([si, ii]) => { const tr = document.querySelector(`#tb tr.it[data-k="${si}:${ii}"]`); return !!tr && !!tr.querySelector('input.sug'); }, [si, sp[1][1]]) );
     } else ok('Subcontractor: a PO with two items exists', false);
     eq('difference stays 0', await p5.evaluate(() => R.diff), 0); await c5.close(); }
+  }
 
+  if (RUN('7c')) {
   head('7c. Codes in one spelling');
   { const { ctx: c6, p: p6 } = await open(APP); await p6.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p6.click('#side [data-gt="cod"][data-bk="0"]'); await p6.waitForTimeout(300);
     const ks = await p6.$$eval('#tb tr.it', (x) => x.slice(0, 2).map((tr) => tr.dataset.k));
@@ -156,7 +172,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
     await p6.$eval('#tabs [data-s=\"chk\"]', (b) => b.click()); await p6.click('#side [data-gt="log"]'); await p6.waitForTimeout(400);
     ok('…and it is in the Changes log', /Codes in capitals/.test(await p6.$eval('#pages .page.on', (e) => e.innerText)));
     eq('difference stays 0', await p6.evaluate(() => R.diff), 0); await c6.close(); }
+  }
 
+  if (RUN('7d')) {
   head('7d. Navigation, Cost flow, coding work list, pick list');
   { const { ctx: c7, p: p7 } = await open(APP);
     ok('top bar: project › page name and the cut date', await p7.$eval('header.top .crumb', (e) => /Dashboard/.test(e.textContent)) && await p7.$eval('header.top .cut', (e) => /CUT DATE/.test(e.textContent) && !!e.querySelector('#cut').value));
@@ -191,7 +209,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
     eq('↓ and Enter take the code from the list', await p7.evaluate((k) => { const [bi, ii] = k.split(':'); return __BK[+bi].items[+ii].pkg; }, k2), 'T11');
     ok('the first item kept its code', await p7.evaluate((k) => { const [bi, ii] = k.split(':'); return __BK[+bi].items[+ii].pkg === 'T11'; }, k1));
     eq('difference stays 0', await p7.evaluate(() => R.diff), 0); await c7.close(); }
+  }
 
+  if (RUN('7e')) {
   head('7e. Expenses: its own page, every item of every bucket by month, export');
   { const { ctx: c8, p: p8 } = await open(APP, { acceptDownloads: true }); await p8.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p8.waitForTimeout(400);
     eq('Coding has two tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines']);
@@ -240,7 +260,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
       const t2 = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); }), w2 = await p8.evaluate((x) => __BK[x.b].items[x.ii].td, it0);
       ok('…and the two rows add up to the item', Math.abs(t2 - w2) <= 1, t2 + ' vs ' + w2); }
     eq('difference stays 0', await p8.evaluate(() => R.diff), 0); await c8.close(); }
+  }
 
+  if (RUN('8')) {
   head('8. Save codes and read them back');
   const it1 = await p.$('#tb input[data-f="pkg"]'); await it1.fill('T02'); await it1.press('Enter'); await p.waitForTimeout(400);
   const [dlS] = await Promise.all([p.waitForEvent('download'), p.$eval('#bSave', (b) => b.click())]); const codes = path.join(OUT, 'codes.json'); await dlS.saveAs(codes);
@@ -250,7 +272,9 @@ const r2 = (x) => Math.round(x * 100) / 100;
   await p2.setInputFiles('#file', codes); await p2.waitForTimeout(2500);
   ok('Import brings the code back', await p2.evaluate(() => __BK[0].items.some((x) => x.pkg === 'T02')));
   eq('difference stays 0 after import', await p2.evaluate(() => R.diff), 0); await ctx2.close();
+  }
 
+  if (RUN('8b')) {
   head('8b. Auto-save to a chosen file');
   { const ctx4 = await browser.newContext({ viewport: { width: 1600, height: 900 } });
     // a stand-in for the browser's "choose file" window, which a test cannot click
@@ -266,16 +290,23 @@ const r2 = (x) => Math.round(x * 100) / 100;
     ok('the next change saves itself', await p4.evaluate((w) => window.__file.writes > w && window.__file.text.includes('"T04"'), w0));
     ok('no second question once a file is chosen', !(await p4.$('#asm')));
     await ctx4.close(); }
+  }
 
+  if (RUN('9')) {
   head('9. Excel export');
   const [dlX] = await Promise.all([p.waitForEvent('download', { timeout: 180000 }), p.click('#bExport')]); const xl = path.join(OUT, 'export.xlsx'); await dlX.saveAs(xl);
   const ExcelJS = require('exceljs'), wb = new ExcelJS.Workbook(); await wb.xlsx.readFile(xl); const sheets = wb.worksheets.map((w) => w.name);
   ok('the export opens in Excel format', sheets.length > 5, sheets.join(', '));
   for (const n of ['Summary', 'Expenses', 'PKG summary', 'Lines', 'Checks']) ok(`sheet "${n}"`, sheets.includes(n));
-  await ctx.close();
+  { const JSZip = require('jszip'), z = await JSZip.loadAsync(fs.readFileSync(path.join(OUT, 'export.xlsx'))), bad = [], ORD = ['tabColor', 'outlinePr', 'pageSetUpPr'];
+    for (const n of Object.keys(z.files)) { if (!/^xl\/worksheets\/sheet\d+\.xml$/.test(n)) continue; const x = await z.files[n].async('string'), m = x.match(/<sheetPr>(.*?)<\/sheetPr>/); if (/<v>(NaN|-?Infinity|undefined|null)<\/v>/.test(x)) bad.push(n + ': a cell holds a value that is not a number');
+      if (m) { const tags = [...m[1].matchAll(/<(\w+)/g)].map((t) => ORD.indexOf(t[1])); if (tags.some((v, i) => v < 0 || (i && v < tags[i - 1]))) bad.push(n + ': ' + m[0]); } }
+    ok('Excel opens every sheet without repair (sheet settings in Excel\'s order, no broken numbers)', !bad.length, bad.join(' · ')); }
 
   // ---------------------------------------------------------------------------- 10. the empty Tool: drop the files, build
-  if (!QUICK) {
+  }
+  await ctx.close();
+  if (RUN('10')) {
     head('10. Tool start page: drop files and build');
     const ctx3 = await browser.newContext({ viewport: { width: 1600, height: 900 } }), p3 = await ctx3.newPage(); p3.on('pageerror', (e) => errs.push(e.message)); p3.on('dialog', (d) => d.dismiss());
     await p3.goto('file://' + TOOL); await p3.waitForSelector('#pick', { state: 'attached' });
@@ -288,11 +319,6 @@ const r2 = (x) => Math.round(x * 100) / 100;
     await ctx3.close();
   }
   await browser.close();
-  { const JSZip = require('jszip'), z = await JSZip.loadAsync(fs.readFileSync(path.join(OUT, 'export.xlsx'))), bad = [], ORD = ['tabColor', 'outlinePr', 'pageSetUpPr'];
-    for (const n of Object.keys(z.files)) { if (!/^xl\/worksheets\/sheet\d+\.xml$/.test(n)) continue; const x = await z.files[n].async('string'), m = x.match(/<sheetPr>(.*?)<\/sheetPr>/); if (/<v>(NaN|-?Infinity|undefined|null)<\/v>/.test(x)) bad.push(n + ': a cell holds a value that is not a number');
-      if (m) { const tags = [...m[1].matchAll(/<(\w+)/g)].map((t) => ORD.indexOf(t[1])); if (tags.some((v, i) => v < 0 || (i && v < tags[i - 1]))) bad.push(n + ': ' + m[0]); } }
-    ok('Excel opens every sheet without repair (sheet settings in Excel\'s order, no broken numbers)', !bad.length, bad.join(' · ')); }
-
   head('Page errors'); ok('no JavaScript errors on any page', errs.length === 0, [...new Set(errs)].slice(0, 5).join(' | '));
 
   if (UPDATE) { fs.writeFileSync(EXP, JSON.stringify(got, null, 1) + '\n'); console.log('\n' + path.basename(EXP) + ' updated'); }

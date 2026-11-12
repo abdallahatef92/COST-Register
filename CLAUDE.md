@@ -19,6 +19,6 @@
 - Ask questions as multiple choice.
 - Follow the owner's files and concepts; keep it simple and consistent.
 - CJI3 is the single source of truth; the difference to CJI3 must be 0.
-- Run `npm test` before every release; all checks must pass. A changed number is only accepted with `--update` after the owner agrees the new figure is right.
+- Run `npm test` (the full set, both projects) before every release; all checks must pass. While working use `npm run test:quick` or `npm run test:only -- <sections>`. A changed number is only accepted with `--update` after the owner agrees the new figure is right.
 - The repo is PUBLIC: never commit real SAP files – only masked copies made with `tools/mask-sap.js`.
 - Version: `VERSION` file → `out/Cost_Register_Tool_vNN.html`; bump on every release.
