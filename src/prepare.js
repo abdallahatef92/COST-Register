@@ -25,13 +25,13 @@ function prepare(opts) {
   step('Material groups (MB52)');
   const groups = readGroups({ me2n: opts.me2n, mb52: opts.mb52 }); log(`Material groups: ${groups.map.size} materials (ME2N ${groups.src.me2n}, MB52 ${groups.src.mb52})`);
   const costAll = r2(cji.lines.filter((l) => l.ce[0] !== '4').reduce((x, l) => x + l.amt, 0));
-  let lines = cji.lines, subRes = null, serv = null;
+  let lines = cji.lines, subRes = null, serv = null, prog = null, Z = null;
   const vm = String(opts.vat || 'exclude').toLowerCase(), vatOpt = { mode: vm.startsWith('before') || vm.includes('before') ? 'Include VAT before date' : vm.startsWith('incl') ? 'Include VAT' : 'Exclude VAT', from: opts.vatfrom || '' };
   if (vatOpt.mode === 'Include VAT before date' && !vatOpt.from) throw new Error('--vat before needs --vatfrom yyyy-mm-dd');
   opts.vatOpt = vatOpt;
   if (opts.zscprg01) {
     step('Certificates (ZSCPRG01, ZSCSRV1)');
-    const prog = SC.readProg(opts.zscprg01); serv = opts.zscsrv1 ? SC.readServ(opts.zscsrv1) : null;
+    prog = SC.readProg(opts.zscprg01); serv = opts.zscsrv1 ? SC.readServ(opts.zscsrv1) : null;
     const ceNames = new Map(cji.lines.map((l) => [l.ce, l.cen]));
     subRes = SC.buildSubcontractor(cji.lines.filter((l) => l.bucket === 'Subcontractor'), prog, serv, ceNames, vatOpt);
     lines = cji.lines.filter((l) => l.bucket !== 'Subcontractor').concat(subRes.lines);
@@ -40,7 +40,7 @@ function prepare(opts) {
   let zRes = null;
   if (opts.zintc1 && [].concat(opts.zintc1).filter(Boolean).length) {
     step('Order charges (ZINTC1)');
-    const Z = ZI.readZint(opts.zintc1), lastYm = lines.map((l) => l.ym).filter(Boolean).sort().pop();
+    Z = ZI.readZint(opts.zintc1); const lastYm = lines.map((l) => l.ym).filter(Boolean).sort().pop();
     zRes = ZI.applyZint(lines, Z, { lastYm }); lines = opts.unsettled === false ? zRes.lines.filter((l) => !l.uns) : zRes.lines;
     const zs = zRes.stats; log(`ZINTC1: ${Z.files.length} file(s), ${Z.rows.length} rows, ${zs.orders} orders (${zs.ordersSettled} settled in CJI3); CJI3 settlements ${zs.cjiSettle}, explained ${zs.explained}; differences ${zs.adjN} (${zs.adj}), rounding ${zs.roundN} (${zs.round}); CJI3-only ${zs.cjiOnlyN} (${zs.cjiOnly}); not yet settled ${zs.unsN} rows (${zs.uns}, of which after the CJI3 data ${zs.unsAfter})${opts.unsettled === false ? ' – left out' : ''}`);
   }
@@ -50,7 +50,7 @@ function prepare(opts) {
   const lastDate = lines.filter((l) => !l.uns).map((l) => l.date).filter(Boolean).sort().pop();   // unsettled ZINTC1 charges never move the cut date
   const model = buildModel(lines, { groups: groups.map, prev, cut: monthEnd(opts.cut || lastDate) });
   log(`Cut date ${model.cut} (report month ${model.reportLabel})`);
-  return { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, zRes, serv, vatOpt, prev, model, lastDate, monthEnd, rules };
+  return { t0, log, cji, dupes, zyPaired, groups, costAll, lines, subRes, zRes, serv, prog, Z, vatOpt, prev, model, lastDate, monthEnd, rules };
 }
 
 module.exports = { prepare };

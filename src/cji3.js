@@ -44,8 +44,10 @@ function readCji3(files) {
     for (const l of p.lines) { if (seen.has(l.id)) within++; seen.add(l.id); const o = byId.get(l.id);
       if (o && o.k !== k) { if (r2(o.l.amt) === r2(l.amt)) { p.dropped++; dropped++; continue; } conflicts.push({ id: l.id, was: o.l.amt, now: l.amt, wasFile: parts[o.k].name, nowFile: p.name }); p.conflicts++; }
       byId.set(l.id, { l, k }); } });
-  const lines = [...byId.values()].map((x) => x.l);
-  return { lines, grand: r2(parts.reduce((s, p) => s + (p.grand || 0), 0)), sum: r2(parts.reduce((s, p) => s + p.sum, 0)), subtotals: parts.reduce((s, p) => s + p.subtotals, 0), dropped, within, conflicts,
-    files: parts.map((p) => ({ name: p.name, lines: p.lines.length, sum: p.sum, grand: p.grand, first: p.lines.reduce((m, l) => (l.date && (!m || l.date < m) ? l.date : m), ''), last: p.last, dropped: p.dropped, conflicts: p.conflicts })) };
+  const lines = [...byId.values()].map((x) => x.l), cov = {};
+  for (const { l, k } of byId.values()) { if (!l.ym) continue; const c = cov[l.ym] || (cov[l.ym] = { f: [], n: 0, amt: 0 }); if (!c.f.includes(k)) c.f.push(k); c.n++; if (l.ce[0] !== '4') c.amt += l.amt; }   // cost only (revenue 4xxxxxxx is not cost)
+  Object.values(cov).forEach((c) => { c.amt = r2(c.amt); });
+  return { lines, cov, grand: r2(parts.reduce((s, p) => s + (p.grand || 0), 0)), sum: r2(parts.reduce((s, p) => s + p.sum, 0)), subtotals: parts.reduce((s, p) => s + p.subtotals, 0), dropped, within, conflicts,
+    files: parts.map((p) => ({ name: p.name, lines: p.lines.length, sum: p.sum, grand: p.grand, first: p.lines.reduce((m, l) => (l.date && (!m || l.date < m) ? l.date : m), ''), last: p.last, cost: r2(p.lines.reduce((t, l) => t + (l.ce[0] !== '4' ? l.amt : 0), 0)), dropped: p.dropped, conflicts: p.conflicts })) };
 }
 module.exports = { readCji3, indexHeader };

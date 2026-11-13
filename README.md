@@ -254,3 +254,10 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - Owner-supplied material: a column **Owner-supplied?** (Yes / No) per material – No takes it out of the cost and out of the check; ↺ goes back to the rule.
 - A **rule** above the table: which SAP cost elements count as owner-supplied (e.g. take out 30101200 Spare Parts with one click). Both are undoable and saved with the codes.
 - Version numbers now run 3.0, 3.1, 3.2 …
+
+## v3.2 – Data file (SQLite) and Data log
+- **Data file**: one SQLite file on your computer (`<Project>_register.db`) keeps every build (compressed), your codes per build and the data log – not the browser. The start page asks to open or create it; Chrome / Edge save to it by themselves, other browsers download it (top bar: *Save data file*).
+  Tables: `builds`, `files`, `coverage`, `certificates`, `changes`, `lines` (the latest build), `codes`, `line_codes`, `log`; view `expenses` = lines with their codes. Open it in DB Browser for SQLite or Power BI.
+- Next month: open the data file, drop the SAP files, Build – last month's codes come from the data file (no last report needed).
+- **Check › Data log**: every file read (months covered, cut type found: cumulative / one month / fiscal year / snapshot, rows, amount, merge rule), coverage by month (ZSCPRG01 = certificates dated in the month), against the last build (closed months changed, certificates revised, the lines), builds in the data file (open an older one read only).
+- **ZINTC1** files are merged on order + month (the newest file wins); a file loaded twice is counted once and the overlap is listed.

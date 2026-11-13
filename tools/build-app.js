@@ -21,7 +21,9 @@ const lib = fs.readFileSync(require.resolve('xlsx/dist/xlsx.mini.min.js'), 'utf8
 const XL_BAD = /(\w=this\.map\.pageSetUpPr\.render\(\w,\w\.pageSetup\)\|\|\w),(\w=this\.map\.outlinePr\.render\(\w,\w\.outlineProperties\)\|\|\w)/;
 if (!XL_BAD.test(xl0)) throw new Error('build-app: the ExcelJS sheetPr order fix no longer matches the library – check <sheetPr> order by hand');
 const xl = xl0.replace(XL_BAD, '$2,$1');
-return tpl.replace('/*__XLSX__*/', () => lib).replace('/*__EXCELJS__*/', () => xl).replace('/*__ENGINE__*/', () => engine).replace('/*__DATA__*/', () => dataJs || 'const DATA0 = null;');
+// SQLite (sql.js, WebAssembly) for the data file on the user's computer: the library and its .wasm, inside the page (offline)
+const sqljs = fs.readFileSync(require.resolve('sql.js/dist/sql-wasm.js'), 'utf8') + '\nconst SQLWASM_B64 = "' + fs.readFileSync(require.resolve('sql.js/dist/sql-wasm.wasm')).toString('base64') + '";';
+return tpl.replace('/*__SQLJS__*/', () => sqljs).replace('/*__XLSX__*/', () => lib).replace('/*__EXCELJS__*/', () => xl).replace('/*__ENGINE__*/', () => engine).replace('/*__DATA__*/', () => dataJs || 'const DATA0 = null;');
 }
 if (require.main === module) { const VER = 'v' + fs.readFileSync(path.join(__dirname, '..', 'VERSION'), 'utf8').trim().padStart(2, '0'), out = process.argv[2] || `out/Cost_Register_Tool_${VER}.html`, html = page(); fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, html); console.log(`${out}: ${(html.length / 1e6).toFixed(2)} MB (no data inside – drop the SAP files)`); }
 module.exports = { page };

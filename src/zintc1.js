@@ -35,14 +35,19 @@ function readOne(src) {
   return { name: baseName(src), rows: out, first: yms[0] || '', last: yms[yms.length - 1] || '' };
 }
 
-// several files (2025 + 2026, or an older and a newer download): every month comes from the newest file that has it.
-// Rows are NOT de-duplicated – ZINTC1 has no document number, two equal diesel issues are two real charges.
+// several files (2025 + 2026, or an older and a newer download): every order × month comes from the newest file that has it.
+// Rows are NOT de-duplicated inside a file – ZINTC1 has no document number, two equal diesel issues are two real charges.
 function readZint(files) {
   const parts = [].concat(files || []).filter(Boolean).map(readOne);
-  const own = new Map();   // ym → part index
-  parts.forEach((p, pi) => { for (const r of p.rows) { const o = own.get(r.ym); if (o === undefined || p.last > parts[o].last || (p.last === parts[o].last && pi > o)) own.set(r.ym, pi); } });
-  const rows = []; parts.forEach((p, pi) => { p.used = 0; for (const r of p.rows) if (own.get(r.ym) === pi) { rows.push(r); p.used++; } });
-  return { rows, files: parts.map((p) => ({ name: p.name, rows: p.rows.length, used: p.used, first: p.first, last: p.last })) };
+  const own = new Map();   // order|ym → part index
+  parts.forEach((p, pi) => { for (const r of p.rows) { const k = r.order + '|' + r.ym, o = own.get(k); if (o === undefined || p.last > parts[o].last || (p.last === parts[o].last && pi > o)) own.set(k, pi); } });
+  const rows = [], cov = {}, over = new Map();
+  parts.forEach((p, pi) => { p.used = 0; p.amt = 0; p.dropAmt = 0; for (const r of p.rows) { const k = r.order + '|' + r.ym, w = own.get(k);
+    if (w === pi) { rows.push(r); p.used++; p.amt += r.amt; const c = cov[r.ym] || (cov[r.ym] = { f: [], n: 0, amt: 0 }); if (!c.f.includes(pi)) c.f.push(pi); c.n++; c.amt += r.amt; }
+    else { p.dropAmt += r.amt; const x = over.get(r.ym) || over.set(r.ym, { ym: r.ym, kept: parts[w].name, dropped: new Map() }).get(r.ym); x.dropped.set(p.name, (x.dropped.get(p.name) || 0) + 1); } } });
+  Object.values(cov).forEach((c) => { c.amt = r2(c.amt); });
+  return { rows, cov, overlaps: [...over.values()].map((x) => ({ ym: x.ym, kept: x.kept, dropped: [...x.dropped].map(([name, n]) => ({ name, n })) })).sort((a, b) => (a.ym < b.ym ? -1 : 1)),
+    files: parts.map((p) => ({ name: p.name, rows: p.rows.length, used: p.used, dropped: p.rows.length - p.used, amt: r2(p.amt), first: p.first, last: p.last })) };
 }
 
 const near = (a, b) => Math.abs(r2(a - b)) < 1;

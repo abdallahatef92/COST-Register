@@ -20,7 +20,7 @@ function showStart(canCancel) {
       ...other.map((f) => `<span class="e">• ${esc(f.name)} is project <b>${esc(f.proj)}</b> – the CJI3 is <b>${esc(cjP)}</b>. Wrong file? Remove it with ✕</span>`),
       n('prev') ? '<span class="ok">✓ Last month\'s codes come back</span>' : '<span class="w">• No last report – first month</span>', ...(bad.length ? [`<span class="e">• ${bad.length} file${bad.length > 1 ? 's' : ''} not recognised</span>`] : [])];
     el.innerHTML = `<div class="st0"><div class="kick">SAP FILES → COST REGISTER</div><h1>Cost Register</h1><p class="lead">Drop the SAP files and press Build. CJI3 is the total; the other files only add detail. Nothing leaves your computer.</p>
-    <div class="stw"><div class="stc"><div class="ch">This month's load <small>STEP 1</small></div><div class="bd">
+    <div class="stw"><div class="stc"><div class="ch">This month's load <small>STEP 1</small></div><div class="bd">${dbCard()}
       <label id="drop" class="drop"><b>Drop files here, or click</b>All at once – any file names.<input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm,.json" hidden></label>
       ${slot('cji3')}<div class="slot2">${slot('zscprg01')}${slot('zscsrv1')}</div>${slot('zintc1')}${slot('mb52')}${slot('prev')}
       ${bad.map((x) => `<div class="slot bad"><div class="ic">?</div><div style="min-width:0"><b>Not recognised</b><div class="f" style="color:#C00000">${esc(x.f.name)}<button data-x="${x.i}">✕</button></div><div class="s">It is: <select data-i="${x.i}">${KIND_ORDER.map((k) => `<option value="${k}" ${x.f.kind === k ? 'selected' : ''}>${K[k]}</option>`).join('')}</select></div></div></div>`).join('')}
@@ -31,6 +31,11 @@ function showStart(canCancel) {
       <div class="stcols"><div><h3>Each month</h3><ol><li><b>Drop</b> the files and press <b>Build</b>.</li><li><b>Check</b> the difference to CJI3 is 0.</li><li><b>Code</b> the new items.</li><li><b>Decide</b> what to add that is not in CJI3 yet.</li><li><b>Export</b> to Excel. Next month, drop it back in.</li></ol></div>
       <div><h3>How the numbers work</h3><ul><li>CJI3 is the total. Everything ties to it.</li><li>Each cost line goes to one bucket.</li><li>Certificates and ZINTC1 show the detail behind CJI3.</li><li>The month is the CJI3 posting month.</li><li>Cost not in CJI3 counts only if you add it.</li></ul></div></div></div></div></div>`;
     document.getElementById('sClear').onclick = () => { picked.length = 0; draw(); };
+    const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
+    on('sDbNew', async () => { if (await dbPickCreate(cjPk() || 'Project')) draw(); });
+    on('sDbOpen', async () => { if (await dbPickOpen()) { const b = dbBuilds()[0]; if (b && !canCancel) return dbBoot(b.id, false); draw(); } });
+    on('sDbAllow', async () => { if (await dbUseHandle(DBF.pend, true)) { const b = dbBuilds()[0]; if (b && !canCancel) return dbBoot(b.id, false); } draw(); });
+    on('sDbLast', () => { const b = dbBuilds()[0]; if (b) dbBoot(b.id, false); });
     el.querySelectorAll('select[data-i]').forEach((x) => { x.onchange = () => { picked[+x.dataset.i].kind = x.value; draw(); }; });
     el.querySelectorAll('button[data-x]').forEach((x) => { x.onclick = () => { picked.splice(+x.dataset.x, 1); draw(); }; });
     const add = async (list) => { document.getElementById('sMsg').textContent = 'Reading…'; for (const f of list) { const data = new Uint8Array(await f.arrayBuffer()), o = { name: f.name, data }; const si = Engine.sniffInfo(o); o.kind = si.kind; o.proj = si.proj; picked.push(o); } draw(); };
@@ -41,14 +46,31 @@ function showStart(canCancel) {
     document.getElementById('sBuild').onclick = async () => { const m = document.getElementById('sMsg'), by = (k) => picked.filter((f) => f.kind === k);
       if (!by('cji3').length) { m.innerHTML = '<span style="color:#c00000">At least one CJI3 file is needed.</span>'; return; }
       if (by('prev').length > 1) { m.innerHTML = '<span style="color:#c00000">Only one last report, please.</span>'; return; }
+      if (!DBF.db && !DBF.skip) { if (!(await dbPickCreate(cjPk() || 'Project'))) DBF.skip = true; draw(); return document.getElementById('sBuild').click(); }   // ask once for the data file; cancel = build in this browser only
       m.textContent = 'Building… (about 20–30 seconds)'; await new Promise((r) => setTimeout(r, 50));
       try { const t0 = Date.now(), files = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), zintc1: by('zintc1'), mb52: by('mb52'), me2n: by('me2n'), prev: by('prev')[0] };
         for (const k of ['zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
-        const data = Engine.build(files, {}); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`; await idbSet('lastBuild', data); try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
+        if (!files.prev && DBF.db) { const c = dbCodes(); if (c) files.prev = { name: 'codes from ' + (DBF.name || 'the data file') + '.json', data: new TextEncoder().encode(JSON.stringify(c)) }; }   // last month's codes come from the data file
+        const data = Engine.build(files, {}); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`;
+        if (DBF.db) { await dbAddBuild(data, '__VER__'); if (!(await dbWrite())) { await idbSet('lastBuild', data); dbDownload(); } else { try { await idbSet('lastBuild', null); } catch (e) { /* none */ } } }
+        else await idbSet('lastBuild', data);
+        try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
       catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
   };
   draw();
 }
-(async () => { if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0); let d = null; try { d = await idbGet('lastBuild'); } catch (e) { /* no saved build */ }
+// the data file card on the start page
+function dbCard() { const bs = dbBuilds(), b = bs[0];
+  if (DBF.db) return `<div class="dbc ok"><span class="dbi">🗄</span><div><b>${esc(DBF.name)}</b><div class="s">${bs.length} build${bs.length === 1 ? '' : 's'}${b ? ' · last cut ' + esc(b.cut) + ' · ' + esc(b.project) : ' · empty – your first build goes here'}${DBF.h ? '' : ' · this browser cannot write to it: it downloads after each build'}</div></div><span class="sp"></span>${b && !document.getElementById('wrap').dataset.booted ? '<button id="sDbLast">Open last build</button>' : ''}<button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
+  if (DBF.pend) return `<div class="dbc"><span class="dbi">🗄</span><div><b>${esc(DBF.pend.name)}</b><div class="s">your data file – the browser asks once to open it</div></div><span class="sp"></span><button class="pri" id="sDbAllow">Open ${esc(DBF.pend.name)}</button><button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
+  return `<div class="dbc no"><span class="dbi">🗄</span><div><b>Data file</b><div class="s">One file on your computer keeps every build, your codes and the data log – not the browser.</div></div><span class="sp"></span><button id="sDbOpen">Open…</button><button class="pri" id="sDbNew">Create new…</button></div>`; }
+// open a build from the data file (ro = an older build, read only)
+async function dbBoot(id, ro) { const data = await dbBuildData(id); if (!data) return; DBF.cur = id; DBF.ro = !!ro; document.getElementById('wrap').dataset.booted = '1'; boot(data); }
+(async () => { if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0); let d = null;
+  let h = null; try { h = await idbGet('dbHandle'); } catch (e) { /* none */ }
+  if (h) { DBF.pend = h; let ok = false; try { ok = await dbUseHandle(h, false); } catch (e) { console.error(e); }
+    if (ok) { const bs = dbBuilds(), want = +sessionStorage.getItem('crOpen') || 0; sessionStorage.removeItem('crOpen'); const id = bs.some((b) => b.id === want) ? want : bs.length ? bs[0].id : 0;
+      if (id) { try { return await dbBoot(id, id !== bs[0].id); } catch (e) { console.error(e); } } }
+    showStart(false); return; } try { d = await idbGet('lastBuild'); } catch (e) { /* no saved build */ }
   if (d) { try { return boot(d); } catch (e) { console.error(e); showStart(false); document.getElementById('sMsg').innerHTML = '<span style="color:#c00000">The saved build could not be opened (' + String(e.message).replace(/</g, '&lt;') + ') – build again.</span>'; return; } }
   showStart(false); })();

@@ -24,7 +24,14 @@ function sheetRows(file) { const wb = readBook(file, { cellDates: true }); retur
 function readProg(files) {
   const all = [].concat(files).filter(Boolean).map(progRows), latest = new Map();
   all.forEach((rows, k) => { for (const x of rows) latest.set([x.po, x.serial, x.item, x.pkg, x.line].join('|'), k); });
-  return progLines(all.flatMap((rows, k) => rows.filter((x) => latest.get([x.po, x.serial, x.item, x.pkg, x.line].join('|')) === k)));
+  const used = all.map((rows, k) => rows.filter((x) => latest.get([x.po, x.serial, x.item, x.pkg, x.line].join('|')) === k)), res = progLines(used.flat());
+  const names = [].concat(files).filter(Boolean).map((f) => (typeof f === 'string' ? f.split(/[\\/]/).pop() : f.name || ''));
+  // the certificates (PO + serial): date and amount, for the data log
+  const cert = new Map(); for (const x of used.flat()) { const k = x.po + '|' + x.serial, c = cert.get(k) || cert.set(k, { po: x.po, serial: x.serial, date: x.date, amt: 0 }).get(k); c.amt += x.amt; if (x.date > c.date) c.date = x.date; }
+  res.certs = [...cert.values()].map((c) => ({ ...c, amt: r2(c.amt) }));
+  res.files = all.map((rows, k) => { const ds = rows.map((x) => x.date).filter(Boolean).sort(), cs = new Set(rows.map((x) => x.po + '|' + x.serial)), pos = new Set(rows.map((x) => x.po));
+    return { name: names[k], rows: rows.length, used: used[k].length, certs: cs.size, pos: pos.size, first: ds[0] || '', last: ds[ds.length - 1] || '' }; });
+  return res;
 }
 function progRows(file) {
   const sh = sheetRows(file), h = sh.findIndex((r) => r.some((c) => str(c) === 'SC Work Current Cost')); if (h < 0) throw new Error('ZSCPRG01: column "SC Work Current Cost" not found.');
@@ -59,17 +66,17 @@ function progLines(rows) {
 }
 
 function readServ(files) {
-  const parts = [].concat(files).filter(Boolean).map(servOne), m = (k) => new Map(parts.flatMap((p) => [...p[k]]));
-  return { unit: m('unit'), poType: m('poType'), poTitle: m('poTitle'), poSup: m('poSup') };
+  const fl = [].concat(files).filter(Boolean), parts = fl.map(servOne), m = (k) => new Map(parts.flatMap((p) => [...p[k]]));
+  return { unit: m('unit'), poType: m('poType'), poTitle: m('poTitle'), poSup: m('poSup'), files: parts.map((p, k) => ({ name: typeof fl[k] === 'string' ? fl[k].split(/[\\/]/).pop() : fl[k].name || '', rows: p.rows, pos: p.poSup.size || p.poType.size })) };
 }
 function servOne(file) {
   const sh = sheetRows(file), h = sh.findIndex((r) => r.some((c) => str(c) === 'PO Service Code')); if (h < 0) throw new Error('ZSCSRV1: column "PO Service Code" not found.');
   const ix = indexHeader(sh[h]), g = (r, k) => (ix.has(SERV[k]) ? str(r[ix.get(SERV[k])]) : ''), unit = new Map(), poType = new Map(), poTitle = new Map(), poSup = new Map();
-  for (const r of sh.slice(h + 1)) { const po = g(r, 'po'); if (!po) continue; const t = normTow(g(r, 'type')); if (t && !poType.has(po)) poType.set(po, t); const sn = g(r, 'supName'); if (sn && !poSup.has(po)) poSup.set(po, sn);
+  let nr = 0; for (const r of sh.slice(h + 1)) { const po = g(r, 'po'); if (!po) continue; nr++; const t = normTow(g(r, 'type')); if (t && !poType.has(po)) poType.set(po, t); const sn = g(r, 'supName'); if (sn && !poSup.has(po)) poSup.set(po, sn);
     const svc = g(r, 'svc'); if (!svc) continue; const u = g(r, 'uom'); if (u) { const m = unit.get(svc) || unit.set(svc, new Map()).get(svc); tally(m, u); }
     const t2 = g(r, 'itemText'); if (t2) { const m = poTitle.get(po) || poTitle.set(po, new Map()).get(po); tally(m, t2, Math.abs(num(r[ix.get(SERV.value)])) + 1); } }
   const U = new Map(); for (const [k, m] of unit) U.set(k, top(m)); const T = new Map(); for (const [k, m] of poTitle) T.set(k, top(m));
-  return { unit: U, poType, poTitle: T, poSup };
+  return { unit: U, poType, poTitle: T, poSup, rows: nr };
 }
 const unitFromCode = (svc) => { const m = /-([A-Za-z0-9]{1,4})$/.exec(str(svc)); return m ? m[1].toUpperCase() : ''; };
 

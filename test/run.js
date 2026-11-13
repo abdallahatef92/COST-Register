@@ -24,7 +24,7 @@ const eq = (name, got, want, tol = 0.01) => ok(name, typeof want === 'number' ? 
 const head = (s) => { section = s; console.log('\n' + s); };
 const r2 = (x) => Math.round(x * 100) / 100;
 // which sections run: 1–4 always (they open the register); --only picks sections; --quick leaves out the slow 9 and 10
-const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k === '10'));
+const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k === '10' || k === '10b'));
 
 (async () => {
   const t0 = Date.now(); fs.mkdirSync(OUT, { recursive: true });
@@ -349,6 +349,36 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await ctx4.close(); }
   }
 
+  if (RUN('7g')) {
+  head('7g. Data log and the data file (SQLite)');
+  { const dl = D.META.dlog || {}; const srcs = (dl.files || []).map((f) => f.src);
+    ok('the build logs every file it read (source, months, cut type, rows, merge rule)', srcs.includes('cji3') && srcs.includes('zintc1') && dl.files.every((f) => f.name && f.cut && f.merge), srcs.join(','));
+    eq('CJI3 coverage by month adds up to the CJI3 cost', r2(Object.values(dl.cov.cji3).reduce((t, c) => t + c.amt, 0)), r2(D.META.cost), 1);
+    ok('ZSCPRG01: certificates per month (all POs)', !dl.cov.zscprg01 || Object.values(dl.cov.zscprg01).reduce((t, c) => t + c.n, 0) === dl.certs.length);
+    // ZINTC1 merge: order + month, newest file wins – the same file twice is counted once and listed as an overlap
+    const ZI = require('../src/zintc1'), zf = [].concat(F.zintc1).map((f) => path.join(DATA, f)), one = ZI.readZint(zf), two = ZI.readZint([...zf, zf[zf.length - 1]]);
+    eq('ZINTC1: a file loaded twice is not counted twice', r2(two.rows.reduce((t, r) => t + r.amt, 0)), r2(one.rows.reduce((t, r) => t + r.amt, 0)));
+    ok('…and the overlap is listed (newest file kept, rows dropped)', two.overlaps.length > 0 && two.files[two.files.length - 2].dropped === two.files[two.files.length - 2].rows); }
+  { const { ctx: c11, p: p11 } = await open(APP);
+    await p11.$eval('#tabs [data-s="chk"]', (b) => b.click()); await p11.waitForTimeout(300); await p11.click('#side [data-gt="dlog"]'); await p11.waitForTimeout(700);
+    ok('Check › Data log: this build, coverage by month', await p11.evaluate(() => __ST.tab === 'dlog' && document.querySelectorAll('#dlog .dlcard').length >= 3 && /Coverage by month/.test(document.getElementById('dlog').textContent)));
+    ok('…without a data file it offers to create one', await p11.$('#dlog [data-asgo="pick"]') !== null);
+    // Chrome / Edge: the data file is written directly (a stand-in for the file the user picks)
+    await p11.evaluate(() => { window.__file = null; window.showSaveFilePicker = async () => ({ name: 'Test_register.db', queryPermission: async () => 'granted', requestPermission: async () => 'granted', getFile: async () => new Blob([window.__file || new Uint8Array()]), createWritable: async () => { const parts = []; return { write: async (d) => parts.push(d), close: async () => { window.__file = new Uint8Array(await new Blob(parts).arrayBuffer()); } }; } }); });
+    await p11.click('#dlog [data-asgo="pick"]'); await p11.waitForFunction(() => window.__file && window.__file.length > 1e5, null, { timeout: 60000 }); await p11.waitForTimeout(1500);
+    const s1 = await p11.evaluate(() => ({ st: DBF.st, b: dbBuilds().length, lines: dbOne('SELECT count(*) AS n FROM lines').n, codes: dbOne('SELECT count(*) AS n FROM codes').n, n: __D.N, pill: document.getElementById('hasv').textContent }));
+    ok('Create data file: written to the file, this build and its lines inside', s1.st === 'ok' && s1.b === 1 && s1.lines === s1.n && s1.codes > 0, JSON.stringify(s1));
+    ok('…the top bar shows the data file', /Test_register\.db/.test(s1.pill), s1.pill);
+    const k = await p11.evaluate(() => { const it = __BK[0].items.find((x) => !x.pkg); __ST.tab = 'cod'; return it.k; });
+    await p11.evaluate((kk) => { const it = __BK[0].items.find((x) => x.k === kk); it.pkg = 'T99'; return __DL.save(); }, k); await p11.waitForTimeout(500);
+    const bytes = await p11.evaluate(() => Array.from(window.__file)); const SQL = await require('sql.js')(), db = new SQL.Database(Uint8Array.from(bytes));
+    const q = (sql) => { const r = db.exec(sql); return r.length ? r[0].values : []; };
+    ok('the .db opens in any SQLite tool: builds, files, coverage, certificates, lines, codes, view expenses', ['builds', 'files', 'coverage', 'certificates', 'lines', 'codes', 'expenses'].every((t) => q(`SELECT count(*) FROM ${t}`)[0][0] >= 0) && q('SELECT count(*) FROM files')[0][0] === D.META.dlog.files.length);
+    eq('…a code typed in the Tool is in the file (view expenses)', q(`SELECT count(*) FROM expenses WHERE item_key = '${k.replace(/'/g, "''")}' AND pkg = 'T99'`)[0][0] > 0, true);
+    eq('…the lines in the file add up to the register lines', r2(q('SELECT sum(amount) FROM lines')[0][0]), r2(await p11.evaluate(() => { let t = 0; for (let i = 0; i < __D.N; i++) t += __D.L.amt[i]; return t; })), 1);
+    eq('difference stays 0', await p11.evaluate(() => R.diff), 0); await c11.close(); }
+  }
+
   if (RUN('9')) {
   head('9. Excel export');
   const [dlX] = await Promise.all([p.waitForEvent('download', { timeout: 180000 }), p.click('#bExport')]); const xl = path.join(OUT, 'export.xlsx'); await dlX.saveAs(xl);
@@ -374,6 +404,32 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     eq('built from the start page: difference 0', await p3.evaluate(() => R.diff), 0);
     eq('same to date as the test app', r2(await p3.evaluate(() => R.toDate)), r2(R0.toDate));
     await ctx3.close();
+  }
+  if (RUN('10b')) {
+    head('10b. Data file: build into it, open it next month, build again');
+    const SP = path.join(OUT, 'db'); fs.mkdirSync(SP, { recursive: true });
+    const fresh = async () => { const c = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true }); await c.addInitScript(() => { delete window.showSaveFilePicker; delete window.showOpenFilePicker; }); const q = await c.newPage(); q.on('pageerror', (e) => errs.push(e.message)); q.on('dialog', (d) => d.dismiss()); await q.goto('file://' + TOOL); await q.waitForSelector('#pick', { state: 'attached' }); return { c, q }; };
+    const openDb = async (q, f) => { const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#sDbOpen')]); await fc.setFiles(f); };
+    const buildInto = async (q, f) => { await q.setInputFiles('#pick', files()); await q.waitForFunction(() => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''), null, { timeout: 120000 });
+      const [d] = await Promise.all([q.waitForEvent('download', { timeout: 240000 }), q.click('#sBuild')]); await d.saveAs(f); };
+    // month 1: a new data file, build into it
+    let { c, q } = await fresh(); ok('start page asks for a data file (open or create)', await q.$('#sDbNew') !== null && await q.$('#sDbOpen') !== null);
+    await q.click('#sDbNew'); await q.waitForFunction(() => /_register\.db/.test(document.querySelector('.dbc').textContent)); const f1 = path.join(SP, 'm1.db'); await buildInto(q, f1); await c.close();
+    // open it: the build comes from the file; type a code
+    ({ c, q } = await fresh()); await openDb(q, f1); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
+    eq('opened from the data file: difference 0', await q.evaluate(() => R.diff), 0);
+    eq('…same to date as the test app', r2(await q.evaluate(() => R.toDate)), r2(R0.toDate));
+    const k = await q.evaluate(() => __BK[0].items.find((x) => !x.pkg).k); await q.evaluate((kk) => { __BK[0].items.find((x) => x.k === kk).pkg = 'T77'; return __DL.save(); }, k);
+    const f2 = path.join(SP, 'm1b.db'); { const [d] = await Promise.all([q.waitForEvent('download'), q.click('#hasv [data-dbgo="dl"]')]); await d.saveAs(f2); } await c.close();
+    // next month: open the data file, build again – no last report dropped, the codes come from the data file
+    ({ c, q } = await fresh()); await openDb(q, f2); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1000);
+    await q.evaluate(() => document.getElementById('bNew').click()); await q.waitForTimeout(500); const f3 = path.join(SP, 'm2.db'); await buildInto(q, f3); await c.close();
+    ({ c, q } = await fresh()); await openDb(q, f3); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
+    eq('two builds in the data file', await q.evaluate(() => dbBuilds().length), 2);
+    eq('…the new build has last month\'s code (from the data file)', await q.evaluate((kk) => __BK[0].items.find((x) => x.k === kk).pkg, k), 'T77');
+    await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
+    ok('Data log compares with the last build: closed months unchanged, no certificate revised', await q.evaluate(() => /Against the last build/.test(document.getElementById('dlog').textContent) && !document.querySelector('#dlog .dlt .bad')), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
+    eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close();
   }
   await browser.close();
   head('Page errors'); ok('no JavaScript errors on any page', errs.length === 0, [...new Set(errs)].slice(0, 5).join(' | '));

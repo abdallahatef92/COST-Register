@@ -24,16 +24,17 @@ function treeCmp(a, b) { const x = treeKey(a), y = treeKey(b); for (let i = 0; i
 
 // ME2N first (PO lines), MB52 for the materials that are on no PO line
 function readGroups({ me2n, mb52 }) {
-  const map = new Map(); const src = { me2n: 0, mb52: 0 };
+  const map = new Map(); const src = { me2n: 0, mb52: 0 }, files = [];
   const read = (file, mCol, gCol, uCol, tag) => {
     if (!file) return;
     const wb = readBook(file); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
     const h = rows.findIndex((r) => r.some((c) => str(c) === mCol)); if (h < 0) throw new Error(tag + ': column "' + mCol + '" not found');
     const ix = indexHeader(rows[h]);
-    for (const r of rows.slice(h + 1)) { const m = str(r[ix.get(mCol)]); const gr = str(r[ix.get(gCol)]); if (!m || !gr) continue; if (!map.has(m)) { map.set(m, { group: gr, unit: uCol && ix.has(uCol) ? str(r[ix.get(uCol)]) : '', src: tag }); src[tag.toLowerCase()]++; } }
+    let n = 0; for (const r of rows.slice(h + 1)) { if (str(r[ix.get(mCol)])) n++; const m = str(r[ix.get(mCol)]); const gr = str(r[ix.get(gCol)]); if (!m || !gr) continue; if (!map.has(m)) { map.set(m, { group: gr, unit: uCol && ix.has(uCol) ? str(r[ix.get(uCol)]) : '', src: tag }); src[tag.toLowerCase()]++; } }
+    files.push({ kind: tag.toLowerCase(), name: typeof file === 'string' ? file.split(/[\\/]/).pop() : file.name || '', rows: n });
   };
   [].concat(me2n || []).forEach((f) => read(f, 'Material', 'Material Group', 'Order Unit', 'ME2N'));
   [].concat(mb52 || []).forEach((f) => read(f, 'Material', 'Material Group', 'Base Unit of Measure', 'MB52'));
-  return { map, src };
+  return { map, src, files };
 }
 module.exports = { FAMILY, FAM_RANK, famOf, divOf, famLabel, divLabel, grpLabel, divKey, treeCmp, readGroups, NO_GRP };
