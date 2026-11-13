@@ -21,7 +21,7 @@ function showStart(canCancel) {
       n('prev') ? '<span class="ok">✓ Last month\'s codes come back</span>' : '<span class="w">• No last report – first month</span>', ...(bad.length ? [`<span class="e">• ${bad.length} file${bad.length > 1 ? 's' : ''} not recognised</span>`] : [])];
     el.innerHTML = `<div class="st0"><div class="kick">SAP FILES → COST REGISTER</div><h1>Cost Register</h1><p class="lead">Drop the SAP files and press Build. CJI3 is the total; the other files only add detail. Nothing leaves your computer.</p>
     <div class="stw"><div class="stc"><div class="ch">This month's load <small>STEP 1</small></div><div class="bd">${dbCard()}
-      <label id="drop" class="drop"><b>Drop files here, or click</b>All at once – any file names.<input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm,.json" hidden></label>
+      <label id="drop" class="drop"><b>Drop files here, or click</b>All at once – any file names.<input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm,.json,.db" hidden></label>
       ${slot('cji3')}<div class="slot2">${slot('zscprg01')}${slot('zscsrv1')}</div>${slot('zintc1')}${slot('mb52')}${slot('prev')}
       ${bad.map((x) => `<div class="slot bad"><div class="ic">?</div><div style="min-width:0"><b>Not recognised</b><div class="f" style="color:#C00000">${esc(x.f.name)}<button data-x="${x.i}">✕</button></div><div class="s">It is: <select data-i="${x.i}">${KIND_ORDER.map((k) => `<option value="${k}" ${x.f.kind === k ? 'selected' : ''}>${K[k]}</option>`).join('')}</select></div></div></div>`).join('')}
       <div class="help" style="margin-top:6px">Report month: from the last CJI3 posting – you can change it later.</div>
@@ -38,10 +38,13 @@ function showStart(canCancel) {
     on('sDbLast', () => { const b = dbBuilds()[0]; if (b) dbBoot(b.id, false); });
     el.querySelectorAll('select[data-i]').forEach((x) => { x.onchange = () => { picked[+x.dataset.i].kind = x.value; draw(); }; });
     el.querySelectorAll('button[data-x]').forEach((x) => { x.onclick = () => { picked.splice(+x.dataset.x, 1); draw(); }; });
-    const add = async (list) => { document.getElementById('sMsg').textContent = 'Reading…'; for (const f of list) { const data = new Uint8Array(await f.arrayBuffer()), o = { name: f.name, data }; const si = Engine.sniffInfo(o); o.kind = si.kind; o.proj = si.proj; picked.push(o); } draw(); };
+    const add = async (list) => { const dbf = list.find((f) => /\.db$/i.test(f.name)); if (dbf) return openDb({ f: dbf, hp: null }); document.getElementById('sMsg').textContent = 'Reading…'; for (const f of list) { const data = new Uint8Array(await f.arrayBuffer()), o = { name: f.name, data }; const si = Engine.sniffInfo(o); o.kind = si.kind; o.proj = si.proj; picked.push(o); } draw(); };
     document.getElementById('pick').onchange = (e) => add([...e.target.files]);
-    el.ondragover = (e) => e.preventDefault(); el.ondrop = (e) => { e.preventDefault(); add([...e.dataTransfer.files]); };
-    const dz = document.getElementById('drop'); dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on'); dz.ondrop = (e) => { e.preventDefault(); e.stopPropagation(); dz.classList.remove('on'); add([...e.dataTransfer.files]); };
+    // a .db dropped (anywhere on the start page, or chosen with the files): opens the data file and its last build – no CJI3 needed
+    const openDb = async (g) => { if (!(await dbOpenGrab(g))) return; const b = dbBuilds()[0]; if (b && !canCancel) return dbBoot(b.id, false); if (b && DBF.h) { sessionStorage.setItem('crOpen', ''); location.reload(); return; } draw(); };
+    const dropIt = (e) => { e.preventDefault(); e.stopPropagation(); const g = dbGrab(e.dataTransfer); if (g) return openDb(g); add([...e.dataTransfer.files]); };
+    el.ondragover = (e) => e.preventDefault(); el.ondrop = dropIt;
+    const dz = document.getElementById('drop'); dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on'); dz.ondrop = (e) => { dz.classList.remove('on'); dropIt(e); };
     if (canCancel) document.getElementById('sCancel').onclick = () => { el.style.display = 'none'; };
     document.getElementById('sBuild').onclick = async () => { const m = document.getElementById('sMsg'), by = (k) => picked.filter((f) => f.kind === k);
       if (!by('cji3').length) { m.innerHTML = '<span style="color:#c00000">At least one CJI3 file is needed.</span>'; return; }

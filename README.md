@@ -275,3 +275,4 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - Next month: drop only the **new** SAP files on the open register (or Side navigation › **Add new SAP files…**). One box says what each file does – *adds Sep-26*, *replaces …* – and what is kept from the data file; **Update** builds again with your codes. The old build stays in the data file.
 - A new file replaces an old one of its kind when it covers the same months (ZSCSRV1, MB52, ME2N and ZSCPRG01: always); otherwise both are kept and merged (CJI3 a line once, ZINTC1 order + month newest).
 - History: Check › Data log › Builds shows, per build, the new SAP files, how many were kept and which were replaced.
+- A **.db** dropped on the page (or chosen with the files) opens that data file and its last build at once – no CJI3 needed.

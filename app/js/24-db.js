@@ -68,3 +68,7 @@ async function dbStoreFiles(id, list) { for (const f of list) { let fid = f.fid;
     DBF.db.run('INSERT INTO build_files VALUES (?, ?, ?)', [id, fid, f.role || 'new']); } }
 const dbBuildFiles = (id) => (DBF.db ? dbRows('SELECT f.id AS fid, f.kind, f.name, f.project AS proj, f.first_month AS first, f.last_month AS last, f.size, b.role FROM build_files b JOIN source_files f ON f.id = b.file_id WHERE b.build_id = ? ORDER BY f.kind, f.name', [id]) : []);
 const dbFileData = (fid) => { const r = dbOne('SELECT data FROM source_files WHERE id = ?', [fid]); return r ? r.data : null; };
+// a .db dropped on the page: take it during the drop (the browser forgets dropped items afterwards), then open it
+function dbGrab(dt) { const it = [...((dt && dt.items) || [])].find((x) => x.kind === 'file' && /\.db$/i.test((x.getAsFile() || {}).name || '')); if (!it) return null; return { f: it.getAsFile(), hp: it.getAsFileSystemHandle ? it.getAsFileSystemHandle() : null }; }
+async function dbOpenGrab(g) { if (g.hp) { try { const h = await g.hp; if (h && h.kind === 'file' && (await dbUseHandle(h, true))) return true; } catch (e) { /* the file itself below */ } }
+  await dbOpenBytes(new Uint8Array(await g.f.arrayBuffer())); DBF.h = null; DBF.name = g.f.name; DBF.st = 'dl'; return true; }

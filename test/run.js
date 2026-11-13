@@ -456,7 +456,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     // next month: open the data file, build again – no last report dropped, the codes come from the data file
     ({ c, q } = await fresh()); await openDb(q, f2); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1000);
     await q.evaluate(() => document.getElementById('bNew').click()); await q.waitForTimeout(500); const f3 = path.join(SP, 'm2.db'); await buildInto(q, f3); await c.close();
-    ({ c, q } = await fresh()); await openDb(q, f3); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
+    ({ c, q } = await fresh()); await q.setInputFiles('#pick', f3); /* a .db chosen with the files opens straight away – no CJI3 needed */ await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
     eq('two builds in the data file', await q.evaluate(() => dbBuilds().length), 2);
     eq('…the new build has last month\'s code (from the data file)', await q.evaluate((kk) => __BK[0].items.find((x) => x.k === kk).pkg, k), 'T77');
     await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);

@@ -47,6 +47,8 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-up
 // drop SAP files anywhere on the register (the start page has its own drop box)
 document.addEventListener('dragover', (e) => { if ($('start').style.display !== 'none' || !e.dataTransfer || ![...e.dataTransfer.types].includes('Files')) return; e.preventDefault(); document.body.classList.add('dropping'); });
 document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('dropping'); });
-document.addEventListener('drop', (e) => { if ($('start').style.display !== 'none' || !e.dataTransfer || !e.dataTransfer.files.length) return; e.preventDefault(); document.body.classList.remove('dropping'); updStart(e.dataTransfer.files); });
+document.addEventListener('drop', (e) => { if ($('start').style.display !== 'none' || !e.dataTransfer || !e.dataTransfer.files.length) return; e.preventDefault(); document.body.classList.remove('dropping');
+  const g = dbGrab(e.dataTransfer); if (g && !g.hp) { toast('This browser cannot switch the data file here – New build › Open…'); return; } if (g) { dbOpenGrab(g).then((ok) => { if (ok && DBF.h) { sessionStorage.setItem('crOpen', ''); location.reload(); } else toast('This browser cannot switch the data file here – New build › Open…'); }); return; }   // a .db: open that data file
+  updStart(e.dataTransfer.files); });
 $('bAdd').onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.accept = '.xlsx,.xls,.xlsm'; i.onchange = () => updStart(i.files); i.click(); };
 globalThis.__UPD = { start: updStart };   // for the checks
