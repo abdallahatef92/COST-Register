@@ -1,24 +1,73 @@
 // =====================================================================================  start: embedded data, the last build saved in this browser, or build from SAP files
-const idb = (mode, fn) => new Promise((res, rej) => { const rq = indexedDB.open('cost-register', 1); rq.onupgradeneeded = () => rq.result.createObjectStore('kv'); rq.onerror = () => rej(rq.error);
-  rq.onsuccess = () => { let tx, r; try { tx = rq.result.transaction('kv', mode); r = fn(tx.objectStore('kv')); } catch (e) { rej(e); return; } tx.oncomplete = () => res(r && r.result); tx.onerror = () => rej(tx.error); }; });
-const idbGet = (k) => idb('readonly', (st) => st.get(k)), idbSet = (k, v) => idb('readwrite', (st) => st.put(v, k));
+const idb = (mode, fn) =>
+  new Promise((res, rej) => {
+    const rq = indexedDB.open('cost-register', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+    rq.onerror = () => rej(rq.error);
+    rq.onsuccess = () => {
+      let tx, r;
+      try {
+        tx = rq.result.transaction('kv', mode);
+        r = fn(tx.objectStore('kv'));
+      } catch (e) {
+        rej(e);
+        return;
+      }
+      tx.oncomplete = () => res(r && r.result);
+      tx.onerror = () => rej(tx.error);
+    };
+  });
+const idbGet = (k) => idb('readonly', (st) => st.get(k)),
+  idbSet = (k, v) => idb('readwrite', (st) => st.put(v, k));
 // files are recognised by their content (column headers), not by their names; several CJI3 / ZSCPRG01 / ZSCSRV1 / MB52 files are merged
-const KIND_ORDER = ['cji3', 'zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n', 'prev', 'ignore'], picked = [];
-const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const LOOP_SVG = "<svg viewBox=\"0 0 760 360\" width=\"100%\" style=\"display:block;max-height:430px\"><defs><marker id=\"a\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" fill=\"#6b7280\"/></marker></defs>\n<g font-family=\"Segoe UI,Arial,sans-serif\">\n<g font-size=\"14\">\n<rect x=\"12\" y=\"10\" width=\"190\" height=\"50\" rx=\"8\" fill=\"#fff\" stroke=\"#1F3864\" stroke-width=\"1.8\"/><text x=\"26\" y=\"32\" font-weight=\"700\">CJI3</text><text x=\"26\" y=\"50\" fill=\"#6b7280\" font-size=\"12.5\">project cost \u00b7 the total</text>\n<rect x=\"12\" y=\"70\" width=\"190\" height=\"50\" rx=\"8\" fill=\"#fff\" stroke=\"#c9cfd8\"/><text x=\"26\" y=\"92\" font-weight=\"600\">ZSCPRG01 + ZSCSRV1</text><text x=\"26\" y=\"110\" fill=\"#6b7280\" font-size=\"12.5\">subcontractor detail</text>\n<rect x=\"12\" y=\"130\" width=\"190\" height=\"50\" rx=\"8\" fill=\"#fff\" stroke=\"#c9cfd8\"/><text x=\"26\" y=\"152\" font-weight=\"600\">ZINTC1</text><text x=\"26\" y=\"170\" fill=\"#6b7280\" font-size=\"12.5\">equipment, fuel, fleet, rent</text>\n<rect x=\"12\" y=\"190\" width=\"190\" height=\"50\" rx=\"8\" fill=\"#fff\" stroke=\"#c9cfd8\"/><text x=\"26\" y=\"212\" font-weight=\"600\">MB52</text><text x=\"26\" y=\"230\" fill=\"#6b7280\" font-size=\"12.5\">material groups</text>\n<rect x=\"12\" y=\"250\" width=\"190\" height=\"50\" rx=\"8\" fill=\"#FFF4E0\" stroke=\"#E7B45A\"/><text x=\"26\" y=\"272\" font-weight=\"600\">Last report</text><text x=\"26\" y=\"290\" fill=\"#6b7280\" font-size=\"12.5\">last month's codes</text>\n</g>\n<g fill=\"none\" stroke=\"#6b7280\"><path d=\"M202 35 C 232 35 232 146 258 146\" marker-end=\"url(#a)\"/><path d=\"M202 95 C 232 95 232 150 258 150\" marker-end=\"url(#a)\"/><path d=\"M202 155 L258 155\" marker-end=\"url(#a)\"/><path d=\"M202 215 C 232 215 232 160 258 160\" marker-end=\"url(#a)\"/><path d=\"M202 275 C 232 275 232 164 258 164\" marker-end=\"url(#a)\"/></g>\n<rect x=\"260\" y=\"110\" width=\"160\" height=\"96\" rx=\"9\" fill=\"#EAF0FA\" stroke=\"#2F5597\"/><text x=\"276\" y=\"136\" font-weight=\"700\" font-size=\"15\">This tool</text>\n<g fill=\"#4b5563\" font-size=\"12.5\"><text x=\"276\" y=\"158\">reads the files</text><text x=\"276\" y=\"176\">sorts cost into buckets</text><text x=\"276\" y=\"194\">adds the detail</text></g>\n<path d=\"M420 158 L456 158\" stroke=\"#6b7280\" marker-end=\"url(#a)\"/>\n<rect x=\"458\" y=\"10\" width=\"290\" height=\"250\" rx=\"9\" fill=\"#EEF7EC\" stroke=\"#8CC084\"/><text x=\"474\" y=\"34\" font-weight=\"700\" font-size=\"15\">The register</text><text x=\"474\" y=\"52\" fill=\"#4b5563\" font-size=\"12.5\">you code here</text>\n<g font-size=\"13\" fill=\"#1f2937\"><text x=\"474\" y=\"80\">\u25b8 Summary \u2013 ties to CJI3</text><text x=\"474\" y=\"104\">\u25b8 Coding \u2013 PKG, MNL, cost element</text><text x=\"474\" y=\"128\">\u25b8 Per Month \u00b7 Lines \u2013 the detail</text><text x=\"474\" y=\"152\">\u25b8 Subcontractor \u2013 by PO</text><text x=\"474\" y=\"176\">\u25b8 Unsettled \u2013 not in CJI3 yet</text><text x=\"474\" y=\"200\">\u25b8 Depreciation \u2013 keep or remove</text><text x=\"474\" y=\"224\">\u25b8 GL \u00b7 WBS \u00b7 Checks \u00b7 Rules</text></g>\n<path d=\"M603 260 L603 290\" stroke=\"#6b7280\" marker-end=\"url(#a)\"/>\n<rect x=\"508\" y=\"292\" width=\"200\" height=\"50\" rx=\"8\" fill=\"#fff\" stroke=\"#2F5597\"/><text x=\"522\" y=\"314\" font-weight=\"600\" font-size=\"14\">Export Excel</text><text x=\"522\" y=\"332\" fill=\"#6b7280\" font-size=\"12.5\">report + your codes</text>\n<path d=\"M508 317 C 330 345 140 340 107 304\" fill=\"none\" stroke=\"#2F5597\" stroke-dasharray=\"5 4\" marker-end=\"url(#a)\"/>\n<text x=\"250\" y=\"352\" fill=\"#6b7280\" font-size=\"12.5\">next month, drop it back in</text>\n</g></svg>";
+const KIND_ORDER = ['cji3', 'zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n', 'prev', 'ignore'],
+  picked = [];
+const esc = (s) =>
+  String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+const LOOP_SVG =
+  '<svg viewBox="0 0 760 360" width="100%" style="display:block;max-height:430px"><defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/></marker></defs>\n<g font-family="Segoe UI,Arial,sans-serif">\n<g font-size="14">\n<rect x="12" y="10" width="190" height="50" rx="8" fill="#fff" stroke="#1F3864" stroke-width="1.8"/><text x="26" y="32" font-weight="700">CJI3</text><text x="26" y="50" fill="#6b7280" font-size="12.5">project cost \u00b7 the total</text>\n<rect x="12" y="70" width="190" height="50" rx="8" fill="#fff" stroke="#c9cfd8"/><text x="26" y="92" font-weight="600">ZSCPRG01 + ZSCSRV1</text><text x="26" y="110" fill="#6b7280" font-size="12.5">subcontractor detail</text>\n<rect x="12" y="130" width="190" height="50" rx="8" fill="#fff" stroke="#c9cfd8"/><text x="26" y="152" font-weight="600">ZINTC1</text><text x="26" y="170" fill="#6b7280" font-size="12.5">equipment, fuel, fleet, rent</text>\n<rect x="12" y="190" width="190" height="50" rx="8" fill="#fff" stroke="#c9cfd8"/><text x="26" y="212" font-weight="600">MB52</text><text x="26" y="230" fill="#6b7280" font-size="12.5">material groups</text>\n<rect x="12" y="250" width="190" height="50" rx="8" fill="#FFF4E0" stroke="#E7B45A"/><text x="26" y="272" font-weight="600">Last report</text><text x="26" y="290" fill="#6b7280" font-size="12.5">last month\'s codes</text>\n</g>\n<g fill="none" stroke="#6b7280"><path d="M202 35 C 232 35 232 146 258 146" marker-end="url(#a)"/><path d="M202 95 C 232 95 232 150 258 150" marker-end="url(#a)"/><path d="M202 155 L258 155" marker-end="url(#a)"/><path d="M202 215 C 232 215 232 160 258 160" marker-end="url(#a)"/><path d="M202 275 C 232 275 232 164 258 164" marker-end="url(#a)"/></g>\n<rect x="260" y="110" width="160" height="96" rx="9" fill="#EAF0FA" stroke="#2F5597"/><text x="276" y="136" font-weight="700" font-size="15">This tool</text>\n<g fill="#4b5563" font-size="12.5"><text x="276" y="158">reads the files</text><text x="276" y="176">sorts cost into buckets</text><text x="276" y="194">adds the detail</text></g>\n<path d="M420 158 L456 158" stroke="#6b7280" marker-end="url(#a)"/>\n<rect x="458" y="10" width="290" height="250" rx="9" fill="#EEF7EC" stroke="#8CC084"/><text x="474" y="34" font-weight="700" font-size="15">The register</text><text x="474" y="52" fill="#4b5563" font-size="12.5">you code here</text>\n<g font-size="13" fill="#1f2937"><text x="474" y="80">\u25b8 Summary \u2013 ties to CJI3</text><text x="474" y="104">\u25b8 Coding \u2013 PKG, MNL, cost element</text><text x="474" y="128">\u25b8 Per Month \u00b7 Lines \u2013 the detail</text><text x="474" y="152">\u25b8 Subcontractor \u2013 by PO</text><text x="474" y="176">\u25b8 Unsettled \u2013 not in CJI3 yet</text><text x="474" y="200">\u25b8 Depreciation \u2013 keep or remove</text><text x="474" y="224">\u25b8 GL \u00b7 WBS \u00b7 Checks \u00b7 Rules</text></g>\n<path d="M603 260 L603 290" stroke="#6b7280" marker-end="url(#a)"/>\n<rect x="508" y="292" width="200" height="50" rx="8" fill="#fff" stroke="#2F5597"/><text x="522" y="314" font-weight="600" font-size="14">Export Excel</text><text x="522" y="332" fill="#6b7280" font-size="12.5">report + your codes</text>\n<path d="M508 317 C 330 345 140 340 107 304" fill="none" stroke="#2F5597" stroke-dasharray="5 4" marker-end="url(#a)"/>\n<text x="250" y="352" fill="#6b7280" font-size="12.5">next month, drop it back in</text>\n</g></svg>';
 function showStart(canCancel) {
-  const el = document.getElementById('start'); el.style.display = 'flex'; const K = Engine.KINDS;
-  const SLOT = { cji3: ['CJI3', 'project cost'], zscprg01: ['ZSCPRG01', 'subcontractor certificates'], zscsrv1: ['ZSCSRV1', 'PO services'], zintc1: ['ZINTC1', 'equipment, fuel, fleet, house rent'], mb52: ['MB52', 'material groups'], prev: ['Last report', "last month's codes · optional"] };
-  const mb = (n) => (n / 1048576).toFixed(n > 1048576 ? 1 : 2) + ' MB', cjPk = () => (picked.find((f) => f.kind === 'cji3' && f.proj) || {}).proj || '';
-  const slot = (k, wide) => { const fs = picked.map((f, i) => ({ f, i })).filter((x) => x.f.kind === k || (k === 'mb52' && x.f.kind === 'me2n')), [t, d] = SLOT[k];
+  const el = document.getElementById('start');
+  el.style.display = 'flex';
+  const K = Engine.KINDS;
+  const SLOT = {
+    cji3: ['CJI3', 'project cost'],
+    zscprg01: ['ZSCPRG01', 'subcontractor certificates'],
+    zscsrv1: ['ZSCSRV1', 'PO services'],
+    zintc1: ['ZINTC1', 'equipment, fuel, fleet, house rent'],
+    mb52: ['MB52', 'material groups'],
+    prev: ['Last report', "last month's codes · optional"],
+  };
+  const mb = (n) => (n / 1048576).toFixed(n > 1048576 ? 1 : 2) + ' MB',
+    cjPk = () => (picked.find((f) => f.kind === 'cji3' && f.proj) || {}).proj || '';
+  const slot = (k, wide) => {
+    const fs = picked.map((f, i) => ({ f, i })).filter((x) => x.f.kind === k || (k === 'mb52' && x.f.kind === 'me2n')),
+      [t, d] = SLOT[k];
     return `<div class="slot ${fs.length ? 'ok' : ''}"><div class="ic">${fs.length ? '✓' : ''}</div><div style="min-width:0"><b>${t}</b>${k === 'cji3' ? ' <span class="req">required</span>' : ''}<div class="s">${d}</div>
-      ${fs.length ? fs.map((x) => `<div class="f"${x.f.proj && cjPk() && x.f.proj !== cjPk() && x.f.kind !== 'cji3' ? ' style="color:#C00000" title="Another project than the CJI3"' : ''}>${esc(x.f.name)} <span style="color:#6b7280">· ${x.f.proj ? esc(x.f.proj) + ' · ' : ''}${mb(x.f.data.length)}</span><button data-x="${x.i}" title="Remove">✕</button></div>`).join('') : k === 'prev' ? '' : ''}</div></div>`; };
-  const draw = () => { const n = (k) => picked.filter((f) => f.kind === k).length, bad = picked.map((f, i) => ({ f, i })).filter((x) => x.f.kind === 'ignore');
-    const cjP = (picked.find((f) => f.kind === 'cji3' && f.proj) || {}).proj || '', other = picked.filter((f) => cjP && f.proj && f.proj !== cjP && f.kind !== 'ignore' && f.kind !== 'prev');
-    const chk = [n('cji3') ? `<span class="ok">✓ CJI3 loaded${n('cji3') > 1 ? ` – ${n('cji3')} files joined` : ''}</span>` : '<span class="e">• CJI3 is needed</span>',
-      ...(n('zintc1') > 1 ? [`<span class="ok">✓ ${n('zintc1')} ZINTC1 files joined</span>`] : []), ...(n('zscprg01') && !n('zscsrv1') ? ['<span class="w">• ZSCSRV1 missing – POs without titles</span>'] : []),
-      ...other.map((f) => `<span class="e">• ${esc(f.name)} is project <b>${esc(f.proj)}</b> – the CJI3 is <b>${esc(cjP)}</b>. Wrong file? Remove it with ✕</span>`),
-      n('prev') ? '<span class="ok">✓ Last month\'s codes come back</span>' : '<span class="w">• No last report – first month</span>', ...(bad.length ? [`<span class="e">• ${bad.length} file${bad.length > 1 ? 's' : ''} not recognised</span>`] : [])];
+      ${fs.length ? fs.map((x) => `<div class="f"${x.f.proj && cjPk() && x.f.proj !== cjPk() && x.f.kind !== 'cji3' ? ' style="color:#C00000" title="Another project than the CJI3"' : ''}>${esc(x.f.name)} <span style="color:#6b7280">· ${x.f.proj ? esc(x.f.proj) + ' · ' : ''}${mb(x.f.data.length)}</span><button data-x="${x.i}" title="Remove">✕</button></div>`).join('') : k === 'prev' ? '' : ''}</div></div>`;
+  };
+  const draw = () => {
+    const n = (k) => picked.filter((f) => f.kind === k).length,
+      bad = picked.map((f, i) => ({ f, i })).filter((x) => x.f.kind === 'ignore');
+    const cjP = (picked.find((f) => f.kind === 'cji3' && f.proj) || {}).proj || '',
+      other = picked.filter((f) => cjP && f.proj && f.proj !== cjP && f.kind !== 'ignore' && f.kind !== 'prev');
+    const chk = [
+      n('cji3')
+        ? `<span class="ok">✓ CJI3 loaded${n('cji3') > 1 ? ` – ${n('cji3')} files joined` : ''}</span>`
+        : '<span class="e">• CJI3 is needed</span>',
+      ...(n('zintc1') > 1 ? [`<span class="ok">✓ ${n('zintc1')} ZINTC1 files joined</span>`] : []),
+      ...(n('zscprg01') && !n('zscsrv1') ? ['<span class="w">• ZSCSRV1 missing – POs without titles</span>'] : []),
+      ...other.map(
+        (f) =>
+          `<span class="e">• ${esc(f.name)} is project <b>${esc(f.proj)}</b> – the CJI3 is <b>${esc(cjP)}</b>. Wrong file? Remove it with ✕</span>`
+      ),
+      n('prev') ? '<span class="ok">✓ Last month\'s codes come back</span>' : '<span class="w">• No last report – first month</span>',
+      ...(bad.length ? [`<span class="e">• ${bad.length} file${bad.length > 1 ? 's' : ''} not recognised</span>`] : []),
+    ];
     el.innerHTML = `<div class="st0"><div class="kick">SAP FILES → COST REGISTER</div><h1>Cost Register</h1><p class="lead">One register per project. Drop the SAP files and press Create – every month after, update it from inside with the new files. CJI3 is the total; the other files only add detail. Nothing leaves your computer.</p>
     <div class="stw"><div class="stc"><div class="ch">This month's load <small>STEP 1</small></div><div class="bd">${dbCard()}
       <label id="drop" class="drop"><b>Drop files here, or click</b>All at once – any file names.<input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm,.json,.db" hidden></label>
@@ -30,55 +79,284 @@ function showStart(canCancel) {
     <div class="stc"><div class="ch">How the monthly loop works <small>EACH MONTH</small></div><div class="svgw">${LOOP_SVG}</div>
       <div class="stcols"><div><h3>Each month</h3><ol><li><b>Drop</b> the files and press <b>Build</b>.</li><li><b>Check</b> the difference to CJI3 is 0.</li><li><b>Code</b> the new items.</li><li><b>Decide</b> what to add that is not in CJI3 yet.</li><li><b>Export</b> to Excel. Next month, drop it back in.</li></ol></div>
       <div><h3>How the numbers work</h3><ul><li>CJI3 is the total. Everything ties to it.</li><li>Each cost line goes to one bucket.</li><li>Certificates and ZINTC1 show the detail behind CJI3.</li><li>The month is the CJI3 posting month.</li><li>Cost not in CJI3 counts only if you add it.</li></ul></div></div></div></div></div>`;
-    document.getElementById('sClear').onclick = () => { picked.length = 0; draw(); };
-    const on = (id, f) => { const b = document.getElementById(id); if (b) b.onclick = f; };
-    on('sDbNew', async () => { if (await dbPickCreate(cjPk() || 'Project')) draw(); });
-    on('sDbOpen', async () => { if (await dbPickOpen()) { const b = dbBuilds()[0]; if (b && !canCancel) return dbBoot(b.id, false); draw(); } });
-    on('sDbAllow', async () => { if (await dbUseHandle(DBF.pend, true)) { const b = dbBuilds()[0]; if (b && !canCancel) return dbBoot(b.id, false); } draw(); });
-    on('sDbLast', () => { const b = dbBuilds()[0]; if (b) dbBoot(b.id, false); });
-    el.querySelectorAll('select[data-i]').forEach((x) => { x.onchange = () => { picked[+x.dataset.i].kind = x.value; draw(); }; });
-    el.querySelectorAll('button[data-x]').forEach((x) => { x.onclick = () => { picked.splice(+x.dataset.x, 1); draw(); }; });
-    const add = async (list) => { const dbf = list.find((f) => /\.db$/i.test(f.name)); if (dbf) return openDb({ f: dbf, hp: null }); document.getElementById('sMsg').textContent = 'Reading…'; for (const f of list) { const data = new Uint8Array(await f.arrayBuffer()), o = { name: f.name, data }; const si = Engine.sniffInfo(o); o.kind = si.kind; o.proj = si.proj; picked.push(o); } draw(); };
+    document.getElementById('sClear').onclick = () => {
+      picked.length = 0;
+      draw();
+    };
+    const on = (id, f) => {
+      const b = document.getElementById(id);
+      if (b) b.onclick = f;
+    };
+    on('sDbNew', async () => {
+      if (await dbPickCreate(cjPk() || 'Project')) draw();
+    });
+    on('sDbOpen', async () => {
+      if (await dbPickOpen()) {
+        const b = dbBuilds()[0];
+        if (b && !canCancel) return dbBoot(b.id, false);
+        draw();
+      }
+    });
+    on('sDbAllow', async () => {
+      if (await dbUseHandle(DBF.pend, true)) {
+        const b = dbBuilds()[0];
+        if (b && !canCancel) return dbBoot(b.id, false);
+      }
+      draw();
+    });
+    on('sDbLast', () => {
+      const b = dbBuilds()[0];
+      if (b) dbBoot(b.id, false);
+    });
+    el.querySelectorAll('select[data-i]').forEach((x) => {
+      x.onchange = () => {
+        picked[+x.dataset.i].kind = x.value;
+        draw();
+      };
+    });
+    el.querySelectorAll('button[data-x]').forEach((x) => {
+      x.onclick = () => {
+        picked.splice(+x.dataset.x, 1);
+        draw();
+      };
+    });
+    const add = async (list) => {
+      const dbf = list.find((f) => /\.db$/i.test(f.name));
+      if (dbf) return openDb({ f: dbf, hp: null });
+      document.getElementById('sMsg').textContent = 'Reading…';
+      for (const f of list) {
+        const data = new Uint8Array(await f.arrayBuffer()),
+          o = { name: f.name, data };
+        const si = Engine.sniffInfo(o);
+        o.kind = si.kind;
+        o.proj = si.proj;
+        picked.push(o);
+      }
+      draw();
+    };
     document.getElementById('pick').onchange = (e) => add([...e.target.files]);
     // a .db dropped (anywhere on the start page, or chosen with the files): opens the data file and its last build – no CJI3 needed
-    const openDb = async (g) => { if (!(await dbOpenGrab(g))) return; const b = dbBuilds()[0]; if (b && !canCancel) return dbBoot(b.id, false); if (b && DBF.h) { sessionStorage.setItem('crOpen', ''); location.reload(); return; } draw(); };
-    const dropIt = (e) => { e.preventDefault(); e.stopPropagation(); const g = dbGrab(e.dataTransfer); if (g) return openDb(g); add([...e.dataTransfer.files]); };
-    el.ondragover = (e) => e.preventDefault(); el.ondrop = dropIt;
-    const dz = document.getElementById('drop'); dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('on'); }; dz.ondragleave = () => dz.classList.remove('on'); dz.ondrop = (e) => { dz.classList.remove('on'); dropIt(e); };
-    if (canCancel) document.getElementById('sCancel').onclick = () => { el.style.display = 'none'; };
-    document.getElementById('sBuild').onclick = async () => { const m = document.getElementById('sMsg'), by = (k) => picked.filter((f) => f.kind === k);
-      if (!by('cji3').length) { m.innerHTML = '<span style="color:#c00000">At least one CJI3 file is needed.</span>'; return; }
-      if (by('prev').length > 1) { m.innerHTML = '<span style="color:#c00000">Only one last report, please.</span>'; return; }
-      if (!DBF.db && !DBF.skip) { if (!(await dbPickCreate(cjPk() || 'Project'))) DBF.skip = true; draw(); return document.getElementById('sBuild').click(); }   // ask once for the data file; cancel = build in this browser only
-      m.textContent = 'Creating the register… (about 20–30 seconds)'; await new Promise((r) => setTimeout(r, 50));
-      try { const t0 = Date.now(), files = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), zintc1: by('zintc1'), mb52: by('mb52'), me2n: by('me2n'), prev: by('prev')[0] };
-        for (const k of ['zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
-        if (!files.prev && DBF.db) { const c = dbCodes(); if (c) files.prev = { name: 'codes from ' + (DBF.name || 'the data file') + '.json', data: new TextEncoder().encode(JSON.stringify(c)) }; }   // last month's codes come from the data file
-        const data = Engine.build(files, {}); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`;
-        if (DBF.db) { if (dbBuilds().length && dbBuilds()[0].project !== data.META.project && !confirm(DBF.name + ' is the register of ' + dbBuilds()[0].project + ' – these files are ' + data.META.project + '. Put them in it anyway?')) { m.textContent = ''; return; } const nid = await dbAddBuild(data, '__VER__'), cov = new Map(((data.META.dlog || {}).files || []).map((f) => [f.name, f]));
-          await dbStoreFiles(nid, picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore').map((f) => ({ ...f, role: 'new', first: (cov.get(f.name) || {}).first, last: (cov.get(f.name) || {}).last }))); dbTidy(); if (!(await dbWrite())) { await idbSet('lastBuild', data); dbDownload(); await new Promise((r) => setTimeout(r, 1500)); } else { try { await idbSet('lastBuild', null); } catch (e) { /* none */ } } }
-        else await idbSet('lastBuild', data);
-        try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
-      catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not create the register: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };
+    const openDb = async (g) => {
+      if (!(await dbOpenGrab(g))) return;
+      const b = dbBuilds()[0];
+      if (b && !canCancel) return dbBoot(b.id, false);
+      if (b && DBF.h) {
+        sessionStorage.setItem('crOpen', '');
+        location.reload();
+        return;
+      }
+      draw();
+    };
+    const dropIt = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const g = dbGrab(e.dataTransfer);
+      if (g) return openDb(g);
+      add([...e.dataTransfer.files]);
+    };
+    el.ondragover = (e) => e.preventDefault();
+    el.ondrop = dropIt;
+    const dz = document.getElementById('drop');
+    dz.ondragover = (e) => {
+      e.preventDefault();
+      dz.classList.add('on');
+    };
+    dz.ondragleave = () => dz.classList.remove('on');
+    dz.ondrop = (e) => {
+      dz.classList.remove('on');
+      dropIt(e);
+    };
+    if (canCancel)
+      document.getElementById('sCancel').onclick = () => {
+        el.style.display = 'none';
+      };
+    document.getElementById('sBuild').onclick = async () => {
+      const m = document.getElementById('sMsg'),
+        by = (k) => picked.filter((f) => f.kind === k);
+      if (!by('cji3').length) {
+        m.innerHTML = '<span style="color:#c00000">At least one CJI3 file is needed.</span>';
+        return;
+      }
+      if (by('prev').length > 1) {
+        m.innerHTML = '<span style="color:#c00000">Only one last report, please.</span>';
+        return;
+      }
+      if (!DBF.db && !DBF.skip) {
+        if (!(await dbPickCreate(cjPk() || 'Project'))) DBF.skip = true;
+        draw();
+        return document.getElementById('sBuild').click();
+      } // ask once for the data file; cancel = build in this browser only
+      m.textContent = 'Creating the register… (about 20–30 seconds)';
+      await new Promise((r) => setTimeout(r, 50));
+      try {
+        const t0 = Date.now(),
+          files = {
+            cji3: by('cji3'),
+            zscprg01: by('zscprg01'),
+            zscsrv1: by('zscsrv1'),
+            zintc1: by('zintc1'),
+            mb52: by('mb52'),
+            me2n: by('me2n'),
+            prev: by('prev')[0],
+          };
+        for (const k of ['zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n']) if (!files[k].length) delete files[k];
+        if (!files.prev) delete files.prev;
+        if (!files.prev && DBF.db) {
+          const c = dbCodes();
+          if (c)
+            files.prev = {
+              name: 'codes from ' + (DBF.name || 'the data file') + '.json',
+              data: new TextEncoder().encode(JSON.stringify(c)),
+            };
+        } // last month's codes come from the data file
+        const data = Engine.build(files, {});
+        m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`;
+        if (DBF.db) {
+          if (
+            dbBuilds().length &&
+            dbBuilds()[0].project !== data.META.project &&
+            !confirm(
+              DBF.name +
+                ' is the register of ' +
+                dbBuilds()[0].project +
+                ' – these files are ' +
+                data.META.project +
+                '. Put them in it anyway?'
+            )
+          ) {
+            m.textContent = '';
+            return;
+          }
+          const nid = await dbAddBuild(data, '__VER__'),
+            cov = new Map(((data.META.dlog || {}).files || []).map((f) => [f.name, f]));
+          await dbStoreFiles(
+            nid,
+            picked
+              .filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')
+              .map((f) => ({ ...f, role: 'new', first: (cov.get(f.name) || {}).first, last: (cov.get(f.name) || {}).last }))
+          );
+          dbTidy();
+          if (!(await dbWrite())) {
+            await idbSet('lastBuild', data);
+            dbDownload();
+            await new Promise((r) => setTimeout(r, 1500));
+          } else {
+            try {
+              await idbSet('lastBuild', null);
+            } catch (e) {
+              /* none */
+            }
+          }
+        } else await idbSet('lastBuild', data);
+        try {
+          await idbSet(
+            'lastFiles',
+            picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')
+          );
+        } catch (e) {
+          /* the build itself is saved */
+        }
+        location.reload();
+      } catch (err) {
+        console.error(err);
+        m.innerHTML =
+          '<span style="color:#c00000">Could not create the register: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>';
+      }
+    };
   };
   draw();
 }
 // the data file card on the start page
-function dbCard() { const bs = dbBuilds(), b = bs[0];
-  if (DBF.db) return `<div class="dbc ok"><span class="dbi">🗄</span><div><b>${esc(DBF.name)}</b><div class="s">${b ? esc(b.project) + ' register · updated ' + esc(String(b.built).slice(0, 10)) + ' · cut ' + esc(b.cut) : 'empty – the register goes here'}${DBF.h ? '' : ' · this browser cannot write to it: it downloads after each update'}</div></div><span class="sp"></span>${b && !document.getElementById('wrap').dataset.booted ? '<button id="sDbLast">Open the register</button>' : ''}<button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
-  if (DBF.pend) return `<div class="dbc"><span class="dbi">🗄</span><div><b>${esc(DBF.pend.name)}</b><div class="s">your data file – the browser asks once to open it</div></div><span class="sp"></span><button class="pri" id="sDbAllow">Open ${esc(DBF.pend.name)}</button><button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
-  return `<div class="dbc no"><span class="dbi">🗄</span><div><b>Data file</b><div class="s">One file per project on your computer keeps the register, your codes and the update log – not the browser.</div></div><span class="sp"></span><button id="sDbOpen">Open…</button><button class="pri" id="sDbNew">Create new…</button></div>`; }
+function dbCard() {
+  const bs = dbBuilds(),
+    b = bs[0];
+  if (DBF.db)
+    return `<div class="dbc ok"><span class="dbi">🗄</span><div><b>${esc(DBF.name)}</b><div class="s">${b ? esc(b.project) + ' register · updated ' + esc(String(b.built).slice(0, 10)) + ' · cut ' + esc(b.cut) : 'empty – the register goes here'}${DBF.h ? '' : ' · this browser cannot write to it: it downloads after each update'}</div></div><span class="sp"></span>${b && !document.getElementById('wrap').dataset.booted ? '<button id="sDbLast">Open the register</button>' : ''}<button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
+  if (DBF.pend)
+    return `<div class="dbc"><span class="dbi">🗄</span><div><b>${esc(DBF.pend.name)}</b><div class="s">your data file – the browser asks once to open it</div></div><span class="sp"></span><button class="pri" id="sDbAllow">Open ${esc(DBF.pend.name)}</button><button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
+  return `<div class="dbc no"><span class="dbi">🗄</span><div><b>Data file</b><div class="s">One file per project on your computer keeps the register, your codes and the update log – not the browser.</div></div><span class="sp"></span><button id="sDbOpen">Open…</button><button class="pri" id="sDbNew">Create new…</button></div>`;
+}
 // open a build from the data file (ro = an older build, read only)
-async function dbBoot(id, ro) { const data = await dbBuildData(id); if (!data) return; DBF.cur = id; DBF.ro = !!ro; document.getElementById('wrap').dataset.booted = '1';
-  if (!ro) idbSet('dbCache', { name: DBF.name, id, data }).catch(() => { /* no copy: next time the file opens on a click */ });   // a copy of the latest build, so the Tool opens at once next time
-  boot(data); }
-(async () => { if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0); let d = null;
-  let h = null; try { h = await idbGet('dbHandle'); } catch (e) { /* none */ }
-  if (h) { DBF.pend = h; let ok = false; try { ok = await dbUseHandle(h, false); } catch (e) { console.error(e); }
-    if (ok) { const bs = dbBuilds(), want = +sessionStorage.getItem('crOpen') || 0; sessionStorage.removeItem('crOpen'); const id = bs.some((b) => b.id === want) ? want : bs.length ? bs[0].id : 0;
-      if (id) { try { return await dbBoot(id, id !== bs[0].id); } catch (e) { console.error(e); } } }
-    else { let c = null; try { c = await idbGet('dbCache'); } catch (e) { /* none */ }   // the browser forgot the permission: open at once from the copy, reconnect on the first click
-      if (c && c.data && c.name === h.name) { DBF.pendH = h; DBF.cacheId = c.id; DBF.name = h.name; document.getElementById('wrap').dataset.booted = '1'; try { return boot(c.data); } catch (e) { console.error(e); } } }
-    showStart(false); return; } try { d = await idbGet('lastBuild'); } catch (e) { /* no saved build */ }
-  if (d) { try { return boot(d); } catch (e) { console.error(e); showStart(false); document.getElementById('sMsg').innerHTML = '<span style="color:#c00000">The saved register could not be opened (' + String(e.message).replace(/</g, '&lt;') + ') – create it again.</span>'; return; } }
-  showStart(false); })();
+async function dbBoot(id, ro) {
+  const data = await dbBuildData(id);
+  if (!data) return;
+  DBF.cur = id;
+  DBF.ro = !!ro;
+  document.getElementById('wrap').dataset.booted = '1';
+  if (!ro)
+    idbSet('dbCache', { name: DBF.name, id, data }).catch(() => {
+      /* no copy: next time the file opens on a click */
+    }); // a copy of the latest build, so the Tool opens at once next time
+  boot(data);
+}
+(async () => {
+  if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0);
+  let d = null;
+  let h = null;
+  try {
+    h = await idbGet('dbHandle');
+  } catch (e) {
+    /* none */
+  }
+  if (h) {
+    DBF.pend = h;
+    let ok = false;
+    try {
+      ok = await dbUseHandle(h, false);
+    } catch (e) {
+      console.error(e);
+    }
+    if (ok) {
+      const bs = dbBuilds(),
+        want = +sessionStorage.getItem('crOpen') || 0;
+      sessionStorage.removeItem('crOpen');
+      const id = bs.some((b) => b.id === want) ? want : bs.length ? bs[0].id : 0;
+      if (id) {
+        try {
+          return await dbBoot(id, id !== bs[0].id);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    } else {
+      let c = null;
+      try {
+        c = await idbGet('dbCache');
+      } catch (e) {
+        /* none */
+      } // the browser forgot the permission: open at once from the copy, reconnect on the first click
+      if (c && c.data && c.name === h.name) {
+        DBF.pendH = h;
+        DBF.cacheId = c.id;
+        DBF.name = h.name;
+        document.getElementById('wrap').dataset.booted = '1';
+        try {
+          return boot(c.data);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    showStart(false);
+    return;
+  }
+  try {
+    d = await idbGet('lastBuild');
+  } catch (e) {
+    /* no saved build */
+  }
+  if (d) {
+    try {
+      return boot(d);
+    } catch (e) {
+      console.error(e);
+      showStart(false);
+      document.getElementById('sMsg').innerHTML =
+        '<span style="color:#c00000">The saved register could not be opened (' +
+        String(e.message).replace(/</g, '&lt;') +
+        ') – create it again.</span>';
+      return;
+    }
+  }
+  showStart(false);
+})();

@@ -12,7 +12,8 @@
     "test:quick": "node test/all.js --quick",
     "build:tool": "node tools/build-app.js",
     "build:site": "node tools/build-site.js",
-    "test:only": "node test/all.js --quick --only"
+    "test:only": "node test/all.js --quick --only",
+    "format": "prettier --write \"app/js/*.js\" \"app/engine-entry.js\" \"src/*.js\" \"tools/*.js\" \"test/*.js\""
   },
   "dependencies": {
     "exceljs": "^4.4.0",
@@ -21,6 +22,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "esbuild": "^0.24.2"
+    "esbuild": "^0.24.2",
+    "prettier": "^3.3.3"
   }
 }

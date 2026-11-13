@@ -280,3 +280,7 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v3.5
 - Update: a file that is the same as the one in the data file shows *same file as in the data file – no change* and is left out; with nothing new, Update is off.
+
+## v3.6 – Update guard and code clean-up
+- **Part CJI3 guard**: a new CJI3 whose cost for the months it shares with the register is lower (e.g. a download with fewer WBS) does not replace the old CJI3 – both are kept (a line in both counts once) and the box warns, with *Replace anyway*.
+- **Code**: formatted with Prettier – one statement per line (about 4,100 → 18,000 short lines); `npm test` stops if the code is not formatted (`npm run format` fixes it). No change in what the Tool does.

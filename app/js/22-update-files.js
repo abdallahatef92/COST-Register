@@ -11,32 +11,52 @@ const ymL = (ym) => (ym ? MON[+ym.slice(5, 7) - 1] + '-' + ym.slice(2, 4) : '');
 const span = (a, b) => (a ? ymL(a) + (b && b !== a ? ' – ' + ymL(b) : '') : '');
 const ymNext = (ym) => {
   let [y, m] = ym.split('-').map(Number);
-  if (++m > 12) { m = 1; y++; }
+  if (++m > 12) {
+    m = 1;
+    y++;
+  }
   return y + '-' + String(m).padStart(2, '0');
 };
-const sha256 = async (u8) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', u8)))
-  .map((x) => x.toString(16).padStart(2, '0')).join('');
+const sha256 = async (u8) =>
+  Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', u8)))
+    .map((x) => x.toString(16).padStart(2, '0'))
+    .join('');
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function updBox(html) {
   let m = $('updm');
-  if (!m) { m = document.createElement('div'); m.id = 'updm'; m.className = 'updm'; document.body.appendChild(m); }
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'updm';
+    m.className = 'updm';
+    document.body.appendChild(m);
+  }
   m.innerHTML = `<div class="ub">${html}</div>`;
   m.style.display = 'flex';
   return m;
 }
-const updClose = () => { const m = $('updm'); if (m) m.style.display = 'none'; };
+const updClose = () => {
+  const m = $('updm');
+  if (m) m.style.display = 'none';
+};
 
 // read the dropped files: same file as in the data file → left out; else its kind, project and months
 async function updRead(list) {
-  const last = latestId(), inUse = dbBuildFiles(last).filter((f) => f.role !== 'replaced');
-  const shas = new Set(inUse.map((f) => f.sha)), nw = [], same = [];
+  const last = latestId(),
+    inUse = dbBuildFiles(last).filter((f) => f.role !== 'replaced');
+  const shas = new Set(inUse.map((f) => f.sha)),
+    nw = [],
+    same = [];
   for (const f of list) {
     const o = { name: f.name, data: new Uint8Array(await f.arrayBuffer()) };
     o.sha = await sha256(o.data);
-    if (shas.has(o.sha)) { same.push(o); continue; }
+    if (shas.has(o.sha)) {
+      same.push(o);
+      continue;
+    }
     const si = Engine.sniffInfo(o);
-    o.kind = si.kind; o.proj = si.proj;
+    o.kind = si.kind;
+    o.proj = si.proj;
     nw.push(o);
   }
   for (const o of nw) {
@@ -45,7 +65,9 @@ async function updRead(list) {
     Object.assign(o, Engine.peek(o, o.kind));
   }
   // the register's CJI3 cost per month (the last update), to compare a new CJI3 with
-  const regCov = new Map(dbRows("SELECT month, amount FROM coverage WHERE build_id = ? AND source = 'cji3'", [last]).map((r) => [r.month, r.amount]));
+  const regCov = new Map(
+    dbRows("SELECT month, amount FROM coverage WHERE build_id = ? AND source = 'cji3'", [last]).map((r) => [r.month, r.amount])
+  );
   return { last, old: inUse, nw, same, regCov, force: new Set() };
 }
 
@@ -54,18 +76,25 @@ function partCheck(o, regCov) {
   if (o.kind !== 'cji3' || !o.cov) return null;
   const ms = [...regCov.keys()].filter((m) => m >= o.first && m <= o.last).sort();
   if (!ms.length) return null;
-  const was = ms.reduce((t, m) => t + regCov.get(m), 0), now = ms.reduce((t, m) => t + (o.cov[m] || 0), 0);
+  const was = ms.reduce((t, m) => t + regCov.get(m), 0),
+    now = ms.reduce((t, m) => t + (o.cov[m] || 0), 0);
   const less = r2(was - now);
   return less > Math.max(1000, Math.abs(was) * 0.005) ? { less, from: ms[0], to: ms[ms.length - 1], n: ms.length } : null;
 }
 
 // which old file each new one replaces, and what stays
 function updPlan(U) {
-  const good = U.nw.filter((o) => UPD_NAME[o.kind]), repl = new Map();
-  good.forEach((o) => { o.part = partCheck(o, U.regCov); });
+  const good = U.nw.filter((o) => UPD_NAME[o.kind]),
+    repl = new Map();
+  good.forEach((o) => {
+    o.part = partCheck(o, U.regCov);
+  });
   for (const f of U.old) {
-    const by = good.find((o) => o.kind === f.kind && (UPD_SNAP.has(f.kind)
-      || (o.first && f.first && o.first <= f.first && o.last >= f.last && (!o.part || U.force.has(o.sha)))));
+    const by = good.find(
+      (o) =>
+        o.kind === f.kind &&
+        (UPD_SNAP.has(f.kind) || (o.first && f.first && o.first <= f.first && o.last >= f.last && (!o.part || U.force.has(o.sha))))
+    );
     if (by) repl.set(f.fid, by);
   }
   return Object.assign(U, { good, bad: U.nw.filter((o) => !UPD_NAME[o.kind]), repl, kept: U.old.filter((f) => !repl.has(f.fid)) });
@@ -74,25 +103,44 @@ function updPlan(U) {
 // what a new file does, in a few words
 function updWhat(U, o) {
   const gone = U.old.filter((f) => U.repl.get(f.fid) === o);
-  const oldMax = U.old.filter((f) => f.kind === o.kind && !U.repl.has(f.fid)).map((f) => f.last || '').sort().pop() || '';
-  if (gone.length) return 'replaces ' + gone.map((f) => (f.first ? span(f.first, f.last) : esc(f.name))).join(', ') + (o.first ? ' · now ' + span(o.first, o.last) : '');
+  const oldMax =
+    U.old
+      .filter((f) => f.kind === o.kind && !U.repl.has(f.fid))
+      .map((f) => f.last || '')
+      .sort()
+      .pop() || '';
+  if (gone.length)
+    return (
+      'replaces ' +
+      gone.map((f) => (f.first ? span(f.first, f.last) : esc(f.name))).join(', ') +
+      (o.first ? ' · now ' + span(o.first, o.last) : '')
+    );
   if (o.first && oldMax && o.last > oldMax) return 'adds ' + span(o.first > oldMax ? o.first : ymNext(oldMax), o.last);
   return o.first ? 'adds ' + span(o.first, o.last) + ' (a line in both counts once)' : 'added';
 }
 
 function updShow() {
-  const U = updPlan(R.upd), b0 = dbBuilds()[0] || {};
+  const U = updPlan(R.upd),
+    b0 = dbBuilds()[0] || {};
   const wrong = U.good.filter((o) => o.proj && o.proj !== META.project);
   const noCji = !U.kept.concat(U.good).some((f) => f.kind === 'cji3');
   const li = (o) => {
-    const p = o.part && !U.force.has(o.sha) ? `<div class="part">⚠ ${fmt(o.part.less)} lower than the register for ${span(o.part.from, o.part.to)} – looks like a part download (fewer WBS?). The old CJI3 is kept too; a line in both counts once.
-      <button data-upd="force" data-sha="${o.sha}">Replace anyway</button></div>` : '';
+    const p =
+      o.part && !U.force.has(o.sha)
+        ? `<div class="part">⚠ ${fmt(o.part.less)} lower than the register for ${span(o.part.from, o.part.to)} – looks like a part download (fewer WBS?). The old CJI3 is kept too; a line in both counts once.
+      <button data-upd="force" data-sha="${o.sha}">Replace anyway</button></div>`
+        : '';
     const proj = o.proj && o.proj !== META.project ? ` <span class="bad">· project ${esc(o.proj)}</span>` : '';
     return `<li><b>${UPD_NAME[o.kind]}</b><span class="n" dir="auto">${esc(o.name)}${proj}</span><span class="d">${updWhat(U, o)}</span>${p}</li>`;
   };
-  const keptTxt = !U.kept.length && U.old.length ? 'Every SAP file in the data file is replaced by the new ones.'
-    : U.kept.length ? 'Kept from the data file: ' + U.kept.map((f) => `${UPD_NAME[f.kind] || f.kind}${f.first ? ' ' + span(f.first, f.last) : ''}`).join(' · ') + ' · your codes'
-      : 'No SAP files in the data file yet (made before v3.4) – drop every file once; your codes come from the data file.';
+  const keptTxt =
+    !U.kept.length && U.old.length
+      ? 'Every SAP file in the data file is replaced by the new ones.'
+      : U.kept.length
+        ? 'Kept from the data file: ' +
+          U.kept.map((f) => `${UPD_NAME[f.kind] || f.kind}${f.first ? ' ' + span(f.first, f.last) : ''}`).join(' · ') +
+          ' · your codes'
+        : 'No SAP files in the data file yet (made before v3.4) – drop every file once; your codes come from the data file.';
   updBox(`<h3>${U.good.length ? `Update the register with ${U.good.length} new file${U.good.length === 1 ? '' : 's'}` : 'Nothing new to update'}</h3>
     <div class="sub">${esc(DBF.name)} · last update ${esc(String(b0.built || '').slice(0, 10))} · cut ${esc(b0.cut || '')}</div>
     <ul>${U.good.map(li).join('')}
@@ -107,7 +155,10 @@ function updShow() {
 async function updStart(fileList) {
   const list = [...fileList];
   if (!list.length) return;
-  if (list.some((f) => /\.db$/i.test(f.name))) { toast('To open another data file: Side navigation › Data file › Open another data file…'); return; }
+  if (list.some((f) => /\.db$/i.test(f.name))) {
+    toast('To open another data file: Side navigation › Data file › Open another data file…');
+    return;
+  }
   if (!DBF.db) {
     updBox(`<h3>Keep your work in a data file first</h3><div class="sub">The SAP files go into the data file with the register and your codes – then every month you drop only the new ones.</div>
       <div class="bt"><button data-upd="x">Cancel</button><button class="pri" data-upd="mk">Create data file…</button></div>`);
@@ -125,24 +176,44 @@ async function updGo() {
   updBox('<h3>Updating the register…</h3><div class="sub">about 20–30 seconds · logged in Check › Data log › Updates</div>');
   await pause(60);
   try {
-    await dbSave();   // your latest codes go with the update
-    const files = {}, put = (k, f) => (files[k] || (files[k] = [])).push(f);
+    await dbSave(); // your latest codes go with the update
+    const files = {},
+      put = (k, f) => (files[k] || (files[k] = [])).push(f);
     U.kept.forEach((f) => put(f.kind, { name: f.name, data: dbFileData(f.fid) }));
     U.good.forEach((o) => put(o.kind, o));
     files.prev = { name: 'codes from ' + DBF.name + '.json', data: new TextEncoder().encode(JSON.stringify(snapshot())) };
-    const data = Engine.build(files, {}), id = await dbAddBuild(data, '__VER__');
+    const data = Engine.build(files, {}),
+      id = await dbAddBuild(data, '__VER__');
     const cov = new Map(((data.META.dlog || {}).files || []).map((f) => [f.name, f]));
     await dbStoreFiles(id, [
       ...U.kept.map((f) => ({ fid: f.fid, role: 'kept' })),
-      ...U.good.map((o) => ({ ...o, role: 'new', first: o.first || (cov.get(o.name) || {}).first, last: o.last || (cov.get(o.name) || {}).last })),
+      ...U.good.map((o) => ({
+        ...o,
+        role: 'new',
+        first: o.first || (cov.get(o.name) || {}).first,
+        last: o.last || (cov.get(o.name) || {}).last,
+      })),
       ...[...U.repl.keys()].map((fid) => ({ fid, role: 'replaced' })),
     ]);
-    dbLog('update', `${U.good.length} new file(s): ${U.good.map((o) => o.name).join(', ')} · ${U.repl.size} replaced · cut ${data.META.cut}`, id);
+    dbLog(
+      'update',
+      `${U.good.length} new file(s): ${U.good.map((o) => o.name).join(', ')} · ${U.repl.size} replaced · cut ${data.META.cut}`,
+      id
+    );
     dbTidy();
     const okW = await dbWrite();
-    try { await idbSet('dbCache', { name: DBF.name, id, data }); } catch (e) { /* none */ }
-    if (!okW) {   // a browser that cannot write files: the data file downloads
-      try { await idbSet('lastBuild', data); } catch (e) { /* none */ }
+    try {
+      await idbSet('dbCache', { name: DBF.name, id, data });
+    } catch (e) {
+      /* none */
+    }
+    if (!okW) {
+      // a browser that cannot write files: the data file downloads
+      try {
+        await idbSet('lastBuild', data);
+      } catch (e) {
+        /* none */
+      }
       dbDownload();
       await pause(1500);
     }
@@ -150,7 +221,9 @@ async function updGo() {
     location.reload();
   } catch (e) {
     console.error(e);
-    updBox(`<h3>Could not update</h3><div class="sub bad">${esc(String(e.message || e))}</div><div class="bt"><button data-upd="x">Close</button></div>`);
+    updBox(
+      `<h3>Could not update</h3><div class="sub bad">${esc(String(e.message || e))}</div><div class="bt"><button data-upd="x">Close</button></div>`
+    );
   }
 }
 
@@ -158,10 +231,17 @@ document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-upd]');
   if (!b) return;
   const k = b.dataset.upd;
-  if (k === 'x') { updClose(); R.upd = null; }
-  else if (k === 'go') updGo();
-  else if (k === 'mk') { updClose(); asPick(); }
-  else if (k === 'force' && R.upd) { R.upd.force.add(b.dataset.sha); updShow(); }
+  if (k === 'x') {
+    updClose();
+    R.upd = null;
+  } else if (k === 'go') updGo();
+  else if (k === 'mk') {
+    updClose();
+    asPick();
+  } else if (k === 'force' && R.upd) {
+    R.upd.force.add(b.dataset.sha);
+    updShow();
+  }
 });
 // drop SAP files anywhere on the register (the start page has its own drop box); a .db opens that data file
 const onRegister = (e) => $('start').style.display === 'none' && e.dataTransfer;
@@ -170,20 +250,36 @@ document.addEventListener('dragover', (e) => {
   e.preventDefault();
   document.body.classList.add('dropping');
 });
-document.addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('dropping'); });
+document.addEventListener('dragleave', (e) => {
+  if (!e.relatedTarget) document.body.classList.remove('dropping');
+});
 document.addEventListener('drop', (e) => {
   if (!onRegister(e) || !e.dataTransfer.files.length) return;
   e.preventDefault();
   document.body.classList.remove('dropping');
-  const g = dbGrab(e.dataTransfer), cant = () => toast('This browser cannot switch the data file here – New project register › Open…');
-  if (g && !g.hp) { cant(); return; }
-  if (g) { dbOpenGrab(g).then((ok) => { if (ok && DBF.h) { sessionStorage.setItem('crOpen', ''); location.reload(); } else cant(); }); return; }
+  const g = dbGrab(e.dataTransfer),
+    cant = () => toast('This browser cannot switch the data file here – New project register › Open…');
+  if (g && !g.hp) {
+    cant();
+    return;
+  }
+  if (g) {
+    dbOpenGrab(g).then((ok) => {
+      if (ok && DBF.h) {
+        sessionStorage.setItem('crOpen', '');
+        location.reload();
+      } else cant();
+    });
+    return;
+  }
   updStart(e.dataTransfer.files);
 });
 $('bAdd').onclick = () => {
   const i = document.createElement('input');
-  i.type = 'file'; i.multiple = true; i.accept = '.xlsx,.xls,.xlsm';
+  i.type = 'file';
+  i.multiple = true;
+  i.accept = '.xlsx,.xls,.xlsm';
   i.onchange = () => updStart(i.files);
   i.click();
 };
-globalThis.__UPD = { start: updStart };   // for the checks
+globalThis.__UPD = { start: updStart }; // for the checks

@@ -2,68 +2,348 @@
 const DV = {
   fM: (v) => (v / 1e6).toFixed(1) + 'M',
   fr: (v) => (Math.abs(v) >= 100 ? fmt(v) : v.toFixed(2)),
-  pf: (v) => (Math.abs(v) >= 100 ? '×' + (1 + v / 100).toFixed(1) : Math.abs(v) >= 10 ? Math.abs(v).toFixed(0) + '%' : Math.abs(v).toFixed(1) + '%'),
-  cl: (v) => (Math.abs(v) < 1 ? 'mut' : v > 0 ? 'up' : 'dn'), ar: (v) => (Math.abs(v) < 1 ? '' : v > 0 ? '▲ ' : '▼ '),
+  pf: (v) =>
+    Math.abs(v) >= 100 ? '×' + (1 + v / 100).toFixed(1) : Math.abs(v) >= 10 ? Math.abs(v).toFixed(0) + '%' : Math.abs(v).toFixed(1) + '%',
+  cl: (v) => (Math.abs(v) < 1 ? 'mut' : v > 0 ? 'up' : 'dn'),
+  ar: (v) => (Math.abs(v) < 1 ? '' : v > 0 ? '▲ ' : '▼ '),
   cm: (x) => (x.s[x.s.length - 1] ? x.s[x.s.length - 1].a : 0),
   months: () => PER.map((x, k) => k).filter((k) => k > 0 && k < NP - 1 && k <= (R.rep > 0 ? R.rep : NM)),
-  serQ: (its) => DV.months().map((k) => { let q = 0, a = 0; its.forEach((it) => { if (it.q[k] > 1e-9 && it.p[k] > 0) { q += it.q[k]; a += it.p[k]; } }); return q ? { r: a / q, q, a } : null; }),
-  serA: (its) => DV.months().map((k) => { const a = its.reduce((x, it) => x + it.p[k], 0); return Math.abs(a) > 0.5 ? { r: a, q: 1, a } : null; }),
-  spk: (s) => { const pts = s.map((x, i) => x && [i, x.r]).filter(Boolean); if (pts.length < 2) return ''; const W2 = 78, H2 = 15, v = pts.map((x) => x[1]), lo = Math.min(...v), hi = Math.max(...v), X = (i) => (2 + i * (W2 - 4) / Math.max(1, s.length - 1)).toFixed(1), Y = (r) => (hi > lo ? 2 + (H2 - 4) * (1 - (r - lo) / (hi - lo)) : H2 / 2).toFixed(1); return `<svg width="${W2}" height="${H2}" style="display:block;margin:0 auto"><polyline fill="none" stroke="${v[v.length - 1] >= v[0] ? '#9B2C2C' : '#2F6B3A'}" stroke-width="1.5" points="${pts.map(([i, r]) => X(i) + ',' + Y(r)).join(' ')}"/><circle cx="${X(pts[pts.length - 1][0])}" cy="${Y(v[v.length - 1])}" r="2.3" fill="#1F3864"/></svg>`; },
+  serQ: (its) =>
+    DV.months().map((k) => {
+      let q = 0,
+        a = 0;
+      its.forEach((it) => {
+        if (it.q[k] > 1e-9 && it.p[k] > 0) {
+          q += it.q[k];
+          a += it.p[k];
+        }
+      });
+      return q ? { r: a / q, q, a } : null;
+    }),
+  serA: (its) =>
+    DV.months().map((k) => {
+      const a = its.reduce((x, it) => x + it.p[k], 0);
+      return Math.abs(a) > 0.5 ? { r: a, q: 1, a } : null;
+    }),
+  spk: (s) => {
+    const pts = s.map((x, i) => x && [i, x.r]).filter(Boolean);
+    if (pts.length < 2) return '';
+    const W2 = 78,
+      H2 = 15,
+      v = pts.map((x) => x[1]),
+      lo = Math.min(...v),
+      hi = Math.max(...v),
+      X = (i) => (2 + (i * (W2 - 4)) / Math.max(1, s.length - 1)).toFixed(1),
+      Y = (r) => (hi > lo ? 2 + (H2 - 4) * (1 - (r - lo) / (hi - lo)) : H2 / 2).toFixed(1);
+    return `<svg width="${W2}" height="${H2}" style="display:block;margin:0 auto"><polyline fill="none" stroke="${v[v.length - 1] >= v[0] ? '#9B2C2C' : '#2F6B3A'}" stroke-width="1.5" points="${pts.map(([i, r]) => X(i) + ',' + Y(r)).join(' ')}"/><circle cx="${X(pts[pts.length - 1][0])}" cy="${Y(v[v.length - 1])}" r="2.3" fill="#1F3864"/></svg>`;
+  },
   // the numbers of one driver: latest rate, 6-month average, vs average, vs the month before
-  calc: (x) => { const s = x.s, idx = s.map((y, i) => (y ? i : -1)).filter((i) => i >= 0), li = idx[idx.length - 1], Lm = s[li], pi = idx[idx.length - 2], Pm = pi !== undefined ? s[pi] : null, cur = li === s.length - 1;
-    const six = s.slice(-6), avg = x.amt ? six.reduce((a, y) => a + (y ? y.a : 0), 0) / Math.max(1, six.length) : six.filter(Boolean).reduce((a, y) => a + y.a, 0) / (six.filter(Boolean).reduce((a, y) => a + y.q, 0) || 1);
-    return { Lm, cur, avg, va: cur && Math.abs(avg) > 1e-6 ? (Lm.r / avg - 1) * 100 : null, vp: cur && Pm && Pm.r > 0 && Lm.r > 0 ? (Lm.r / Pm.r - 1) * 100 : null }; },
+  calc: (x) => {
+    const s = x.s,
+      idx = s.map((y, i) => (y ? i : -1)).filter((i) => i >= 0),
+      li = idx[idx.length - 1],
+      Lm = s[li],
+      pi = idx[idx.length - 2],
+      Pm = pi !== undefined ? s[pi] : null,
+      cur = li === s.length - 1;
+    const six = s.slice(-6),
+      avg = x.amt
+        ? six.reduce((a, y) => a + (y ? y.a : 0), 0) / Math.max(1, six.length)
+        : six.filter(Boolean).reduce((a, y) => a + y.a, 0) / (six.filter(Boolean).reduce((a, y) => a + y.q, 0) || 1);
+    return {
+      Lm,
+      cur,
+      avg,
+      va: cur && Math.abs(avg) > 1e-6 ? (Lm.r / avg - 1) * 100 : null,
+      vp: cur && Pm && Pm.r > 0 && Lm.r > 0 ? (Lm.r / Pm.r - 1) * 100 : null,
+    };
+  },
   // every possible driver of one bucket, largest first
-  of: (bi) => { const b = BK[bi], GN = META.grpNames || {}, its = b.items.filter((x) => x.inc !== 'No'), out = [];
-    if (bi === MATI) { const g = new Map(); its.forEach((it) => { const k = it.vals[2] + '|' + it.vals[5]; (g.get(k) || g.set(k, []).get(k)).push(it); });
-      for (const [k, a] of g) { const code = k.split('|')[0]; if (!code || code === '–') continue; out.push({ bi, key: 'm:' + code, code, name: `<b>${esc(GN[code] || a.slice().sort((p, q) => q.td - p.td)[0].vals[4])}</b> <span class="mut">${esc(code)}</span>`, txt: (GN[code] || '') + ' ' + code + ' ' + a.map((x) => x.vals[4]).join(' '), u: k.split('|')[1], td: a.reduce((x, y) => x + y.td, 0), s: DV.serQ(a), n: a.length, cat: grpTail(a[0].grp) }); } }
-    else its.filter((it) => String(it.vals[0])[0] !== '~').forEach((it) => { const rate = b.qty && it.qtd > 0, nm = isSub(bi) ? `<span dir="rtl" style="unicode-bidi:isolate">${esc(it.vals[2])}</span> <span class="mut">${esc(it.vals[1])}</span>` : b.id === 'G&A' ? `<b>${esc(it.vals[1] || it.vals[0])}</b> <span class="mut">${esc(it.vals[1] ? it.vals[0] : '')}</span>` : `<b>${esc(String(itemDesc(it) || itemCode(it)).replace(/ (Cairo|North Coast).*$/, ''))}</b> <span class="mut">${esc(itemDesc(it) ? itemCode(it) : '')}</span>`;
-      out.push({ bi, it, name: nm, cat: isSub(bi) ? String(it.vals[0]).replace(/^مقاولين-\s?/, '') : b.id === 'G&A' ? it.vals[0] : '', txt: it.vals.join(' '), ttl: isSub(bi) ? it.vals[2] : '', u: rate ? itemUnit(it) : '', td: it.td, s: rate ? DV.serQ([it]) : DV.serA([it]), amt: !rate }); });
-    return out.filter((x) => (x.amt ? x.s.some(Boolean) : x.s.filter(Boolean).length >= 2)).sort((a, b2) => b2.td - a.td); },
-  how: (bi) => (bi === MATI ? 'rate per unit (moving price)' : isSub(bi) ? 'certified rate per unit' : BK[bi].qty ? 'rate per unit, else cost per month' : 'cost per month (no unit)'),
-  row: (x, opt = {}) => { const c = DV.calc(x), fM = DV.fM;
-    return `<tr${opt.click ? ` class="dvr" data-dv="${x.key || 'i:' + x.bi + ':' + x.it.ii}"` : ''}><td title="${esc(x.ttl || '')}">${opt.num ? `<span class="mut" style="display:inline-block;width:24px">${opt.num}</span>` : ''}${x.name}</td>${opt.cat ? `<td class="dcat" dir="auto" title="${esc(x.cat || '')}">${esc(x.cat || '')}</td>` : ''}<td style="text-align:center">${x.amt ? '<span class="mut" style="font-size:11px">/ month</span>' : `<span class="u" style="background:${unitCol(x.u)}">${esc(x.u)}</span>`}</td><td>${c.cur ? `<b>${x.amt ? fM(c.Lm.r) : DV.fr(c.Lm.r)}</b>` : `<span class="mut" title="nothing in ${R.repLab}">none</span>`}</td><td class="mut">${!x.s.slice(-6).some(Boolean) ? '-' : x.amt ? fM(c.avg) : DV.fr(c.avg)}</td><td class="${c.va === null ? 'mut' : DV.cl(c.va)}">${c.va === null ? '-' : DV.ar(c.va) + DV.pf(c.va)}</td><td class="${c.vp === null ? 'mut' : DV.cl(c.vp)}">${c.vp === null ? '-' : DV.ar(c.vp) + DV.pf(c.vp)}</td><td>${DV.spk(x.s)}</td><td>${c.cur ? fM(DV.cm(x)) : '<span class="mut">-</span>'}</td><td><b>${fM(x.td)}</b></td><td class="mut">${R.toDate ? (100 * x.td / R.toDate).toFixed(1) : 0}%</td></tr>`; },
-  head: (first, cat) => `<colgroup><col>${cat ? '<col style="width:190px">' : ''}<col style="width:58px"><col style="width:74px"><col style="width:78px"><col style="width:66px"><col style="width:70px"><col style="width:84px"><col style="width:72px"><col style="width:68px"><col style="width:56px"></colgroup><tr><th>${first || 'Driver'}</th>${cat ? '<th style="text-align:right">Type of works / group</th>' : ''}<th style="text-align:center">Unit</th><th>${R.repLab}</th><th>6-month avg</th><th>vs avg</th><th>vs ${R.rep > 1 ? PER[R.rep - 1] : ''}</th><th style="text-align:center">Trend</th><th>${R.repLab} cost</th><th>To date</th><th>Share</th></tr>`,
-  gh: (bi, label, a, extra, cat) => `<tr class="gh" style="--bc:${bkColor(bi)}"${extra || ''}><td colspan="${cat ? 8 : 7}"><i class="sdot" style="background:${bkColor(bi)}"></i><b style="color:${bkColor(bi)}">${label}</b> · ${DV.how(bi)}</td><td>${DV.fM(a.reduce((x, y) => x + DV.cm(y), 0))}</td><td>${DV.fM(a.reduce((x, y) => x + y.td, 0))}</td><td>${R.toDate ? (100 * a.reduce((x, y) => x + y.td, 0) / R.toDate).toFixed(1) : 0}%</td></tr>`,
-  tot: (all, label, cat) => { const sA = all.reduce((x, y) => x + DV.cm(y), 0), sT = all.reduce((x, y) => x + y.td, 0); return `<tr class="t"><td>${label}</td><td colspan="${cat ? 7 : 6}" style="font-weight:400;color:#4B5563">${R.thisM ? (100 * sA / R.thisM).toFixed(0) : 0}% of ${R.repLab} cost · ${R.toDate ? (100 * sT / R.toDate).toFixed(0) : 0}% of to date</td><td>${DV.fM(sA)}</td><td>${DV.fM(sT)}</td><td>${R.toDate ? (100 * sT / R.toDate).toFixed(1) : 0}%</td></tr>`; },
+  of: (bi) => {
+    const b = BK[bi],
+      GN = META.grpNames || {},
+      its = b.items.filter((x) => x.inc !== 'No'),
+      out = [];
+    if (bi === MATI) {
+      const g = new Map();
+      its.forEach((it) => {
+        const k = it.vals[2] + '|' + it.vals[5];
+        (g.get(k) || g.set(k, []).get(k)).push(it);
+      });
+      for (const [k, a] of g) {
+        const code = k.split('|')[0];
+        if (!code || code === '–') continue;
+        out.push({
+          bi,
+          key: 'm:' + code,
+          code,
+          name: `<b>${esc(GN[code] || a.slice().sort((p, q) => q.td - p.td)[0].vals[4])}</b> <span class="mut">${esc(code)}</span>`,
+          txt: (GN[code] || '') + ' ' + code + ' ' + a.map((x) => x.vals[4]).join(' '),
+          u: k.split('|')[1],
+          td: a.reduce((x, y) => x + y.td, 0),
+          s: DV.serQ(a),
+          n: a.length,
+          cat: grpTail(a[0].grp),
+        });
+      }
+    } else
+      its
+        .filter((it) => String(it.vals[0])[0] !== '~')
+        .forEach((it) => {
+          const rate = b.qty && it.qtd > 0,
+            nm = isSub(bi)
+              ? `<span dir="rtl" style="unicode-bidi:isolate">${esc(it.vals[2])}</span> <span class="mut">${esc(it.vals[1])}</span>`
+              : b.id === 'G&A'
+                ? `<b>${esc(it.vals[1] || it.vals[0])}</b> <span class="mut">${esc(it.vals[1] ? it.vals[0] : '')}</span>`
+                : `<b>${esc(String(itemDesc(it) || itemCode(it)).replace(/ (Cairo|North Coast).*$/, ''))}</b> <span class="mut">${esc(itemDesc(it) ? itemCode(it) : '')}</span>`;
+          out.push({
+            bi,
+            it,
+            name: nm,
+            cat: isSub(bi) ? String(it.vals[0]).replace(/^مقاولين-\s?/, '') : b.id === 'G&A' ? it.vals[0] : '',
+            txt: it.vals.join(' '),
+            ttl: isSub(bi) ? it.vals[2] : '',
+            u: rate ? itemUnit(it) : '',
+            td: it.td,
+            s: rate ? DV.serQ([it]) : DV.serA([it]),
+            amt: !rate,
+          });
+        });
+    return out.filter((x) => (x.amt ? x.s.some(Boolean) : x.s.filter(Boolean).length >= 2)).sort((a, b2) => b2.td - a.td);
+  },
+  how: (bi) =>
+    bi === MATI
+      ? 'rate per unit (moving price)'
+      : isSub(bi)
+        ? 'certified rate per unit'
+        : BK[bi].qty
+          ? 'rate per unit, else cost per month'
+          : 'cost per month (no unit)',
+  row: (x, opt = {}) => {
+    const c = DV.calc(x),
+      fM = DV.fM;
+    return `<tr${opt.click ? ` class="dvr" data-dv="${x.key || 'i:' + x.bi + ':' + x.it.ii}"` : ''}><td title="${esc(x.ttl || '')}">${opt.num ? `<span class="mut" style="display:inline-block;width:24px">${opt.num}</span>` : ''}${x.name}</td>${opt.cat ? `<td class="dcat" dir="auto" title="${esc(x.cat || '')}">${esc(x.cat || '')}</td>` : ''}<td style="text-align:center">${x.amt ? '<span class="mut" style="font-size:11px">/ month</span>' : `<span class="u" style="background:${unitCol(x.u)}">${esc(x.u)}</span>`}</td><td>${c.cur ? `<b>${x.amt ? fM(c.Lm.r) : DV.fr(c.Lm.r)}</b>` : `<span class="mut" title="nothing in ${R.repLab}">none</span>`}</td><td class="mut">${!x.s.slice(-6).some(Boolean) ? '-' : x.amt ? fM(c.avg) : DV.fr(c.avg)}</td><td class="${c.va === null ? 'mut' : DV.cl(c.va)}">${c.va === null ? '-' : DV.ar(c.va) + DV.pf(c.va)}</td><td class="${c.vp === null ? 'mut' : DV.cl(c.vp)}">${c.vp === null ? '-' : DV.ar(c.vp) + DV.pf(c.vp)}</td><td>${DV.spk(x.s)}</td><td>${c.cur ? fM(DV.cm(x)) : '<span class="mut">-</span>'}</td><td><b>${fM(x.td)}</b></td><td class="mut">${R.toDate ? ((100 * x.td) / R.toDate).toFixed(1) : 0}%</td></tr>`;
+  },
+  head: (first, cat) =>
+    `<colgroup><col>${cat ? '<col style="width:190px">' : ''}<col style="width:58px"><col style="width:74px"><col style="width:78px"><col style="width:66px"><col style="width:70px"><col style="width:84px"><col style="width:72px"><col style="width:68px"><col style="width:56px"></colgroup><tr><th>${first || 'Driver'}</th>${cat ? '<th style="text-align:right">Type of works / group</th>' : ''}<th style="text-align:center">Unit</th><th>${R.repLab}</th><th>6-month avg</th><th>vs avg</th><th>vs ${R.rep > 1 ? PER[R.rep - 1] : ''}</th><th style="text-align:center">Trend</th><th>${R.repLab} cost</th><th>To date</th><th>Share</th></tr>`,
+  gh: (bi, label, a, extra, cat) =>
+    `<tr class="gh" style="--bc:${bkColor(bi)}"${extra || ''}><td colspan="${cat ? 8 : 7}"><i class="sdot" style="background:${bkColor(bi)}"></i><b style="color:${bkColor(bi)}">${label}</b> · ${DV.how(bi)}</td><td>${DV.fM(a.reduce((x, y) => x + DV.cm(y), 0))}</td><td>${DV.fM(a.reduce((x, y) => x + y.td, 0))}</td><td>${R.toDate ? ((100 * a.reduce((x, y) => x + y.td, 0)) / R.toDate).toFixed(1) : 0}%</td></tr>`,
+  tot: (all, label, cat) => {
+    const sA = all.reduce((x, y) => x + DV.cm(y), 0),
+      sT = all.reduce((x, y) => x + y.td, 0);
+    return `<tr class="t"><td>${label}</td><td colspan="${cat ? 7 : 6}" style="font-weight:400;color:#4B5563">${R.thisM ? ((100 * sA) / R.thisM).toFixed(0) : 0}% of ${R.repLab} cost · ${R.toDate ? ((100 * sT) / R.toDate).toFixed(0) : 0}% of to date</td><td>${DV.fM(sA)}</td><td>${DV.fM(sT)}</td><td>${R.toDate ? ((100 * sT) / R.toDate).toFixed(1) : 0}%</td></tr>`;
+  },
 };
 // the short list on the Summary: the largest drivers with cost this month
-function sumDrivers() { const GAI = BK.findIndex((b) => b.id === 'G&A'), EQI = BK.findIndex((b) => b.id === 'Equipment / fuel'), live = (x) => x.amt || x.s[x.s.length - 1];
-  return [[MATI, 'Material', 5, (x) => !x.amt && live(x) && x.s.filter(Boolean).length >= 3], [SUBI, 'Subcontractor', 6, (x) => !x.amt && live(x) && x.s.filter(Boolean).length >= 3], [GAI, 'G&A', 4, () => true], [EQI, 'Equipment', 2, (x) => !x.amt && live(x) && x.s.filter(Boolean).length >= 3]]
-    .filter(([bi]) => bi >= 0).map(([bi, l, n, f]) => [bi, l, DV.of(bi).filter(f).slice(0, n)]).filter((g) => g[2].length); }
+function sumDrivers() {
+  const GAI = BK.findIndex((b) => b.id === 'G&A'),
+    EQI = BK.findIndex((b) => b.id === 'Equipment / fuel'),
+    live = (x) => x.amt || x.s[x.s.length - 1];
+  return [
+    [MATI, 'Material', 5, (x) => !x.amt && live(x) && x.s.filter(Boolean).length >= 3],
+    [SUBI, 'Subcontractor', 6, (x) => !x.amt && live(x) && x.s.filter(Boolean).length >= 3],
+    [GAI, 'G&A', 4, () => true],
+    [EQI, 'Equipment', 2, (x) => !x.amt && live(x) && x.s.filter(Boolean).length >= 3],
+  ]
+    .filter(([bi]) => bi >= 0)
+    .map(([bi, l, n, f]) => [bi, l, DV.of(bi).filter(f).slice(0, n)])
+    .filter((g) => g[2].length);
+}
 // Reports › Cost drivers: every bucket, drivers until the chosen share of the bucket is covered
 function renderDrivers() {
-  const grp = ST.dvGrp !== false, gfold = ST.dvGFold || (ST.dvGFold = new Set()), cover = ST.dvCover ?? 0.8, f = ST.dvF || 'all', q = (ST.dvQ || '').toLowerCase(), fold = ST.dvFold || (ST.dvFold = new Set()), order = BK.map((b, i) => i).filter((bi) => BK[bi].items.some((x) => x.td > 0)).sort((a, b) => Math.abs(BK[b].items.reduce((x, y) => x + y.td, 0)) - Math.abs(BK[a].items.reduce((x, y) => x + y.td, 0)));
-  const bsel = ST.dvB || (ST.dvB = new Set()), chips = [], dz = ST.dvFold && ST.dvFold.size ? 'b' : ST.dvGFold && ST.dvGFold.size ? 't' : 'd';
-  let all = [], body = '', n = 0; R.dvMap = new Map();
-  for (const bi of order) { const cand = DV.of(bi), bt = cand.reduce((x, y) => x + Math.max(0, y.td), 0) || 1, pos = BK[bi].items.reduce((x, y) => x + Math.max(0, y.td), 0) || 1; let cum = 0, a = [];
-    for (const x of cand) { if (cover < 1 && cum >= cover * pos) break; a.push(x); cum += Math.max(0, x.td); }
-    const shown = a.filter((x) => { const c = DV.calc(x); return (f === 'all' || (f === 'up' && c.va !== null && c.va >= 5) || (f === 'dn' && c.va !== null && c.va <= -5) || (f === 'none' && !c.cur)) && (!q || x.txt.toLowerCase().includes(q)); });
-    chips.push([bi, shown.length, shown.reduce((x, y) => x + y.td, 0)]); if (!shown.length || (bsel.size && !bsel.has(bi))) continue; all = all.concat(shown); shown.forEach((x) => R.dvMap.set(x.key || 'i:' + x.bi + ':' + x.it.ii, x));
-    const fo = fold.has(bi), cov = Math.round(100 * a.reduce((x, y) => x + Math.max(0, y.td), 0) / pos);
-    body += DV.gh(bi, `${fo ? '+' : '−'} ${esc(BK[bi].id)}`, shown, ` data-dvg="${bi}" style="--bc:${bkColor(bi)};cursor:pointer" title="${shown.length} drivers · cover ${cov}% of ${esc(BK[bi].id)} – click to fold"`, 1).replace('</b> · ', `</b> <span class="mut">${shown.length} drivers · ${cov}% of the bucket</span> · `);
-    if (fo) { n += shown.length; continue; }
-    const cats = new Map(); shown.forEach((x) => { const k = x.cat || ''; (cats.get(k) || cats.set(k, []).get(k)).push(x); });
-    if (!grp || cats.size < 2) { body += shown.map((x) => DV.row(x, { click: 1, num: ++n, cat: 1 })).join(''); continue; }
-    [...cats].sort((a2, b2) => b2[1].reduce((x, y) => x + y.td, 0) - a2[1].reduce((x, y) => x + y.td, 0)).forEach(([k, xs]) => { const gk = bi + '|' + k, gf = gfold.has(gk), sA = xs.reduce((x, y) => x + DV.cm(y), 0), sT2 = xs.reduce((x, y) => x + y.td, 0);
-      body += `<tr class="gh2" data-dvc2="${esc(gk)}" style="--bc:${bkColor(bi)}"><td colspan="8"><span class="tg2">${gf ? '+' : '−'}</span><b dir="auto">${esc(k || '(none)')}</b> <span class="mut">${xs.length} driver${xs.length > 1 ? 's' : ''}</span></td><td>${DV.fM(sA)}</td><td>${DV.fM(sT2)}</td><td>${R.toDate ? (100 * sT2 / R.toDate).toFixed(1) : 0}%</td></tr>` + (gf ? '' : xs.map((x) => DV.row(x, { click: 1, num: ++n, cat: 1 })).join('')); if (gf) n += xs.length; }); }
+  const grp = ST.dvGrp !== false,
+    gfold = ST.dvGFold || (ST.dvGFold = new Set()),
+    cover = ST.dvCover ?? 0.8,
+    f = ST.dvF || 'all',
+    q = (ST.dvQ || '').toLowerCase(),
+    fold = ST.dvFold || (ST.dvFold = new Set()),
+    order = BK.map((b, i) => i)
+      .filter((bi) => BK[bi].items.some((x) => x.td > 0))
+      .sort((a, b) => Math.abs(BK[b].items.reduce((x, y) => x + y.td, 0)) - Math.abs(BK[a].items.reduce((x, y) => x + y.td, 0)));
+  const bsel = ST.dvB || (ST.dvB = new Set()),
+    chips = [],
+    dz = ST.dvFold && ST.dvFold.size ? 'b' : ST.dvGFold && ST.dvGFold.size ? 't' : 'd';
+  let all = [],
+    body = '',
+    n = 0;
+  R.dvMap = new Map();
+  for (const bi of order) {
+    const cand = DV.of(bi),
+      bt = cand.reduce((x, y) => x + Math.max(0, y.td), 0) || 1,
+      pos = BK[bi].items.reduce((x, y) => x + Math.max(0, y.td), 0) || 1;
+    let cum = 0,
+      a = [];
+    for (const x of cand) {
+      if (cover < 1 && cum >= cover * pos) break;
+      a.push(x);
+      cum += Math.max(0, x.td);
+    }
+    const shown = a.filter((x) => {
+      const c = DV.calc(x);
+      return (
+        (f === 'all' ||
+          (f === 'up' && c.va !== null && c.va >= 5) ||
+          (f === 'dn' && c.va !== null && c.va <= -5) ||
+          (f === 'none' && !c.cur)) &&
+        (!q || x.txt.toLowerCase().includes(q))
+      );
+    });
+    chips.push([bi, shown.length, shown.reduce((x, y) => x + y.td, 0)]);
+    if (!shown.length || (bsel.size && !bsel.has(bi))) continue;
+    all = all.concat(shown);
+    shown.forEach((x) => R.dvMap.set(x.key || 'i:' + x.bi + ':' + x.it.ii, x));
+    const fo = fold.has(bi),
+      cov = Math.round((100 * a.reduce((x, y) => x + Math.max(0, y.td), 0)) / pos);
+    body += DV.gh(
+      bi,
+      `${fo ? '+' : '−'} ${esc(BK[bi].id)}`,
+      shown,
+      ` data-dvg="${bi}" style="--bc:${bkColor(bi)};cursor:pointer" title="${shown.length} drivers · cover ${cov}% of ${esc(BK[bi].id)} – click to fold"`,
+      1
+    ).replace('</b> · ', `</b> <span class="mut">${shown.length} drivers · ${cov}% of the bucket</span> · `);
+    if (fo) {
+      n += shown.length;
+      continue;
+    }
+    const cats = new Map();
+    shown.forEach((x) => {
+      const k = x.cat || '';
+      (cats.get(k) || cats.set(k, []).get(k)).push(x);
+    });
+    if (!grp || cats.size < 2) {
+      body += shown.map((x) => DV.row(x, { click: 1, num: ++n, cat: 1 })).join('');
+      continue;
+    }
+    [...cats]
+      .sort((a2, b2) => b2[1].reduce((x, y) => x + y.td, 0) - a2[1].reduce((x, y) => x + y.td, 0))
+      .forEach(([k, xs]) => {
+        const gk = bi + '|' + k,
+          gf = gfold.has(gk),
+          sA = xs.reduce((x, y) => x + DV.cm(y), 0),
+          sT2 = xs.reduce((x, y) => x + y.td, 0);
+        body +=
+          `<tr class="gh2" data-dvc2="${esc(gk)}" style="--bc:${bkColor(bi)}"><td colspan="8"><span class="tg2">${gf ? '+' : '−'}</span><b dir="auto">${esc(k || '(none)')}</b> <span class="mut">${xs.length} driver${xs.length > 1 ? 's' : ''}</span></td><td>${DV.fM(sA)}</td><td>${DV.fM(sT2)}</td><td>${R.toDate ? ((100 * sT2) / R.toDate).toFixed(1) : 0}%</td></tr>` +
+          (gf ? '' : xs.map((x) => DV.row(x, { click: 1, num: ++n, cat: 1 })).join(''));
+        if (gf) n += xs.length;
+      });
+  }
   const sT = all.reduce((x, y) => x + y.td, 0);
-  $('drvp').innerHTML = `<div class="panel" style="margin:0;padding:10px 14px"><div class="sct" style="flex-wrap:wrap;gap:8px 10px"><b>Cost drivers</b><small>${all.length} drivers · <b style="color:#1B2A41">${R.toDate ? (100 * sT / R.toDate).toFixed(0) : 0}% of the cost to date</b> · this month vs its 6-month average · ▲ red = dearer · click a driver for its detail</small><span class="sp"></span>
-    <span class="help">Cover of each bucket</span><span class="seg">${[[0.5, '50%'], [0.8, '80%'], [0.95, '95%'], [1, 'All']].map(([v, l]) => `<button data-dvc="${v}" class="${cover === v ? 'on' : ''}">${l}</button>`).join('')}</span>
-    ${[['all', 'All'], ['up', '▲ Above average ≥ 5%'], ['dn', '▼ Below average ≥ 5%'], ['none', 'No cost this month']].map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-dvf="${k}">${l}</button>`).join('')}
+  $('drvp').innerHTML =
+    `<div class="panel" style="margin:0;padding:10px 14px"><div class="sct" style="flex-wrap:wrap;gap:8px 10px"><b>Cost drivers</b><small>${all.length} drivers · <b style="color:#1B2A41">${R.toDate ? ((100 * sT) / R.toDate).toFixed(0) : 0}% of the cost to date</b> · this month vs its 6-month average · ▲ red = dearer · click a driver for its detail</small><span class="sp"></span>
+    <span class="help">Cover of each bucket</span><span class="seg">${[
+      [0.5, '50%'],
+      [0.8, '80%'],
+      [0.95, '95%'],
+      [1, 'All'],
+    ]
+      .map(([v, l]) => `<button data-dvc="${v}" class="${cover === v ? 'on' : ''}">${l}</button>`)
+      .join('')}</span>
+    ${[
+      ['all', 'All'],
+      ['up', '▲ Above average ≥ 5%'],
+      ['dn', '▼ Below average ≥ 5%'],
+      ['none', 'No cost this month'],
+    ]
+      .map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-dvf="${k}">${l}</button>`)
+      .join('')}
     <span class="seg" title="Group the drivers of a bucket by type of works (Subcontractor), division (Material) or sub-group (G&amp;A)"><button data-dvgrp="1" class="${grp ? 'on' : ''}">Group by type</button><button data-dvgrp="0" class="${grp ? '' : 'on'}">List</button></span>
     <input id="dvQ" type="search" placeholder="Search driver, type of works…" value="${esc(ST.dvQ || '')}" style="width:220px;padding:4px 9px;border:1px solid var(--line);border-radius:6px"><a class="lk" data-dvback="1">‹ Summary</a></div>
     <div class="dvchips"><span class="seg" title="Zoom: buckets › types › drivers"><button data-dvz="b" class="${dz === 'b' ? 'on' : ''}">Buckets</button><button data-dvz="t" class="${dz === 't' ? 'on' : ''}">Types</button><button data-dvz="d" class="${dz === 'd' ? 'on' : ''}">Drivers</button></span><button data-fxfit="drv" title="Fit every column to its content">↔ Fit</button><span style="width:8px"></span><button class="dvc ${bsel.size ? '' : 'on'}" data-dvb="all">All buckets</button>${chips.map(([bi, k, t]) => `<button class="dvc ${bsel.has(bi) ? 'on' : ''}" data-dvb="${bi}" style="--bc:${bkColor(bi)}" title="${k} drivers · ${DV.fM(t)} · Ctrl+click to add to the selection"><i style="background:${bkColor(bi)}"></i>${esc(BK[bi].short || BK[bi].id)}<small>${k} drivers</small></button>`).join('')}</div>
     <table class="st drv drvf fxt" data-fx="drv">${DV.head('#&nbsp; Driver', 1)}${body || '<tr><td colspan="11" class="help">Nothing matches.</td></tr>'}${all.length ? DV.tot(all, 'Total of these ' + all.length + ' drivers', 1) : ''}</table></div>`;
   fxScan($('drvp'));
-  const i = $('dvQ'); i.oninput = () => { ST.dvQ = i.value; const p = i.selectionStart; renderDrivers(); const n2 = $('dvQ'); n2.focus(); n2.setSelectionRange(p, p); };
+  const i = $('dvQ');
+  i.oninput = () => {
+    ST.dvQ = i.value;
+    const p = i.selectionStart;
+    renderDrivers();
+    const n2 = $('dvQ');
+    n2.focus();
+    n2.setSelectionRange(p, p);
+  };
 }
-document.addEventListener('click', (e) => { const t = e.target, pg = $('drvp'); if (!pg || !pg.contains(t)) return;
-  const c = t.closest('[data-dvc]'); if (c) { ST.dvCover = +c.dataset.dvc; renderDrivers(); return; } const f = t.closest('[data-dvf]'); if (f) { ST.dvF = f.dataset.dvf; renderDrivers(); return; }
-  if (t.closest('[data-dvback]')) { ST.tab = 'sum'; render(); return; }
-  const bc = t.closest('[data-dvb]'); if (bc) { const v = bc.dataset.dvb, S2 = ST.dvB; if (v === 'all') S2.clear(); else { const bi = +v; if (e.ctrlKey || e.metaKey) { S2.has(bi) ? S2.delete(bi) : S2.add(bi); } else if (S2.size === 1 && S2.has(bi)) S2.clear(); else { S2.clear(); S2.add(bi); } } renderDrivers(); return; }
-  const z = t.closest('[data-dvz]'); if (z) { const v = z.dataset.dvz; ST.dvFold.clear(); ST.dvGFold.clear(); if (v === 'b') BK.forEach((b, bi) => ST.dvFold.add(bi)); if (v === 't') { ST.dvGrp = true; BK.forEach((b, bi) => DV.of(bi).forEach((x) => ST.dvGFold.add(bi + '|' + (x.cat || '')))); } renderDrivers(); return; }
-  const gp = t.closest('[data-dvgrp]'); if (gp) { ST.dvGrp = gp.dataset.dvgrp === '1'; renderDrivers(); return; }
-  const g2 = t.closest('[data-dvc2]'); if (g2) { const k = g2.dataset.dvc2; ST.dvGFold.has(k) ? ST.dvGFold.delete(k) : ST.dvGFold.add(k); renderDrivers(); return; }
-  const g = t.closest('[data-dvg]'); if (g) { const bi = +g.dataset.dvg; ST.dvFold.has(bi) ? ST.dvFold.delete(bi) : ST.dvFold.add(bi); renderDrivers(); return; }
-  const r = t.closest('tr[data-dv]'); if (r) { const x = R.dvMap && R.dvMap.get(r.dataset.dv); if (!x) return; if (x.it) openDrawer(x.it); else { ST.tab = 'mrate'; ST.bk = MATI; ST.mrLv = 'grp'; ST.mrQ = x.code; render(); } } });
+document.addEventListener('click', (e) => {
+  const t = e.target,
+    pg = $('drvp');
+  if (!pg || !pg.contains(t)) return;
+  const c = t.closest('[data-dvc]');
+  if (c) {
+    ST.dvCover = +c.dataset.dvc;
+    renderDrivers();
+    return;
+  }
+  const f = t.closest('[data-dvf]');
+  if (f) {
+    ST.dvF = f.dataset.dvf;
+    renderDrivers();
+    return;
+  }
+  if (t.closest('[data-dvback]')) {
+    ST.tab = 'sum';
+    render();
+    return;
+  }
+  const bc = t.closest('[data-dvb]');
+  if (bc) {
+    const v = bc.dataset.dvb,
+      S2 = ST.dvB;
+    if (v === 'all') S2.clear();
+    else {
+      const bi = +v;
+      if (e.ctrlKey || e.metaKey) {
+        S2.has(bi) ? S2.delete(bi) : S2.add(bi);
+      } else if (S2.size === 1 && S2.has(bi)) S2.clear();
+      else {
+        S2.clear();
+        S2.add(bi);
+      }
+    }
+    renderDrivers();
+    return;
+  }
+  const z = t.closest('[data-dvz]');
+  if (z) {
+    const v = z.dataset.dvz;
+    ST.dvFold.clear();
+    ST.dvGFold.clear();
+    if (v === 'b') BK.forEach((b, bi) => ST.dvFold.add(bi));
+    if (v === 't') {
+      ST.dvGrp = true;
+      BK.forEach((b, bi) => DV.of(bi).forEach((x) => ST.dvGFold.add(bi + '|' + (x.cat || ''))));
+    }
+    renderDrivers();
+    return;
+  }
+  const gp = t.closest('[data-dvgrp]');
+  if (gp) {
+    ST.dvGrp = gp.dataset.dvgrp === '1';
+    renderDrivers();
+    return;
+  }
+  const g2 = t.closest('[data-dvc2]');
+  if (g2) {
+    const k = g2.dataset.dvc2;
+    ST.dvGFold.has(k) ? ST.dvGFold.delete(k) : ST.dvGFold.add(k);
+    renderDrivers();
+    return;
+  }
+  const g = t.closest('[data-dvg]');
+  if (g) {
+    const bi = +g.dataset.dvg;
+    ST.dvFold.has(bi) ? ST.dvFold.delete(bi) : ST.dvFold.add(bi);
+    renderDrivers();
+    return;
+  }
+  const r = t.closest('tr[data-dv]');
+  if (r) {
+    const x = R.dvMap && R.dvMap.get(r.dataset.dv);
+    if (!x) return;
+    if (x.it) openDrawer(x.it);
+    else {
+      ST.tab = 'mrate';
+      ST.bk = MATI;
+      ST.mrLv = 'grp';
+      ST.mrQ = x.code;
+      render();
+    }
+  }
+});

@@ -22,3 +22,4 @@
 - Run `npm test` (the full set, both projects) before every release; all checks must pass. While working use `npm run test:quick` or `npm run test:only -- <sections>`. A changed number is only accepted with `--update` after the owner agrees the new figure is right.
 - The repo is PUBLIC: never commit real SAP files – only masked copies made with `tools/mask-sap.js`.
 - Version: `VERSION` file → `out/Cost_Register_Tool_vX.Y.html` (v30 became 3.0, then 3.1, 3.2 …); bump on every release.
+- Code style: Prettier (`.prettierrc.json`); run `npm run format` after editing – `npm test` refuses unformatted code.

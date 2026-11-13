@@ -1,0 +1,4 @@
+app/js/00-boot-open.js
+app/js/23-boot-start.js
+node_modules
+out

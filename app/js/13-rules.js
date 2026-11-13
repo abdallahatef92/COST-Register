@@ -1,48 +1,245 @@
 // =====================================================================================  Rules: the built-in rules (read-only), YOUR rules (editable), the unclassified lines
-const ruleMatch = (r, i) => { const n = (x) => String(x || '').trim().toLowerCase(); return (r.ce || r.cen || r.type || r.wbs) && (!r.ce || n(S[L.ce[i]]) === n(r.ce)) && (!r.cen || n(S[L.cen[i]]) === n(r.cen)) && (!r.type || n(S[L.ty[i]]) === n(r.type)) && (!r.wbs || n(S[L.wbs[i]]).startsWith(n(r.wbs))); };
+const ruleMatch = (r, i) => {
+  const n = (x) =>
+    String(x || '')
+      .trim()
+      .toLowerCase();
+  return (
+    (r.ce || r.cen || r.type || r.wbs) &&
+    (!r.ce || n(S[L.ce[i]]) === n(r.ce)) &&
+    (!r.cen || n(S[L.cen[i]]) === n(r.cen)) &&
+    (!r.type || n(S[L.ty[i]]) === n(r.type)) &&
+    (!r.wbs || n(S[L.wbs[i]]).startsWith(n(r.wbs)))
+  );
+};
 function renderRules() {
-  const BKS = META.bucketIds || BK.map((b) => b.id), ur = ST.rules;
+  const BKS = META.bucketIds || BK.map((b) => b.id),
+    ur = ST.rules;
   // preview: lines (and amount) each of your rules catches now, and in which bucket those lines are today
-  const prev = ur.map((r) => { let n = 0, a = 0; const now = new Map(); for (let i = 0; i < N; i++) if (ruleMatch(r, i)) { n++; a += L.amt[i]; const b = BK[L.b[i]].short; now.set(b, (now.get(b) || 0) + 1); } return { n, a, now }; });
-  const inp = (i, f, w, list) => `<input data-r="${i}" data-f="${f}" value="${esc(ur[i][f] || '')}" style="width:${w}px" ${list ? `list="${list}"` : ''}>`;
-  const unc = META.unclass || [], uncN = unc.reduce((s0, x) => s0 + x.n, 0), uncA = unc.reduce((s0, x) => s0 + x.amt, 0);
-  $('rul').innerHTML = `<div class="cards" style="grid-template-columns:repeat(4,minmax(160px,1fr))"><div class="card ${uncN ? 'red' : 'green'}"><span>Unclassified lines</span><b>${uncN.toLocaleString('en-US')}</b></div><div class="card"><span>Unclassified amount</span><b>${fmt(uncA)}</b></div><div class="card"><span>Your rules</span><b>${ur.length}</b></div><div class="card"><span>Lines by your rules (this build)</span><b>${(META.yours || 0).toLocaleString('en-US')}</b></div></div>
+  const prev = ur.map((r) => {
+    let n = 0,
+      a = 0;
+    const now = new Map();
+    for (let i = 0; i < N; i++)
+      if (ruleMatch(r, i)) {
+        n++;
+        a += L.amt[i];
+        const b = BK[L.b[i]].short;
+        now.set(b, (now.get(b) || 0) + 1);
+      }
+    return { n, a, now };
+  });
+  const inp = (i, f, w, list) =>
+    `<input data-r="${i}" data-f="${f}" value="${esc(ur[i][f] || '')}" style="width:${w}px" ${list ? `list="${list}"` : ''}>`;
+  const unc = META.unclass || [],
+    uncN = unc.reduce((s0, x) => s0 + x.n, 0),
+    uncA = unc.reduce((s0, x) => s0 + x.amt, 0);
+  $('rul').innerHTML =
+    `<div class="cards" style="grid-template-columns:repeat(4,minmax(160px,1fr))"><div class="card ${uncN ? 'red' : 'green'}"><span>Unclassified lines</span><b>${uncN.toLocaleString('en-US')}</b></div><div class="card"><span>Unclassified amount</span><b>${fmt(uncA)}</b></div><div class="card"><span>Your rules</span><b>${ur.length}</b></div><div class="card"><span>Lines by your rules (this build)</span><b>${(META.yours || 0).toLocaleString('en-US')}</b></div></div>
    <div class="panel"><h2>Your rules<span class="note">checked FIRST, before the built-in rules · fill only what must match (cost element exact, name, document type, WBS starts with) · first matching rule wins</span></h2>
     <table class="s"><tr><th>#</th><th style="text-align:left">Cost element</th><th style="text-align:left">Cost element name</th><th style="text-align:left">Doc. type</th><th style="text-align:left">WBS starts with</th><th style="text-align:left">→ Bucket</th><th style="text-align:left">G&amp;A sub-group</th><th>Lines it catches</th><th>Amount</th><th style="text-align:left">Those lines are now in</th><th></th></tr>
-    ${ur.map((r, i) => `<tr><td>${i + 1}</td><td style="text-align:left">${inp(i, 'ce', 100)}</td><td style="text-align:left">${inp(i, 'cen', 170, 'dl-cen')}</td><td style="text-align:left">${inp(i, 'type', 50)}</td><td style="text-align:left">${inp(i, 'wbs', 140)}</td>
+    ${
+      ur
+        .map(
+          (
+            r,
+            i
+          ) => `<tr><td>${i + 1}</td><td style="text-align:left">${inp(i, 'ce', 100)}</td><td style="text-align:left">${inp(i, 'cen', 170, 'dl-cen')}</td><td style="text-align:left">${inp(i, 'type', 50)}</td><td style="text-align:left">${inp(i, 'wbs', 140)}</td>
       <td style="text-align:left"><select data-r="${i}" data-f="bucket"><option value="">– choose –</option>${BKS.map((b) => `<option ${r.bucket === b ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></td><td style="text-align:left">${r.bucket === 'G&A' ? inp(i, 'sub', 150, 'dl-gas') : ''}</td>
-      <td>${prev[i].n.toLocaleString('en-US')}</td><td>${fmt(prev[i].a)}</td><td style="text-align:left" class="help">${esc([...prev[i].now].map(([b, n]) => b + ' ' + n).join(' · '))}</td><td><button data-del="${i}">✕</button></td></tr>`).join('') || '<tr><td colspan="11" class="help" style="text-align:left">No rules yet – add one, or use "Make rule" on an unclassified line below.</td></tr>'}</table>
+      <td>${prev[i].n.toLocaleString('en-US')}</td><td>${fmt(prev[i].a)}</td><td style="text-align:left" class="help">${esc([...prev[i].now].map(([b, n]) => b + ' ' + n).join(' · '))}</td><td><button data-del="${i}">✕</button></td></tr>`
+        )
+        .join('') ||
+      '<tr><td colspan="11" class="help" style="text-align:left">No rules yet – add one, or use "Make rule" on an unclassified line below.</td></tr>'
+    }</table>
     <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><button id="rAdd">+ Add rule</button><button class="pri" id="rApply">Apply rules – rebuild</button><span class="help" id="rMsg">Your rules are kept with your codes (Save codes, Excel export) and used by every next build.</span></div></div>
    <div class="panel"><h2>Indirect presets<span class="note">SAP GL → PKG “Indirect” + indirect cost element (from the CJI3 master, mapped to the indirect template) · applied to G&amp;A, Equipment, Fleet, House rent and Depreciation · fills empty codes only, every build</span></h2>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><button id="ipTog" class="${ST.indOff ? '' : 'pri'}">${ST.indOff ? 'Off – turn on' : 'On'}</button><button id="ipNow">Fill empty codes now</button><span class="help">Ctrl+Z undoes a fill · a code you type always wins</span></div>
-    <table class="s"><tr><th style="text-align:left">Indirect code</th><th style="text-align:left">Name</th><th style="text-align:left">SAP GL cost elements</th><th>Items now</th><th>To date</th></tr>${(() => { const by = new Map(); BK.forEach((b) => b.items.forEach((it) => { const p = indPreset(it); if (!p) return; const e = by.get(p.ce) || by.set(p.ce, { n: 0, a: 0 }).get(p.ce); e.n++; e.a += it.td; })); const names = new Map([...new Set(Object.values(IND_GL).join(' ').split(' '))].map((g) => [g, ''])); for (let i = 0; i < N; i++) { const g = S[L.ce[i]]; if (names.has(g) && !names.get(g)) names.set(g, S[L.cen[i]]); }
-      return [...Object.keys(IND_GL), 'SE-03', 'SE-07', 'SE-11', 'SE-01', 'SE-05', 'SE-08'].filter((c, i, a) => a.indexOf(c) === i).map((c) => `<tr><td style="text-align:left"><b>${esc(c)}</b></td><td style="text-align:left">${esc(PS_NAMES[c] || '')}</td><td style="text-align:left" class="help">${IND_GL[c] ? IND_GL[c].split(' ').map((g) => esc(g + (names.get(g) ? ' ' + names.get(g) : ''))).join(' · ') : 'Inhouse Charge EQ (30103100) – by the equipment order name'}</td><td>${(by.get(c) || {}).n || '-'}</td><td>${by.get(c) ? fmt(by.get(c).a) : '-'}</td></tr>`).join(''); })()}</table></div>
+    <table class="s"><tr><th style="text-align:left">Indirect code</th><th style="text-align:left">Name</th><th style="text-align:left">SAP GL cost elements</th><th>Items now</th><th>To date</th></tr>${(() => {
+      const by = new Map();
+      BK.forEach((b) =>
+        b.items.forEach((it) => {
+          const p = indPreset(it);
+          if (!p) return;
+          const e = by.get(p.ce) || by.set(p.ce, { n: 0, a: 0 }).get(p.ce);
+          e.n++;
+          e.a += it.td;
+        })
+      );
+      const names = new Map([...new Set(Object.values(IND_GL).join(' ').split(' '))].map((g) => [g, '']));
+      for (let i = 0; i < N; i++) {
+        const g = S[L.ce[i]];
+        if (names.has(g) && !names.get(g)) names.set(g, S[L.cen[i]]);
+      }
+      return [...Object.keys(IND_GL), 'SE-03', 'SE-07', 'SE-11', 'SE-01', 'SE-05', 'SE-08']
+        .filter((c, i, a) => a.indexOf(c) === i)
+        .map(
+          (c) =>
+            `<tr><td style="text-align:left"><b>${esc(c)}</b></td><td style="text-align:left">${esc(PS_NAMES[c] || '')}</td><td style="text-align:left" class="help">${
+              IND_GL[c]
+                ? IND_GL[c]
+                    .split(' ')
+                    .map((g) => esc(g + (names.get(g) ? ' ' + names.get(g) : '')))
+                    .join(' · ')
+                : 'Inhouse Charge EQ (30103100) – by the equipment order name'
+            }</td><td>${(by.get(c) || {}).n || '-'}</td><td>${by.get(c) ? fmt(by.get(c).a) : '-'}</td></tr>`
+        )
+        .join('');
+    })()}</table></div>
    <div class="panel"><h2>Coding rules<span class="note">a code typed on a material group (Material › Rate analysis) or a subcontractor work item (Rates &amp; coding) is kept here – every new item of that group / service gets it in the next builds</span></h2>
     <table class="s"><tr><th style="text-align:left">Applies to</th><th style="text-align:left">Group / service</th><th style="text-align:left">Codes</th><th>Items now</th><th>Coded by it</th><th></th></tr>
-    ${Object.entries(ST.crules).sort().map(([k, r]) => { const its = BK.flatMap((b) => b.items.filter((it) => ruleKeyOf(it) === k)), ok = its.filter((it) => Object.entries(r).every(([f, v]) => it[f] === v)).length, GN = META.grpNames || {}, code = k.slice(2);
-      return `<tr><td style="text-align:left">${k[0] === 'm' ? 'Material group' : 'Subcontractor service'}</td><td style="text-align:left"><b>${esc(code)}</b> ${esc(k[0] === 'm' ? GN[code] || '' : (its[0] ? its[0].vals[2] : ''))}</td><td style="text-align:left">${Object.entries(r).map(([f, v]) => FN[f] + ' <b>' + esc(v) + '</b>').join(' · ')}</td><td>${its.length}</td><td>${ok}</td><td><button data-crx="${esc(k)}">✕</button></td></tr>`; }).join('') || '<tr><td colspan="6" class="help" style="text-align:left">None yet – type a code on a material group in Material › Rate analysis, or on a work item in Subcontractor › Rates &amp; coding.</td></tr>'}</table>
+    ${
+      Object.entries(ST.crules)
+        .sort()
+        .map(([k, r]) => {
+          const its = BK.flatMap((b) => b.items.filter((it) => ruleKeyOf(it) === k)),
+            ok = its.filter((it) => Object.entries(r).every(([f, v]) => it[f] === v)).length,
+            GN = META.grpNames || {},
+            code = k.slice(2);
+          return `<tr><td style="text-align:left">${k[0] === 'm' ? 'Material group' : 'Subcontractor service'}</td><td style="text-align:left"><b>${esc(code)}</b> ${esc(k[0] === 'm' ? GN[code] || '' : its[0] ? its[0].vals[2] : '')}</td><td style="text-align:left">${Object.entries(
+            r
+          )
+            .map(([f, v]) => FN[f] + ' <b>' + esc(v) + '</b>')
+            .join(' · ')}</td><td>${its.length}</td><td>${ok}</td><td><button data-crx="${esc(k)}">✕</button></td></tr>`;
+        })
+        .join('') ||
+      '<tr><td colspan="6" class="help" style="text-align:left">None yet – type a code on a material group in Material › Rate analysis, or on a work item in Subcontractor › Rates &amp; coding.</td></tr>'
+    }</table>
     ${Object.keys(ST.crules).length ? '<div style="margin-top:8px"><button id="crApply">Fill empty codes now from these rules</button> <span class="help">only empty codes are filled; one undo step</span></div>' : ''}</div>
    <div class="panel"><h2>Unclassified lines<span class="note">cost elements no rule catches – they show on Checks until a rule takes them</span></h2>
     <table class="s"><tr><th style="text-align:left">Cost element</th><th style="text-align:left">Name</th><th>Doc. type</th><th>Lines</th><th>Amount</th><th style="text-align:left">Main WBS</th><th></th></tr>
     ${unc.map((x, k) => `<tr><td style="text-align:left">${esc(x.ce)}</td><td style="text-align:left">${esc(x.cen)}</td><td>${esc(x.type)}</td><td>${x.n}</td><td>${fmt(x.amt)}</td><td style="text-align:left" class="help">${esc(x.wbs.join(' · '))}</td><td><button data-mk="${k}">Make rule</button></td></tr>`).join('') || '<tr><td colspan="7" class="help" style="text-align:left">None – every line has a bucket.</td></tr>'}</table></div>
    <div class="panel"><h2>Built-in rules<span class="note">in this order, after your rules · first match wins</span></h2><table class="s"><tr><th>#</th><th style="text-align:left">When the line…</th><th style="text-align:left">It goes to</th><th style="text-align:left">Note</th></tr>
     ${(META.ruleTable || []).map((r) => `<tr><td>${esc(r[0])}</td><td style="text-align:left">${esc(r[1])}</td><td style="text-align:left"><b>${esc(r[2])}</b></td><td style="text-align:left" class="help">${esc(r[3])}</td></tr>`).join('')}</table></div>
-   <datalist id="dl-cen">${[...new Set(L.cen.map((x) => S[x]))].sort().map((x) => `<option value="${esc(x)}">`).join('')}</datalist><datalist id="dl-gas">${(META.gaSubs || []).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>`;
-  const save = () => { persist(); };
-  $('rul').querySelectorAll('[data-r]').forEach((el) => { el.onchange = () => { ur[+el.dataset.r][el.dataset.f] = el.value.trim(); save(); renderRules(); }; });
-  $('rul').querySelectorAll('[data-del]').forEach((el) => { el.onclick = () => { ur.splice(+el.dataset.del, 1); save(); renderRules(); }; });
-  $('rul').querySelectorAll('[data-mk]').forEach((el) => { el.onclick = () => { const x = unc[+el.dataset.mk]; const w = x.wbs.filter(Boolean), pre = w.length ? w.reduce((p, v) => { let i = 0; while (i < p.length && p[i] === v[i]) i++; return p.slice(0, i); }) : '', wp = pre.replace(/[.\-]+$/, '');
-      ur.push({ ce: x.ce || '', cen: x.cen || '', type: x.type && x.type !== '(blank)' ? x.type : '', wbs: wp.length > 6 ? wp : '', bucket: '', sub: '' }); save(); renderRules(); }; });
-  $('rul').querySelectorAll('[data-crx]').forEach((el) => { el.onclick = () => { delete ST.crules[el.dataset.crx]; persist(); renderRules(); }; });
-  if ($('crApply')) $('crApply').onclick = () => { const ch = []; BK.forEach((b) => b.items.forEach((it) => { const k = ruleKeyOf(it), r = k && ST.crules[k]; if (r) Object.entries(r).forEach(([f, v]) => { if (!it[f] && codeF(it.bi).includes(f)) ch.push({ t: 'item', bi: it.bi, ii: it.ii, f, v }); }); })); if (ch.length) change(ch, 'Codes from coding rules'); else toast('Nothing empty to fill'); };
-  $('ipTog').onclick = () => { ST.indOff = !ST.indOff; persist(); renderRules(); }; $('ipNow').onclick = () => { const ch = indPresetChanges(); if (ch.length) change(ch, 'Indirect presets (SAP GL → indirect code)'); else toast(ST.indOff ? 'The presets are off' : 'Nothing empty to fill'); };
-  $('rAdd').onclick = () => { ur.push({ ce: '', cen: '', type: '', wbs: '', bucket: '', sub: '' }); save(); renderRules(); };
-  $('rApply').onclick = async () => { const m = $('rMsg'), bad = ur.filter((r) => !r.bucket || !(r.ce || r.cen || r.type || r.wbs)); if (bad.length) { m.innerHTML = '<span style="color:#c00000">Every rule needs a bucket and at least one field to match.</span>'; return; }
-    let files = null; try { files = await idbGet('lastFiles'); } catch (e) { /* none */ }
-    if (!files || !files.length) { m.innerHTML = '<span style="color:#c55a11">The SAP files of this build are not kept in this browser (a ready-made App). Your rules are saved – they apply at the next build in the Tool.</span>'; return; }
-    m.textContent = 'Rebuilding with your rules… (about 30 seconds)'; await new Promise((r) => setTimeout(r, 50));
-    try { const by = (k) => files.filter((f) => f.kind === k), snap = snapshot(), fl = { cji3: by('cji3'), zscprg01: by('zscprg01'), zscsrv1: by('zscsrv1'), zintc1: by('zintc1'), mb52: by('mb52'), me2n: by('me2n'), prev: { name: 'codes.json', data: new TextEncoder().encode(JSON.stringify(snap)) } };
+   <datalist id="dl-cen">${[...new Set(L.cen.map((x) => S[x]))]
+     .sort()
+     .map((x) => `<option value="${esc(x)}">`)
+     .join('')}</datalist><datalist id="dl-gas">${(META.gaSubs || []).map((x) => `<option value="${esc(x)}">`).join('')}</datalist>`;
+  const save = () => {
+    persist();
+  };
+  $('rul')
+    .querySelectorAll('[data-r]')
+    .forEach((el) => {
+      el.onchange = () => {
+        ur[+el.dataset.r][el.dataset.f] = el.value.trim();
+        save();
+        renderRules();
+      };
+    });
+  $('rul')
+    .querySelectorAll('[data-del]')
+    .forEach((el) => {
+      el.onclick = () => {
+        ur.splice(+el.dataset.del, 1);
+        save();
+        renderRules();
+      };
+    });
+  $('rul')
+    .querySelectorAll('[data-mk]')
+    .forEach((el) => {
+      el.onclick = () => {
+        const x = unc[+el.dataset.mk];
+        const w = x.wbs.filter(Boolean),
+          pre = w.length
+            ? w.reduce((p, v) => {
+                let i = 0;
+                while (i < p.length && p[i] === v[i]) i++;
+                return p.slice(0, i);
+              })
+            : '',
+          wp = pre.replace(/[.\-]+$/, '');
+        ur.push({
+          ce: x.ce || '',
+          cen: x.cen || '',
+          type: x.type && x.type !== '(blank)' ? x.type : '',
+          wbs: wp.length > 6 ? wp : '',
+          bucket: '',
+          sub: '',
+        });
+        save();
+        renderRules();
+      };
+    });
+  $('rul')
+    .querySelectorAll('[data-crx]')
+    .forEach((el) => {
+      el.onclick = () => {
+        delete ST.crules[el.dataset.crx];
+        persist();
+        renderRules();
+      };
+    });
+  if ($('crApply'))
+    $('crApply').onclick = () => {
+      const ch = [];
+      BK.forEach((b) =>
+        b.items.forEach((it) => {
+          const k = ruleKeyOf(it),
+            r = k && ST.crules[k];
+          if (r)
+            Object.entries(r).forEach(([f, v]) => {
+              if (!it[f] && codeF(it.bi).includes(f)) ch.push({ t: 'item', bi: it.bi, ii: it.ii, f, v });
+            });
+        })
+      );
+      if (ch.length) change(ch, 'Codes from coding rules');
+      else toast('Nothing empty to fill');
+    };
+  $('ipTog').onclick = () => {
+    ST.indOff = !ST.indOff;
+    persist();
+    renderRules();
+  };
+  $('ipNow').onclick = () => {
+    const ch = indPresetChanges();
+    if (ch.length) change(ch, 'Indirect presets (SAP GL → indirect code)');
+    else toast(ST.indOff ? 'The presets are off' : 'Nothing empty to fill');
+  };
+  $('rAdd').onclick = () => {
+    ur.push({ ce: '', cen: '', type: '', wbs: '', bucket: '', sub: '' });
+    save();
+    renderRules();
+  };
+  $('rApply').onclick = async () => {
+    const m = $('rMsg'),
+      bad = ur.filter((r) => !r.bucket || !(r.ce || r.cen || r.type || r.wbs));
+    if (bad.length) {
+      m.innerHTML = '<span style="color:#c00000">Every rule needs a bucket and at least one field to match.</span>';
+      return;
+    }
+    let files = null;
+    try {
+      files = await idbGet('lastFiles');
+    } catch (e) {
+      /* none */
+    }
+    if (!files || !files.length) {
+      m.innerHTML =
+        '<span style="color:#c55a11">The SAP files of this build are not kept in this browser (a ready-made App). Your rules are saved – they apply at the next build in the Tool.</span>';
+      return;
+    }
+    m.textContent = 'Rebuilding with your rules… (about 30 seconds)';
+    await new Promise((r) => setTimeout(r, 50));
+    try {
+      const by = (k) => files.filter((f) => f.kind === k),
+        snap = snapshot(),
+        fl = {
+          cji3: by('cji3'),
+          zscprg01: by('zscprg01'),
+          zscsrv1: by('zscsrv1'),
+          zintc1: by('zintc1'),
+          mb52: by('mb52'),
+          me2n: by('me2n'),
+          prev: { name: 'codes.json', data: new TextEncoder().encode(JSON.stringify(snap)) },
+        };
       for (const k of ['zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n']) if (!fl[k].length) delete fl[k];
-      const data = Engine.build(fl, { project: META.project, rules: ur }); await idbSet('lastBuild', data); location.reload(); }
-    catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not rebuild: ' + esc(err.message || err) + '</span>'; } };
+      const data = Engine.build(fl, { project: META.project, rules: ur });
+      await idbSet('lastBuild', data);
+      location.reload();
+    } catch (err) {
+      console.error(err);
+      m.innerHTML = '<span style="color:#c00000">Could not rebuild: ' + esc(err.message || err) + '</span>';
+    }
+  };
 }
