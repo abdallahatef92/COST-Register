@@ -249,3 +249,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - CJI3 lines with a **quantity and no amount** (material given by the owner) are listed under **Adjust › Owner-supplied material**: bucket, material, quantity, lines, months, your **rate**, the material's own paid rate as a suggestion (*use*, or *Use the suggested rate for n*), value and status.
 - A rate adds **qty × rate** to the cost, each line in its own month (Expenses, reports, Excel); the footer shows **Owner material in** and the difference to CJI3 stays 0. Rates are undoable and saved with the codes.
 - **Check** lists how many of these materials still have no rate.
+
+## v3.1 (v30 = 3.0)
+- Owner-supplied material: a column **Owner-supplied?** (Yes / No) per material – No takes it out of the cost and out of the check; ↺ goes back to the rule.
+- A **rule** above the table: which SAP cost elements count as owner-supplied (e.g. take out 30101200 Spare Parts with one click). Both are undoable and saved with the codes.
+- Version numbers now run 3.0, 3.1, 3.2 …

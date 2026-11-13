@@ -301,6 +301,11 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ok('a rate adds qty × rate to the cost (Owner material in)', Math.abs(g.own - want * 10) < 0.01 && g.own > 0, JSON.stringify(g) + ' · qty ' + want);
       eq('…and the difference to CJI3 stays 0', g.diff, 0);
       ok('…shown in the footer', /Owner material in/.test(await p10.$eval('#sbar', (e) => e.textContent)));
+      const v1 = await p10.evaluate(() => R.ownIn); await p10.click('#tb [data-ownyn]'); await p10.waitForTimeout(700);
+      ok('Owner-supplied? No: the material leaves the cost and the count', await p10.evaluate((v) => R.ownIn === 0 && v > 0 && R.rows.some((r) => !r.o.yes), v1) && await p10.evaluate(() => R.diff === 0));
+      await p10.keyboard.press('Control+z'); await p10.waitForTimeout(600);
+      const nG = await p10.$$eval('[data-owngl]', (x) => x.length), n1 = await p10.evaluate(() => ownStats().n); await p10.click('[data-owngl]'); await p10.waitForTimeout(700);
+      ok('the rule: taking out a SAP cost element takes its materials out', nG >= 1 && await p10.evaluate((n) => ownStats().n < n && ownStats().out > 0 && R.diff === 0, n1)); await p10.keyboard.press('Control+z'); await p10.waitForTimeout(600);
       await p10.keyboard.press('Control+z'); await p10.waitForTimeout(600); ok('Undo takes the rate away', await p10.evaluate((t) => R.ownIn === 0 && Math.abs(R.toDate - t) < 0.01, td0)); }
     await c10.close(); }
 

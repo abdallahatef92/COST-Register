@@ -3,6 +3,8 @@ let OB0 = 0; for (let i = 0; i < N; i++) if (L.d[i] && (!OB0 || L.d[i] < OB0)) O
 const isOB = (i) => S[L.ty[i]] === 'UE' && (/^OB\b/i.test(S[L.hdr[i]] || '') || L.d[i] === OB0), OBTAG = '<span class="obt" title="Opening balance (UE) – stays in this bucket until it is reallocated in SAP">OB</span>';
 const R = {}; globalThis.R = R; globalThis.__ST = ST; globalThis.__BK = BK; globalThis.__D = { L, S, N };   // results of compute() (also readable from the browser console)
 const SRC = L.src.map((x) => S[x]);
+// owner-supplied: yes when you said Yes for the material; else no when you said No, or a rule takes out the line's SAP cost element (GL)
+const ownOn = (i) => { if (!isOwn(i)) return false; const s = ST.ownSet[BK[L.b[i]].items[L.it[i]].k]; return s === 'yes' || (s !== 'no' && !ST.ownGl.includes(S[L.ce[i]])); };
 function compute() {
   const cutI = +ST.cut.replace(/-/g, ''), fromI = ST.vatFrom ? +ST.vatFrom.replace(/-/g, '') : 0, rep = PER.indexOf(monLab(ST.cut));
   R.rep = rep; R.repLab = monLab(ST.cut); R.cutI = cutI;
@@ -12,7 +14,7 @@ function compute() {
     const m = L.m[i]; per[i] = m === 0 ? 0 : m < 0 || !L.d[i] || L.d[i] > cutI ? NP - 1 : m;
     let v = 0; if (L.b[i] === SUBI) { if (L.vat[i] === -1) offRow = i; else if (L.vat[i] && (SRC[i] === 'Certificate' || SRC[i] === 'Opening certificate')) { v = ST.vat === 'Include VAT' ? L.vat[i] : ST.vat === 'Include VAT before date' ? ((L.cd[i] ? fromI && L.cd[i] < fromI : SRC[i] === 'Opening certificate') ? L.vat[i] : 0) : 0; if (SRC[i] === 'Opening certificate') openVin += v; } }
     vin[i] = v; amt[i] = L.amt[i] + v;
-    if (HASOWN && isOwn(i)) { const rt = ST.own[BK[L.b[i]].items[L.it[i]].k]; if (rt > 0) { amt[i] = L.qty[i] * rt; ownIn += amt[i]; } }   // owner-supplied material, valued at your rate
+    if (HASOWN && ownOn(i)) { const rt = ST.own[BK[L.b[i]].items[L.it[i]].k]; if (rt > 0) { amt[i] = L.qty[i] * rt; ownIn += amt[i]; } }   // owner-supplied material, valued at your rate
   }
   if (offRow >= 0) { vin[offRow] = -openVin; amt[offRow] = L.amt[offRow] - openVin; }
   // effective codes per line + aggregates per item

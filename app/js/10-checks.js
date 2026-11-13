@@ -9,7 +9,7 @@ function renderChecks() {
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
   if (SUB && subP) { const reg = subP.reduce((s, v) => s + v, 0) + R.bkExc[SUBI]; add('Subcontractor: bucket (without VAT) vs CJI3', r2(reg - R.vatIn - R.bkUns[SUBI] - SUB.cjiTotal), 'abs', 'Certificates + differences = Subcontractor bucket in CJI3.'); }
   BK.forEach((b) => { const nf = b.items.filter((it) => statusOf(it) !== 'Coded').length; add(b.id + ': items not fully coded', nf, 'info', b.items.length + ' items.'); });
-  if (HASOWN) { const o = ownStats(); add('Owner-supplied material: materials with quantity and no amount, still without a rate', o.noRate, 'info', `${o.n} materials · ${o.lines} CJI3 lines · valued so far ${fmt(R.ownIn)} – Adjust › Owner-supplied material.`); }
+  if (HASOWN) { const o = ownStats(); add('Owner-supplied material: materials with quantity and no amount, still without a rate', o.noRate, 'info', `${o.n} owner-supplied materials${o.out ? ` · ${o.out} set as not owner-supplied` : ''} · valued so far ${fmt(R.ownIn)} – Adjust › Owner-supplied material.`); }
   add('Lines typed over (hand-coded)', [...R.hand].reduce((s, v) => s + v, 0), 'info', 'Lines coded differently from their item (Lines tab).');
   add('ZY accrual-reversal lines paired to a bucket', META.zy, 'info', 'Equal-and-opposite pairs take the bucket of the original.');
   if (ZI) { const T = { HOUS: 'house rent', ZF01: 'fleet orders', ZFU1: 'fuel orders', ZE01: 'equipment', ZTM1: 'trips', DCRM: 'corrective maintenance' };
