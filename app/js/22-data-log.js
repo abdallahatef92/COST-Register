@@ -5,13 +5,13 @@ const DLWHAT = { cji3: 'actual cost line items', zscprg01: 'subcontract certific
 const ymLbl = (ym) => (ym ? MON[+ym.slice(5, 7) - 1] + '-' + ym.slice(2, 4) : '');
 const latestId = () => { const r = DBF.db && dbOne('SELECT max(id) AS id FROM builds'); return r ? r.id : 0; };
 // codes into the data file: the codes of this build (JSON, as the Save file) and, for the latest build, the codes as tables for SQL
-async function dbSave() { if (!DBF.db || DBF.ro || DBF.busy) return; DBF.busy = true;
+async function dbSave() { if (!DBF.db || DBF.ro) return; if (DBF.busy) { DBF.again = true; return DBF.busy; } let done; DBF.busy = new Promise((r) => { done = r; });
   try { const s = snapshot(); DBF.db.run('BEGIN'); DBF.db.run('UPDATE builds SET codes = ?, codes_at = ? WHERE id = ?', [JSON.stringify(s), s.at, DBF.cur]);
     if (DBF.cur === latestId()) { DBF.db.run('DELETE FROM codes'); const st = DBF.db.prepare('INSERT INTO codes VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       BK.forEach((b) => b.items.forEach((it) => st.run([b.id, it.k, itemCode(it), itemDesc(it), it.div || '', it.pkg || '', it.mnl || '', it.ce || '']))); st.free();
       DBF.db.run('DELETE FROM line_codes'); const so = DBF.db.prepare('INSERT INTO line_codes VALUES (?, ?, ?, ?)'); Object.entries(OVR).forEach(([id, o]) => { if (o && (o.pkg || o.mnl || o.ce)) so.run([id, o.pkg || null, o.mnl || null, o.ce || null]); }); so.free(); }
     DBF.db.run('COMMIT'); } catch (e) { try { DBF.db.run('ROLLBACK'); } catch (x) { /* none */ } console.error(e); }
-  if (await dbWrite()) setDirty(0); DBF.busy = false; renderStatus(); navBadges(); }
+  if (await dbWrite()) setDirty(0); DBF.busy = false; done(); if (DBF.again) { DBF.again = false; return dbSave(); } renderStatus(); navBadges(); }   // a change made while saving is saved right after
 // the lines of this build (the latest) as a table, and what changed in closed months against the build before
 function dbFillLines() { if (!DBF.db || DBF.ro || DBF.cur !== latestId() || dbOne('SELECT 1 AS x FROM lines WHERE build_id = ? LIMIT 1', [DBF.cur])) return;
   const prev = dbOne('SELECT DISTINCT l.build_id AS id, b.cut FROM lines l JOIN builds b ON b.id = l.build_id WHERE l.build_id < ? ORDER BY l.build_id DESC LIMIT 1', [DBF.cur]);

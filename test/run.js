@@ -419,7 +419,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ({ c, q } = await fresh()); await openDb(q, f1); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
     eq('opened from the data file: difference 0', await q.evaluate(() => R.diff), 0);
     eq('…same to date as the test app', r2(await q.evaluate(() => R.toDate)), r2(R0.toDate));
-    const k = await q.evaluate(() => __BK[0].items.find((x) => !x.pkg).k); await q.evaluate((kk) => { __BK[0].items.find((x) => x.k === kk).pkg = 'T77'; return __DL.save(); }, k);
+    const k = await q.evaluate(() => __BK[0].items.find((x) => !x.pkg).k); await q.evaluate((kk) => { __BK[0].items.find((x) => x.k === kk).pkg = 'T77'; return __DL.save(); }, k); await q.waitForFunction(() => !DBF.busy && !DBF.again);
     const f2 = path.join(SP, 'm1b.db'); { const [d] = await Promise.all([q.waitForEvent('download'), q.click('#hasv [data-dbgo="dl"]')]); await d.saveAs(f2); } await c.close();
     // next month: open the data file, build again – no last report dropped, the codes come from the data file
     ({ c, q } = await fresh()); await openDb(q, f2); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1000);
