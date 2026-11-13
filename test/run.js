@@ -343,7 +343,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await p4.click('#asPick'); await p4.waitForFunction(() => DBF.cur > 0 && DBF.st === 'ok' && dbOne('SELECT count(*) AS n FROM codes').n > 0, null, { timeout: 60000 }); await p4.waitForFunction(() => !DBF.busy && !DBF.again); await p4.waitForTimeout(500);
     const SQL = await require('sql.js')(), rd = async () => new SQL.Database(Buffer.from(await p4.evaluate(async () => { const r = new FileReader(); return new Promise((res) => { r.onload = () => res(String(r.result).split(',')[1]); r.readAsDataURL(new Blob([window.__file.bytes])); }); }), 'base64')), cnt = (db, v) => db.exec(`SELECT count(*) FROM codes WHERE pkg = '${v}'`)[0].values[0][0];
     { const db = await rd(); ok('Create data file: the build and the codes are written to it', cnt(db, 'T03') > 0, JSON.stringify(db.exec('SELECT count(*), sum(pkg != \'\') FROM codes')[0].values)); }
-    ok('top bar: SUTH_register.db · 1 build · saved', await p4.$eval('#hasv', (e) => /SUTH_register\.db · 1 build/.test(e.textContent)), await p4.$eval('#hasv', (e) => e.textContent.slice(0, 300)));
+    ok('top bar: SUTH_register.db · updated · saved', await p4.$eval('#hasv', (e) => /SUTH_register\.db · updated/.test(e.textContent)), await p4.$eval('#hasv', (e) => e.textContent.slice(0, 300)));
     const w0 = await p4.evaluate(() => window.__file.writes); const i5 = (await p4.$$('#tb input[data-f="pkg"]'))[1]; await i5.fill('T04'); await i5.press('Enter');
     await p4.waitForFunction((w) => window.__file.writes > w, w0, { timeout: 30000 }).catch(() => {}); await p4.waitForFunction(() => !DBF.busy && !DBF.again); await p4.waitForTimeout(300);
     ok('the next change saves itself', cnt(await rd(), 'T04') > 0);
@@ -492,7 +492,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('…with your code', await q.evaluate((kk) => __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg, k) === 'T55');
     ok('…the top bar says the first click reconnects the data file', /click to reconnect/.test(await q.$eval('#hasv', (e) => e.textContent)), await q.$eval('#hasv', (e) => e.textContent));
     await q.mouse.click(700, 400); await q.waitForFunction(() => DBF.db && DBF.st === 'ok', null, { timeout: 30000 }); await q.waitForTimeout(800);
-    ok('first click: the browser asks once, the data file is connected', await q.evaluate(() => window.__asked === 1 && /Test_register\.db · 1 build/.test(document.getElementById('hasv').textContent)), await q.$eval('#hasv', (e) => e.textContent));
+    ok('first click: the browser asks once, the data file is connected', await q.evaluate(() => window.__asked === 1 && /Test_register\.db · updated/.test(document.getElementById('hasv').textContent)), await q.$eval('#hasv', (e) => e.textContent));
     const w = await q.evaluate(() => window.__writes || 0); await q.evaluate((kk) => { __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg = 'T56'; return __DL.save(); }, k); await q.waitForFunction(() => !DBF.busy && !DBF.again);
     ok('…and changes go to the file again', await q.evaluate((ww) => (window.__writes || 0) > ww && JSON.parse(dbOne('SELECT codes FROM builds WHERE id = 1').codes).at > '', w));
     await q.click('#bDb'); await q.waitForTimeout(300);
