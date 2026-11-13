@@ -5,6 +5,7 @@ const $ = (id) => document.getElementById(id), esc = (s) => String(s ?? '').repl
 const fmt = (v) => (Math.abs(v) < 0.5 ? '-' : Math.round(v).toLocaleString('en-US')), fmt2 = (v) => (Math.abs(v) < 0.005 ? '-' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
 const fmtM = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : fmt(v)), fq = (v) => (Math.abs(v) < 1e-9 ? '-' : v.toLocaleString('en-US', { maximumFractionDigits: 3 })), pct = (a, b) => (b ? (100 * a / b).toFixed(1) + '%' : '-');
 const r2 = (v) => Math.round(v * 100) / 100;
+const isOwn = (i) => Math.abs(L.amt[i]) < 0.005 && Math.abs(L.qty[i]) > 1e-9, HASOWN = (() => { for (let i = 0; i < L.b.length; i++) if (isOwn(i)) return true; return false; })();   // owner-supplied material: quantity, no amount
 const UNS = L.uns || [], HASUNS = UNS.some((v) => v), ZI = META.zint || null, DEPI = BK.findIndex((b) => b.id === 'Asset depreciation');   // ZINTC1 charges not yet settled in CJI3 (excluded unless included)
 const SUBI = BK.findIndex((b) => b.id === 'Subcontractor'), MATI = BK.findIndex((b) => b.id === 'Material');
 BK.forEach((b, bi) => b.items.forEach((it, ii) => { it.bi = bi; it.ii = ii; it.vals = it.v.map((x) => S[x]); it.grp = S[it.g] || ''; }));

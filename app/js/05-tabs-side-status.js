@@ -1,6 +1,6 @@
 // =====================================================================================  tabs
 // the 5 steps of the month (top) – each holds the pages you work through, listed in the sidebar
-const SECS = [['dash', 'Dashboard', ['sum', 'flow', 'drv', ...(MATI >= 0 ? ['mrate'] : [])]], ['cod', 'Coding', ['cod', 'lines']], ['xp', 'Expenses', ['xpm']], ...(HASUNS || DEPI >= 0 ? [['adj', 'Adjust', [...(HASUNS ? ['uns'] : []), ...(DEPI >= 0 ? ['dep'] : [])]]] : []), ['chk', 'Check', ['chk', 'log', 'rules']], ['rep', 'Reports', ['psum', 'pm', 'exp', 'gl', 'wbs']]];
+const SECS = [['dash', 'Dashboard', ['sum', 'flow', 'drv', ...(MATI >= 0 ? ['mrate'] : [])]], ['cod', 'Coding', ['cod', 'lines']], ['xp', 'Expenses', ['xpm']], ...(HASUNS || DEPI >= 0 || HASOWN ? [['adj', 'Adjust', [...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]]] : []), ['chk', 'Check', ['chk', 'log', 'rules']], ['rep', 'Reports', ['psum', 'pm', 'exp', 'gl', 'wbs']]];
 // the subcontractor pages live in other sections: POs in Coding, Rates & coding in Dashboard, PO register in Reports, Bridge in Check
 const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'rep', bridge: 'chk' };
 const secOf = (t) => (t === 'sub' ? SUBSEC[ST.sub] || 'dash' : (SECS.find((x) => x[2].includes(t)) || SECS[0])[0]), LASTT = {}, LASTS = {};
@@ -59,6 +59,7 @@ function renderSide() {
     if (HASUNS) { items.push(['sec', 'Not in CJI3 yet – add to the cost?']);
       if (R.unsMk.o.size) items.push([`data-gt="uns" data-uv="o"`, ST.tab === 'uns' && ST.unsView === 'o', '#3E6FA8', 'Orders not settled', fmtM(ua('o')), (R.unsInK.o ? 'ZINTC1 · added ' + fmt(R.unsInK.o) : 'ZINTC1 · not added yet'), '', undefined, 'Ord']);
       if (R.unsMk.c.size) items.push([`data-gt="uns" data-uv="c"`, ST.tab === 'uns' && ST.unsView === 'c', '#2F7F7A', 'Certificates not in CJI3', fmtM(ua('c')), (R.unsInK.c ? 'added ' + fmt(R.unsInK.c) : 'not added yet'), '', undefined, 'Cer']); }
+    if (HASOWN) { const o = ownStats(); items.push(['sec', 'Quantity only – value it?']); items.push(['data-gt="own"', ST.tab === 'own', '#B8860B', 'Owner-supplied material', R.ownIn ? fmtM(R.ownIn) : '', `${o.n} materials · ${o.noRate ? o.noRate + ' without a rate' : 'every one has a rate'}`, '', undefined, 'Own']); }
     if (DEPI >= 0) { const all = [...R.depM.values()].reduce((x, e) => x + e.all, 0); items.push(['sec', 'In CJI3 – take out?']); items.push(['data-gt="dep"', ST.tab === 'dep', '#5F6B7A', 'Asset depreciation', fmtM(all), (R.depExc ? 'taken out ' + fmt(R.depExc) : 'kept in the cost'), '', undefined, 'Dep']); } }
   else if (sec === 'chk') { head = 'Check'; const ok = Math.abs(R.diff) < 0.01;
     items.push(['data-gt="chk"', ST.tab === 'chk', ok ? '#2F6B3A' : '#9B2C2C', 'All checks', ok ? '✓' : '!', 'Difference to CJI3 ' + (ok ? '0.00' : fmt2(R.diff)), '', undefined, 'Chk']); items.push(['data-gt="log"', ST.tab === 'log', '#5F6B7A', 'Changes', String(ST.log.length), 'every change you made, with time', '', undefined, 'Log']);
@@ -91,6 +92,7 @@ function renderStatus() {
     ...(SUBI >= 0 && !z(R.vatIn) ? [it('VAT in', fmt(R.vatIn), z(R.vatIn) || 'inc', '', ST.vat)] : []),
     ...(R.unsMk && R.unsMk.o.size && uo ? [it('Orders in', fmt(uo), z(uo) || 'inc', 'uns:o', 'ZINTC1 orders not yet settled, included by you')] : []),
     ...(R.unsMk && R.unsMk.c.size && uc ? [it('Certificates in', fmt(uc), z(uc) || 'inc', 'uns:c', 'Certificates not in CJI3, included by you')] : []),
+    ...(R.ownIn ? [it('Owner material in', fmt(R.ownIn), 'inc', 'own', 'Owner-supplied material valued at your rates (quantity × rate) – added to the cost')] : []),
     ...(DEPI >= 0 && !z(R.depExc) ? [it('Depreciation out', fmt(R.depExc), z(R.depExc) || 'exc', 'dep', 'CJI3 depreciation excluded by you')] : []),
     ...(Math.abs(R.cdAll) >= 0.5 ? [it('Client deductions', fmt(R.cdAll), 'exc', 'chk', 'Client deductions in CJI3 booked with revenue – in the CJI3 total, not counted as cost')] : []), sep,
     ...(hand ? [it('Hand-coded lines', hand.toLocaleString('en-US'), '', 'lines')] : [])].join('');
@@ -111,7 +113,7 @@ function renderGuide() { const g = $('guide'); if (ST.tab === 'cod' && ST.next) 
   $('gHide').onclick = () => { GUIDE_OFF = true; try { localStorage.setItem('crt:guideOff', '1'); } catch (e) { /* none */ } renderGuide(); };
   $('gPk').onclick = () => { ST.tab = 'psum'; ST.psEd = true; render(); $('wrap').scrollTop = 0; }; }
 function render() {
-  { const rp = ST.tab === 'xpm' || (ST.tab === 'sub' && ST.sub === 'reg'); $('bExport').innerHTML = rp ? '⇩ Export this report' : '⇩ Export Excel'; $('bExport').title = rp ? 'This report only, as on screen – as an Excel file (Shift+click: the full register)' : 'Light Excel report: values, formatted, cut date as now'; }
+  { const rp = ST.tab === 'xpm' || ST.tab === 'own' || (ST.tab === 'sub' && ST.sub === 'reg'); $('bExport').innerHTML = rp ? '⇩ Export this report' : '⇩ Export Excel'; $('bExport').title = rp ? 'This report only, as on screen – as an Excel file (Shift+click: the full register)' : 'Light Excel report: values, formatted, cut date as now'; }
   if (!(ST.tab === 'sub' && ST.sub === 'pkg')) { LASTT[secOf(ST.tab)] = ST.tab; if (ST.tab === 'sub') LASTS[secOf('sub')] = ST.sub; }   /* Dashboard reopens its own pages, not the packages */ renderGuide(); navBadges(); renderProg(); document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === secOf(ST.tab)));
   const isOv = ST.tab === 'sub' && ST.sub === 'ov', isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv; $('pg-pkg').classList.toggle('on', isPk && !isOv); $('pg-sov').classList.toggle('on', isOv);
   ['sum', 'tbl', 'chk', 'rul', 'mr', 'log', 'drv', 'psum', 'flow'].forEach((p) => $('pg-' + p).classList.toggle('on', !isPk && ((p === 'sum' && ST.tab === 'sum') || (p === 'flow' && ST.tab === 'flow') || (p === 'drv' && ST.tab === 'drv') || (p === 'psum' && ST.tab === 'psum') || (p === 'chk' && ST.tab === 'chk') || (p === 'log' && ST.tab === 'log') || (p === 'rul' && ST.tab === 'rules') || (p === 'mr' && ST.tab === 'mrate') || (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'flow'].includes(ST.tab)))));

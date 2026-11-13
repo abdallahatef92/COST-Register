@@ -7,11 +7,12 @@ function compute() {
   const cutI = +ST.cut.replace(/-/g, ''), fromI = ST.vatFrom ? +ST.vatFrom.replace(/-/g, '') : 0, rep = PER.indexOf(monLab(ST.cut));
   R.rep = rep; R.repLab = monLab(ST.cut); R.cutI = cutI;
   const per = R.per = new Int16Array(N), amt = R.amt = new Float64Array(N), vin = R.vin = new Float64Array(N);
-  let openVin = 0, offRow = -1;
+  let openVin = 0, offRow = -1, ownIn = 0;
   for (let i = 0; i < N; i++) {
     const m = L.m[i]; per[i] = m === 0 ? 0 : m < 0 || !L.d[i] || L.d[i] > cutI ? NP - 1 : m;
     let v = 0; if (L.b[i] === SUBI) { if (L.vat[i] === -1) offRow = i; else if (L.vat[i] && (SRC[i] === 'Certificate' || SRC[i] === 'Opening certificate')) { v = ST.vat === 'Include VAT' ? L.vat[i] : ST.vat === 'Include VAT before date' ? ((L.cd[i] ? fromI && L.cd[i] < fromI : SRC[i] === 'Opening certificate') ? L.vat[i] : 0) : 0; if (SRC[i] === 'Opening certificate') openVin += v; } }
     vin[i] = v; amt[i] = L.amt[i] + v;
+    if (HASOWN && isOwn(i)) { const rt = ST.own[BK[L.b[i]].items[L.it[i]].k]; if (rt > 0) { amt[i] = L.qty[i] * rt; ownIn += amt[i]; } }   // owner-supplied material, valued at your rate
   }
   if (offRow >= 0) { vin[offRow] = -openVin; amt[offRow] = L.amt[offRow] - openVin; }
   // effective codes per line + aggregates per item
@@ -45,6 +46,6 @@ function compute() {
   R.toDate = r2(td(R.tot)); R.thisM = rep > 0 ? r2(R.tot[rep]) : 0; R.pend = r2(R.tot[NP - 1]); R.excl = r2(R.bkExc.reduce((s, v) => s + v, 0));
   R.rev4 = 0; R.cd = 0; R.revPend = 0; for (const [d, m, a, is4] of REV) { const p = m === 0 ? 0 : m < 0 || !d || d > cutI ? NP - 1 : m; if (p === NP - 1) { R.revPend += -a; continue; } if (is4) R.rev4 += -a; else R.cd += a; }
   R.cdAll = REV.filter((x) => !x[3]).reduce((s, x) => s + x[2], 0);
-  R.unsIn = r2(R.unsIn); R.unsExc = r2(R.unsExc); R.depExc = r2(R.depExc); R.diff = r2(META.cost - R.toDate - R.pend - R.excl - R.depExc - R.cdAll + R.vatIn + R.unsIn);
+  R.unsIn = r2(R.unsIn); R.unsExc = r2(R.unsExc); R.depExc = r2(R.depExc); R.ownIn = r2(ownIn); R.diff = r2(META.cost - R.toDate - R.pend - R.excl - R.depExc - R.cdAll + R.vatIn + R.unsIn + R.ownIn);
 }
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], monLab = (iso) => MON[+iso.slice(5, 7) - 1] + '-' + iso.slice(2, 4);

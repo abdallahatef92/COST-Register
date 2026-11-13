@@ -244,3 +244,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v29 – codes from the earlier offline tools
 - **Import codes…** also reads the Coding sheet of the earlier offline reports: the **Inventory** report (Material → CSI as PKG, MNL, Cost element) and the **Subcontract Cost Report** (Service + Description → DIV, PKG, MNL, Cost element; a service with one set of codes also matches on the service alone). Blank cells never wipe a code; Ctrl+Z undoes the import.
+
+## v30 – Owner-supplied material
+- CJI3 lines with a **quantity and no amount** (material given by the owner) are listed under **Adjust › Owner-supplied material**: bucket, material, quantity, lines, months, your **rate**, the material's own paid rate as a suggestion (*use*, or *Use the suggested rate for n*), value and status.
+- A rate adds **qty × rate** to the cost, each line in its own month (Expenses, reports, Excel); the footer shows **Owner material in** and the difference to CJI3 stays 0. Rates are undoable and saved with the codes.
+- **Check** lists how many of these materials still have no rate.

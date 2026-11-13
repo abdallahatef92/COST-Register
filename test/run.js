@@ -288,6 +288,22 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   }
 
   if (RUN('8')) {
+  head('7f. Owner-supplied material: quantity with no amount, valued at your rate');
+  { const { ctx: c10, p: p10 } = await open(APP); const n0 = await p10.evaluate(() => { const { L, N } = __D; let n = 0; for (let i = 0; i < N; i++) if (Math.abs(L.amt[i]) < 0.005 && Math.abs(L.qty[i]) > 1e-9) n++; return n; });
+    if (!n0) ok('no owner-supplied lines in this project', true);
+    else { await p10.$eval('#tabs [data-s="adj"]', (b) => b.click()); await p10.waitForTimeout(300); await p10.click('#side [data-gt="own"]'); await p10.waitForTimeout(700);
+      ok('Adjust › Owner-supplied material lists every material with quantity and no amount', await p10.evaluate((n) => R.rows.reduce((t, r) => t + r.o.n, 0) === n, n0));
+      ok('…and Check counts the ones still without a rate', await p10.evaluate(() => { document.querySelector('#tabs [data-s="chk"]').click(); return true; }) && (await p10.click('#side [data-gt="chk"]'), await p10.waitForTimeout(400), await p10.evaluate(() => /Owner-supplied material/.test(document.querySelector('#pages .page.on').innerText))));
+      await p10.$eval('#tabs [data-s="adj"]', (b) => b.click()); await p10.click('#side [data-gt="own"]'); await p10.waitForTimeout(500);
+      const k = await p10.$eval('#tb input.ownr', (x) => x.dataset.k), td0 = await p10.evaluate(() => R.toDate), want = await p10.evaluate((kk) => { const { L, N } = __D; let q = 0; for (let i = 0; i < N; i++) { const it = __BK[L.b[i]].items[L.it[i]]; if (it.k === kk && Math.abs(L.amt[i]) < 0.005 && Math.abs(L.qty[i]) > 1e-9 && R.per[i] < R.per.length && R.inc[i]) q += L.qty[i]; } return q; }, k);
+      const i10 = await p10.$('#tb input.ownr'); await i10.fill('10'); await i10.press('Enter'); await p10.waitForTimeout(700); const m10 = await p10.$('#asLater'); if (m10) await m10.click();
+      const g = await p10.evaluate(() => ({ own: R.ownIn, td: R.toDate, diff: R.diff }));
+      ok('a rate adds qty × rate to the cost (Owner material in)', Math.abs(g.own - want * 10) < 0.01 && g.own > 0, JSON.stringify(g) + ' · qty ' + want);
+      eq('…and the difference to CJI3 stays 0', g.diff, 0);
+      ok('…shown in the footer', /Owner material in/.test(await p10.$eval('#sbar', (e) => e.textContent)));
+      await p10.keyboard.press('Control+z'); await p10.waitForTimeout(600); ok('Undo takes the rate away', await p10.evaluate((t) => R.ownIn === 0 && Math.abs(R.toDate - t) < 0.01, td0)); }
+    await c10.close(); }
+
   head('8. Save codes and read them back');
   const it1 = await p.$('#tb input[data-f="pkg"]'); await it1.fill('T02'); await it1.press('Enter'); await p.waitForTimeout(400);
   const [dlS] = await Promise.all([p.waitForEvent('download'), p.$eval('#bSave', (b) => b.click())]); const codes = path.join(OUT, 'codes.json'); await dlS.saveAs(codes);

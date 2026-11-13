@@ -201,6 +201,7 @@ function pageDef() {
   if (ST.tab === 'sub') return subDef();
   if (ST.tab === 'uns') return unsDef();
   if (ST.tab === 'dep') return depDef();
+  if (ST.tab === 'own') return ownDef();
 }
 // ---- Subcontractor views
 function subDef() {
