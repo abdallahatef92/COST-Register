@@ -12,7 +12,10 @@ async function updStart(fileList) {
   const db = list.find((f) => /\.db$/i.test(f.name)); if (db) { toast('To open another data file: Side navigation › Data file › Open another data file…'); return; }
   if (!DBF.db) { updBox(`<h3>Keep your work in a data file first</h3><div class="sub">The SAP files go into the data file with the register and your codes – then every month you drop only the new ones.</div><div class="bt"><button data-upd="x">Cancel</button><button class="pri" data-upd="mk">Create data file…</button></div>`); return; }
   updBox('<h3>Reading the new files…</h3><div class="sub">a few seconds for a big CJI3</div>'); await new Promise((r) => setTimeout(r, 60));
-  const nw = []; for (const f of list) { const o = { name: f.name, data: new Uint8Array(await f.arrayBuffer()) }; const si = Engine.sniffInfo(o); o.kind = si.kind; o.proj = si.proj; nw.push(o); }
+  const last0 = latestId(), shas = new Map(dbBuildFiles(last0).filter((f) => f.role !== 'replaced').map((f) => [f.sha, f]));
+  const nw = [], same = []; for (const f of list) { const o = { name: f.name, data: new Uint8Array(await f.arrayBuffer()) }; o.sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', o.data))).map((x) => x.toString(16).padStart(2, '0')).join('');
+    if (shas.has(o.sha)) { same.push(o); continue; }   // the same file as in the data file: no change, left out
+    const si = Engine.sniffInfo(o); o.kind = si.kind; o.proj = si.proj; nw.push(o); }
   for (const o of nw) if (['cji3', 'zintc1', 'zscprg01'].includes(o.kind)) { await new Promise((r) => setTimeout(r, 20)); Object.assign(o, Engine.peek(o, o.kind)); }
   const last = latestId(), old = dbBuildFiles(last).filter((f) => f.role !== 'replaced'), good = nw.filter((o) => UPD_NAME[o.kind]), bad = nw.filter((o) => !UPD_NAME[o.kind]);
   // which old file each new one replaces
@@ -24,8 +27,9 @@ async function updStart(fileList) {
     return o.first ? 'adds ' + span(o.first, o.last) + ' (a line in both counts once)' : 'added'; };
   const wrong = good.filter((o) => o.proj && o.proj !== META.project), noCji = !kept.concat(good).some((f) => f.kind === 'cji3');
   R.upd = { good, kept, repl, last };
-  updBox(`<h3>Update the register with ${good.length} new file${good.length === 1 ? '' : 's'}</h3><div class="sub">${esc(DBF.name)} · last update ${esc(String((dbBuilds()[0] || {}).built || '').slice(0, 10))} · cut ${esc((dbBuilds()[0] || {}).cut || '')}</div>
+  updBox(`<h3>${good.length ? `Update the register with ${good.length} new file${good.length === 1 ? '' : 's'}` : 'Nothing new to update'}</h3><div class="sub">${esc(DBF.name)} · last update ${esc(String((dbBuilds()[0] || {}).built || '').slice(0, 10))} · cut ${esc((dbBuilds()[0] || {}).cut || '')}</div>
     <ul>${good.map((o) => `<li><b>${UPD_NAME[o.kind]}</b><span class="n" dir="auto">${esc(o.name)}${o.proj && o.proj !== META.project ? ` <span class="bad">· project ${esc(o.proj)}</span>` : ''}</span><span class="d">${what(o)}</span></li>`).join('')}
+      ${same.map((o) => `<li><b class="help">=</b><span class="n" dir="auto">${esc(o.name)}</span><span class="d help">same file as in the data file – no change</span></li>`).join('')}
       ${bad.map((o) => `<li><b class="bad">?</b><span class="n">${esc(o.name)}</span><span class="d bad">not a SAP file the Tool reads – left out</span></li>`).join('')}</ul>
     <div class="k">${!kept.length && old.length ? 'Every SAP file in the data file is replaced by the new ones.' : kept.length ? 'Kept from the data file: ' + kept.map((f) => `${UPD_NAME[f.kind] || f.kind}${f.first ? ' ' + span(f.first, f.last) : ''}`).join(' · ') + ' · your codes' : 'No SAP files in the data file yet (built before v3.4) – drop every file once; your codes come from the data file.'}</div>
     ${wrong.length ? `<div class="k bad">${wrong.length} file${wrong.length > 1 ? 's are' : ' is'} another project than ${esc(META.project)} – remove ${wrong.length > 1 ? 'them' : 'it'}, or Update anyway.</div>` : ''}

@@ -529,6 +529,8 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     eq('…your code came along', await q.evaluate((kk) => __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg, k), 'T66');
     await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
     ok('Data log › Updates: both updates with their SAP files', await q.evaluate(() => document.querySelectorAll('#dlog .bfs').length === 2 && /replaced/.test(document.getElementById('dlog').textContent)));
+    { const [fc2] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]); await fc2.setFiles([F1]); await q.waitForFunction(() => document.querySelector('#updm [data-upd]') && /same file/.test(document.getElementById('updm').textContent), null, { timeout: 120000 });
+      ok('the same file again: "same file as in the data file – no change", nothing to update', await q.evaluate(() => /Nothing new to update/.test(document.getElementById('updm').textContent) && document.querySelector('#updm [data-upd="go"]').disabled)); await q.click('#updm [data-upd="x"]'); }
     await c.close(); fs.rmSync(dir, { recursive: true, force: true });
   }
   await browser.close();

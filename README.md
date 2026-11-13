@@ -277,3 +277,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - History: Check › Data log › Builds shows, per build, the new SAP files, how many were kept and which were replaced.
 - A **.db** dropped on the page (or chosen with the files) opens that data file and its last build at once – no CJI3 needed.
 - **One register per project, one data file**: no "builds" any more. The start page **creates the register** (first time); every month you **update** it from inside (*Update with new SAP files…*). The data file keeps the register now, your codes, the SAP files in use and the **update log** (Check › Data log › Updates: date, cut, CJI3 cost, change, SAP files new / kept / replaced) – no copies of earlier months (any earlier month is the cut date). *New project register…* starts a new data file.
+
+## v3.5
+- Update: a file that is the same as the one in the data file shows *same file as in the data file – no change* and is left out; with nothing new, Update is off.
