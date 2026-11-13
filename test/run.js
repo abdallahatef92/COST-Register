@@ -111,7 +111,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   await p.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p.click('#side [data-gt="cod"][data-bk="0"]'); await p.waitForTimeout(400);
   ok('Start here guide on the Code page', await p.$eval('#guide', (g) => !g.hidden));
   const first = await p.$('#tb input[data-f="pkg"]'); await first.fill('T01'); await first.press('Enter'); await p.waitForTimeout(900);
-  ok('first coding asks: Save your codes automatically?', !!(await p.$('#asm')) && /Save your codes automatically/.test(await p.$eval('#asm', (e) => e.textContent)));
+  ok('first coding asks: Keep your work in a data file?', !!(await p.$('#asm')) && /Keep your work in a data file/.test(await p.$eval('#asm', (e) => e.textContent)));
   await p.click('#asLater'); await p.waitForTimeout(200); ok('Later closes it', !(await p.$('#asm')));
   const it0 = await p.evaluate(() => __BK[0].items.find((x) => x.pkg === 'T01') ? 1 : 0);
   ok('typing a PKG codes the item', it0 === 1);
@@ -332,20 +332,22 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   }
 
   if (RUN('8b')) {
-  head('8b. Auto-save to a chosen file');
+  head('8b. Auto-save to the data file');
   { const ctx4 = await browser.newContext({ viewport: { width: 1600, height: 900 } });
-    // a stand-in for the browser's "choose file" window, which a test cannot click
-    await ctx4.addInitScript(() => { window.__file = { name: 'SUTH_codes.json', text: '', writes: 0 };
-      window.showSaveFilePicker = async () => ({ name: window.__file.name, queryPermission: async () => 'granted', requestPermission: async () => 'granted', getFile: async () => ({ text: async () => window.__file.text }),
-        createWritable: async () => { let buf = ''; return { write: async (t) => { buf += t; }, close: async () => { window.__file.text = buf; window.__file.writes++; } }; } }); });
+    // a stand-in for the browser's "save file" window, which a test cannot click
+    await ctx4.addInitScript(() => { window.__file = { name: 'SUTH_register.db', bytes: null, writes: 0 };
+      window.showSaveFilePicker = async () => ({ name: window.__file.name, queryPermission: async () => 'granted', requestPermission: async () => 'granted', getFile: async () => new Blob([window.__file.bytes || new Uint8Array()]),
+        createWritable: async () => { const parts = []; return { write: async (d) => { parts.push(d); }, close: async () => { window.__file.bytes = new Uint8Array(await new Blob(parts).arrayBuffer()); window.__file.writes++; } }; } }); });
     const p4 = await ctx4.newPage(); p4.on('pageerror', (e) => errs.push(e.message)); await p4.goto('file://' + APP); await p4.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 }); await p4.waitForTimeout(1200);
-    await p4.$eval('#tabs [data-s=\"cod\"]', (b) => b.click()); await p4.waitForTimeout(300); const i4 = await p4.$('#tb input[data-f="pkg"]'); await i4.fill('T03'); await i4.press('Enter'); await p4.waitForTimeout(900);
-    await p4.click('#asPick'); await p4.waitForTimeout(1200);
-    ok('Choose file → the codes are written to it', await p4.evaluate(() => window.__file.writes > 0 && JSON.stringify(JSON.parse(window.__file.text).codes).includes('"T03"')));
-    ok('footer: ✓ Auto-saved · SUTH_codes.json', await p4.$eval('#hasv', (e) => /Auto-saved · SUTH_codes\.json/.test(e.textContent)), await p4.$eval('#hasv', (e) => e.textContent.slice(0, 300)));
-    const w0 = await p4.evaluate(() => window.__file.writes); const i5 = (await p4.$$('#tb input[data-f="pkg"]'))[1]; await i5.fill('T04'); await i5.press('Enter'); await p4.waitForTimeout(1500);
-    ok('the next change saves itself', await p4.evaluate((w) => window.__file.writes > w && window.__file.text.includes('"T04"'), w0));
-    ok('no second question once a file is chosen', !(await p4.$('#asm')));
+    await p4.$eval('#tabs [data-s="cod"]', (b) => b.click()); await p4.waitForTimeout(300); const i4 = await p4.$('#tb input[data-f="pkg"]'); await i4.fill('T03'); await i4.press('Enter'); await p4.waitForTimeout(900);
+    await p4.click('#asPick'); await p4.waitForFunction(() => DBF.cur > 0 && DBF.st === 'ok' && dbOne('SELECT count(*) AS n FROM codes').n > 0, null, { timeout: 60000 }); await p4.waitForFunction(() => !DBF.busy && !DBF.again); await p4.waitForTimeout(500);
+    const SQL = await require('sql.js')(), rd = async () => new SQL.Database(Buffer.from(await p4.evaluate(async () => { const r = new FileReader(); return new Promise((res) => { r.onload = () => res(String(r.result).split(',')[1]); r.readAsDataURL(new Blob([window.__file.bytes])); }); }), 'base64')), cnt = (db, v) => db.exec(`SELECT count(*) FROM codes WHERE pkg = '${v}'`)[0].values[0][0];
+    { const db = await rd(); ok('Create data file: the build and the codes are written to it', cnt(db, 'T03') > 0, JSON.stringify(db.exec('SELECT count(*), sum(pkg != \'\') FROM codes')[0].values)); }
+    ok('top bar: SUTH_register.db · 1 build · saved', await p4.$eval('#hasv', (e) => /SUTH_register\.db · 1 build/.test(e.textContent)), await p4.$eval('#hasv', (e) => e.textContent.slice(0, 300)));
+    const w0 = await p4.evaluate(() => window.__file.writes); const i5 = (await p4.$$('#tb input[data-f="pkg"]'))[1]; await i5.fill('T04'); await i5.press('Enter');
+    await p4.waitForFunction((w) => window.__file.writes > w, w0, { timeout: 30000 }).catch(() => {}); await p4.waitForFunction(() => !DBF.busy && !DBF.again); await p4.waitForTimeout(300);
+    ok('the next change saves itself', cnt(await rd(), 'T04') > 0);
+    ok('no second question once a data file is there', !(await p4.$('#asm')));
     await ctx4.close(); }
   }
 
