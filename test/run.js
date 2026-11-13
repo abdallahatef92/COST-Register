@@ -2060,9 +2060,12 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await fc3.setFiles([cPart]);
       await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]'), null, { timeout: 120000 });
       ok(
-        'a part CJI3 (fewer WBS, same months): warned, the old CJI3 kept too',
+        'a part CJI3 (fewer WBS, same months): warned with the missing WBS, the old CJI3 kept too',
         await q.evaluate(
-          () => /part download/.test(document.getElementById('updm').textContent) && R.upd.kept.some((f) => f.kind === 'cji3')
+          () =>
+            /part download/.test(document.getElementById('updm').textContent) &&
+            /missing \d+ WBS/.test(document.getElementById('updm').textContent) &&
+            R.upd.kept.some((f) => f.kind === 'cji3')
         ),
         await q.$eval('#updm', (e) => e.textContent.slice(0, 300))
       );

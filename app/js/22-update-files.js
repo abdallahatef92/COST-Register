@@ -79,7 +79,30 @@ function partCheck(o, regCov) {
   const was = ms.reduce((t, m) => t + regCov.get(m), 0),
     now = ms.reduce((t, m) => t + (o.cov[m] || 0), 0);
   const less = r2(was - now);
-  return less > Math.max(1000, Math.abs(was) * 0.005) ? { less, from: ms[0], to: ms[ms.length - 1], n: ms.length } : null;
+  if (!(less > Math.max(1000, Math.abs(was) * 0.005))) return null;
+  // which WBS: the register's CJI3 cost per WBS (this update's log) against the new file, for the same months
+  const inM = (mm) => ms.reduce((t, m) => t + ((mm || {})[m] || 0), 0);
+  const reg = (META.dlog && META.dlog.wbs) || {},
+    nwW = o.wbs || {};
+  const wbs = Object.keys(reg)
+    .map((w) => ({ w, was: inM(reg[w]), now: inM(nwW[w]), gone: !nwW[w] }))
+    .map((x) => ({ ...x, d: r2(x.was - x.now) }))
+    .filter((x) => x.d > 1000)
+    .sort((a, b) => b.d - a.d);
+  return { less, from: ms[0], to: ms[ms.length - 1], n: ms.length, wbs };
+}
+// the WBS a smaller CJI3 is missing (or has less of), the biggest first
+function partWbs(p) {
+  if (!p.wbs || !p.wbs.length) return '';
+  const name = (w) => esc(w) + (META.wbsNames && META.wbsNames[w] ? ` <span class="help">${esc(META.wbsNames[w])}</span>` : '');
+  const gone = p.wbs.filter((x) => x.gone),
+    low = p.wbs.filter((x) => !x.gone);
+  const list = (xs) =>
+    xs
+      .slice(0, 5)
+      .map((x) => `${name(x.w)} (${fmtM(x.d)})`)
+      .join(', ') + (xs.length > 5 ? ` and ${xs.length - 5} more` : '');
+  return `<div class="pw">${gone.length ? `<b>missing ${gone.length} WBS:</b> ${list(gone)}` : ''}${gone.length && low.length ? '<br>' : ''}${low.length ? `<b>lower in ${low.length} WBS:</b> ${list(low)}` : ''}</div>`;
 }
 
 // which old file each new one replaces, and what stays
@@ -127,7 +150,7 @@ function updShow() {
   const li = (o) => {
     const p =
       o.part && !U.force.has(o.sha)
-        ? `<div class="part">⚠ ${fmt(o.part.less)} lower than the register for ${span(o.part.from, o.part.to)} – looks like a part download (fewer WBS?). The old CJI3 is kept too; a line in both counts once.
+        ? `<div class="part">⚠ ${fmt(o.part.less)} lower than the register for ${span(o.part.from, o.part.to)} – looks like a part download. The old CJI3 is kept too; a line in both counts once.${partWbs(o.part)}
       <button data-upd="force" data-sha="${o.sha}">Replace anyway</button></div>`
         : '';
     const proj = o.proj && o.proj !== META.project ? ` <span class="bad">· project ${esc(o.proj)}</span>` : '';

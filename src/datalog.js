@@ -28,6 +28,17 @@ function overlapsOf(files) {
   return out;
 }
 
+// CJI3 cost (not revenue) per WBS element and month: { wbs: { 'yyyy-mm': amount } }
+function cjiWbs(lines) {
+  const w = {};
+  for (const l of lines) {
+    if (!l.ym || l.ce[0] === '4') continue;
+    const m = w[l.wbs || '(no WBS)'] || (w[l.wbs || '(no WBS)'] = {});
+    m[l.ym] = r2((m[l.ym] || 0) + l.amt);
+  }
+  return w;
+}
+
 function dataLog(P, o) {
   const files = [],
     cov = {},
@@ -159,6 +170,8 @@ function dataLog(P, o) {
     });
   // per month of each source, the CJI3 cost (to compare closed months with the next build)
   const certs = P.prog ? (P.prog.certs || []).map((c) => [c.po, c.serial, c.date, c.amt]) : [];
-  return { files, cov, ovl, certs };
+  // CJI3 cost per WBS and month (to tell which WBS a later, smaller CJI3 is missing)
+  const wbs = cjiWbs(P.cji.lines);
+  return { files, cov, ovl, certs, wbs };
 }
-module.exports = { dataLog, cutType };
+module.exports = { dataLog, cutType, cjiWbs };

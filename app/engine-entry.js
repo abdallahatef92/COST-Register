@@ -43,7 +43,7 @@ function peek(f, kind) {
     Object.entries(c.cov).forEach(([m, v]) => {
       cov[m] = v.amt;
     });
-    return { first: ym(x.first), last: ym(x.last), cov, wbs: new Set(c.lines.map((l) => l.wbs)).size };
+    return { first: ym(x.first), last: ym(x.last), cov, wbs: require('../src/datalog').cjiWbs(c.lines) };
   }
   if (kind === 'zintc1') {
     const x = require('../src/zintc1').readZint([f]).files[0];
