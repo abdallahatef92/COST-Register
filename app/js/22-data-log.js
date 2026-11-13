@@ -29,8 +29,8 @@ function dbFillLines() { if (!DBF.db || DBF.ro || DBF.cur !== latestId() || dbOn
   st.free(); DBF.db.run('COMMIT'); }
 // the Tool opens from the data file: codes of this build (when newer than this browser), lines table, status
 function dbStart() { AS.ready = true;
-  const c = dbCodes(DBF.cur); let loc = null; try { loc = JSON.parse(localStorage.getItem(LSK) || 'null'); } catch (e) { /* none */ }
-  if (c && c.codes && (DBF.ro || !loc || (c.at || '') > (loc.at || ''))) { applySnap(c, true); undo = []; redo = []; if (!DBF.ro) persist(); compute(); }
+  const c = dbCodes(DBF.cur);   // newer than what this browser had before opening (the automatic first-time changes do not count)
+  if (c && c.codes && (DBF.ro || !AS.locAt || (c.at || '') > AS.locAt)) { applySnap(c, true); undo = []; redo = []; if (!DBF.ro) persist(); compute(); }
   try { dbFillLines(); } catch (e) { console.error(e); }
   if (!DBF.ro && !dbOne('SELECT codes FROM builds WHERE id = ? AND codes IS NOT NULL', [DBF.cur])) dbSave(); else dbWrite().then(() => renderStatus());
   render(); }
