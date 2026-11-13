@@ -467,7 +467,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     eq('…after the update: the same to date as the test app (every file)', r2(await q.evaluate(() => R.toDate)), r2(R0.toDate));
     eq('…the new build has last month\'s code (from the data file)', await q.evaluate((kk) => __BK[0].items.find((x) => x.k === kk).pkg, k), 'T77');
     await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
-    ok('Data log compares with the last update: the September lines the first CJI3 did not have show as a change', await q.evaluate(() => /Against the last update/.test(document.getElementById('dlog').textContent) && /closed months changed/.test(document.getElementById('dlog').textContent)), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
+    ok('Data log compares with the last update: the CJI3 grew by the month the first file did not have', await q.evaluate(() => { const t = [...document.querySelectorAll('#dlog .dlcard')].find((c) => /Against the last update/.test(c.textContent)); if (!t) return false; const r = [...t.querySelectorAll('tr')].find((x) => /^CJI3/.test(x.textContent.trim())); if (!r) return false; const n = [...r.children].map((td) => +td.textContent.replace(/[^0-9.-]/g, '')); return n[2] > n[1]; }), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
     eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close();
   }
   const FAKE = () => { const fsDb = () => new Promise((res) => { const r = indexedDB.open('fakefs', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); });
