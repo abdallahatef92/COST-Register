@@ -534,6 +534,16 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('Data log › Updates: both updates with their SAP files', await q.evaluate(() => document.querySelectorAll('#dlog .bfs').length === 2 && /replaced/.test(document.getElementById('dlog').textContent)));
     { const [fc2] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]); await fc2.setFiles([F1]); await q.waitForFunction(() => document.querySelector('#updm [data-upd]') && /same file/.test(document.getElementById('updm').textContent), null, { timeout: 120000 });
       ok('the same file again: "same file as in the data file – no change", nothing to update', await q.evaluate(() => /Nothing new to update/.test(document.getElementById('updm').textContent) && document.querySelector('#updm [data-upd="go"]').disabled)); await q.click('#updm [data-upd="x"]'); }
+    { // a part download: the same months, only some WBS → lower than the register: the old CJI3 is kept too, unless "Replace anyway"
+      const cPart = path.join(OUT, 'cji3-part.xlsx');
+      if (!fs.existsSync(cPart)) { const XLm = require('xlsx'), wb = XLm.readFile(F1, { cellDates: true }), ws = wb.Sheets[wb.SheetNames[0]], rows = XLm.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+        const h = rows.findIndex((r) => r && r.includes('Object')), c = h >= 0 ? h : rows.findIndex((r) => r && r.includes('Posting Date')), w = rows[c].findIndex((x) => /^(Object|WBS element)$/.test(String(x || '')));
+        const keep = rows.filter((r, k) => k <= c || !r || String(r[w] || '').length % 2 === 0); const nb = XLm.utils.book_new(); XLm.utils.book_append_sheet(nb, XLm.utils.aoa_to_sheet(keep, { cellDates: true }), wb.SheetNames[0]); XLm.writeFile(nb, cPart); }
+      const [fc3] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]); await fc3.setFiles([cPart]); await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]'), null, { timeout: 120000 });
+      ok('a part CJI3 (fewer WBS, same months): warned, the old CJI3 kept too', await q.evaluate(() => /part download/.test(document.getElementById('updm').textContent) && R.upd.kept.some((f) => f.kind === 'cji3')), await q.$eval('#updm', (e) => e.textContent.slice(0, 300)));
+      await q.click('#updm [data-upd="force"]'); await q.waitForTimeout(300);
+      ok('…Replace anyway replaces it', await q.evaluate(() => !/part download/.test(document.getElementById('updm').textContent) && !R.upd.kept.some((f) => f.kind === 'cji3')));
+      await q.click('#updm [data-upd="x"]'); }
     await c.close(); fs.rmSync(dir, { recursive: true, force: true });
   }
   await browser.close();

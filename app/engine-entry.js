@@ -12,7 +12,11 @@ function prevFromJson(s) {
 }
 // the months a CJI3 / ZINTC1 / ZSCPRG01 file covers (to tell which old file a new one replaces)
 function peek(f, kind) { const ym = (d) => String(d || '').slice(0, 7);
-  if (kind === 'cji3') { const x = require('../src/cji3').readCji3([f]).files[0]; return { first: ym(x.first), last: ym(x.last) }; }
+  if (kind === 'cji3') {   // + the cost per month, to tell a part download (fewer WBS) from a full one
+    const c = require('../src/cji3').readCji3([f]), x = c.files[0], cov = {};
+    Object.entries(c.cov).forEach(([m, v]) => { cov[m] = v.amt; });
+    return { first: ym(x.first), last: ym(x.last), cov, wbs: new Set(c.lines.map((l) => l.wbs)).size };
+  }
   if (kind === 'zintc1') { const x = require('../src/zintc1').readZint([f]).files[0]; return { first: x.first, last: x.last }; }
   if (kind === 'zscprg01') { const x = require('../src/subcontract').readProg([f]).files[0]; return { first: ym(x.first), last: ym(x.last) }; }
   return { first: '', last: '' }; }
