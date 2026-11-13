@@ -44,7 +44,7 @@ try { localStorage.removeItem('cr-focus'); } catch (e) {}
 $('bSave').onclick = () => { if (AS.h && AS.st === 'ok') asWrite(); dl(new Blob([JSON.stringify(snapshot())], { type: 'application/json' }), `CostRegister_codes_${META.project}_${stamp()}.json`); setDirty(0); renderStatus(); toast('Codes saved to a file – keep it with this month\'s files'); };
 // ---- light Excel report (values, formatted)
 // on a report page (Expenses 1–3, PO register) the top-bar button exports only that report; elsewhere the full register
-const isReportPage = () => ST.tab === 'xpm' || ST.tab === 'own' || (ST.tab === 'sub' && ST.sub === 'reg');
+const isReportPage = () => ST.tab === 'xpm' || ST.tab === 'own' || ST.tab === 'adjl' || (ST.tab === 'sub' && ST.sub === 'reg');
 $('bExport').onclick = async (ev) => { if (isReportPage() && !(ev && ev.shiftKey)) { const b = $('bXpX'); if (b) { b.click(); return; } }
   toast('Building the Excel report…'); await new Promise((r) => setTimeout(r, 30));
   const wb = new ExcelJS.Workbook(), NAVY = 'FF1F3864', GOLD = 'FFBF8F00', bd = { style: 'thin', color: { argb: 'FFD9D9D9' } }, box = { top: bd, bottom: bd, left: bd, right: bd }, A = 'Arial';
@@ -158,8 +158,8 @@ $('bExport').onclick = async (ev) => { if (isReportPage() && !(ev && ev.shiftKey
 
 // Export to Excel of a report page (Expenses 1–4, PO register): the rows and columns as on screen, laid out to read and print.
 // A grouped page keeps its heads, each with its items below (outline levels, + / − in Excel); Expenses per month stays a flat list.
-document.addEventListener('click', async (e) => { if (!e.target.closest('#bXpX') || !(ST.tab === 'xpm' || ST.tab === 'sub' || ST.tab === 'own')) return; const D = R.D, rows = R.rows || []; if (!D) return;
-  const name = ST.tab === 'own' ? 'Owner-supplied material' : ST.tab === 'sub' ? 'PO register' : (XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1], tree = !!D.groups && !(ST.tab === 'xpm' && (xpPage() === 'month' || xpPage() === 'lines'));
+document.addEventListener('click', async (e) => { if (!e.target.closest('#bXpX') || !(ST.tab === 'xpm' || ST.tab === 'sub' || ST.tab === 'own' || ST.tab === 'adjl')) return; const D = R.D, rows = R.rows || []; if (!D) return;
+  const name = ST.tab === 'adjl' ? 'Adjustment lines' : ST.tab === 'own' ? 'Owner-supplied material' : ST.tab === 'sub' ? 'PO register' : (XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1], tree = !!D.groups && !(ST.tab === 'xpm' && (xpPage() === 'month' || xpPage() === 'lines'));
   const cols = D.cols, nC = cols.length, F = 'Calibri', NAV = 'FF14254A', NAV2 = 'FF2F4A7C', GOLD = 'FFFFE9A8', LINE = 'FFD9DEE7', HR = 5;   // HR = the column-name row
   const wb = new ExcelJS.Workbook(); wb.creator = 'Cost Register · by A. Atef';
   const ws = wb.addWorksheet(name.slice(0, 31), { views: [{ state: 'frozen', xSplit: 1, ySplit: HR, showGridLines: false, zoomScale: 90 }], properties: { tabColor: { argb: NAV }, outlineProperties: { summaryBelow: false } },

@@ -221,7 +221,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     const ftot = (k) => p8.evaluate((k2) => { const c = R.D.cols.find((x) => x.k === k2); return R.rows.reduce((t, r) => t + c.v(r), 0); }, k);
     // 1 Summary
     ok('1 Summary opens first, compact (every bucket folded)', await p8.evaluate(() => /Summary/.test(document.querySelector('#tools .xpt').textContent) && document.querySelectorAll('#tb tr.it').length === 0 && document.querySelectorAll('#tb tr.grp').length >= 5));
-    ok('…Item, PKG, MNL, Cost element, Qty, then the amounts', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()); return t[0] === 'Item' && t[1] === 'PKG' && t[2] === 'MNL' && t[3] === 'Cost element' && /Material group/.test(t[4]) && /^Qty/.test(t[5]) && t.some((v) => /^Previous cumulative/.test(v)) && t.some((v) => /^This month/.test(v)) && t.some((v) => /^Cumulative/.test(v)); }));
+    ok('…Item, PKG, MNL, Cost element, Source, Qty, then the amounts', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()); return t[0] === 'Item' && t[1] === 'PKG' && t[2] === 'MNL' && t[3] === 'Cost element' && t[4] === 'Source' && /Material group/.test(t[5]) && /^Qty/.test(t[6]) && t.some((v) => /^Previous/.test(v)) && t.some((v) => /^This month/.test(v)) && t.some((v) => /^Cumulative/.test(v)); }));
     { const pc = await ftot('pc'), tm = await ftot('tm'), cu = await ftot('cu'); ok('previous cumulative + this month = cumulative = cost to date', Math.abs(pc + tm - cu) < 1 && Math.abs(cu - td8) < 2 && Math.abs(tm - tm8) < 2, [pc, tm, cu, td8, tm8].join(' · ')); }
     eq('every item + code combination is a row', await p8.evaluate(() => R.rows.length), nIt, 0);
     await p8.click('#bOpen'); await p8.waitForTimeout(600); ok('Expand all opens the items', await p8.$$eval('#tb tr.it', (x) => x.length > 5));
@@ -234,7 +234,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('2 Expenses per month: opens on Qty · Rate · Amount', await p8.$eval('[data-pm="All"]', (b) => b.classList.contains('on')));
     const nM = await p8.evaluate(() => { const sb = __BK.findIndex((b) => b.id === 'Subcontractor'), live = (e) => e.p.some((v) => Math.abs(v) >= 0.005); return [...R.exp.values()].filter((e) => e.b !== sb && live(e)).length + [...R.expPo.values()].filter(live).length; });
     ok('…every item + code of every bucket, subcontractor one row per PO', nM > nIt && await p8.$eval('#cnt', (e, n) => e.textContent.includes(n.toLocaleString('en-US') + ' rows'), nM), await p8.$eval('#cnt', (e) => e.textContent));
-    ok('…bucket, PKG, MNL, Cost element, item, then the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Item' && t.includes('Qty') && t.includes('Rate'); }));
+    ok('…bucket, PKG, MNL, Cost element, item, then the months', await p8.$$eval('#th tr:last-child th', (x) => { const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean); return t[0] === 'Bucket' && /^PKG/.test(t[1]) && /^MNL/.test(t[2]) && /^Cost element/.test(t[3]) && t[4] === 'Source' && t[5] === 'Item' && t.includes('Qty') && t.includes('Rate'); }));
     ok('it is a report: no code boxes', await p8.$$eval('#tb input[data-f]', (x) => x.length === 0));
     { const tot = await p8.evaluate(() => { const c = [...document.querySelectorAll('#tf td')]; return +c[c.length - 1].textContent.replace(/,/g, ''); }); ok('the To date total is the cost to date', Math.abs(tot - td8) <= 2, String(tot)); }
     { const g = await p8.evaluate(() => { const sb = __BK.findIndex((b) => b.id === 'Subcontractor'), rs = R.rows.filter((r) => r.e.b === sb), c = R.D.cols.find((x) => x.k === 'tdAmount'); return { po: rs.every((r) => r.e.po !== undefined), cols: R.D.cols.some((x) => x.k === 'po') && R.D.cols.some((x) => x.k === 'sup'), sum: rs.reduce((t, r) => t + c.v(r), 0), bk: __BK[sb].items.reduce((t, it) => t + it.td, 0) }; });
@@ -257,7 +257,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ok('…+ on a cost element shows its items', await p8.$$eval('#tb tr.it a.open', (x) => x.length > 0)); await p8.click('#tb tr.it a.open'); await p8.waitForTimeout(800);
       const got = await p8.evaluate(() => ({ page: __ST.xpPage, sum: R.rows.reduce((t, r) => t + (R.inc[r.i] ? R.amt[r.i] : 0), 0), chip: !!document.querySelector('#tools .xlf') }));
       ok('an item opens 4 SAP CJI3 transactions with only its lines – the same amount', got.page === 'lines' && got.chip && Math.abs(got.sum - want) < 0.01, JSON.stringify(got) + ' vs ' + want);
-      await p8.click('[data-xlf]'); await p8.waitForTimeout(800); ok('…✕ shows every CJI3 line again (bucket and codes on each)', await p8.evaluate(() => R.rows.length === __D.N && R.D.cols.some((c) => c.k === 'bk') && R.D.cols.some((c) => c.k === 'pkg'))); await p8.click('#side [data-xp="ind"]'); await p8.waitForTimeout(600); }
+      await p8.click('[data-xlf]'); await p8.waitForTimeout(800); ok('…✕ shows every CJI3 line again (bucket and codes on each)', await p8.evaluate(() => R.rows.length === __D.N - (__D.L.uns || []).filter(Boolean).length && R.D.cols.some((c) => c.k === 'bk') && R.D.cols.some((c) => c.k === 'pkg'))); await p8.click('#side [data-xp="ind"]'); await p8.waitForTimeout(600); }
     { const [di] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]); const fi = path.join(OUT, 'indirect.xlsx'); await di.saveAs(fi); const ai = XL.utils.sheet_to_json(XL.readFile(fi).Sheets[XL.readFile(fi).SheetNames[0]], { header: 1, defval: '' }), n = await p8.evaluate(() => R.rows.length), ng = await p8.evaluate(() => new Set(R.rows.map((r) => r.g)).size + new Set(R.rows.map((r) => R.D.fam(r.g))).size);
       const ih = ai.findIndex((x) => /Head › Cost element/.test(x[0])), it2 = ai.findIndex((x) => x[0] === 'TOTAL');
       ok('Indirect export: heads and cost elements with their items below', it2 - ih - 1 === n + ng && ai.some((x) => x[0] === 'Personnel and Manning' || /Personnel/.test(x[0])), (it2 - ih - 1) + ' rows · expected ' + (n + ng)); }
@@ -349,6 +349,36 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('the next change saves itself', cnt(await rd(), 'T04') > 0);
     ok('no second question once a data file is there', !(await p4.$('#asm')));
     await ctx4.close(); }
+  }
+
+  if (RUN('7h')) {
+  head('7h. Adjustment lines, Source in Expenses, Summary period, footer links');
+  { const { ctx: c12, p: q } = await open(APP); const tot = () => q.evaluate(() => R.D.foot(R.rows));
+    // some adjustments: VAT on certificates, owner material at its own paid rate
+    await q.evaluate(() => { const v = document.getElementById('vat'); v.value = 'Include VAT'; v.dispatchEvent(new Event('change', { bubbles: true })); }); await q.waitForTimeout(600);
+    if (await q.$('#tabs [data-s="adj"]')) { await q.$eval('#tabs [data-s="adj"]', (b) => b.click()); await q.waitForTimeout(300); if (await q.$('#side [data-gt="own"]')) { await q.click('#side [data-gt="own"]'); await q.waitForTimeout(500); const ow = await q.$('#ownAll'); if (ow) { await ow.click(); await q.waitForTimeout(500); } } }
+    { const m = await q.$('#asLater'); if (m) await m.click(); }
+    await q.$eval('#tabs [data-s="adj"]', (b) => b.click()); await q.waitForTimeout(300); await q.click('#side [data-gt="adjl"]'); await q.waitForTimeout(900);
+    const g = await q.evaluate(() => ({ diff: R.diff, sum: R.rows.filter((r) => r.on).reduce((t, r) => t + r.a, 0), want: R.toDate + R.pend - __D.N * 0 - 0, cost: 0, vat: R.rows.filter((r) => r.g === 'VAT in').reduce((t, r) => t + r.a, 0), vatIn: R.vatIn, ties: /✓ ties/.test(document.getElementById('tools').textContent) }));
+    const cost = await q.evaluate(() => { let t = 0; return document.querySelector('#sbar').textContent.includes('CJI3') ? 1 : t; });
+    ok('Adjust › Adjustment lines: every adjustment line by line, CJI3 + added − taken out = To date + Pending', g.ties && Math.abs(g.diff) < 0.01, JSON.stringify(g));
+    eq('…VAT in lines add up to the footer\'s VAT in', r2(g.vat), r2(g.vatIn), 1);
+    ok('…grouped by kind (+ / −)', await q.evaluate(() => R.D.groups && new Set(R.rows.map((r) => r.g)).size >= 1));
+    { const [d] = await Promise.all([q.waitForEvent('download', { timeout: 120000 }), q.click('#bXpX')]); const f = path.join(OUT, 'adjustment_lines.xlsx'); await d.saveAs(f); ok('…exports to Excel', require('xlsx').readFile(f).SheetNames[0] === 'Adjustment lines'); }
+    // footer: an adjustment opens its lines; CJI3 opens the SAP CJI3 transactions
+    if (await q.$('#sbar [data-sgo^="adj:VAT"]')) { await q.click('#sbar [data-sgo^="adj:VAT"]'); await q.waitForTimeout(700); ok('footer › VAT in opens Adjustment lines, only VAT in', await q.evaluate(() => __ST.tab === 'adjl' && R.rows.length > 0 && R.rows.every((r) => r.g === 'VAT in'))); }
+    await q.click('#sbar [data-sgo="xl"]'); await q.waitForTimeout(1200);
+    ok('footer › CJI3 opens Expenses › SAP CJI3 transactions: the pure CJI3 lines at their CJI3 amount', await q.evaluate(() => { if (__ST.tab !== 'xpm' || __ST.xpPage !== 'lines') return false; const { L, N } = __D; let t = 0, n = 0; for (let i = 0; i < N; i++) if (!(L.uns || [])[i]) { t += L.amt[i]; n++; } return R.rows.length === n && Math.abs(+R.D.foot(R.rows).amt.replace(/,/g, '') - t) < 1; }));
+    // Expenses › Summary: Source column and filter, period
+    await q.$eval('#tabs [data-s="xp"]', (b) => b.click()); await q.waitForTimeout(300); await q.click('#side [data-xp="sum"]'); await q.waitForTimeout(800);
+    eq('Summary (To date): the total is To date', +String((await tot()).cu).replace(/,/g, ''), r2(await q.evaluate(() => R.toDate)), 1);
+    await q.click('[data-xsrc="adj"]'); await q.waitForTimeout(600);
+    ok('Source › Adjustments only: VAT in and owner material rows, no CJI3 rows', await q.evaluate(() => R.rows.length > 0 && R.rows.every((r) => r.e.src !== 'CJI3')));
+    eq('…their total = VAT in + owner material in (+ what is included from not yet in CJI3)', +String((await tot()).cu).replace(/,/g, ''), r2(await q.evaluate(() => R.vatIn + R.ownIn + R.unsIn)), 2);
+    await q.click('[data-xsrc=""]'); await q.waitForTimeout(400); await q.click('[data-xsq]:nth-child(3)'); await q.waitForTimeout(700);
+    eq('period › Cut month: the cumulative is the cut month', +String((await tot()).cu).replace(/,/g, ''), r2(await q.evaluate(() => R.thisM)), 1);
+    await q.click('[data-xsm2="-1"]'); await q.waitForTimeout(600); ok('◀ moves the period one month back', await q.evaluate(() => /This month · /.test(document.getElementById('th').textContent) && __ST.xsT === R.rep - 1));
+    eq('difference stays 0', await q.evaluate(() => R.diff), 0); await c12.close(); }
   }
 
   if (RUN('7g')) {

@@ -263,3 +263,9 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - **ZINTC1** files are merged on order + month (the newest file wins); a file loaded twice is counted once and the overlap is listed.
 - Opening again: the Tool opens at once from this browser's copy of the last build; the first click reconnects the data file (Chrome / Edge ask once – choose *Allow on every visit*). A newer build in the file (another PC) opens instead.
 - **Side navigation › Data file**: open another data file, new data file, download a copy, data log.
+
+## v3.3 – Adjustment lines, Source in Expenses, Summary period
+- **Adjust › Adjustment lines**: every amount that is not a plain CJI3 line, line by line in its month – added (VAT in, owner material, ZINTC1 orders and certificates not in CJI3 yet) and taken out (excluded, depreciation out, client deductions). Grouped by kind (+ / −), bridge on top: CJI3 + added − taken out = To date + Pending. *+ not counted* shows the lines not in the register too. Exports to Excel.
+- **Expenses**: a **Source** column – CJI3 (the pure CJI3 amount) or the adjustment, each on its own row; filter All / CJI3 only / Adjustments only (Summary and Expenses per month, Excel the same).
+- **Summary period**: From / To, ◀ ▶, To date · This year · Cut month · Last 3 months.
+- **Footer**: CJI3 and To date open Expenses › SAP CJI3 transactions (now the pure CJI3 lines at their CJI3 amount); each adjustment opens Adjustment lines of that kind.

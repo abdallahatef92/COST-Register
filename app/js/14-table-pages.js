@@ -72,6 +72,7 @@ function pageDef() {
     const mode = (X ? xb.some((k) => BK[k].qty) : b.qty) ? (X ? ST.xpMode || 'All' : ST.pmMode) : 'Amount', subs = mode === 'All' ? ['Qty', 'Rate', 'Amount'] : [mode], slots = X ? slotsOf().filter((sl) => sl.idx.some((k) => k >= (ST.xpFrom ?? 0) && k <= (ST.xpTo ?? NP - 1))) : slotsOf(), lead = [], XS = X && ST.xpView === 'sum';
     if (X) { lead.push({ k: 'bk', l: 'Bucket', w: 140, fz: 1, v: (r) => BK[r.it.bi].id, h: (r) => `<td title="${esc(BK[r.it.bi].id)}"><span class="bkc"><i style="background:${bkColor(r.it.bi)}"></i>${esc(BK[r.it.bi].short)}</span></td>` });
       ['pkg', 'mnl', 'ce'].forEach((f) => lead.push({ k: f, l: FN[f], tip: CTIP[f], w: (f === 'ce' ? 112 : f === 'mnl' ? 66 : 96) + 18, code: 1, v: (r) => r.e[f] || '(blank)', h: (r) => (r.e[f] ? `<td${r.e.hand ? ' class="xph" title="Coded on its CJI3 lines (not the item code)"' : ''}><b>${esc(r.e[f])}</b>${r.e.hand && f === 'pkg' ? ' <span class="help">✎</span>' : ''}</td>` : '<td class="help">–</td>') }));
+      lead.push(srcCol);
       lead.push({ k: 'code', l: 'Item', w: 130, v: (r) => itemCode(r.it), h: (r) => `<td title="${esc(itemCode(r.it))}"><a class="lk open">${esc(itemCode(r.it))}</a></td>` }, { k: 'desc', l: 'Description', w: 240, v: (r) => itemDesc(r.it), h: (r) => `<td dir="auto" title="${esc(itemDesc(r.it))}">${esc(itemDesc(r.it))}</td>` }, gtyCol, { k: 'po', l: 'PO', w: 104, v: (r) => r.e.po || '', h: (r) => `<td class="xpo">${esc(r.e.po || '')}</td>` }, { k: 'sup', l: 'Subcontractor', w: 200, v: (r) => r.e.sup || '', h: (r) => `<td dir="auto" class="xpo" title="${esc(r.e.sup || '')}">${esc(r.e.sup || '')}</td>` }); }
     else {
     lead.push({ k: 'code', l: b.cols[bi === MATI ? 3 : isSub(bi) ? 1 : 0], w: 110, fz: 1, v: (r) => itemCode(r.it), h: (r) => `<td><a class="lk open">${esc(itemCode(r.it))}</a></td>` });
@@ -93,7 +94,7 @@ function pageDef() {
     [yr, qr, mr].forEach((row) => row.push({ l: mode === 'All' ? 'To date' : '', span: subs.length, cls: 'blank' }));
     if (X) { bands.length = 0; if (mode === 'All') bands.push(XS ? xpSumBand(nL, subs) : mr); xpBlocks(cols, subs); } else { bands.push(yr, qr); if (mode === 'All') bands.push(mr); }
     const live = (e) => xb.includes(e.b) && e.p.some((v) => Math.abs(v) >= 0.005), tdOf = (e) => { let t = 0; for (let k = 0; k < NP - 1; k++) t += e.p[k]; return t; };
-    const xr = X ? [...[...R.exp.values()].filter((e) => e.b !== SUBI), ...R.expPo.values()].filter(live).sort((x, y) => x.b - y.b || x.ii - y.ii || String(x.pkg + x.mnl + x.ce).localeCompare(String(y.pkg + y.mnl + y.ce)) || Math.abs(tdOf(y)) - Math.abs(tdOf(x))) : [];
+    const xr = X ? [...[...R.exps.values()].filter((e) => e.b !== SUBI), ...R.expPoS.values()].filter(live).filter(xpSrcOk).sort((x, y) => x.b - y.b || x.ii - y.ii || String(x.pkg + x.mnl + x.ce).localeCompare(String(y.pkg + y.mnl + y.ce)) || String(x.po || '').localeCompare(String(y.po || '')) || srcRank(x.src) - srcRank(y.src) || Math.abs(tdOf(y)) - Math.abs(tdOf(x))) : [];
     const rows = X ? xr.map((e, n) => ({ it: BK[e.b].items[e.ii], e, g: xpGrp(e), xk: 'X' + n, rep: n > 0 && e.po !== undefined && xr[n - 1].b === e.b && xr[n - 1].ii === e.ii && xr[n - 1].pkg === e.pkg && xr[n - 1].mnl === e.mnl && xr[n - 1].ce === e.ce, stx: e.pkg && e.mnl && e.ce ? 'Coded' : 'Not coded' })) : b.items.map((it) => ({ it, g: b.tree ? it.grp : '' }));
     const footF = (rs) => { const o = {}; cols.forEach((c) => { if (c.slot === undefined) return; const idx = c.pidx || (c.slot === 'td' ? tdIdx : slots[c.slot].idx); let a = 0, q = 0; rs.forEach((r) => { const s = r.e || r.it; idx.forEach((p) => { a += s.p[p]; q += s.q[p]; }); }); o[c.k] = X && c.sub !== 'Amount' ? '' : c.sub === 'Qty' ? fq(q) : c.sub === 'Rate' ? (Math.abs(q) > 1e-9 ? fmt2(a / q) : '') : fmt(a); }); return o; };
     const pmSeg = (q) => (q ? `<span class="seg">${[['All', 'Qty · Rate · Amount'], ['Amount', 'Amount'], ['Qty', 'Qty'], ['Rate', 'Rate']].map(([m, l]) => `<button data-pm="${m}" class="${mode === m ? 'on' : ''}">${l}</button>`).join('')}</span>` : '') + ` <span class="seg">${['Months', 'Quarters', 'Years'].map((v) => `<button data-pv="${v}">${v}</button>`).join('')}</span>`;
@@ -107,7 +108,7 @@ function pageDef() {
     // one bucket, or every line of every bucket (bi = -1); grouped by item; tick lines (header ☐ = all lines that pass the filters) and code them
     const XL = ST.tab === 'xpm', LF = XL ? ST.xpLF : null, all = XL || bi < 0, idx = [], gs = all ? '' : ST.grpSel[bi] || '', gOk = (i) => { if (!gs) return true; const g = BK[bi].items[L.it[i]].grp; return gs.startsWith('F:') ? famOf(g) === gs.slice(2) : g === gs; };   // the side list's group / family, as on Coding
     const lfOk = (i) => { if (!LF) return true; if (L.b[i] !== LF.b || L.it[i] !== LF.ii) return false; if (LF.po && (S[L.po[i]] || '(no PO)') !== LF.po) return false; if (!LF.codes) return true; if (!R.inc[i]) return false; const o = OVR[L.id[i]], t = BK[L.b[i]].items[L.it[i]]; return ['pkg', 'mnl', 'ce'].every((f) => (o && o[f] !== undefined ? o[f] : t[f]) === LF.codes[f]); };
-    for (let i = 0; i < N; i++) if (XL ? lfOk(i) : (all && (!XB.size || XB.has(L.b[i]))) || (L.b[i] === bi && gOk(i))) idx.push(i);
+    for (let i = 0; i < N; i++) if (XL ? !UNS[i] && lfOk(i) : (all && (!XB.size || XB.has(L.b[i]))) || (L.b[i] === bi && gOk(i))) idx.push(i);
     const it = (i) => BK[L.b[i]].items[L.it[i]], ef = (i, f) => { const o = OVR[L.id[i]]; return o && o[f] !== undefined ? o[f] : it(i)[f]; };
     const anyQ = all ? true : b.qty, isMat = !all && bi === MATI, isS = !all && isSub(bi);
     const tx = (k, l, w, arr) => ({ k, l, w, v: (r) => S[arr[r.i]], h: (r) => `<td dir="auto" title="${esc(S[arr[r.i]])}">${esc(S[arr[r.i]])}</td>` });
@@ -128,7 +129,7 @@ function pageDef() {
     cols.push({ k: 'st', l: 'Status', tip: 'Coded = the line has every code (its own or its item\'s)', w: 118, v: (r) => lineStatusOf(r.i), h: (r) => `<td><span class="st ${lineStatusOf(r.i).split(' ')[0]}">${lineStatusOf(r.i)}</span></td>` },
       { k: 'inc', l: 'Include', w: 92, v: (r) => ef(r.i, 'inc'), h: (r) => `<td><button class="incb ${ef(r.i, 'inc') === 'No' ? 'no' : ''}">${ef(r.i, 'inc') === 'No' ? 'No' : 'Yes'}</button>${OVR[L.id[r.i]] ? '<button class="rst" title="Back to the item\'s codes">↺</button>' : ''}</td>` });
     if (anyQ) cols.push(numC('qty', 'Qty', 84, (r) => L.qty[r.i], { f: fq }));
-    cols.push(numC('amt', 'Amount', 110, (r) => R.amt[r.i], { f: fmt2 }));
+    cols.push(numC('amt', XL ? 'Amount (CJI3)' : 'Amount', 110, (r) => (XL ? L.amt[r.i] : R.amt[r.i]), { f: fmt2 }));
     cols.unshift({ k: 'date', l: 'Posting date', w: 92, v: (r) => (L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''), h: (r) => `<td>${L.d[r.i] ? String(L.d[r.i]).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : ''}</td>` },
       { k: 'per', l: 'Period', w: 72, v: (r) => PER[R.per[r.i]], h: (r) => `<td><b>${PER[R.per[r.i]]}</b></td>` });   // the posting date and period first
     if (!isMat) cols.push(tx('desc', 'Line text', 220, L.desc));
@@ -140,8 +141,8 @@ function pageDef() {
       { k: 'doc', l: 'Document', w: 96, v: (r) => S[L.doc[r.i]], h: (r) => `<td>${esc(S[L.doc[r.i]])}</td>` }, { k: 'ty', l: 'Type', w: 64, v: (r) => S[L.ty[r.i]] + (isOB(r.i) ? ' · OB' : ''), h: (r) => `<td>${esc(S[L.ty[r.i]])}${isOB(r.i) ? ' ' + OBTAG : ''}</td>` },
       { k: 'ce2', l: 'Cost element', w: 90, v: (r) => S[L.ce[r.i]], h: (r) => `<td>${esc(S[L.ce[r.i]])}</td>` }, { k: 'cen', l: 'Cost element name', w: 170, v: (r) => S[L.cen[r.i]], h: (r) => `<td>${esc(S[L.cen[r.i]])}</td>` });
     { const mv = ['wbs', 'hdr'].map((k) => cols.splice(cols.findIndex((c) => c.k === k), 1)[0]); cols.splice(cols.findIndex((c) => c.k === 'name') + 1, 0, ...mv); }   // WBS and document header text right after the name
-    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: '' })), lines: true, sel: true, status: true, groups: false, extraTools: '', rpt: XL ? { title: xpTitle(), lead: LF ? `<span class="xlf">Lines of <b dir="auto">${esc(LF.label)}</b> <a data-xlf="1" title="Show every CJI3 line again">✕</a></span>` : '', hint: LF ? 'the CJI3 lines behind the row you clicked – the same amount' : 'every CJI3 line of every bucket with its codes · click an item in Expenses to see only its lines' } : null, rowCls: (r) => (isOB(r.i) ? 'obr' : ''),
-      foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? R.amt[r.i] : 0), 0)), ...(anyQ ? { qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)) } : {}) }) };
+    return { cols, rows: idx.map((i) => ({ i, it: it(i), g: '' })), lines: true, sel: true, status: true, groups: false, extraTools: '', rpt: XL ? { title: xpTitle(), lead: LF ? `<span class="xlf">Lines of <b dir="auto">${esc(LF.label)}</b> <a data-xlf="1" title="Show every CJI3 line again">✕</a></span>` : '', hint: LF ? 'the CJI3 lines behind the row you clicked – the same amount' : 'every CJI3 line of every bucket with its codes, at its CJI3 amount (pure cost – adjustments are on Adjust › Adjustment lines; client deductions are booked with revenue) · click an item in Expenses to see only its lines' } : null, rowCls: (r) => (isOB(r.i) ? 'obr' : ''),
+      foot: (rs) => ({ amt: fmt2(rs.reduce((s0, r) => s0 + (XL ? L.amt[r.i] : R.inc[r.i] ? R.amt[r.i] : 0), 0)), ...(anyQ ? { qty: fq(rs.reduce((s0, r) => s0 + (R.inc[r.i] ? L.qty[r.i] : 0), 0)) } : {}) }) };
   }
   if (ST.tab === 'gl' || ST.tab === 'wbs') {
     // month columns (Opening · months folding into quarters / years · Pending) + To date, amounts only
@@ -202,6 +203,7 @@ function pageDef() {
   if (ST.tab === 'uns') return unsDef();
   if (ST.tab === 'dep') return depDef();
   if (ST.tab === 'own') return ownDef();
+  if (ST.tab === 'adjl') return adjDef();
 }
 // ---- Subcontractor views
 function subDef() {

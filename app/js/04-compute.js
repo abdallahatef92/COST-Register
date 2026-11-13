@@ -5,6 +5,9 @@ const R = {}; globalThis.R = R; globalThis.__ST = ST; globalThis.__BK = BK; glob
 const SRC = L.src.map((x) => S[x]);
 // owner-supplied: yes when you said Yes for the material; else no when you said No, or a rule takes out the line's SAP cost element (GL)
 const ownOn = (i) => { if (!isOwn(i)) return false; const s = ST.ownSet[BK[L.b[i]].items[L.it[i]].k]; return s === 'yes' || (s !== 'no' && !ST.ownGl.includes(S[L.ce[i]])); };
+// the source of a counted line in Expenses: CJI3, or an adjustment that is the whole line (owner material at your rate, not yet in CJI3)
+const ADJK = { vat: 'VAT in', own: 'Owner material', ord: 'Order not yet settled', cert: 'Certificate not in CJI3', exc: 'Excluded', dep: 'Depreciation out', cd: 'Client deduction' };
+const adjKind = (i) => (UNS[i] ? (L.b[i] === SUBI ? ADJK.cert : ADJK.ord) : HASOWN && ownOn(i) && ST.own[BK[L.b[i]].items[L.it[i]].k] > 0 ? ADJK.own : '');
 function compute() {
   const cutI = +ST.cut.replace(/-/g, ''), fromI = ST.vatFrom ? +ST.vatFrom.replace(/-/g, '') : 0, rep = PER.indexOf(monLab(ST.cut));
   R.rep = rep; R.repLab = monLab(ST.cut); R.cutI = cutI;
@@ -23,7 +26,7 @@ function compute() {
   R.bkP = BK.map(() => new Float64Array(NP)); R.bkExc = BK.map(() => 0); R.bkUns = BK.map(() => 0); R.vatIn = 0; R.unsIn = 0; R.unsExc = 0; R.unsMk = { o: new Map(), c: new Map() }; R.unsInK = { o: 0, c: 0 }; R.unsExcK = { o: 0, c: 0 }; R.depExc = 0; R.depM = new Map();
   const dpk = new Set(ST.depx.pick || []), depOff = (k) => ST.depx.mode === 'all' || (ST.depx.mode === 'pick' && dpk.has(k)); R.depOff = depOff;
   const pkK = { o: new Set(ST.uns.pick || []), c: new Set(ST.unsc.pick || []) }, stK = { o: ST.uns, c: ST.unsc }, mStart = (k) => { const [mn, yy] = PER[+k].split('-'); return (2000 + +yy) * 10000 + (MON.indexOf(mn) + 1) * 100 + 1; },
-    keyOnK = (v, k) => (stK[v].mode === 'cut' ? k !== 'a' && mStart(k) <= cutI : stK[v].mode === 'pick' ? pkK[v].has(String(k)) : false); R.keyOnK = keyOnK; R.exp = new Map(); R.expPo = new Map();
+    keyOnK = (v, k) => (stK[v].mode === 'cut' ? k !== 'a' && mStart(k) <= cutI : stK[v].mode === 'pick' ? pkK[v].has(String(k)) : false); R.keyOnK = keyOnK; R.exp = new Map(); R.expPo = new Map(); R.exps = new Map(); R.expPoS = new Map();
   for (let i = 0; i < N; i++) {
     const b = L.b[i], it = BK[b].items[L.it[i]], o = OVR[L.id[i]];
     const pkg = o && o.pkg !== undefined ? o.pkg : it.pkg, mnl = o && o.mnl !== undefined ? o.mnl : it.mnl, ce = o && o.ce !== undefined ? o.ce : it.ce, inc = o && o.inc !== undefined ? o.inc : it.inc;
@@ -39,8 +42,12 @@ function compute() {
       if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } }
     else if (inc === 'No') { it.exc += amt[i]; R.inc[i] = 0; R.bkExc[b] += amt[i]; continue; } R.inc[i] = 1;
     const p = per[i]; it.p[p] += amt[i]; it.q[p] += L.qty[i]; R.bkP[b][p] += amt[i]; R.vatIn += vin[i];
-    const k = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; let e = R.exp.get(k); if (!e) R.exp.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, p: new Float64Array(NP), q: new Float64Array(NP) })); e.p[p] += amt[i]; e.q[p] += L.qty[i]; if (hand) e.hand = true;
-    if (b === SUBI) { const po = S[L.po[i]] || '(no PO)', k2 = k + '\u0001' + po; let f = R.expPo.get(k2); if (!f) R.expPo.set(k2, (f = { b, ii: L.it[i], pkg, mnl, ce, hand, po, sup: S[L.sup[i]] || '', p: new Float64Array(NP), q: new Float64Array(NP) })); f.p[p] += amt[i]; f.q[p] += L.qty[i]; if (hand) f.hand = true; }   // Expenses per month: one row per PO
+    // Expenses: one row per item + codes + source – CJI3 (the pure CJI3 amount) and each adjustment on its own row, in the line's month
+    const put = (M, MP, k, src, a, q) => { let e = M.get(k); if (!e) M.set(k, (e = { b, ii: L.it[i], pkg, mnl, ce, hand, src, p: new Float64Array(NP), q: new Float64Array(NP) })); e.p[p] += a; e.q[p] += q; if (hand) e.hand = true;
+      if (b === SUBI) { const po = S[L.po[i]] || '(no PO)', k2 = k + '\u0001' + po; let f = MP.get(k2); if (!f) MP.set(k2, (f = { b, ii: L.it[i], pkg, mnl, ce, hand, src, po, sup: S[L.sup[i]] || '', p: new Float64Array(NP), q: new Float64Array(NP) })); f.p[p] += a; f.q[p] += q; if (hand) f.hand = true; } };   // Expenses per month: one row per PO
+    const k0 = b + '\u0001' + L.it[i] + '\u0001' + pkg + '\u0001' + mnl + '\u0001' + ce; put(R.exp, R.expPo, k0, '', amt[i], L.qty[i]);   // item + codes (reports, Excel register)
+    const add = (src, a, q) => put(R.exps, R.expPoS, k0 + '\u0001' + src, src, a, q);   // Expenses pages: + the source
+    const ak = adjKind(i); if (ak) add(ak, amt[i], L.qty[i]); else { add('CJI3', amt[i] - vin[i], L.qty[i]); if (vin[i]) add('VAT in', vin[i], 0); }
   }
   const td = (arr) => { let s = 0; for (let p = 0; p < NP - 1; p++) s += arr[p]; return s; };
   BK.forEach((b) => b.items.forEach((it) => { it.td = r2(td(it.p)); it.tm = rep > 0 ? r2(it.p[rep]) : 0; it.qtd = td(it.q); it.pe = r2(it.p[NP - 1]); }));
