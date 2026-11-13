@@ -65,12 +65,16 @@ function dbCard() { const bs = dbBuilds(), b = bs[0];
   if (DBF.pend) return `<div class="dbc"><span class="dbi">🗄</span><div><b>${esc(DBF.pend.name)}</b><div class="s">your data file – the browser asks once to open it</div></div><span class="sp"></span><button class="pri" id="sDbAllow">Open ${esc(DBF.pend.name)}</button><button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
   return `<div class="dbc no"><span class="dbi">🗄</span><div><b>Data file</b><div class="s">One file on your computer keeps every build, your codes and the data log – not the browser.</div></div><span class="sp"></span><button id="sDbOpen">Open…</button><button class="pri" id="sDbNew">Create new…</button></div>`; }
 // open a build from the data file (ro = an older build, read only)
-async function dbBoot(id, ro) { const data = await dbBuildData(id); if (!data) return; DBF.cur = id; DBF.ro = !!ro; document.getElementById('wrap').dataset.booted = '1'; boot(data); }
+async function dbBoot(id, ro) { const data = await dbBuildData(id); if (!data) return; DBF.cur = id; DBF.ro = !!ro; document.getElementById('wrap').dataset.booted = '1';
+  if (!ro) idbSet('dbCache', { name: DBF.name, id, data }).catch(() => { /* no copy: next time the file opens on a click */ });   // a copy of the latest build, so the Tool opens at once next time
+  boot(data); }
 (async () => { if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0); let d = null;
   let h = null; try { h = await idbGet('dbHandle'); } catch (e) { /* none */ }
   if (h) { DBF.pend = h; let ok = false; try { ok = await dbUseHandle(h, false); } catch (e) { console.error(e); }
     if (ok) { const bs = dbBuilds(), want = +sessionStorage.getItem('crOpen') || 0; sessionStorage.removeItem('crOpen'); const id = bs.some((b) => b.id === want) ? want : bs.length ? bs[0].id : 0;
       if (id) { try { return await dbBoot(id, id !== bs[0].id); } catch (e) { console.error(e); } } }
+    else { let c = null; try { c = await idbGet('dbCache'); } catch (e) { /* none */ }   // the browser forgot the permission: open at once from the copy, reconnect on the first click
+      if (c && c.data && c.name === h.name) { DBF.pendH = h; DBF.cacheId = c.id; DBF.name = h.name; document.getElementById('wrap').dataset.booted = '1'; try { return boot(c.data); } catch (e) { console.error(e); } } }
     showStart(false); return; } try { d = await idbGet('lastBuild'); } catch (e) { /* no saved build */ }
   if (d) { try { return boot(d); } catch (e) { console.error(e); showStart(false); document.getElementById('sMsg').innerHTML = '<span style="color:#c00000">The saved build could not be opened (' + String(e.message).replace(/</g, '&lt;') + ') – build again.</span>'; return; } }
   showStart(false); })();

@@ -11,16 +11,16 @@ async function asPick() {   // create the data file (needs a click); this build 
   catch (e) { return; }   // cancelled
   AS.st = 'ok'; try { await idbSet(asKey(), AS.h); } catch (e) { /* kept for this session only */ } await asWrite(); toast('Auto-save on: every change goes to ' + asName());
 }
-async function asAllow() { if (DBF.db && DBF.h) { try { if ((await DBF.h.requestPermission({ mode: 'readwrite' })) === 'granted') await dbSave(); } catch (e) { /* none */ } renderStatus(); return; } if (!AS.h) return asPick(); try { const p = await AS.h.requestPermission({ mode: 'readwrite' }); if (p === 'granted') { AS.st = 'ok'; await asWrite(); } } catch (e) { AS.st = 'err'; } renderStatus(); }
+async function asAllow() { if (DBF.pendH) return dbConnect(); if (DBF.db && DBF.h) { try { if ((await DBF.h.requestPermission({ mode: 'readwrite' })) === 'granted') await dbSave(); } catch (e) { /* none */ } renderStatus(); return; } if (!AS.h) return asPick(); try { const p = await AS.h.requestPermission({ mode: 'readwrite' }); if (p === 'granted') { AS.st = 'ok'; await asWrite(); } } catch (e) { AS.st = 'err'; } renderStatus(); }
 // the Tool opens: find the linked file; when it holds newer codes than this browser (e.g. next month's build), load them
-async function asStart() { if (DBF.db) return dbStart(); let h = null; try { h = await idbGet(asKey()); } catch (e) { /* none */ } AS.ready = true; if (!h || !h.queryPermission) { renderStatus(); return; }
+async function asStart() { if (DBF.db) return dbStart(); if (DBF.pendH) return dbWait(); let h = null; try { h = await idbGet(asKey()); } catch (e) { /* none */ } AS.ready = true; if (!h || !h.queryPermission) { renderStatus(); return; }
   AS.h = h; let p = 'prompt'; try { p = await h.queryPermission({ mode: 'readwrite' }); } catch (e) { /* ask */ } AS.st = p === 'granted' ? 'ok' : 'perm';
   if (AS.st === 'ok') { try { const f = JSON.parse(await (await h.getFile()).text()); let loc = null; try { loc = JSON.parse(localStorage.getItem(LSK) || 'null'); } catch (e) { /* none */ }
       if (f && f.codes && (!f.project || f.project === META.project) && (!AS.locAt || (f.at || '') > AS.locAt)) { const n = applySnap(f, true); undo = []; redo = []; persist(); compute(); render(); toast('Codes of ' + n + ' items loaded from ' + asName()); } }
     catch (e) { /* an empty / new file */ } }
   renderStatus(); }
 // the first coding of a session, with no file linked yet: ask once
-function asAsk() { if (!AS.ready || AS.h || AS.asked || DBF.db) return; AS.asked = true; const m = document.createElement('div'); m.className = 'asm'; m.id = 'asm';
+function asAsk() { if (!AS.ready || AS.h || AS.asked || DBF.db || DBF.pendH) return; AS.asked = true; const m = document.createElement('div'); m.className = 'asm'; m.id = 'asm';
   m.innerHTML = `<div class="bx"><h3>Keep your work in a data file?</h3>Create one file <b>once</b>. The Tool then saves every build and every change to it by itself – no Save button.
     <div class="f">🗄 Name: <b>${esc(META.project)}_register.db</b> &nbsp;·&nbsp; keep it next to the Tool (OneDrive or the project share).<br><span style="color:#4B5563">Next month the new build goes into the same file, with your codes – and the Data log shows what changed.</span></div>
     <span style="color:#6B7280;font-size:13px">If you choose <b>Later</b>, your work stays only in this browser.</span>

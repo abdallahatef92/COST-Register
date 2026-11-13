@@ -28,12 +28,37 @@ function dbFillLines() { if (!DBF.db || DBF.ro || DBF.cur !== latestId() || dbOn
   for (let i = 0; i < N; i++) { const it = BK[L.b[i]].items[L.it[i]], d = ds(L.d[i]); st.run([DBF.cur, String(L.id[i]), d, d.slice(0, 7), BK[L.b[i]].id, it.k, itemCode(it), S[L.desc[i]] || itemDesc(it), S[L.ce[i]], S[L.cen[i]], L.amt[i], L.qty[i], S[L.wbs[i]], S[L.po[i]], S[L.ty[i]], S[L.src[i]] || 'CJI3']); }
   st.free(); DBF.db.run('COMMIT'); }
 // the Tool opens from the data file: codes of this build (when newer than this browser), lines table, status
-function dbStart() { AS.ready = true;
-  const c = dbCodes(DBF.cur);   // newer than what this browser had before opening (the automatic first-time changes do not count)
-  if (c && c.codes && (DBF.ro || !AS.locAt || (c.at || '') > AS.locAt)) { applySnap(c, true); undo = []; redo = []; if (!DBF.ro) persist(); compute(); }
+function dbStart(late) { AS.ready = true;
+  // the file's codes win when they are newer than what this browser had before opening (the automatic first-time changes do not count);
+  // connected later (first click): changes you made meanwhile win and go to the file
+  const c = dbCodes(DBF.cur), mine = late && DIRTY > 0;
+  if (!mine && c && c.codes && (DBF.ro || !AS.locAt || (c.at || '') > AS.locAt)) { applySnap(c, true); undo = []; redo = []; if (!DBF.ro) persist(); compute(); }
   try { dbFillLines(); } catch (e) { console.error(e); }
-  if (!DBF.ro && !dbOne('SELECT codes FROM builds WHERE id = ? AND codes IS NOT NULL', [DBF.cur])) dbSave(); else dbWrite().then(() => renderStatus());
+  if (!DBF.ro && (!c || mine)) dbSave(); else dbWrite().then(() => renderStatus());
   render(); }
+// opened from this browser's copy of the last build: the first click (or key) reconnects the data file – the browser asks once ("Allow on every visit")
+async function dbConnect() { const h = DBF.pendH; if (!h || DBF.connecting) return; DBF.connecting = true; let ok = false;
+  try { ok = await dbUseHandle(h, true); } catch (e) { console.error(e); } DBF.connecting = false;
+  if (!ok) { DBF.st = 'perm'; renderStatus(); return; }
+  const top = dbBuilds()[0]; DBF.pendH = null;
+  if (!top || top.id !== DBF.cacheId) { sessionStorage.setItem('crOpen', ''); location.reload(); return; }   // the file holds a newer build (another PC): open that one
+  DBF.cur = top.id; dbStart(true); toast('Connected to ' + DBF.name); }
+function dbWait() { AS.ready = true; const go = () => { document.removeEventListener('pointerdown', go, true); document.removeEventListener('keydown', go, true); dbConnect(); };
+  document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true); render(); }
+// side navigation › Data file
+$('bDb').onclick = (e) => { e.stopPropagation(); let m = $('dbm'); if (!m) { m = document.createElement('div'); m.id = 'dbm'; m.className = 'dbm'; document.body.appendChild(m); }
+  if (m.classList.contains('on')) { m.classList.remove('on'); return; } const r = $('bDb').getBoundingClientRect(), bs = DBF.db ? dbBuilds() : [];
+  const nm = DBF.db ? DBF.name : DBF.pendH ? DBF.pendH.name : '', st = DBF.ro ? 'an older build, read only' : DBF.db ? `${bs.length} build${bs.length === 1 ? '' : 's'} · last cut ${esc(bs[0] ? bs[0].cut : '')}${DBF.at ? ' · saved ' + DBF.at : ''}` : DBF.pendH ? 'click anywhere to reconnect' : 'your work is only in this browser';
+  m.innerHTML = `<div class="dbh"><span class="dbi">🗄</span><div><b>${nm ? esc(nm) : 'No data file'}</b><div class="s">${st}</div></div></div>
+    <button data-dbm="open">Open another data file…</button><button data-dbm="new">New data file…</button><button data-dbm="copy"${DBF.db ? '' : ' disabled'}>Download a copy</button><button data-dbm="log">Data log (builds in the file)</button>`;
+  m.style.left = r.right + 8 + 'px'; m.style.bottom = Math.max(8, innerHeight - r.bottom) + 'px'; m.classList.add('on'); };
+document.addEventListener('click', (e) => { const m = $('dbm'); if (!m || !m.classList.contains('on')) return; const b = e.target.closest('[data-dbm]'); if (!b) { if (!e.target.closest('#dbm')) m.classList.remove('on'); return; }
+  m.classList.remove('on'); const k = b.dataset.dbm;
+  if (k === 'open') dbMenuOpen(); else if (k === 'new') dbMenuNew(); else if (k === 'copy') dbDownload(); else { ST.tab = 'dlog'; sel.clear(); render(); } });
+async function dbMenuOpen() { if (!window.showOpenFilePicker) { toast('Use Chrome or Edge to switch the data file inside the Tool – or New build › Open…'); return; }
+  let h; try { [h] = await window.showOpenFilePicker({ types: DB_TYPES, multiple: false }); } catch (e) { return; }
+  if (await dbUseHandle(h, true)) { if (!dbBuilds().length) { DBF.cur = await dbAddBuild(DATA, '__VER__'); dbFillLines(); await dbSave(); } sessionStorage.setItem('crOpen', ''); location.reload(); } }
+async function dbMenuNew() { if (!(await dbPickCreate(META.project))) return; DBF.ro = false; DBF.pendH = null; DBF.cur = await dbAddBuild(DATA, '__VER__'); dbFillLines(); await dbSave(); try { await idbSet('dbCache', { name: DBF.name, id: DBF.cur, data: DATA }); } catch (e) { /* none */ } render(); toast('New data file ' + DBF.name + ' – this build and your codes are in it'); }
 document.addEventListener('click', (e) => { const g = e.target.closest('[data-dbgo]'); if (!g) return; const k = g.dataset.dbgo;
   if (k === 'dl') { dbDownload(); setDirty(0); renderStatus(); return; }
   if (k === 'latest' || k === 'open') { sessionStorage.setItem('crOpen', k === 'open' ? g.dataset.id : ''); location.reload(); return; }
@@ -69,7 +94,8 @@ function renderDlog() {
       ${srcs.map((k) => `<tr><td class="src">${DLSRC[k]}</td>${months.map((ym) => cell(k, ym)).join('')}</tr>`).join('')}</table></div><div class="dlg">${lg.join('')}</div></div>`; }
   // against the last build (data file only)
   const prev = DBF.db ? dbOne('SELECT id, built, cut FROM builds WHERE id < ? ORDER BY id DESC LIMIT 1', [DBF.cur]) : null;
-  if (!DBF.db) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3></div><div class="dln">No data file yet – the earlier builds are kept in a data file on your computer. <a class="lk" data-asgo="pick">Create the data file</a> and next month this card shows what changed since this build.</div></div>`;
+  if (!DBF.db && DBF.pendH) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3></div><div class="dln">Click anywhere to reconnect <b>${esc(DBF.pendH.name)}</b> – then this card compares with the last build.</div></div>`;
+  else if (!DBF.db) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3></div><div class="dln">No data file yet – the earlier builds are kept in a data file on your computer. <a class="lk" data-asgo="pick">Create the data file</a> and next month this card shows what changed since this build.</div></div>`;
   else if (!prev) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3><span class="help">${esc(DBF.name)}</span></div><div class="dln">This is the first build in the data file – next month this card shows what changed since this build.</div></div>`;
   else { const pc = String(prev.cut).slice(0, 7), sum = (id, src, w) => (dbOne(`SELECT coalesce(sum(amount), 0) AS a, coalesce(sum(n), 0) AS n FROM coverage WHERE build_id = ? AND source = ?${w || ''}`, w ? [id, src, pc] : [id, src]) || { a: 0, n: 0 });
     const ln = []; const add = (src, a, b, nw, closed, note) => ln.push(`<tr><td class="src">${src}</td><td class="n">${a}</td><td class="n">${b}</td><td class="n">${nw}</td><td class="n ${closed && closed !== '0' ? 'bad' : 'ok'}">${closed || '0'}</td><td>${note}</td></tr>`);

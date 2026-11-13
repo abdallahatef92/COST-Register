@@ -24,7 +24,7 @@ const eq = (name, got, want, tol = 0.01) => ok(name, typeof want === 'number' ? 
 const head = (s) => { section = s; console.log('\n' + s); };
 const r2 = (x) => Math.round(x * 100) / 100;
 // which sections run: 1–4 always (they open the register); --only picks sections; --quick leaves out the slow 9 and 10
-const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k === '10' || k === '10b'));
+const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k === '10' || k === '10b' || k === '10c'));
 
 (async () => {
   const t0 = Date.now(); fs.mkdirSync(OUT, { recursive: true });
@@ -432,6 +432,41 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
     ok('Data log compares with the last build: closed months unchanged, no certificate revised', await q.evaluate(() => /Against the last build/.test(document.getElementById('dlog').textContent) && !document.querySelector('#dlog .dlt .bad')), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
     eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close();
+  }
+  if (RUN('10c')) {
+    head('10c. Close the Tool and open it again: it opens at once, the first click reconnects the data file');
+    // a stand-in for Chrome's file handles: kept in IndexedDB like the real ones; the permission is forgotten when the browser closes (sessionStorage)
+    const FAKE = () => { const fsDb = () => new Promise((res) => { const r = indexedDB.open('fakefs', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); });
+      const io = async (mode, fn) => { const d = await fsDb(); return new Promise((res) => { const t = d.transaction('f', mode), q = fn(t.objectStore('f')); t.oncomplete = () => res(q && q.result); }); };
+      const H = () => ({ __fake: 1, name: 'Test_register.db', kind: 'file', queryPermission: async () => (sessionStorage.getItem('fakePerm') === 'granted' ? 'granted' : 'prompt'),
+        requestPermission: async () => { window.__asked = (window.__asked || 0) + 1; sessionStorage.setItem('fakePerm', 'granted'); return 'granted'; },
+        getFile: async () => new Blob([(await io('readonly', (st) => st.get('file'))) || new Uint8Array()]),
+        createWritable: async () => { const parts = []; return { write: async (d) => { parts.push(d); }, close: async () => { const u = new Uint8Array(await new Blob(parts).arrayBuffer()); await io('readwrite', (st) => st.put(u, 'file')); window.__writes = (window.__writes || 0) + 1; } }; } });
+      const put = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function (v, k) { return put.call(this, v && v.__fake ? '__FAKEH__' : v, k); };
+      const g = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'result').get; Object.defineProperty(IDBRequest.prototype, 'result', { get() { const v = g.call(this); return v === '__FAKEH__' ? H() : v; } });
+      window.showSaveFilePicker = async () => { sessionStorage.setItem('fakePerm', 'granted'); return H(); }; window.showOpenFilePicker = async () => { sessionStorage.setItem('fakePerm', 'granted'); return [H()]; }; };
+    const dir = path.join(OUT, 'profile'); fs.rmSync(dir, { recursive: true, force: true });
+    const launch = async () => { const c = await chromium.launchPersistentContext(dir, { viewport: { width: 1600, height: 900 } }); await c.addInitScript(FAKE); const q = c.pages()[0] || await c.newPage(); q.on('pageerror', (e) => errs.push(e.message)); q.on('dialog', (d) => d.dismiss()); return { c, q }; };
+    let { c, q } = await launch(); await q.goto('file://' + TOOL); await q.waitForSelector('#pick', { state: 'attached' });
+    await q.click('#sDbNew'); await q.waitForFunction(() => /Test_register\.db/.test(document.querySelector('.dbc').textContent));
+    await q.setInputFiles('#pick', files()); await q.waitForFunction(() => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''), null, { timeout: 120000 });
+    await q.click('#sBuild'); await q.waitForFunction(() => document.querySelector('#tabs button') && typeof DBF !== 'undefined' && DBF.db && DBF.st === 'ok', null, { timeout: 240000 }); await q.waitForTimeout(2000);
+    ok('after the build the Tool opens from the data file by itself', await q.evaluate(() => DBF.cur === 1 && /Test_register\.db/.test(document.getElementById('hasv').textContent)));
+    await q.$eval('#tabs [data-s="cod"]', (b) => b.click()); await q.waitForTimeout(400); { const m = await q.$('#asLater'); if (m) await m.click(); } const iq = await q.$('#tb input[data-f="pkg"]'); await iq.fill('T55'); await iq.press('Enter'); await q.waitForTimeout(800); { const m = await q.$('#asLater'); if (m) await m.click(); }
+    const k = await q.evaluate(() => __BK.flatMap((b) => b.items).find((x) => x.pkg === 'T55').k);
+    await q.waitForFunction(() => !DBF.busy && !DBF.again); await c.close();
+    // close and open again: no choosing, the build is there at once
+    ({ c, q } = await launch()); const t1 = Date.now(); await q.goto('file://' + TOOL); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 });
+    ok('opened again: the register is there at once – nothing to choose', await q.evaluate(() => document.getElementById('start').style.display === 'none' && !!DBF.pendH), `${Date.now() - t1} ms`);
+    ok('…with your code', await q.evaluate((kk) => __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg, k) === 'T55');
+    ok('…the top bar says the first click reconnects the data file', /click to reconnect/.test(await q.$eval('#hasv', (e) => e.textContent)), await q.$eval('#hasv', (e) => e.textContent));
+    await q.mouse.click(700, 400); await q.waitForFunction(() => DBF.db && DBF.st === 'ok', null, { timeout: 30000 }); await q.waitForTimeout(800);
+    ok('first click: the browser asks once, the data file is connected', await q.evaluate(() => window.__asked === 1 && /Test_register\.db · 1 build/.test(document.getElementById('hasv').textContent)), await q.$eval('#hasv', (e) => e.textContent));
+    const w = await q.evaluate(() => window.__writes || 0); await q.evaluate((kk) => { __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg = 'T56'; return __DL.save(); }, k); await q.waitForFunction(() => !DBF.busy && !DBF.again);
+    ok('…and changes go to the file again', await q.evaluate((ww) => (window.__writes || 0) > ww && JSON.parse(dbOne('SELECT codes FROM builds WHERE id = 1').codes).at > '', w));
+    await q.click('#bDb'); await q.waitForTimeout(300);
+    ok('side navigation › Data file: open another, new, download a copy, data log', await q.$$eval('#dbm.on [data-dbm]', (b) => b.map((x) => x.dataset.dbm).join(',')) === 'open,new,copy,log');
+    eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close(); fs.rmSync(dir, { recursive: true, force: true });
   }
   await browser.close();
   head('Page errors'); ok('no JavaScript errors on any page', errs.length === 0, [...new Set(errs)].slice(0, 5).join(' | '));
