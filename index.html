@@ -366,6 +366,9 @@ header.top .logo .lg{width:34px;height:34px;flex:none;display:block} header.top 
 .dlsc{overflow-x:auto} .dlcov{border-collapse:collapse} .dlcov td{padding:3px 2px;text-align:center;min-width:46px;font-size:11.5px} .dlcov td.src{text-align:left;padding:0 12px;min-width:90px} .dlcov td.cm{color:#B8860B;font-weight:700}
 .cl{height:20px;border-radius:4px;line-height:20px;color:#fff;font-weight:600;font-size:10.5px;padding:0 3px} .cl.b{background:#7FB069} .cl.x{background:#E5E7EB;color:#9CA3AF} .cl.ov{background:#B42318} .cl.cut{box-shadow:inset 0 -3px 0 #D4A72C}
 .dlg{display:flex;gap:14px;padding:8px 14px;font-size:12px;color:#4B5563;flex-wrap:wrap} .dlg span{display:inline-flex;align-items:center;gap:5px} .dlg i{width:14px;height:12px;border-radius:3px;display:inline-block}
+.dbm{position:fixed;z-index:96;display:none;flex-direction:column;min-width:270px;background:#fff;border:1px solid #C9D3E3;border-radius:10px;box-shadow:0 10px 30px rgba(20,37,74,.22);padding:6px} .dbm.on{display:flex}
+.dbm .dbh{display:flex;gap:10px;align-items:center;padding:8px 10px 10px;border-bottom:1px solid #E5E9F0;margin-bottom:4px} .dbm .dbi{font-size:20px} .dbm .s{color:#6B7280;font-size:12px}
+.dbm button{border:0;background:none;text-align:left;padding:8px 10px;border-radius:6px;font:13px "Segoe UI",Arial,sans-serif;color:#14254A;cursor:pointer} .dbm button:hover{background:#EEF3FB} .dbm button:disabled{color:#B0B6C0;cursor:default;background:none}
 </style>
 </head>
 <body>
@@ -386,6 +389,7 @@ header.top .logo .lg{width:34px;height:34px;flex:none;display:block} header.top 
   <div class="nsp"></div>
   <div class="nft">
     <label class="nvat" title="VAT on subcontractor certificates"><span class="ni"></span><select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none"></label>
+    <button id="bDb" title="The data file on your computer: every build, your codes and the data log"><span class="ni"></span><span class="tx">Data file</span></button>
     <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file"><span class="ni"></span><span class="tx">Import codes…</span></button>
     <button id="bSave" title="Save all codes (and line overrides) as a small file"><span class="ni"></span><span class="tx">Save codes to a file</span></button>
     <button id="bNew" title="Build from new SAP files"><span class="ni"></span><span class="tx">New build from SAP files</span></button>
@@ -744,16 +748,16 @@ async function asPick() {   // create the data file (needs a click); this build 
   catch (e) { return; }   // cancelled
   AS.st = 'ok'; try { await idbSet(asKey(), AS.h); } catch (e) { /* kept for this session only */ } await asWrite(); toast('Auto-save on: every change goes to ' + asName());
 }
-async function asAllow() { if (DBF.db && DBF.h) { try { if ((await DBF.h.requestPermission({ mode: 'readwrite' })) === 'granted') await dbSave(); } catch (e) { /* none */ } renderStatus(); return; } if (!AS.h) return asPick(); try { const p = await AS.h.requestPermission({ mode: 'readwrite' }); if (p === 'granted') { AS.st = 'ok'; await asWrite(); } } catch (e) { AS.st = 'err'; } renderStatus(); }
+async function asAllow() { if (DBF.pendH) return dbConnect(); if (DBF.db && DBF.h) { try { if ((await DBF.h.requestPermission({ mode: 'readwrite' })) === 'granted') await dbSave(); } catch (e) { /* none */ } renderStatus(); return; } if (!AS.h) return asPick(); try { const p = await AS.h.requestPermission({ mode: 'readwrite' }); if (p === 'granted') { AS.st = 'ok'; await asWrite(); } } catch (e) { AS.st = 'err'; } renderStatus(); }
 // the Tool opens: find the linked file; when it holds newer codes than this browser (e.g. next month's build), load them
-async function asStart() { if (DBF.db) return dbStart(); let h = null; try { h = await idbGet(asKey()); } catch (e) { /* none */ } AS.ready = true; if (!h || !h.queryPermission) { renderStatus(); return; }
+async function asStart() { if (DBF.db) return dbStart(); if (DBF.pendH) return dbWait(); let h = null; try { h = await idbGet(asKey()); } catch (e) { /* none */ } AS.ready = true; if (!h || !h.queryPermission) { renderStatus(); return; }
   AS.h = h; let p = 'prompt'; try { p = await h.queryPermission({ mode: 'readwrite' }); } catch (e) { /* ask */ } AS.st = p === 'granted' ? 'ok' : 'perm';
   if (AS.st === 'ok') { try { const f = JSON.parse(await (await h.getFile()).text()); let loc = null; try { loc = JSON.parse(localStorage.getItem(LSK) || 'null'); } catch (e) { /* none */ }
       if (f && f.codes && (!f.project || f.project === META.project) && (!AS.locAt || (f.at || '') > AS.locAt)) { const n = applySnap(f, true); undo = []; redo = []; persist(); compute(); render(); toast('Codes of ' + n + ' items loaded from ' + asName()); } }
     catch (e) { /* an empty / new file */ } }
   renderStatus(); }
 // the first coding of a session, with no file linked yet: ask once
-function asAsk() { if (!AS.ready || AS.h || AS.asked || DBF.db) return; AS.asked = true; const m = document.createElement('div'); m.className = 'asm'; m.id = 'asm';
+function asAsk() { if (!AS.ready || AS.h || AS.asked || DBF.db || DBF.pendH) return; AS.asked = true; const m = document.createElement('div'); m.className = 'asm'; m.id = 'asm';
   m.innerHTML = `<div class="bx"><h3>Keep your work in a data file?</h3>Create one file <b>once</b>. The Tool then saves every build and every change to it by itself – no Save button.
     <div class="f">🗄 Name: <b>${esc(META.project)}_register.db</b> &nbsp;·&nbsp; keep it next to the Tool (OneDrive or the project share).<br><span style="color:#4B5563">Next month the new build goes into the same file, with your codes – and the Data log shows what changed.</span></div>
     <span style="color:#6B7280;font-size:13px">If you choose <b>Later</b>, your work stays only in this browser.</span>
@@ -825,9 +829,9 @@ const secOf = (t) => (t === 'sub' ? SUBSEC[ST.sub] || 'dash' : (SECS.find((x) =>
 const NIC = ((d) => Object.fromEntries(Object.entries(d).map(([k, v]) => [k, `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${v}</svg>`])))({
   dash: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>', cod: '<path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/>', sub: '<rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="8" height="6" rx="1"/><rect x="13" y="14" width="8" height="6" rx="1"/>',
   xp: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M15 9v11"/>', adj: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>', chk: '<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>', rep: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
-  imp: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/>', build: '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/>', help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/>', vat: '<path d="M6 18L18 6"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>', pin: '<path d="M9 4h6l-1 6 3 3H7l3-3z"/><path d="M12 13v7"/>' });
+  imp: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>', db: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>', save: '<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/>', build: '<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/>', help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/>', vat: '<path d="M6 18L18 6"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>', pin: '<path d="M9 4h6l-1 6 3 3H7l3-3z"/><path d="M12 13v7"/>' });
 $('tabs').innerHTML = SECS.map(([k, l]) => `<button data-s="${k}"><span class="ni">${NIC[k]}<i class="dot"></i></span><span class="tx">${l}<small></small></span><span class="nb"></span></button>`).join('');
-[['bImport', 'imp'], ['bSave', 'save'], ['bNew', 'build'], ['bHelp', 'help']].forEach(([id, k]) => { $(id).querySelector('.ni').innerHTML = NIC[k]; }); document.querySelector('#nav .nvat .ni').innerHTML = NIC.vat;
+[['bDb', 'db'], ['bImport', 'imp'], ['bSave', 'save'], ['bNew', 'build'], ['bHelp', 'help']].forEach(([id, k]) => { $(id).querySelector('.ni').innerHTML = NIC[k]; }); document.querySelector('#nav .nvat .ni').innerHTML = NIC.vat;
 let NAVPIN = false; try { NAVPIN = localStorage.getItem('cr-navpin') === '1'; } catch (e) { /* per-viewer only */ }
 const navPin = () => { document.body.classList.toggle('navpin', NAVPIN); $('bPin').innerHTML = NIC.pin + (NAVPIN ? ' pinned' : ' pin'); $('bPin').classList.toggle('on', NAVPIN); }; navPin();
 $('bPin').onclick = () => { NAVPIN = !NAVPIN; try { localStorage.setItem('cr-navpin', NAVPIN ? '1' : '0'); } catch (e) { /* none */ } navPin(); window.dispatchEvent(new Event('resize')); render(); };
@@ -914,7 +918,8 @@ function renderStatus() {
     ...(DEPI >= 0 && !z(R.depExc) ? [it('Depreciation out', fmt(R.depExc), z(R.depExc) || 'exc', 'dep', 'CJI3 depreciation excluded by you')] : []),
     ...(Math.abs(R.cdAll) >= 0.5 ? [it('Client deductions', fmt(R.cdAll), 'exc', 'chk', 'Client deductions in CJI3 booked with revenue – in the CJI3 total, not counted as cost')] : []), sep,
     ...(hand ? [it('Hand-coded lines', hand.toLocaleString('en-US'), '', 'lines')] : [])].join('');
-  $('hasv').innerHTML = DBF.db ? (DBF.ro ? `<a class="asv amb" data-dbgo="latest" title="An older build from the data file – changes are not saved">🔒 Read only · cut ${esc(META.cut)} · back to the latest</a>`
+  $('hasv').innerHTML = !DBF.db && DBF.pendH ? `<a class="asv amb" data-asgo="allow" title="Opened from this browser's copy of your last build – the first click connects the data file again (choose Allow on every visit)">⟳ ${esc(DBF.pendH.name)} · click to reconnect</a>`
+    : DBF.db ? (DBF.ro ? `<a class="asv amb" data-dbgo="latest" title="An older build from the data file – changes are not saved">🔒 Read only · cut ${esc(META.cut)} · back to the latest</a>`
       : DBF.st === 'ok' ? `<span class="asv ok" title="Every build and every change is saved to this data file by itself">🗄 ${esc(DBF.name)} · ${dbBuilds().length} build${dbBuilds().length === 1 ? '' : 's'}${DBF.at ? ' · saved ' + DBF.at : ''}</span>`
       : DBF.st === 'perm' ? `<a class="asv amb" data-asgo="allow" title="The browser asks again – one click">⟳ Click to keep saving to ${esc(DBF.name)}</a>`
       : `<a class="asv red" data-dbgo="dl" title="This browser cannot write to the file – download it to keep your work">⇩ Save data file ${esc(DBF.name)}</a>`)
@@ -2388,12 +2393,37 @@ function dbFillLines() { if (!DBF.db || DBF.ro || DBF.cur !== latestId() || dbOn
   for (let i = 0; i < N; i++) { const it = BK[L.b[i]].items[L.it[i]], d = ds(L.d[i]); st.run([DBF.cur, String(L.id[i]), d, d.slice(0, 7), BK[L.b[i]].id, it.k, itemCode(it), S[L.desc[i]] || itemDesc(it), S[L.ce[i]], S[L.cen[i]], L.amt[i], L.qty[i], S[L.wbs[i]], S[L.po[i]], S[L.ty[i]], S[L.src[i]] || 'CJI3']); }
   st.free(); DBF.db.run('COMMIT'); }
 // the Tool opens from the data file: codes of this build (when newer than this browser), lines table, status
-function dbStart() { AS.ready = true;
-  const c = dbCodes(DBF.cur);   // newer than what this browser had before opening (the automatic first-time changes do not count)
-  if (c && c.codes && (DBF.ro || !AS.locAt || (c.at || '') > AS.locAt)) { applySnap(c, true); undo = []; redo = []; if (!DBF.ro) persist(); compute(); }
+function dbStart(late) { AS.ready = true;
+  // the file's codes win when they are newer than what this browser had before opening (the automatic first-time changes do not count);
+  // connected later (first click): changes you made meanwhile win and go to the file
+  const c = dbCodes(DBF.cur), mine = late && DIRTY > 0;
+  if (!mine && c && c.codes && (DBF.ro || !AS.locAt || (c.at || '') > AS.locAt)) { applySnap(c, true); undo = []; redo = []; if (!DBF.ro) persist(); compute(); }
   try { dbFillLines(); } catch (e) { console.error(e); }
-  if (!DBF.ro && !dbOne('SELECT codes FROM builds WHERE id = ? AND codes IS NOT NULL', [DBF.cur])) dbSave(); else dbWrite().then(() => renderStatus());
+  if (!DBF.ro && (!c || mine)) dbSave(); else dbWrite().then(() => renderStatus());
   render(); }
+// opened from this browser's copy of the last build: the first click (or key) reconnects the data file – the browser asks once ("Allow on every visit")
+async function dbConnect() { const h = DBF.pendH; if (!h || DBF.connecting) return; DBF.connecting = true; let ok = false;
+  try { ok = await dbUseHandle(h, true); } catch (e) { console.error(e); } DBF.connecting = false;
+  if (!ok) { DBF.st = 'perm'; renderStatus(); return; }
+  const top = dbBuilds()[0]; DBF.pendH = null;
+  if (!top || top.id !== DBF.cacheId) { sessionStorage.setItem('crOpen', ''); location.reload(); return; }   // the file holds a newer build (another PC): open that one
+  DBF.cur = top.id; dbStart(true); toast('Connected to ' + DBF.name); }
+function dbWait() { AS.ready = true; const go = () => { document.removeEventListener('pointerdown', go, true); document.removeEventListener('keydown', go, true); dbConnect(); };
+  document.addEventListener('pointerdown', go, true); document.addEventListener('keydown', go, true); render(); }
+// side navigation › Data file
+$('bDb').onclick = (e) => { e.stopPropagation(); let m = $('dbm'); if (!m) { m = document.createElement('div'); m.id = 'dbm'; m.className = 'dbm'; document.body.appendChild(m); }
+  if (m.classList.contains('on')) { m.classList.remove('on'); return; } const r = $('bDb').getBoundingClientRect(), bs = DBF.db ? dbBuilds() : [];
+  const nm = DBF.db ? DBF.name : DBF.pendH ? DBF.pendH.name : '', st = DBF.ro ? 'an older build, read only' : DBF.db ? `${bs.length} build${bs.length === 1 ? '' : 's'} · last cut ${esc(bs[0] ? bs[0].cut : '')}${DBF.at ? ' · saved ' + DBF.at : ''}` : DBF.pendH ? 'click anywhere to reconnect' : 'your work is only in this browser';
+  m.innerHTML = `<div class="dbh"><span class="dbi">🗄</span><div><b>${nm ? esc(nm) : 'No data file'}</b><div class="s">${st}</div></div></div>
+    <button data-dbm="open">Open another data file…</button><button data-dbm="new">New data file…</button><button data-dbm="copy"${DBF.db ? '' : ' disabled'}>Download a copy</button><button data-dbm="log">Data log (builds in the file)</button>`;
+  m.style.left = r.right + 8 + 'px'; m.style.bottom = Math.max(8, innerHeight - r.bottom) + 'px'; m.classList.add('on'); };
+document.addEventListener('click', (e) => { const m = $('dbm'); if (!m || !m.classList.contains('on')) return; const b = e.target.closest('[data-dbm]'); if (!b) { if (!e.target.closest('#dbm')) m.classList.remove('on'); return; }
+  m.classList.remove('on'); const k = b.dataset.dbm;
+  if (k === 'open') dbMenuOpen(); else if (k === 'new') dbMenuNew(); else if (k === 'copy') dbDownload(); else { ST.tab = 'dlog'; sel.clear(); render(); } });
+async function dbMenuOpen() { if (!window.showOpenFilePicker) { toast('Use Chrome or Edge to switch the data file inside the Tool – or New build › Open…'); return; }
+  let h; try { [h] = await window.showOpenFilePicker({ types: DB_TYPES, multiple: false }); } catch (e) { return; }
+  if (await dbUseHandle(h, true)) { if (!dbBuilds().length) { DBF.cur = await dbAddBuild(DATA, 'v3.2'); dbFillLines(); await dbSave(); } sessionStorage.setItem('crOpen', ''); location.reload(); } }
+async function dbMenuNew() { if (!(await dbPickCreate(META.project))) return; DBF.ro = false; DBF.pendH = null; DBF.cur = await dbAddBuild(DATA, 'v3.2'); dbFillLines(); await dbSave(); try { await idbSet('dbCache', { name: DBF.name, id: DBF.cur, data: DATA }); } catch (e) { /* none */ } render(); toast('New data file ' + DBF.name + ' – this build and your codes are in it'); }
 document.addEventListener('click', (e) => { const g = e.target.closest('[data-dbgo]'); if (!g) return; const k = g.dataset.dbgo;
   if (k === 'dl') { dbDownload(); setDirty(0); renderStatus(); return; }
   if (k === 'latest' || k === 'open') { sessionStorage.setItem('crOpen', k === 'open' ? g.dataset.id : ''); location.reload(); return; }
@@ -2429,7 +2459,8 @@ function renderDlog() {
       ${srcs.map((k) => `<tr><td class="src">${DLSRC[k]}</td>${months.map((ym) => cell(k, ym)).join('')}</tr>`).join('')}</table></div><div class="dlg">${lg.join('')}</div></div>`; }
   // against the last build (data file only)
   const prev = DBF.db ? dbOne('SELECT id, built, cut FROM builds WHERE id < ? ORDER BY id DESC LIMIT 1', [DBF.cur]) : null;
-  if (!DBF.db) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3></div><div class="dln">No data file yet – the earlier builds are kept in a data file on your computer. <a class="lk" data-asgo="pick">Create the data file</a> and next month this card shows what changed since this build.</div></div>`;
+  if (!DBF.db && DBF.pendH) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3></div><div class="dln">Click anywhere to reconnect <b>${esc(DBF.pendH.name)}</b> – then this card compares with the last build.</div></div>`;
+  else if (!DBF.db) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3></div><div class="dln">No data file yet – the earlier builds are kept in a data file on your computer. <a class="lk" data-asgo="pick">Create the data file</a> and next month this card shows what changed since this build.</div></div>`;
   else if (!prev) h += `<div class="dlcard"><div class="dlh"><h3>Against the last build</h3><span class="help">${esc(DBF.name)}</span></div><div class="dln">This is the first build in the data file – next month this card shows what changed since this build.</div></div>`;
   else { const pc = String(prev.cut).slice(0, 7), sum = (id, src, w) => (dbOne(`SELECT coalesce(sum(amount), 0) AS a, coalesce(sum(n), 0) AS n FROM coverage WHERE build_id = ? AND source = ?${w || ''}`, w ? [id, src, pc] : [id, src]) || { a: 0, n: 0 });
     const ln = []; const add = (src, a, b, nw, closed, note) => ln.push(`<tr><td class="src">${src}</td><td class="n">${a}</td><td class="n">${b}</td><td class="n">${nw}</td><td class="n ${closed && closed !== '0' ? 'bad' : 'ok'}">${closed || '0'}</td><td>${note}</td></tr>`);
@@ -2802,12 +2833,16 @@ function dbCard() { const bs = dbBuilds(), b = bs[0];
   if (DBF.pend) return `<div class="dbc"><span class="dbi">🗄</span><div><b>${esc(DBF.pend.name)}</b><div class="s">your data file – the browser asks once to open it</div></div><span class="sp"></span><button class="pri" id="sDbAllow">Open ${esc(DBF.pend.name)}</button><button id="sDbOpen">Open another…</button><button id="sDbNew">New…</button></div>`;
   return `<div class="dbc no"><span class="dbi">🗄</span><div><b>Data file</b><div class="s">One file on your computer keeps every build, your codes and the data log – not the browser.</div></div><span class="sp"></span><button id="sDbOpen">Open…</button><button class="pri" id="sDbNew">Create new…</button></div>`; }
 // open a build from the data file (ro = an older build, read only)
-async function dbBoot(id, ro) { const data = await dbBuildData(id); if (!data) return; DBF.cur = id; DBF.ro = !!ro; document.getElementById('wrap').dataset.booted = '1'; boot(data); }
+async function dbBoot(id, ro) { const data = await dbBuildData(id); if (!data) return; DBF.cur = id; DBF.ro = !!ro; document.getElementById('wrap').dataset.booted = '1';
+  if (!ro) idbSet('dbCache', { name: DBF.name, id, data }).catch(() => { /* no copy: next time the file opens on a click */ });   // a copy of the latest build, so the Tool opens at once next time
+  boot(data); }
 (async () => { if (typeof DATA0 !== 'undefined' && DATA0) return boot(DATA0); let d = null;
   let h = null; try { h = await idbGet('dbHandle'); } catch (e) { /* none */ }
   if (h) { DBF.pend = h; let ok = false; try { ok = await dbUseHandle(h, false); } catch (e) { console.error(e); }
     if (ok) { const bs = dbBuilds(), want = +sessionStorage.getItem('crOpen') || 0; sessionStorage.removeItem('crOpen'); const id = bs.some((b) => b.id === want) ? want : bs.length ? bs[0].id : 0;
       if (id) { try { return await dbBoot(id, id !== bs[0].id); } catch (e) { console.error(e); } } }
+    else { let c = null; try { c = await idbGet('dbCache'); } catch (e) { /* none */ }   // the browser forgot the permission: open at once from the copy, reconnect on the first click
+      if (c && c.data && c.name === h.name) { DBF.pendH = h; DBF.cacheId = c.id; DBF.name = h.name; document.getElementById('wrap').dataset.booted = '1'; try { return boot(c.data); } catch (e) { console.error(e); } } }
     showStart(false); return; } try { d = await idbGet('lastBuild'); } catch (e) { /* no saved build */ }
   if (d) { try { return boot(d); } catch (e) { console.error(e); showStart(false); document.getElementById('sMsg').innerHTML = '<span style="color:#c00000">The saved build could not be opened (' + String(e.message).replace(/</g, '&lt;') + ') – build again.</span>'; return; } }
   showStart(false); })();
