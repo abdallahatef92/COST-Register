@@ -7,7 +7,7 @@ compute(); render();
   const ix = new Map(); L.id.forEach((id, i) => ix.set(String(id), i)); Object.entries(OVR).forEach(([id, o]) => ['pkg', 'mnl', 'ce'].forEach((f) => { const v = o && o[f]; if (typeof v === 'string' && v && canon(f, v) !== v && ix.has(id)) ch.push({ t: 'line', i: ix.get(id), f, v: canon(f, v) }); }));
   canonCfg(); if (ch.length) { const d0 = DIRTY; AS.boot = true; change(ch, 'Codes in capitals (e.g. sf-02 → SF-02)'); AS.boot = false; setDirty(d0); persist(); render(); setTimeout(() => toast(ch.length + ' code' + (ch.length > 1 ? 's' : '') + ' written in capitals (e.g. sf-02 → SF-02) – Ctrl+Z to undo'), 1600); } }
 asStart();
-$('bNew').onclick = () => showStart(true);
+$('bNew').onclick = () => { DBF.db = null; DBF.h = null; DBF.pendH = null; DBF.skip = false; showStart(true); };   // a new project: its own data file
 $('bHelp').onclick = () => { GUIDE_OFF = !GUIDE_OFF; try { localStorage.setItem('crt:guideOff', GUIDE_OFF ? '1' : '0'); } catch (e) { /* none */ } if (!GUIDE_OFF && ST.tab !== 'cod') { ST.tab = 'cod'; render(); } else renderGuide(); };
 }
 

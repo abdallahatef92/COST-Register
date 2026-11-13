@@ -438,7 +438,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await ctx3.close();
   }
   if (RUN('10b')) {
-    head('10b. Data file: build into it, open it next month, build again');
+    head('10b. Data file: create the register, open it next month, update it');
     const SP = path.join(OUT, 'db'); fs.mkdirSync(SP, { recursive: true });
     const fresh = async () => { const c = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true }); await c.addInitScript(() => { delete window.showSaveFilePicker; delete window.showOpenFilePicker; }); const q = await c.newPage(); q.on('pageerror', (e) => errs.push(e.message)); q.on('dialog', (d) => d.dismiss()); await q.goto('file://' + TOOL); await q.waitForSelector('#pick', { state: 'attached' }); return { c, q }; };
     const openDb = async (q, f) => { const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#sDbOpen')]); await fc.setFiles(f); };
@@ -455,12 +455,13 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     const f2 = path.join(SP, 'm1b.db'); { const [d] = await Promise.all([q.waitForEvent('download'), q.click('#hasv [data-dbgo="dl"]')]); await d.saveAs(f2); } await c.close();
     // next month: open the data file, build again – no last report dropped, the codes come from the data file
     ({ c, q } = await fresh()); await openDb(q, f2); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1000);
-    await q.evaluate(() => document.getElementById('bNew').click()); await q.waitForTimeout(500); const f3 = path.join(SP, 'm2.db'); await buildInto(q, f3); await c.close();
+    const f3 = path.join(SP, 'm2.db'); { const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]); await fc.setFiles(files()); await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]'), null, { timeout: 120000 });
+      const [d] = await Promise.all([q.waitForEvent('download', { timeout: 300000 }), q.click('#updm [data-upd="go"]')]); await d.saveAs(f3); } await c.close();   // next month: Update with new SAP files (this browser downloads the data file)
     ({ c, q } = await fresh()); await q.setInputFiles('#pick', f3); /* a .db chosen with the files opens straight away – no CJI3 needed */ await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
-    eq('two builds in the data file', await q.evaluate(() => dbBuilds().length), 2);
+    eq('two updates in the data file', await q.evaluate(() => dbBuilds().length), 2);
     eq('…the new build has last month\'s code (from the data file)', await q.evaluate((kk) => __BK[0].items.find((x) => x.k === kk).pkg, k), 'T77');
     await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
-    ok('Data log compares with the last build: closed months unchanged, no certificate revised', await q.evaluate(() => /Against the last build/.test(document.getElementById('dlog').textContent) && !document.querySelector('#dlog .dlt .bad')), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
+    ok('Data log compares with the last update: closed months unchanged, no certificate revised', await q.evaluate(() => /Against the last update/.test(document.getElementById('dlog').textContent) && !document.querySelector('#dlog .dlt .bad')), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
     eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close();
   }
   const FAKE = () => { const fsDb = () => new Promise((res) => { const r = indexedDB.open('fakefs', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); });
@@ -527,7 +528,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('…the history: new files, kept files, the replaced one', /new/.test(m2.roles) && /kept/.test(m2.roles) && /replaced/.test(m2.roles), m2.roles);
     eq('…your code came along', await q.evaluate((kk) => __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg, k), 'T66');
     await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
-    ok('Data log › Builds: both builds with their SAP files', await q.evaluate(() => document.querySelectorAll('#dlog .bfs').length === 2 && /replaced/.test(document.getElementById('dlog').textContent)));
+    ok('Data log › Updates: both updates with their SAP files', await q.evaluate(() => document.querySelectorAll('#dlog .bfs').length === 2 && /replaced/.test(document.getElementById('dlog').textContent)));
     await c.close(); fs.rmSync(dir, { recursive: true, force: true });
   }
   await browser.close();

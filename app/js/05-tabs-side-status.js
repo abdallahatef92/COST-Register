@@ -65,7 +65,7 @@ function renderSide() {
     items.push(['data-gt="chk"', ST.tab === 'chk', ok ? '#2F6B3A' : '#9B2C2C', 'All checks', ok ? '✓' : '!', 'Difference to CJI3 ' + (ok ? '0.00' : fmt2(R.diff)), '', undefined, 'Chk']); items.push(['data-gt="log"', ST.tab === 'log', '#5F6B7A', 'Changes', String(ST.log.length), 'every change you made, with time', '', undefined, 'Log']);
     if (SUBI >= 0) items.push(['data-gt="sub" data-sv="bridge"', ST.tab === 'sub' && ST.sub === 'bridge', '#E07B39', 'Bridge to CJI3', '', 'subcontractor certificates vs CJI3', '', undefined, 'Brg']);
     items.push(['data-gt="rules"', ST.tab === 'rules', '#9CA3AF', 'Rules', META.unclassified ? `<span style="color:#9B2C2C">${META.unclassified}</span>` : '✓', META.unclassified ? 'lines without a bucket' : 'every line has a bucket', '', undefined, 'Rul']);
-    { const ov = ((META.dlog && META.dlog.ovl) || []).length; items.push(['data-gt="dlog"', ST.tab === 'dlog', '#2F5597', 'Data log', ov ? `<span style="color:#9B2C2C">${ov}</span>` : '✓', ov ? 'files overlap – see how they are merged' : 'files loaded · coverage · last build', '', undefined, 'Log']); } }
+    { const ov = ((META.dlog && META.dlog.ovl) || []).length; items.push(['data-gt="dlog"', ST.tab === 'dlog', '#2F5597', 'Data log', ov ? `<span style="color:#9B2C2C">${ov}</span>` : '✓', ov ? 'files overlap – see how they are merged' : 'files · coverage · updates', '', undefined, 'Log']); } }
   else if (sec === 'xp') { head = 'Expenses · reports';
     XPAGES.forEach(([k, l, d], n) => items.push([`data-gt="xpm" data-xp="${k}"`, ST.tab === 'xpm' && xpPage() === k, PAL[n], (n + 1) + '  ' + l, '', d, '', undefined, String(n + 1)])); }
   else if (sec === 'dash') { head = 'Dashboard';
@@ -99,7 +99,7 @@ function renderStatus() {
     ...(hand ? [it('Hand-coded lines', hand.toLocaleString('en-US'), '', 'lines')] : [])].join('');
   $('hasv').innerHTML = !DBF.db && DBF.pendH ? `<a class="asv amb" data-asgo="allow" title="Opened from this browser's copy of your last build – the first click connects the data file again (choose Allow on every visit)">⟳ ${esc(DBF.pendH.name)} · click to reconnect</a>`
     : DBF.db ? (DBF.ro ? `<a class="asv amb" data-dbgo="latest" title="An older build from the data file – changes are not saved">🔒 Read only · cut ${esc(META.cut)} · back to the latest</a>`
-      : DBF.st === 'ok' ? `<span class="asv ok" title="Every build and every change is saved to this data file by itself">🗄 ${esc(DBF.name)} · ${dbBuilds().length} build${dbBuilds().length === 1 ? '' : 's'}${DBF.at ? ' · saved ' + DBF.at : ''}</span>`
+      : DBF.st === 'ok' ? `<span class="asv ok" title="The register of this project – every change is saved to this data file by itself">🗄 ${esc(DBF.name)} · updated ${esc(String((dbBuilds()[0] || {}).built || '').slice(0, 10))}${DBF.at ? ' · saved ' + DBF.at : ''}</span>`
       : DBF.st === 'perm' ? `<a class="asv amb" data-asgo="allow" title="The browser asks again – one click">⟳ Click to keep saving to ${esc(DBF.name)}</a>`
       : `<a class="asv red" data-dbgo="dl" title="This browser cannot write to the file – download it to keep your work">⇩ Save data file ${esc(DBF.name)}</a>`)
     : AS.h && AS.st === 'ok' ? `<span class="asv ok" title="Every change is saved to this file by itself">✓ Auto-saved · ${esc(asName())}${AS.at ? ' · ' + AS.at : ''}</span>`

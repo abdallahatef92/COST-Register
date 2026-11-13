@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS codes(bucket TEXT, item_key TEXT, item_code TEXT, des
 CREATE TABLE IF NOT EXISTS line_codes(line_id TEXT PRIMARY KEY, pkg TEXT, mnl TEXT, cost_element TEXT);
 CREATE TABLE IF NOT EXISTS log(at TEXT, build_id INTEGER, event TEXT, detail TEXT);
 CREATE INDEX IF NOT EXISTS lines_b ON lines(build_id);
+CREATE VIEW IF NOT EXISTS updates AS SELECT id, built AS updated, cut, project, app, cji3_cost, files FROM builds;
 CREATE TABLE IF NOT EXISTS source_files(id INTEGER PRIMARY KEY, kind TEXT, name TEXT, project TEXT, added TEXT, size INTEGER, sha TEXT UNIQUE, first_month TEXT, last_month TEXT, data BLOB);
 CREATE TABLE IF NOT EXISTS build_files(build_id INTEGER, file_id INTEGER, role TEXT);
 CREATE VIEW IF NOT EXISTS expenses AS SELECT l.*, COALESCE(o.pkg, c.pkg) AS pkg, COALESCE(o.mnl, c.mnl) AS mnl, COALESCE(o.cost_element, c.cost_element) AS cost_element, o.line_id IS NOT NULL AS hand_coded
@@ -60,7 +61,11 @@ async function dbAddBuild(data, ver) { const M = data.META, d = M.dlog || { file
   const names = (src) => d.files.filter((f) => f.src === src).map((f) => f.name), cv = DBF.db.prepare('INSERT INTO coverage VALUES (?, ?, ?, ?, ?, ?)');
   Object.entries(d.cov || {}).forEach(([src, m]) => Object.entries(m).forEach(([ym, c]) => cv.run([id, src, ym, c.f ? c.f.map((k) => names(src)[k] || '').join(' + ') : '', c.n, c.amt]))); cv.free();
   const ce = DBF.db.prepare('INSERT INTO certificates VALUES (?, ?, ?, ?, ?)'); (d.certs || []).forEach((c) => ce.run([id, c[0], c[1], c[2], c[3]])); ce.free();
-  dbLog('build', `${M.project} · cut ${M.cut} · ${d.files.length} files`, id); return id; }
+  // one register: the earlier updates stay as log rows (cut, cost, files, coverage, certificates, changes) – their data and codes are not kept
+  DBF.db.run('UPDATE builds SET data = NULL, codes = NULL WHERE id < ?', [id]);
+  dbLog('update', `${M.project} · cut ${M.cut} · ${d.files.length} files`, id); return id; }
+// after an update: SAP files no longer used keep their name in the log, not their content; the file shrinks
+function dbTidy() { const id = dbOne('SELECT max(id) AS id FROM builds').id; DBF.db.run("UPDATE source_files SET data = NULL WHERE id NOT IN (SELECT file_id FROM build_files WHERE build_id = ? AND role != 'replaced')", [id]); try { DBF.db.run('VACUUM'); } catch (e) { /* in a transaction */ } }
 // the SAP files of a build, kept in the data file (each file once): role new = dropped for this build, kept = taken from the build before, replaced = an old file a new one replaced
 async function dbStoreFiles(id, list) { for (const f of list) { let fid = f.fid;
     if (!fid) { const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', f.data))).map((x) => x.toString(16).padStart(2, '0')).join(''), o = dbOne('SELECT id FROM source_files WHERE sha = ?', [sha]);

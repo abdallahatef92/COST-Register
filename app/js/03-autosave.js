@@ -22,7 +22,7 @@ async function asStart() { if (DBF.db) return dbStart(); if (DBF.pendH) return d
 // the first coding of a session, with no file linked yet: ask once
 function asAsk() { if (!AS.ready || AS.h || AS.asked || DBF.db || DBF.pendH) return; AS.asked = true; const m = document.createElement('div'); m.className = 'asm'; m.id = 'asm';
   m.innerHTML = `<div class="bx"><h3>Keep your work in a data file?</h3>Create one file <b>once</b>. The Tool then saves every build and every change to it by itself – no Save button.
-    <div class="f">🗄 Name: <b>${esc(META.project)}_register.db</b> &nbsp;·&nbsp; keep it next to the Tool (OneDrive or the project share).<br><span style="color:#4B5563">Next month the new build goes into the same file, with your codes – and the Data log shows what changed.</span></div>
+    <div class="f">🗄 Name: <b>${esc(META.project)}_register.db</b> &nbsp;·&nbsp; keep it next to the Tool (OneDrive or the project share).<br><span style="color:#4B5563">Every month you update the same file with the new SAP files – your codes stay in it, and the Data log shows what changed.</span></div>
     <span style="color:#6B7280;font-size:13px">If you choose <b>Later</b>, your work stays only in this browser.</span>
     <div class="bt"><button id="asLater">Later</button><button class="pri" id="asPick">Create data file…</button></div></div>`;
   document.body.appendChild(m); $('asLater').onclick = () => m.remove(); $('asPick').onclick = () => { m.remove(); asPick(); }; }
