@@ -10,7 +10,14 @@ function prevFromJson(s) {
   for (const [b, m] of Object.entries(s.codes || {})) { const mm = new Map(); for (const [k, c] of Object.entries(m)) { mm.set(k, { pkg: c.pkg || '', mnl: c.mnl || '', ce: c.ce || '', inc: c.inc || '', ...(c.div !== undefined ? { div: c.div } : {}) }); items++; } coding.set(b, mm); }
   return { coding, over: new Map(BUCKETS.map((b) => [b.id, lines])), items, typed: lines.size, file: 'codes', rules: s.rules || [], uns: s.uns || null, unsc: s.unsc || null, pk: s.pk || null, depx: s.depx || null, crules: s.crules || null, log: s.log || null };
 }
+// the months a CJI3 / ZINTC1 / ZSCPRG01 file covers (to tell which old file a new one replaces)
+function peek(f, kind) { const ym = (d) => String(d || '').slice(0, 7);
+  if (kind === 'cji3') { const x = require('../src/cji3').readCji3([f]).files[0]; return { first: ym(x.first), last: ym(x.last) }; }
+  if (kind === 'zintc1') { const x = require('../src/zintc1').readZint([f]).files[0]; return { first: x.first, last: x.last }; }
+  if (kind === 'zscprg01') { const x = require('../src/subcontract').readProg([f]).files[0]; return { first: ym(x.first), last: ym(x.last) }; }
+  return { first: '', last: '' }; }
 globalThis.Engine = {
+  peek(f, kind) { try { return peek(f, kind); } catch (e) { return { first: '', last: '', err: String(e.message || e) }; } },
   KINDS, sniff(f) { try { return sniff(f); } catch (e) { return 'ignore'; } },
   sniffInfo(f) { try { return sniffInfo(f); } catch (e) { return { kind: 'ignore', proj: '' }; } },
   build(files, opts = {}) {   // files: { cji3, mb52, zscprg01, zscsrv1, prev } each { name, data }

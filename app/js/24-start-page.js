@@ -52,7 +52,8 @@ function showStart(canCancel) {
         for (const k of ['zscprg01', 'zscsrv1', 'zintc1', 'mb52', 'me2n']) if (!files[k].length) delete files[k]; if (!files.prev) delete files.prev;
         if (!files.prev && DBF.db) { const c = dbCodes(); if (c) files.prev = { name: 'codes from ' + (DBF.name || 'the data file') + '.json', data: new TextEncoder().encode(JSON.stringify(c)) }; }   // last month's codes come from the data file
         const data = Engine.build(files, {}); m.textContent = `Built in ${((Date.now() - t0) / 1000).toFixed(1)} s – saving…`;
-        if (DBF.db) { await dbAddBuild(data, '__VER__'); if (!(await dbWrite())) { await idbSet('lastBuild', data); dbDownload(); } else { try { await idbSet('lastBuild', null); } catch (e) { /* none */ } } }
+        if (DBF.db) { const nid = await dbAddBuild(data, '__VER__'), cov = new Map(((data.META.dlog || {}).files || []).map((f) => [f.name, f]));
+          await dbStoreFiles(nid, picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore').map((f) => ({ ...f, role: 'new', first: (cov.get(f.name) || {}).first, last: (cov.get(f.name) || {}).last }))); if (!(await dbWrite())) { await idbSet('lastBuild', data); dbDownload(); } else { try { await idbSet('lastBuild', null); } catch (e) { /* none */ } } }
         else await idbSet('lastBuild', data);
         try { await idbSet('lastFiles', picked.filter((f) => f.kind !== 'prev' && f.kind !== 'ignore')); } catch (e) { /* the build itself is saved */ } location.reload(); }
       catch (err) { console.error(err); m.innerHTML = '<span style="color:#c00000">Could not build: ' + String(err.message || err).replace(/</g, '&lt;') + '</span>'; } };

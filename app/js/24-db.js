@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS codes(bucket TEXT, item_key TEXT, item_code TEXT, des
 CREATE TABLE IF NOT EXISTS line_codes(line_id TEXT PRIMARY KEY, pkg TEXT, mnl TEXT, cost_element TEXT);
 CREATE TABLE IF NOT EXISTS log(at TEXT, build_id INTEGER, event TEXT, detail TEXT);
 CREATE INDEX IF NOT EXISTS lines_b ON lines(build_id);
+CREATE TABLE IF NOT EXISTS source_files(id INTEGER PRIMARY KEY, kind TEXT, name TEXT, project TEXT, added TEXT, size INTEGER, sha TEXT UNIQUE, first_month TEXT, last_month TEXT, data BLOB);
+CREATE TABLE IF NOT EXISTS build_files(build_id INTEGER, file_id INTEGER, role TEXT);
 CREATE VIEW IF NOT EXISTS expenses AS SELECT l.*, COALESCE(o.pkg, c.pkg) AS pkg, COALESCE(o.mnl, c.mnl) AS mnl, COALESCE(o.cost_element, c.cost_element) AS cost_element, o.line_id IS NOT NULL AS hand_coded
   FROM lines l LEFT JOIN codes c ON c.bucket = l.bucket AND c.item_key = l.item_key LEFT JOIN line_codes o ON o.line_id = l.line_id;`;
 async function dbLib() { if (!DBF.SQL) { const b = atob(SQLWASM_B64), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); DBF.SQL = await initSqlJs({ wasmBinary: u.buffer }); } return DBF.SQL; }
@@ -59,3 +61,10 @@ async function dbAddBuild(data, ver) { const M = data.META, d = M.dlog || { file
   Object.entries(d.cov || {}).forEach(([src, m]) => Object.entries(m).forEach(([ym, c]) => cv.run([id, src, ym, c.f ? c.f.map((k) => names(src)[k] || '').join(' + ') : '', c.n, c.amt]))); cv.free();
   const ce = DBF.db.prepare('INSERT INTO certificates VALUES (?, ?, ?, ?, ?)'); (d.certs || []).forEach((c) => ce.run([id, c[0], c[1], c[2], c[3]])); ce.free();
   dbLog('build', `${M.project} · cut ${M.cut} · ${d.files.length} files`, id); return id; }
+// the SAP files of a build, kept in the data file (each file once): role new = dropped for this build, kept = taken from the build before, replaced = an old file a new one replaced
+async function dbStoreFiles(id, list) { for (const f of list) { let fid = f.fid;
+    if (!fid) { const sha = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', f.data))).map((x) => x.toString(16).padStart(2, '0')).join(''), o = dbOne('SELECT id FROM source_files WHERE sha = ?', [sha]);
+      if (o) fid = o.id; else { DBF.db.run('INSERT INTO source_files (kind, name, project, added, size, sha, first_month, last_month, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [f.kind, f.name, f.proj || '', new Date().toISOString(), f.data.length, sha, f.first || null, f.last || null, f.data]); fid = dbOne('SELECT max(id) AS id FROM source_files').id; } }
+    DBF.db.run('INSERT INTO build_files VALUES (?, ?, ?)', [id, fid, f.role || 'new']); } }
+const dbBuildFiles = (id) => (DBF.db ? dbRows('SELECT f.id AS fid, f.kind, f.name, f.project AS proj, f.first_month AS first, f.last_month AS last, f.size, b.role FROM build_files b JOIN source_files f ON f.id = b.file_id WHERE b.build_id = ? ORDER BY f.kind, f.name', [id]) : []);
+const dbFileData = (fid) => { const r = dbOne('SELECT data FROM source_files WHERE id = ?', [fid]); return r ? r.data : null; };

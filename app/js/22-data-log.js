@@ -64,6 +64,9 @@ document.addEventListener('click', (e) => { const g = e.target.closest('[data-db
   if (k === 'latest' || k === 'open') { sessionStorage.setItem('crOpen', k === 'open' ? g.dataset.id : ''); location.reload(); return; }
   if (k === 'more') { const t = g.closest('.dlcard').querySelector('.dlmore'); if (t) t.hidden = !t.hidden; } });
 
+// a build's SAP files in one cell: the new ones by name, how many kept from the build before, how many replaced
+const bfSum = (id) => { const f = dbBuildFiles(id); if (!f.length) return '<span class="help">not kept (before v3.4)</span>'; const n = f.filter((x) => x.role === 'new'), k = f.filter((x) => x.role === 'kept').length, r = f.filter((x) => x.role === 'replaced');
+  return `${n.map((x) => `<span class="srct un" title="${esc(x.name)}">+ ${esc(x.kind.toUpperCase())}${x.first ? ' ' + esc(x.first.slice(2)) + (x.last && x.last !== x.first ? '…' + esc(x.last.slice(2)) : '') : ''}</span>`).join(' ')}${k ? ` <span class="help">${k} kept</span>` : ''}${r.length ? ` <span class="help" title="${esc(r.map((x) => x.name).join(', '))}">· ${r.length} replaced</span>` : ''}`; };
 function renderDlog() {
   const D = META.dlog || { files: [], cov: {}, ovl: [] }, el = $('dlog'), cutYm = String(ST.cut).slice(0, 7);
   const tag = (c) => `<span class="dtg ${/^Cumulative/.test(c) ? 'cum' : /^Fiscal/.test(c) ? 'fy' : /^One month/.test(c) ? 'mon' : 'snap'}">${esc(c)}</span>`;
@@ -112,7 +115,7 @@ function renderDlog() {
   // builds in the data file
   if (DBF.db) { const bs = dbBuilds();
     h += `<div class="dlcard"><div class="dlh"><h3>Builds in the data file</h3><span class="help">${esc(DBF.name)} keeps every build, your codes and this log – open it in DB Browser for SQLite or Power BI (view <b>expenses</b>)</span></div>
-      <table class="dlt"><tr><th>Built</th><th>Cut</th><th>Project</th><th class="n">Files</th><th class="n">CJI3 cost</th><th>Codes saved</th><th>Tool</th><th></th></tr>${bs.map((b) => `<tr${b.id === DBF.cur ? ' class="cur"' : ''}><td>${esc(b.built)}${b.id === DBF.cur ? ' · <b>open now</b>' : ''}</td><td>${esc(b.cut)}</td><td>${esc(b.project)}</td><td class="n">${b.files}</td><td class="n">${fmt(b.cji3_cost)}</td><td>${b.codes_at ? esc(new Date(b.codes_at).toLocaleString()) : '–'}</td><td>${esc(b.app || '')}</td>
+      <table class="dlt"><tr><th>Built</th><th>Cut</th><th>Project</th><th class="n">Files</th><th class="n">CJI3 cost</th><th>SAP files</th><th>Codes saved</th><th>Tool</th><th></th></tr>${bs.map((b) => `<tr${b.id === DBF.cur ? ' class="cur"' : ''}><td>${esc(b.built)}${b.id === DBF.cur ? ' · <b>open now</b>' : ''}</td><td>${esc(b.cut)}</td><td>${esc(b.project)}</td><td class="n">${b.files}</td><td class="n">${fmt(b.cji3_cost)}</td><td class="bfs">${bfSum(b.id)}</td><td>${b.codes_at ? esc(new Date(b.codes_at).toLocaleString()) : '–'}</td><td>${esc(b.app || '')}</td>
         <td>${b.id === DBF.cur ? '' : b.id === bs[0].id ? '<button data-dbgo="latest">Open (latest)</button>' : `<button data-dbgo="open" data-id="${b.id}">Open (read only)</button>`}</td></tr>`).join('')}</table></div>`; }
   el.innerHTML = h;
 }

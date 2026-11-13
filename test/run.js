@@ -24,7 +24,7 @@ const eq = (name, got, want, tol = 0.01) => ok(name, typeof want === 'number' ? 
 const head = (s) => { section = s; console.log('\n' + s); };
 const r2 = (x) => Math.round(x * 100) / 100;
 // which sections run: 1–4 always (they open the register); --only picks sections; --quick leaves out the slow 9 and 10
-const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k === '10' || k === '10b' || k === '10c'));
+const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k === '10' || k === '10b' || k === '10c' || k === '10d'));
 
 (async () => {
   const t0 = Date.now(); fs.mkdirSync(OUT, { recursive: true });
@@ -463,10 +463,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('Data log compares with the last build: closed months unchanged, no certificate revised', await q.evaluate(() => /Against the last build/.test(document.getElementById('dlog').textContent) && !document.querySelector('#dlog .dlt .bad')), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
     eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close();
   }
-  if (RUN('10c')) {
-    head('10c. Close the Tool and open it again: it opens at once, the first click reconnects the data file');
-    // a stand-in for Chrome's file handles: kept in IndexedDB like the real ones; the permission is forgotten when the browser closes (sessionStorage)
-    const FAKE = () => { const fsDb = () => new Promise((res) => { const r = indexedDB.open('fakefs', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); });
+  const FAKE = () => { const fsDb = () => new Promise((res) => { const r = indexedDB.open('fakefs', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); });
       const io = async (mode, fn) => { const d = await fsDb(); return new Promise((res) => { const t = d.transaction('f', mode), q = fn(t.objectStore('f')); t.oncomplete = () => res(q && q.result); }); };
       const H = () => ({ __fake: 1, name: 'Test_register.db', kind: 'file', queryPermission: async () => (sessionStorage.getItem('fakePerm') === 'granted' ? 'granted' : 'prompt'),
         requestPermission: async () => { window.__asked = (window.__asked || 0) + 1; sessionStorage.setItem('fakePerm', 'granted'); return 'granted'; },
@@ -475,6 +472,9 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       const put = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function (v, k) { return put.call(this, v && v.__fake ? '__FAKEH__' : v, k); };
       const g = Object.getOwnPropertyDescriptor(IDBRequest.prototype, 'result').get; Object.defineProperty(IDBRequest.prototype, 'result', { get() { const v = g.call(this); return v === '__FAKEH__' ? H() : v; } });
       window.showSaveFilePicker = async () => { sessionStorage.setItem('fakePerm', 'granted'); return H(); }; window.showOpenFilePicker = async () => { sessionStorage.setItem('fakePerm', 'granted'); return [H()]; }; };
+  if (RUN('10c')) {
+    head('10c. Close the Tool and open it again: it opens at once, the first click reconnects the data file');
+    // a stand-in for Chrome's file handles: kept in IndexedDB like the real ones; the permission is forgotten when the browser closes (sessionStorage)
     const dir = path.join(OUT, 'profile'); fs.rmSync(dir, { recursive: true, force: true });
     const launch = async () => { const c = await chromium.launchPersistentContext(dir, { viewport: { width: 1600, height: 900 } }); await c.addInitScript(FAKE); const q = c.pages()[0] || await c.newPage(); q.on('pageerror', (e) => errs.push(e.message)); q.on('dialog', (d) => d.dismiss()); return { c, q }; };
     let { c, q } = await launch(); await q.goto('file://' + TOOL); await q.waitForSelector('#pick', { state: 'attached' });
@@ -497,6 +497,38 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.click('#bDb'); await q.waitForTimeout(300);
     ok('side navigation › Data file: open another, new, download a copy, data log', await q.$$eval('#dbm.on [data-dbm]', (b) => b.map((x) => x.dataset.dbm).join(',')) === 'open,new,copy,log');
     eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close(); fs.rmSync(dir, { recursive: true, force: true });
+  }
+  if (RUN('10d')) {
+    head('10d. Next month from inside the register: drop only the new files, Update');
+    // month 1: a CJI3 to the end of August (the September lines taken out) and one ZINTC1 file; month 2: the full CJI3 and the 2026 ZINTC1
+    const cAug = path.join(OUT, 'cji3-aug.xlsx'), F1 = path.join(DATA, [].concat(F.cji3)[0]);
+    if (!fs.existsSync(cAug)) { const XLm = require('xlsx'), wb = XLm.readFile(F1, { cellDates: true }), ws = wb.Sheets[wb.SheetNames[0]], rows = XLm.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+      const h = rows.findIndex((r) => r && r.includes('Posting Date')), c = rows[h].indexOf('Posting Date'), last = rows.slice(h + 1).map((r) => r && r[c]).filter((d) => d instanceof Date).sort((a, b) => b - a)[0], ym = (d) => d.getFullYear() * 100 + d.getMonth();
+      const keep = rows.filter((r, k) => k <= h || !(r && r[c] instanceof Date && ym(r[c]) === ym(last))); const nb = XLm.utils.book_new(); XLm.utils.book_append_sheet(nb, XLm.utils.aoa_to_sheet(keep, { cellDates: true }), wb.SheetNames[0]); XLm.writeFile(nb, cAug); }
+    const zf = [].concat(F.zintc1).map((f) => path.join(DATA, f)), first = [cAug, ...files().filter((f) => f !== F1 && (zf.length < 2 || f !== zf[zf.length - 1]))], neu = [F1, ...(zf.length > 1 ? [zf[zf.length - 1]] : [])];
+    const dir = path.join(OUT, 'profile2'); fs.rmSync(dir, { recursive: true, force: true });
+    const launch = async () => { const c = await chromium.launchPersistentContext(dir, { viewport: { width: 1600, height: 900 } }); await c.addInitScript(FAKE); const q = c.pages()[0] || await c.newPage(); q.on('pageerror', (e) => errs.push(e.message)); q.on('dialog', (d) => d.dismiss()); return { c, q }; };
+    let { c, q } = await launch(); await q.goto('file://' + TOOL); await q.waitForSelector('#pick', { state: 'attached' });
+    await q.click('#sDbNew'); await q.waitForFunction(() => /Test_register\.db/.test(document.querySelector('.dbc').textContent));
+    await q.setInputFiles('#pick', first); await q.waitForFunction(() => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''), null, { timeout: 120000 });
+    await q.click('#sBuild'); await q.waitForFunction(() => document.querySelector('#tabs button') && typeof DBF !== 'undefined' && DBF.db && DBF.st === 'ok', null, { timeout: 240000 }); await q.waitForTimeout(1500);
+    const m1 = await q.evaluate(() => ({ cut: __DL.data.META.cut, files: dbBuildFiles(DBF.cur).length }));
+    ok('month 1 built into the data file, with its SAP files kept in it', m1.files === first.length, JSON.stringify(m1));
+    await q.$eval('#tabs [data-s="cod"]', (b) => b.click()); await q.waitForTimeout(300); { const m = await q.$('#asLater'); if (m) await m.click(); } const iq = await q.$('#tb input[data-f="pkg"]'); await iq.fill('T66'); await iq.press('Enter'); await q.waitForTimeout(600); { const m = await q.$('#asLater'); if (m) await m.click(); }
+    const k = await q.evaluate(() => __BK.flatMap((b) => b.items).find((x) => x.pkg === 'T66').k); await q.waitForFunction(() => !DBF.busy && !DBF.again); await q.waitForTimeout(1500);
+    // month 2: Add new SAP files…
+    const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]); await fc.setFiles(neu);
+    await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]'), null, { timeout: 120000 }); const box = await q.$eval('#updm', (e) => e.textContent);
+    ok('one box: what each new file does, what is kept from the data file', /Update the register with/.test(box) && /replaces/.test(box) && /Kept from the data file/.test(box), box.slice(0, 400));
+    await q.click('#updm [data-upd="go"]'); await q.waitForFunction(() => typeof DBF !== 'undefined' && DBF.db && DBF.cur === 2 && document.querySelector('#tabs button'), null, { timeout: 300000 }); await q.waitForTimeout(2000);
+    const m2 = await q.evaluate(() => ({ cut: __DL.data.META.cut, diff: R.diff, td: R.toDate, b: dbBuilds().length, roles: dbBuildFiles(DBF.cur).map((f) => f.role).sort().join(',') }));
+    ok('Update: a new build in the data file, difference 0', m2.b === 2 && m2.cut >= m1.cut && Math.abs(m2.diff) < 0.01, JSON.stringify(m2));
+    eq('…the same to date as building from every file', r2(m2.td), r2(R0.toDate));
+    ok('…the history: new files, kept files, the replaced one', /new/.test(m2.roles) && /kept/.test(m2.roles) && /replaced/.test(m2.roles), m2.roles);
+    eq('…your code came along', await q.evaluate((kk) => __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg, k), 'T66');
+    await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
+    ok('Data log › Builds: both builds with their SAP files', await q.evaluate(() => document.querySelectorAll('#dlog .bfs').length === 2 && /replaced/.test(document.getElementById('dlog').textContent)));
+    await c.close(); fs.rmSync(dir, { recursive: true, force: true });
   }
   await browser.close();
   head('Page errors'); ok('no JavaScript errors on any page', errs.length === 0, [...new Set(errs)].slice(0, 5).join(' | '));

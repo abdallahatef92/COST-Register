@@ -269,3 +269,9 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - **Expenses**: a **Source** column – CJI3 (the pure CJI3 amount) or the adjustment, each on its own row; filter All / CJI3 only / Adjustments only (Summary and Expenses per month, Excel the same).
 - **Summary period**: From / To, ◀ ▶, To date · This year · Cut month · Last 3 months.
 - **Footer**: CJI3 and To date open Expenses › SAP CJI3 transactions (now the pure CJI3 lines at their CJI3 amount); each adjustment opens Adjustment lines of that kind.
+
+## v3.4 – Update from inside the register
+- The SAP files of each build are kept in the data file (each file once).
+- Next month: drop only the **new** SAP files on the open register (or Side navigation › **Add new SAP files…**). One box says what each file does – *adds Sep-26*, *replaces …* – and what is kept from the data file; **Update** builds again with your codes. The old build stays in the data file.
+- A new file replaces an old one of its kind when it covers the same months (ZSCSRV1, MB52, ME2N and ZSCPRG01: always); otherwise both are kept and merged (CJI3 a line once, ZINTC1 order + month newest).
+- History: Check › Data log › Builds shows, per build, the new SAP files, how many were kept and which were replaced.
