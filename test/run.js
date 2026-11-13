@@ -437,31 +437,37 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     eq('same to date as the test app', r2(await p3.evaluate(() => R.toDate)), r2(R0.toDate));
     await ctx3.close();
   }
+  const mkAug = () => { const cAug = path.join(OUT, 'cji3-aug.xlsx'), F1 = path.join(DATA, [].concat(F.cji3)[0]);
+    if (!fs.existsSync(cAug)) { const XLm = require('xlsx'), wb = XLm.readFile(F1, { cellDates: true }), ws = wb.Sheets[wb.SheetNames[0]], rows = XLm.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+      const h = rows.findIndex((r) => r && r.includes('Posting Date')), c = rows[h].indexOf('Posting Date'), last = rows.slice(h + 1).map((r) => r && r[c]).filter((d) => d instanceof Date).sort((a, b) => b - a)[0], ym = (d) => d.getFullYear() * 100 + d.getMonth();
+      const keep = rows.filter((r, k) => k <= h || !(r && r[c] instanceof Date && ym(r[c]) === ym(last))); const nb = XLm.utils.book_new(); XLm.utils.book_append_sheet(nb, XLm.utils.aoa_to_sheet(keep, { cellDates: true }), wb.SheetNames[0]); XLm.writeFile(nb, cAug); }
+    return { cAug, F1 }; };
   if (RUN('10b')) {
     head('10b. Data file: create the register, open it next month, update it');
     const SP = path.join(OUT, 'db'); fs.mkdirSync(SP, { recursive: true });
     const fresh = async () => { const c = await browser.newContext({ viewport: { width: 1600, height: 900 }, acceptDownloads: true }); await c.addInitScript(() => { delete window.showSaveFilePicker; delete window.showOpenFilePicker; }); const q = await c.newPage(); q.on('pageerror', (e) => errs.push(e.message)); q.on('dialog', (d) => d.dismiss()); await q.goto('file://' + TOOL); await q.waitForSelector('#pick', { state: 'attached' }); return { c, q }; };
     const openDb = async (q, f) => { const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#sDbOpen')]); await fc.setFiles(f); };
-    const buildInto = async (q, f) => { await q.setInputFiles('#pick', files()); await q.waitForFunction(() => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''), null, { timeout: 120000 });
+    const buildInto = async (q, f, list) => { await q.setInputFiles('#pick', list || files()); await q.waitForFunction(() => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''), null, { timeout: 120000 });
       const [d] = await Promise.all([q.waitForEvent('download', { timeout: 240000 }), q.click('#sBuild')]); await d.saveAs(f); };
     // month 1: a new data file, build into it
     let { c, q } = await fresh(); ok('start page asks for a data file (open or create)', await q.$('#sDbNew') !== null && await q.$('#sDbOpen') !== null);
-    await q.click('#sDbNew'); await q.waitForFunction(() => /_register\.db/.test(document.querySelector('.dbc').textContent)); const f1 = path.join(SP, 'm1.db'); await buildInto(q, f1); await c.close();
+    const { cAug, F1 } = mkAug(), aug = files().map((f) => (f === F1 ? cAug : f));
+    await q.click('#sDbNew'); await q.waitForFunction(() => /_register\.db/.test(document.querySelector('.dbc').textContent)); const f1 = path.join(SP, 'm1.db'); await buildInto(q, f1, aug); await c.close();
     // open it: the build comes from the file; type a code
     ({ c, q } = await fresh()); await openDb(q, f1); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
     eq('opened from the data file: difference 0', await q.evaluate(() => R.diff), 0);
-    eq('…same to date as the test app', r2(await q.evaluate(() => R.toDate)), r2(R0.toDate));
     const k = await q.evaluate(() => __BK[0].items.find((x) => !x.pkg).k); await q.evaluate((kk) => { __BK[0].items.find((x) => x.k === kk).pkg = 'T77'; return __DL.save(); }, k); await q.waitForFunction(() => !DBF.busy && !DBF.again);
     const f2 = path.join(SP, 'm1b.db'); { const [d] = await Promise.all([q.waitForEvent('download'), q.click('#hasv [data-dbgo="dl"]')]); await d.saveAs(f2); } await c.close();
     // next month: open the data file, build again – no last report dropped, the codes come from the data file
     ({ c, q } = await fresh()); await openDb(q, f2); await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1000);
-    const f3 = path.join(SP, 'm2.db'); { const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]); await fc.setFiles(files()); await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]'), null, { timeout: 120000 });
+    const f3 = path.join(SP, 'm2.db'); { const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]); await fc.setFiles(files()); await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]') && !document.querySelector('#updm [data-upd="go"]').disabled, null, { timeout: 120000 });
       const [d] = await Promise.all([q.waitForEvent('download', { timeout: 300000 }), q.click('#updm [data-upd="go"]')]); await d.saveAs(f3); } await c.close();   // next month: Update with new SAP files (this browser downloads the data file)
     ({ c, q } = await fresh()); await q.setInputFiles('#pick', f3); /* a .db chosen with the files opens straight away – no CJI3 needed */ await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 }); await q.waitForTimeout(1500);
     eq('two updates in the data file', await q.evaluate(() => dbBuilds().length), 2);
+    eq('…after the update: the same to date as the test app (every file)', r2(await q.evaluate(() => R.toDate)), r2(R0.toDate));
     eq('…the new build has last month\'s code (from the data file)', await q.evaluate((kk) => __BK[0].items.find((x) => x.k === kk).pkg, k), 'T77');
     await q.$eval('#tabs [data-s="chk"]', (b) => b.click()); await q.click('#side [data-gt="dlog"]'); await q.waitForTimeout(800);
-    ok('Data log compares with the last update: closed months unchanged, no certificate revised', await q.evaluate(() => /Against the last update/.test(document.getElementById('dlog').textContent) && !document.querySelector('#dlog .dlt .bad')), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
+    ok('Data log compares with the last update: the September lines the first CJI3 did not have show as a change', await q.evaluate(() => /Against the last update/.test(document.getElementById('dlog').textContent) && /closed months changed/.test(document.getElementById('dlog').textContent)), await q.$eval('#dlog', (e) => e.textContent.slice(0, 300)));
     eq('difference 0', await q.evaluate(() => R.diff), 0); await c.close();
   }
   const FAKE = () => { const fsDb = () => new Promise((res) => { const r = indexedDB.open('fakefs', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); });
@@ -502,10 +508,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   if (RUN('10d')) {
     head('10d. Next month from inside the register: drop only the new files, Update');
     // month 1: a CJI3 to the end of August (the September lines taken out) and one ZINTC1 file; month 2: the full CJI3 and the 2026 ZINTC1
-    const cAug = path.join(OUT, 'cji3-aug.xlsx'), F1 = path.join(DATA, [].concat(F.cji3)[0]);
-    if (!fs.existsSync(cAug)) { const XLm = require('xlsx'), wb = XLm.readFile(F1, { cellDates: true }), ws = wb.Sheets[wb.SheetNames[0]], rows = XLm.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
-      const h = rows.findIndex((r) => r && r.includes('Posting Date')), c = rows[h].indexOf('Posting Date'), last = rows.slice(h + 1).map((r) => r && r[c]).filter((d) => d instanceof Date).sort((a, b) => b - a)[0], ym = (d) => d.getFullYear() * 100 + d.getMonth();
-      const keep = rows.filter((r, k) => k <= h || !(r && r[c] instanceof Date && ym(r[c]) === ym(last))); const nb = XLm.utils.book_new(); XLm.utils.book_append_sheet(nb, XLm.utils.aoa_to_sheet(keep, { cellDates: true }), wb.SheetNames[0]); XLm.writeFile(nb, cAug); }
+    const { cAug, F1 } = mkAug();
     const zf = [].concat(F.zintc1).map((f) => path.join(DATA, f)), first = [cAug, ...files().filter((f) => f !== F1 && (zf.length < 2 || f !== zf[zf.length - 1]))], neu = [F1, ...(zf.length > 1 ? [zf[zf.length - 1]] : [])];
     const dir = path.join(OUT, 'profile2'); fs.rmSync(dir, { recursive: true, force: true });
     const launch = async () => { const c = await chromium.launchPersistentContext(dir, { viewport: { width: 1600, height: 900 } }); await c.addInitScript(FAKE); const q = c.pages()[0] || await c.newPage(); q.on('pageerror', (e) => errs.push(e.message)); q.on('dialog', (d) => d.dismiss()); return { c, q }; };
