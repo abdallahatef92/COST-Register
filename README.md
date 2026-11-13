@@ -261,3 +261,5 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - Next month: open the data file, drop the SAP files, Build – last month's codes come from the data file (no last report needed).
 - **Check › Data log**: every file read (months covered, cut type found: cumulative / one month / fiscal year / snapshot, rows, amount, merge rule), coverage by month (ZSCPRG01 = certificates dated in the month), against the last build (closed months changed, certificates revised, the lines), builds in the data file (open an older one read only).
 - **ZINTC1** files are merged on order + month (the newest file wins); a file loaded twice is counted once and the overlap is listed.
+- Opening again: the Tool opens at once from this browser's copy of the last build; the first click reconnects the data file (Chrome / Edge ask once – choose *Allow on every visit*). A newer build in the file (another PC) opens instead.
+- **Side navigation › Data file**: open another data file, new data file, download a copy, data log.
