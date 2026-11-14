@@ -241,6 +241,7 @@ async function updGo() {
       await pause(1500);
     }
     sessionStorage.setItem('crOpen', '');
+    sessionStorage.setItem('crJob', '1'); // a new month: the Monthly job opens by itself
     location.reload();
   } catch (e) {
     console.error(e);

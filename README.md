@@ -296,3 +296,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 ## v3.81 – Tidy-up (UI only, quick checks)
 - **Rates** (Dashboard): Rate analysis and Subcontractor rates & coding are one side item with tabs *Material · Subcontractor*.
 - **Reports**: *Per Month* and *By PKG* removed (they are Expenses › Expenses per month and Expenses › Summary by PKG); *GL* and *WBS* are one side item with a GL / WBS switch on the page.
+
+## v3.9 – Monthly job
+- Side navigation › **Monthly job n / 5**: a panel with the 5 steps of the month – Update · Check (difference 0) · Code (and name new PKGs) · Decide what is not in CJI3 yet · Report (Expenses + Excel) – each Done / Now / To do from the register, with *Go ›*. It opens by itself after each update. The Coding guide stays as it is.

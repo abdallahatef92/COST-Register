@@ -71,6 +71,10 @@ render();
   }
 }
 asStart();
+if (sessionStorage.getItem('crJob')) {
+  sessionStorage.removeItem('crJob');
+  setTimeout(() => jobOpen(true), 400);
+}
 $('bNew').onclick = () => {
   DBF.db = null;
   DBF.h = null;

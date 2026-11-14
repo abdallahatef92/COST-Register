@@ -211,6 +211,11 @@ $('bExport').onclick = async (ev) => {
       return;
     }
   }
+  try {
+    localStorage.setItem(JOBK(), ST.cut); // Monthly job › step 5: the report of this cut was exported
+  } catch (e) {
+    /* this browser only */
+  }
   toast('Building the Excel report…');
   await new Promise((r) => setTimeout(r, 30));
   const wb = new ExcelJS.Workbook(),

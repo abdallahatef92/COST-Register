@@ -248,6 +248,7 @@ function showStart(canCancel) {
             }
           }
         } else await idbSet('lastBuild', data);
+        sessionStorage.setItem('crJob', '1');
         try {
           await idbSet(
             'lastFiles',

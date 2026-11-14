@@ -1498,6 +1498,36 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await c13.close();
   }
 
+  if (RUN('7j')) {
+    head('7j. Monthly job: 5 steps with their status, Go opens the place');
+    const { ctx: c14, p: q } = await open(APP);
+    ok('the side navigation shows Monthly job n / 5', /Monthly job\s*\d \/ 5/.test(await q.$eval('#bJob', (e) => e.textContent)));
+    await q.click('#bJob');
+    await q.waitForTimeout(500);
+    ok(
+      'the panel: 5 steps, Update and Check done (difference 0)',
+      await q.evaluate(
+        () =>
+          document.querySelectorAll('#mjob .st').length === 5 &&
+          document.querySelectorAll('#mjob .st.ok').length >= 2 &&
+          /difference 0\.00/.test(document.getElementById('mjob').textContent)
+      )
+    );
+    await q.click('#mjob .now .go');
+    await q.waitForTimeout(600);
+    ok('"Now" step › Go opens it (Coding)', await q.evaluate(() => __ST.tab === 'cod'));
+    await q.click('#bExport');
+    await q.waitForTimeout(1500);
+    await q.click('#bJob');
+    await q.click('#bJob');
+    await q.waitForTimeout(400);
+    ok(
+      'after Export Excel, step 5 is done',
+      await q.evaluate(() => /exported for this cut/.test(document.querySelectorAll('#mjob .st')[4].textContent))
+    );
+    await c14.close();
+  }
+
   if (RUN('7g')) {
     head('7g. Data log and the data file (SQLite)');
     {

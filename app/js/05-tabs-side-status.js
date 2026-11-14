@@ -24,6 +24,7 @@ const NIC = ((d) =>
   ))({
   dash: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   cod: '<path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/>',
+  job: '<path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1.2 1.2L7 4.5M4 12l1.2 1.2L7 11.5"/><circle cx="5" cy="19" r="1.2"/>',
   codes: '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2z"/><path d="M5 19a2 2 0 0 1 2-2h12M9 7h6M9 11h4"/>',
   sub: '<rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="8" height="6" rx="1"/><rect x="13" y="14" width="8" height="6" rx="1"/>',
   xp: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M15 9v11"/>',
@@ -44,6 +45,7 @@ $('tabs').innerHTML = SECS.map(
     `<button data-s="${k}"><span class="ni">${NIC[k]}<i class="dot"></i></span><span class="tx">${l}<small></small></span><span class="nb"></span></button>`
 ).join('');
 [
+  ['bJob', 'job'],
   ['bDb', 'db'],
   ['bAdd', 'add'],
   ['bImport', 'imp'],
@@ -793,6 +795,7 @@ function render() {
   else if (ST.tab === 'dlog') renderDlog();
   else if (ST.tab === 'psum' || ST.tab === 'pkl') renderPsum();
   else renderTable();
+  renderJob(); // Monthly job: the count on its button, and the panel when it is open
   // Rates: one page, two tabs – Material (rate analysis) · Subcontractor (packages: rates and codes)
   const rm = ST.tab === 'mrate',
     rs = isPk && !isOv;
