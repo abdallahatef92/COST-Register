@@ -73,7 +73,7 @@ function renderJob() {
   const m = $('mjob');
   if (!m || m.hidden) return;
   m.innerHTML = `<div class="hd"><div><h2>Monthly job · ${esc(PER[R.rep] || '')}</h2><div class="sub">5 steps, the same every month · each step shows where you are</div></div><button class="x" data-job="x" title="Close">✕</button></div>
-    <div class="bar"><i style="width:${n * 20}%"></i></div><div class="bl">${n} of 5 steps done</div>
+    <div class="jbar"><i style="width:${n * 20}%"></i></div><div class="bl">${n} of 5 steps done</div>
     ${st
       .map((x, i) => {
         const cls = x.done ? 'ok' : i === now ? 'now' : 'todo';
