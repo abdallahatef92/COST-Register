@@ -574,7 +574,7 @@ document.addEventListener('change', (e) => {
     persist();
     logIt('Name of ' + code + ' = ' + (v || '(none)'), 1);
     lists();
-    renderStatus();   // the footer's "PKG without a name"
+    renderStatus(); // the footer's "PKG without a name"
     renderSide();
     return;
   }
