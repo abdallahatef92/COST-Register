@@ -299,3 +299,12 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v3.9 – Monthly job
 - Side navigation › **Monthly job n / 5**: a panel with the 5 steps of the month – Update · Check (difference 0) · Code (and name new PKGs) · Decide what is not in CJI3 yet · Report (Expenses + Excel) – each Done / Now / To do from the register, with *Go ›*. It opens by itself after each update. The Coding guide stays as it is.
+
+## v4.0 – First month close (SBAY), fixes
+- A new data file is named after the project (`SBAY_register.db`), not `Project_register.db`.
+- Monthly job step 4 lists only what is still open ("5 owner materials still need a rate"); "decided" only when nothing is left.
+- Start page: "press **Create the register** – next months: **Update** from inside" (was "Build").
+
+## v4.1 – Monthly job: Go to the open place, own export button
+- Step 4 › Go opens the place still open: Not settled, Depreciation, then Owner material (the rates).
+- Step 5 has **⇩ Export the monthly report**: the full report from any page (the top Export Excel on a report page exports only that page); step 5 turns Done at once.

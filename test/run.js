@@ -1516,14 +1516,22 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.click('#mjob .now .go');
     await q.waitForTimeout(600);
     ok('"Now" step › Go opens it (Coding)', await q.evaluate(() => __ST.tab === 'cod'));
-    await q.click('#bExport');
+    {
+      const g4 = await q.evaluate(() => document.querySelectorAll('#mjob .st')[3].querySelector('.go').dataset.job);
+      ok('step 4 › Go points at a place of Adjust (' + g4 + ')', ['uns', 'dep', 'own', 'adjl'].includes(g4));
+    }
+    // from the Expenses page, where the top Export Excel exports only the page: the panel's button exports the monthly report
+    if (await q.evaluate(() => document.getElementById('mjob').hidden)) await q.click('#bJob');
+    await q.evaluate(() => document.querySelectorAll('#mjob .st')[4].querySelector('.go').click());
+    await q.waitForTimeout(600);
+    ok('step 5 › Expenses opens the Expenses page', await q.evaluate(() => __ST.tab === 'xpm'));
+    await q.click('#mjob .go.x2');
     await q.waitForTimeout(1500);
-    await q.click('#bJob');
-    await q.click('#bJob');
-    await q.waitForTimeout(400);
     ok(
-      'after Export Excel, step 5 is done',
-      await q.evaluate(() => /exported for this cut/.test(document.querySelectorAll('#mjob .st')[4].textContent))
+      'step 5 › Export the monthly report: step 5 is done at once, panel still open',
+      await q.evaluate(
+        () => !document.getElementById('mjob').hidden && /exported for this cut/.test(document.querySelectorAll('#mjob .st')[4].textContent)
+      )
     );
     await c14.close();
   }
