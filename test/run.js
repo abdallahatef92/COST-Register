@@ -1773,6 +1773,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       );
       const [d] = await Promise.all([q.waitForEvent('download', { timeout: 240000 }), q.click('#sBuild')]);
       await d.saveAs(f);
+      return d.suggestedFilename();
     };
     // month 1: a new data file, build into it
     let { c, q } = await fresh();
@@ -1782,7 +1783,10 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.click('#sDbNew');
     await q.waitForFunction(() => /_register\.db/.test(document.querySelector('.dbc').textContent));
     const f1 = path.join(SP, 'm1.db');
-    await buildInto(q, f1, aug);
+    ok(
+      'the new data file is named after the project (not Project_register.db)',
+      /^[A-Z]+_register\.db$/.test(await buildInto(q, f1, aug)) && !/^Project_/.test(await q.evaluate(() => DBF.name))
+    );
     await c.close();
     // open it: the build comes from the file; type a code
     ({ c, q } = await fresh());

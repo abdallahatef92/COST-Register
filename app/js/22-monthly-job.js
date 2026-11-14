@@ -50,7 +50,12 @@ function jobSteps() {
       done: !need || (dec && !(own && own.noRate)),
       s: !need
         ? 'nothing to decide this month'
-        : (dec ? 'decided' : 'not decided yet') + (own && own.noRate ? ` · ${own.noRate} owner materials without a rate` : ''),
+        : [
+            dec ? '' : 'add to the cost or not – not decided yet',
+            own && own.noRate ? `${own.noRate} owner materials still need a rate` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ') || 'decided',
       go: 'adj',
       gl: 'Adjust ›',
     },

@@ -77,7 +77,7 @@ function showStart(canCancel) {
       <div class="stchk">${chk.join('<br>')}</div>
       <div class="stbtn"><button class="pri" id="sBuild">Create the register</button>${canCancel ? '<button id="sCancel">Cancel</button>' : ''}<button id="sClear">Clear</button></div><div class="help" id="sMsg" style="margin-top:6px"></div></div></div>
     <div class="stc"><div class="ch">How the monthly loop works <small>EACH MONTH</small></div><div class="svgw">${LOOP_SVG}</div>
-      <div class="stcols"><div><h3>Each month</h3><ol><li><b>Drop</b> the files and press <b>Build</b>.</li><li><b>Check</b> the difference to CJI3 is 0.</li><li><b>Code</b> the new items.</li><li><b>Decide</b> what to add that is not in CJI3 yet.</li><li><b>Export</b> to Excel. Next month, drop it back in.</li></ol></div>
+      <div class="stcols"><div><h3>Each month</h3><ol><li><b>Drop</b> the files and press <b>Create the register</b> – next months: <b>Update</b> from inside.</li><li><b>Check</b> the difference to CJI3 is 0.</li><li><b>Code</b> the new items.</li><li><b>Decide</b> what to add that is not in CJI3 yet.</li><li><b>Export</b> to Excel. Next month, drop it back in.</li></ol></div>
       <div><h3>How the numbers work</h3><ul><li>CJI3 is the total. Everything ties to it.</li><li>Each cost line goes to one bucket.</li><li>Certificates and ZINTC1 show the detail behind CJI3.</li><li>The month is the CJI3 posting month.</li><li>Cost not in CJI3 counts only if you add it.</li></ul></div></div></div></div></div>`;
     document.getElementById('sClear').onclick = () => {
       picked.length = 0;
@@ -186,6 +186,7 @@ function showStart(canCancel) {
         draw();
         return document.getElementById('sBuild').click();
       } // ask once for the data file; cancel = build in this browser only
+      if (DBF.db && !DBF.h && /^Project_register\.db$/.test(DBF.name || '') && cjPk()) DBF.name = cjPk() + '_register.db'; // a download: name it after the project once the CJI3 shows it
       m.textContent = 'Creating the register… (about 20–30 seconds)';
       await new Promise((r) => setTimeout(r, 50));
       try {
