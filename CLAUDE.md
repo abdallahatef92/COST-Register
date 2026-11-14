@@ -21,5 +21,5 @@
 - CJI3 is the single source of truth; the difference to CJI3 must be 0.
 - Before every release `npm run test:quick` must pass. The full set (`npm test`, both projects) runs before a release that changes the engine (`src/`, `app/engine-entry.js`), the data file / update code (`24-db.js`, `22-data-log.js`, `22-update-files.js`, `24-start-page.js`) or the export; UI-only releases go out after the quick checks. While working use `npm run test:quick` or `npm run test:only -- <sections>`. A changed number is only accepted with `--update` after the owner agrees the new figure is right.
 - The repo is PUBLIC: never commit real SAP files – only masked copies made with `tools/mask-sap.js`.
-- Version: `VERSION` file → `out/Cost_Register_Tool_vX.Y.html` (v30 became 3.0, then 3.1, 3.2 …); bump on every release.
+- Version: `VERSION` file → `out/Cost_Register_Tool_vX.Y.html` (v30 became 3.0, then 3.1, 3.2 …); bump on every release. A release after the full set takes the next number (3.8 → 3.9); a UI-only release after the quick checks adds a digit (3.8 → 3.81, 3.82 …).
 - Code style: Prettier (`.prettierrc.json`); run `npm run format` after editing – `npm test` refuses unformatted code.
