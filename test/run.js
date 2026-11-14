@@ -327,7 +327,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       }
     }
     await p.$eval('#tabs [data-s="dash"]', (b) => b.click());
-    await p.click('#side [data-gt="mrate"]');
+    await p.click('#side [data-rates]'); // Rates (Material first)
     await p.waitForTimeout(800);
     ok('Code › Rate analysis (Material) opens', await p.$eval('#pg-mr', (e) => e.classList.contains('on') && e.innerText.length > 100));
     await p.$eval('#tabs [data-s="cod"]', (b) => b.click());
@@ -1024,7 +1024,9 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           )
         );
         await p8.$eval('#tabs [data-s="dash"]', (b) => b.click());
-        await p8.click('#side [data-sv="rate"]');
+        await p8.click('#side [data-rates]');
+        await p8.waitForTimeout(500);
+        await p8.click('[data-rt="s"]'); // Rates › Subcontractor
         await p8.waitForTimeout(800);
         ok(
           'Dashboard › Subcontractor rates & coding',

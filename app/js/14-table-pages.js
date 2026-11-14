@@ -979,6 +979,7 @@ function pageDef() {
           `<b>${esc(g)}</b><span class="gm">${rs.length} cost elements · to date ${fmt(rs.reduce((s0, r) => s0 + sumIdx(r.x.p, tdIdx), 0))}</span>`,
         foot: ft,
         extraTools:
+          `<span class="seg"><button data-glw="gl" class="${ST.tab === 'gl' ? 'on' : ''}">GL</button><button data-glw="wbs" class="${ST.tab === 'wbs' ? 'on' : ''}">WBS</button></span> ` +
           `<span class="seg">${[
             ['ce', 'By cost element'],
             ['bucket', 'By bucket'],
@@ -1070,7 +1071,11 @@ function pageDef() {
       search: true,
       tree: true,
       rowCls: (r) => 'lv' + Math.min(r.n.depth, 4),
-      extraTools: '<span class="help">Levels</span>' + lv + pv,
+      extraTools:
+        `<span class="seg"><button data-glw="gl" class="${ST.tab === 'gl' ? 'on' : ''}">GL</button><button data-glw="wbs" class="${ST.tab === 'wbs' ? 'on' : ''}">WBS</button></span> ` +
+        '<span class="help">Levels</span>' +
+        lv +
+        pv,
       foot: () => {
         const o = {};
         const rs = roots;

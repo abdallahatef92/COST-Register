@@ -373,3 +373,4 @@ body.dropping::after{content:'Drop the new SAP files to update the register';pos
 .psed .psin.miss{width:calc(100% - 100px);border:1px dashed #E0A458;background:#FFF8EC} .psed .psno{display:inline-block;margin-left:6px;border-radius:9px;padding:0 7px;font:700 11px 'Segoe UI',Arial;background:#FCE4D6;color:#9B2C2C}
 .psed .psgi{font-weight:700} .psed .psgc{text-align:right} .psed .psge{border:1px solid #C9D3E3;border-radius:4px;padding:1px 4px;background:#fff;font:12.5px 'Segoe UI',Arial;max-width:170px}
 .psed .sct .seg{flex:none} .psed .sct small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .psed .psge{max-width:none;width:100%} .psed td.psgc{min-width:200px}
+.ratetabs{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:8px 12px;background:#fff;border:1px solid #DDE3EC;border-radius:10px} .ratetabs b{font-size:15px;color:#14254A}

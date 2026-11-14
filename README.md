@@ -292,3 +292,7 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - New side-navigation section **Codes**, in the PKG report's style (same frame, bands and groups): the **Name** is typed in place, the **Group** is chosen on the row; filters All · No name · Not in a group; + New PKG, + New group. PKGs only – the indirect cost elements are coded in Coding. It replaces the hidden *Codes & groups* inside Reports › PKG summary (the report links to it: *Edit names and groups*).
 - Footer: **⚠ PKG without a name n** – PKGs used in your coding with no name; a click opens the PKG list showing only those.
 - A new PKG typed while coding asks for its name at once (*Save* or *Later*).
+
+## v3.81 – Tidy-up (UI only, quick checks)
+- **Rates** (Dashboard): Rate analysis and Subcontractor rates & coding are one side item with tabs *Material · Subcontractor*.
+- **Reports**: *Per Month* and *By PKG* removed (they are Expenses › Expenses per month and Expenses › Summary by PKG); *GL* and *WBS* are one side item with a GL / WBS switch on the page.

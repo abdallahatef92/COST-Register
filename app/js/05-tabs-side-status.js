@@ -7,7 +7,7 @@ const SECS = [
   ['xp', 'Expenses', ['xpm']],
   ['adj', 'Adjust', ['adjl', ...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]],
   ['chk', 'Check', ['chk', 'log', 'rules', 'dlog']],
-  ['rep', 'Reports', ['psum', 'pm', 'exp', 'gl', 'wbs']],
+  ['rep', 'Reports', ['psum', 'gl', 'wbs']],
 ];
 // the subcontractor pages live in other sections: POs in Coding, Rates & coding in Dashboard, PO register in Reports, Bridge in Check
 const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'rep', bridge: 'chk' };
@@ -467,29 +467,35 @@ function renderSide() {
       ['sum', 'Summary', 'one-screen view'],
       ['flow', 'Cost flow', 'where the cost goes: bucket › PKG'],
       ['drv', 'Cost drivers', 'rates and monthly costs behind the cost'],
-      ...(MATI >= 0 ? [['mrate', 'Rate analysis', 'rate per month for every material']] : []),
     ].forEach(([k, l, d], i) => items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)]));
-    if (SUBI >= 0)
+    if (MATI >= 0 || SUBI >= 0)
       items.push([
-        'data-gt="sub" data-sv="rate"',
-        ST.tab === 'sub' && ST.sub === 'pkg',
-        '#E07B39',
-        'Subcontractor rates & coding',
+        'data-rates="1"',
+        ST.tab === 'mrate' || (ST.tab === 'sub' && ST.sub === 'pkg'),
+        PAL[3],
+        'Rates',
         '',
-        'packages: rates and codes, one package at a time',
+        [MATI >= 0 ? 'material' : '', SUBI >= 0 ? 'subcontractor' : ''].filter(Boolean).join(' · ') + ': rate per unit, by month',
         '',
         undefined,
-        'Sub',
+        'Rat',
       ]);
   } else {
     head = 'Reports';
-    [
-      ['psum', 'PKG summary', 'Direct by PKG · Indirect by cost element'],
-      ['pm', 'Per Month', 'items by month'],
-      ['exp', 'By PKG', 'every item under its package code'],
-      ['gl', 'GL', 'by cost element'],
-      ['wbs', 'WBS', 'by WBS element'],
-    ].forEach(([k, l, d], i) => items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)]));
+    [['psum', 'PKG summary', 'Direct by PKG · Indirect by cost element']].forEach(([k, l, d], i) =>
+      items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)])
+    );
+    items.push([
+      `data-gt="${ST.glw || 'gl'}"`,
+      ST.tab === 'gl' || ST.tab === 'wbs',
+      PAL[1],
+      'GL · WBS',
+      '',
+      'by cost element or by WBS element – switch on the page',
+      '',
+      undefined,
+      'GL',
+    ]);
     if (SUBI >= 0)
       items.push([
         'data-gt="sub" data-sv="reg"',
@@ -531,6 +537,19 @@ $('side').addEventListener('click', (e) => {
     sel.clear();
     render();
     $('wrap').scrollTop = 0;
+    return;
+  }
+  if (e.target.closest('#side [data-rates]')) {
+    // Rates: the last of Material / Subcontractor (Material first)
+    sel.clear();
+    if (ST.rates === 's' || MATI < 0) {
+      ST.tab = 'sub';
+      goSub('rate');
+    } else {
+      ST.tab = 'mrate';
+      ST.bk = MATI;
+      render();
+    }
     return;
   }
   const a = e.target.closest('[data-gt]');
@@ -774,7 +793,38 @@ function render() {
   else if (ST.tab === 'dlog') renderDlog();
   else if (ST.tab === 'psum' || ST.tab === 'pkl') renderPsum();
   else renderTable();
+  // Rates: one page, two tabs – Material (rate analysis) · Subcontractor (packages: rates and codes)
+  const rm = ST.tab === 'mrate',
+    rs = isPk && !isOv;
+  if ((rm || rs) && MATI >= 0 && SUBI >= 0) {
+    ST.rates = rm ? 'm' : 's';
+    $(rm ? 'mr' : 'pkg').insertAdjacentHTML(
+      'afterbegin',
+      `<div class="ratetabs"><b>Rates</b><span class="seg"><button data-rt="m" class="${rm ? 'on' : ''}">Material</button><button data-rt="s" class="${rs ? 'on' : ''}">Subcontractor</button></span><span class="help">rate per unit, month by month</span></div>`
+    );
+  }
 }
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-rt]');
+  if (t) {
+    ST.rates = t.dataset.rt;
+    if (ST.rates === 's') {
+      ST.tab = 'sub';
+      goSub('rate');
+    } else {
+      ST.tab = 'mrate';
+      ST.bk = MATI;
+      render();
+    }
+    return;
+  }
+  const g = e.target.closest('[data-glw]');
+  if (g) {
+    ST.tab = ST.glw = g.dataset.glw;
+    sel.clear();
+    render();
+  }
+});
 function lists() {
   const s = {
     div: new Set([
