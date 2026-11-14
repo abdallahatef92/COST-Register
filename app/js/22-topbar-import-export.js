@@ -216,6 +216,7 @@ $('bExport').onclick = async (ev) => {
   } catch (e) {
     /* this browser only */
   }
+  renderJob(); // step 5 turns Done at once, also with the panel open
   toast('Building the Excel report…');
   await new Promise((r) => setTimeout(r, 30));
   const wb = new ExcelJS.Workbook(),

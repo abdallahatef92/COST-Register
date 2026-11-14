@@ -19,6 +19,17 @@ function jobSteps() {
     dec = [ST.uns.mode, ST.unsc.mode, ST.depx.mode].some((m) => m && m !== 'none'),
     own = HASOWN ? ownStats() : null,
     need = hasUns || DEPI >= 0 || (own && own.n);
+  // step 4 › Go: the first place still open – not settled / not in CJI3, depreciation, then the owner material rates
+  const unsSet = [ST.uns.mode, ST.unsc.mode].some((m) => m && m !== 'none'),
+    depSet = ST.depx.mode && ST.depx.mode !== 'none',
+    open4 =
+      !dec && hasUns && !unsSet
+        ? ['uns', 'Not settled ›']
+        : !dec && DEPI >= 0 && !depSet
+          ? ['dep', 'Depreciation ›']
+          : own && own.noRate
+            ? ['own', 'Owner material ›']
+            : ['adjl', 'Adjust ›'];
   return [
     {
       t: 'Update with the new SAP files',
@@ -56,16 +67,17 @@ function jobSteps() {
           ]
             .filter(Boolean)
             .join(' · ') || 'decided',
-      go: 'adj',
-      gl: 'Adjust ›',
+      go: open4[0],
+      gl: open4[1],
     },
     {
       t: 'Report: Expenses and Excel',
-      d: 'Look at Expenses › Summary for the month, then Export Excel for the monthly report',
+      d: 'Look at Expenses › Summary for the month, then export the monthly report (Excel)',
       done: jobExported(),
       s: jobExported() ? 'exported for this cut' : 'not exported for this cut yet',
       go: 'rep',
       gl: 'Expenses ›',
+      x2: ['xl', '⇩ Export the monthly report'],
     },
   ];
 }
@@ -82,7 +94,7 @@ function renderJob() {
     ${st
       .map((x, i) => {
         const cls = x.done ? 'ok' : i === now ? 'now' : 'todo';
-        return `<div class="st ${cls}"><div class="n">${x.done ? '✓' : i + 1}</div><div class="tx"><b>${x.t}</b><div class="d">${x.d}</div><div class="s">${x.done ? 'Done' : i === now ? 'Now' : 'To do'} · ${esc(x.s)}</div></div><button class="go" data-job="${x.go}">${x.gl}</button></div>`;
+        return `<div class="st ${cls}"><div class="n">${x.done ? '✓' : i + 1}</div><div class="tx"><b>${x.t}</b><div class="d">${x.d}</div><div class="s">${x.done ? 'Done' : i === now ? 'Now' : 'To do'} · ${esc(x.s)}</div></div><div class="gos"><button class="go" data-job="${x.go}">${x.gl}</button>${x.x2 ? `<button class="go x2" data-job="${x.x2[0]}">${x.x2[1]}</button>` : ''}</div></div>`;
       })
       .join('')}
     <div class="ft">How to code a row: Coding guide (side navigation) · this panel opens by itself after each update</div>`;
@@ -114,7 +126,9 @@ document.addEventListener('click', (e) => {
   if (k === 'chk') ST.tab = 'chk';
   else if (k === 'cod') ST.tab = 'cod';
   else if (k === 'pkl') ST.tab = 'pkl';
-  else if (k === 'adj') return goSec('adj');
+  else if (k === 'xl')
+    return $('bExport').onclick({ shiftKey: true }); // the full monthly report, whatever page is open
+  else if (['uns', 'dep', 'own', 'adjl'].includes(k)) ST.tab = k;
   else if (k === 'rep') {
     ST.tab = 'xpm';
     ST.xpPage = 'sum';

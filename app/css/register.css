@@ -382,3 +382,5 @@ body.dropping::after{content:'Drop the new SAP files to update the register';pos
 .mjob .st b{font-size:14.5px;color:#14254A} .mjob .d{color:#4B5563;font-size:12.5px;margin:2px 0 6px} .mjob .s{font-size:12.5px;font-weight:600} .mjob .ok .s{color:#2E7D32} .mjob .now .s{color:#8A4B00} .mjob .todo .s{color:#6B7280}
 .mjob .go{align-self:center;border:1px solid #C9D3E3;border-radius:7px;padding:5px 12px;font-weight:600;background:#fff;color:#14254A;white-space:nowrap;cursor:pointer} .mjob .now .go{background:#14254A;color:#fff;border-color:#14254A} .mjob .ft{padding:12px 20px;color:#6B7280;font-size:12px;border-top:1px solid #EEF1F5}
 #bJob small{margin-left:6px;color:#D4A72C;font-weight:700}
+.mjob .gos{align-self:center;display:flex;flex-direction:column;gap:6px;align-items:stretch} .mjob .go.x2{background:#fff;color:#14254A;border-color:#14254A}
+.mjob .now .go.x2{background:#D4A72C;color:#14254A;border-color:#D4A72C}
