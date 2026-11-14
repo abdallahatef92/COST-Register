@@ -678,7 +678,7 @@ document.addEventListener('click', (e) => {
     ST.xpLF = null;
   } else if (t === 'pkl') {
     ST.tab = 'pkl';
-    ST.pkNo = v === 'no';
+    ST.pkF = v === 'no' ? 'noname' : '';
   } else if (t === 'adj') {
     ST.tab = 'adjl';
     ST.adjK0 = v || '';

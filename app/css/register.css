@@ -369,3 +369,7 @@ body.dropping::after{content:'Drop the new SAP files to update the register';pos
 .si.warn{background:#FFF4E5;border:1px solid #F3C98B;border-radius:12px;color:#8A4B00}
 .pkask{position:fixed;right:18px;bottom:46px;z-index:97;background:#fff;border:1px solid #E2D3A2;border-left:4px solid #D4A72C;border-radius:10px;box-shadow:0 10px 30px rgba(20,37,74,.22);padding:10px 12px;font-size:13px;display:flex;gap:8px;align-items:center}
 .pkask[hidden]{display:none} .pkask input{border:1px solid #C9D3E3;border-radius:6px;padding:4px 8px;width:220px} .pkask button{border:1px solid #C9D3E3;border-radius:6px;padding:4px 10px;background:#fff;font-weight:600} .pkask button.pri{background:#14254A;color:#fff}
+.psed .psin{width:100%;border:1px solid transparent;border-radius:4px;padding:2px 6px;font:inherit;background:transparent;color:inherit} .psed .psin:hover,.psed .psin:focus{border-color:#9FB3D1;background:#fff;outline:none}
+.psed .psin.miss{width:calc(100% - 100px);border:1px dashed #E0A458;background:#FFF8EC} .psed .psno{display:inline-block;margin-left:6px;border-radius:9px;padding:0 7px;font:700 11px 'Segoe UI',Arial;background:#FCE4D6;color:#9B2C2C}
+.psed .psgi{font-weight:700} .psed .psgc{text-align:right} .psed .psge{border:1px solid #C9D3E3;border-radius:4px;padding:1px 4px;background:#fff;font:12.5px 'Segoe UI',Arial;max-width:170px}
+.psed .sct .seg{flex:none} .psed .sct small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .psed .psge{max-width:none;width:100%} .psed td.psgc{min-width:200px}

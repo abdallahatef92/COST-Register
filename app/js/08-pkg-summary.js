@@ -170,17 +170,20 @@ const psName = (code, n, sec) => {
 };
 const ceName = (n, code, pkg) => ceLabel(pkg, code) || psName('', n);
 function renderPsum() {
-  const D = psData(),
-    open =
-      ST.psOpen ||
-      (ST.psOpen = new Set([
-        'S|D',
-        'S|I',
-        ...D.cfg.direct.map((g, i) => 'G|D|' + i),
-        ...D.cfg.indirect.map((g, i) => 'G|I|' + i),
-        'G|U',
-        'G|J',
-      ])),
+  const ED = psEdit(),
+    D = psData(),
+    cfg0 = D.cfg,
+    open = ED
+      ? new Set(['S|D', 'S|I', 'G|U', 'G|J', ...cfg0.direct.map((g, i) => 'G|D|' + i), ...cfg0.indirect.map((g, i) => 'G|I|' + i)])
+      : ST.psOpen ||
+        (ST.psOpen = new Set([
+          'S|D',
+          'S|I',
+          ...D.cfg.direct.map((g, i) => 'G|D|' + i),
+          ...D.cfg.indirect.map((g, i) => 'G|I|' + i),
+          'G|U',
+          'G|J',
+        ])),
     T = R.toDate || 1,
     fA = (v) => fmt(v),
     sh = (v) => (Math.abs(v) >= 0.5 ? ((100 * v) / T).toFixed(1) + '%' : '-'),
@@ -205,7 +208,21 @@ function renderPsum() {
         return `<tr class="l${lvl} psi" data-psit="${k}"><td class="pi${lvl}"><span class="tg"></span><a class="lk">${esc(itemCode(it))}</a></td><td dir="auto" title="${esc(itemDesc(it))}">${esc(itemDesc(it))} <span class="help">· ${esc(BK[b].short)}</span></td><td>${fA(v)}</td><td>${sh(v)}</td><td></td></tr>`;
       })
       .join('');
+  const secOf = (sec) => (sec === 'D' || sec === 'U' ? 'direct' : 'indirect');
+  const gSelE = (sec, code) => {
+    const c = secOf(sec),
+      cur = cfg0[c].findIndex((g) => g.c.includes(code));
+    return `<select class="psgs psge" data-psmv="${c}|${esc(code)}"><option value="">— no group</option>${cfg0[c].map((g, gi) => `<option value="${gi}" ${cur === gi ? 'selected' : ''}>${esc(g.n)}</option>`).join('')}<option value="new">+ New group…</option></select>`;
+  };
+  const rowE = (sec, code, r) => {
+    const dir = secOf(sec) === 'direct',
+      nm = dir ? pkgLabel(code) : ceLabel(IND_PKG, code),
+      loose = sec === 'U' || sec === 'J';
+    if ((ST.pkF === 'noname' && (nm || !dir)) || (ST.pkF === 'loose' && !loose)) return '';
+    return `<tr class="row${r ? '' : ' zero'}"><td class="pi1"><span class="tg"></span><span class="code">${esc(code)}</span></td><td dir="auto"><input class="psin${nm || !dir ? '' : ' miss'}" data-psn="${secOf(sec)}|${esc(code)}" value="${esc(nm)}" placeholder="type the name">${nm || !dir ? '' : '<span class="psno">No name yet</span>'}</td><td class="psgc">${gSelE(sec, code)}</td><td><b>${r ? fA(r.a) : '-'}</b></td><td>${r ? sh(r.a) : '-'}</td><td></td></tr>`;
+  };
   const rowH = (sec, code, r, name) => {
+    if (ED) return rowE(sec, code, r);
     const k = 'R|' + sec + '|' + code,
       has = r && r.m.size,
       o = open.has(k);
@@ -240,15 +257,17 @@ function renderPsum() {
       gs0 = 0,
       gs = groups.map((g, gi) => ({ g, gi, a: g.c.reduce((x, c) => x + ((D.rows.get(s + '|' + c) || {}).a || 0), 0) })),
       sa = gs.reduce((x, y) => x + y.a, 0);
-    h += `<tr class="sec"><td>${tg(ks, 1)}${label}</td><td></td><td>${fA(sa)}</td><td>${sh(sa)}</td><td></td></tr>`;
+    h += `<tr class="sec" id="pss-${s}"><td>${tg(ks, 1)}${label}</td><td></td>${ED ? '<td></td>' : ''}<td>${fA(sa)}</td><td>${sh(sa)}</td><td></td></tr>`;
     if (!open.has(ks)) return sa;
     gs.forEach(({ g, gi, a }) => {
       const kg = 'G|' + s + '|' + gi;
-      h += `<tr class="grp"><td>${tg(kg, g.c.length)}</td><td>${esc(g.n)}</td><td>${fA(a)}</td><td>${sh(a)}</td><td></td></tr>`;
+      h += ED
+        ? `<tr class="grp"><td>${tg(kg, g.c.length)}</td><td><input class="psin psgi" data-psgn="${s === 'D' ? 'direct' : 'indirect'}|${gi}" value="${esc(g.n)}" title="The group's name – type to change it"></td><td class="help">${g.c.length} code${g.c.length === 1 ? '' : 's'}</td><td>${fA(a)}</td><td>${sh(a)}</td><td></td></tr>`
+        : `<tr class="grp"><td>${tg(kg, g.c.length)}</td><td>${esc(g.n)}</td><td>${fA(a)}</td><td>${sh(a)}</td><td></td></tr>`;
       if (open.has(kg))
         g.c.forEach((c) => {
           const r = D.rows.get(s + '|' + c);
-          if (!r && !ST.psAll) return;
+          if (!r && !ST.psAll && !ED) return;
           h += rowH(s, c, r, '');
         });
     });
@@ -257,7 +276,9 @@ function renderPsum() {
     if (us.length) {
       const ua = us.reduce((x, y) => x + y[1].a, 0),
         gk = 'G|' + lp[0];
-      h += `<tr class="grp warn"><td>${tg(gk, 1)}</td><td>${s === 'D' ? 'PKGs' : 'Indirect cost elements'} not in a group <a class="lk" data-pse="open|${s === 'D' ? 'p' : 'c'}" style="font-weight:500">– place them in Codes &amp; groups ›</a></td><td>${fA(ua)}</td><td>${sh(ua)}</td><td></td></tr>`;
+      h += ED
+        ? `<tr class="grp warn"><td>${tg(gk, 1)}</td><td>Not in a group yet – choose the group on the row</td><td></td><td>${fA(ua)}</td><td>${sh(ua)}</td><td></td></tr>`
+        : `<tr class="grp warn"><td>${tg(gk, 1)}</td><td>${s === 'D' ? 'PKGs' : 'Indirect cost elements'} not in a group <a class="lk" data-pse="open|${s === 'D' ? 'p' : 'c'}" style="font-weight:500">– name and group them in Codes ›</a></td><td>${fA(ua)}</td><td>${sh(ua)}</td><td></td></tr>`;
       if (open.has(gk))
         us.forEach(([k, r]) => {
           h += rowH(lp[0], k.slice(2), r, '');
@@ -271,86 +292,50 @@ function renderPsum() {
   h +=
     `<tr class="grp na"><td>${tg('NA', D.naIt.size)}⚠</td><td>Not allocated – no PKG yet</td><td class="dka" data-psk="NA">${fA(D.na)}</td><td>${sh(D.na)}</td><td></td></tr>` +
     (open.has('NA') ? items(new Map([...D.naIt].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 300)), 'NA', 2) : '');
-  h += `<tr class="t"><td></td><td>Total = counted to the cut date (ties to CJI3)</td><td>${fA(da + ia + D.na)}</td><td>${sh(da + ia + D.na)}</td><td></td></tr>`;
+  h += `<tr class="t"><td></td><td>Total = counted to the cut date (ties to CJI3)</td>${ED ? '<td></td>' : ''}<td>${fA(da + ia + D.na)}</td><td>${sh(da + ia + D.na)}</td><td></td></tr>`;
   const zl = ST.psZ || 'r',
     cfg = D.cfg,
     used = new Set([...cfg.direct, ...cfg.indirect].flatMap((g) => g.c)),
     loose = [...D.rows.keys()].filter((k) => k.startsWith('U|')).map((k) => k.slice(2));
-  let setup = '';
-  if (psEdit()) {
-    const PK = psPk(),
-      CE = psCe(),
-      aP = new Map(),
-      aI = new Map();
-    for (const e of R.exp.values()) {
-      let a = 0;
-      for (let p = 0; p < NP - 1; p++) a += e.p[p];
-      if (!e.pkg) continue;
-      if (isIndPkg(e.pkg)) {
-        const c = e.ce || '(no cost element)';
-        aI.set(c, (aI.get(c) || 0) + a);
-      } else aP.set(e.pkg, (aP.get(e.pkg) || 0) + a);
-    }
-    const inD = new Set(cfg.direct.flatMap((g) => g.c)),
-      inI = new Set(cfg.indirect.flatMap((g) => g.c));
-    const looseD = [...new Set([...aP.keys(), ...Object.keys(PK).filter((p) => !isIndPkg(p))])]
-      .filter((p) => !inD.has(p))
-      .sort((a, b) => Math.abs(aP.get(b) || 0) - Math.abs(aP.get(a) || 0));
-    const looseI = [...aI.keys()]
-      .filter((c) => !inI.has(c) && c !== '(no cost element)')
-      .sort((a, b) => Math.abs(aI.get(b) || 0) - Math.abs(aI.get(a) || 0));
-    const gSel = (sec, code, cur) =>
-      `<select class="psgs" data-psmv="${sec}|${esc(code)}"><option value="">— no group</option>${cfg[sec].map((g, gi) => `<option value="${gi}" ${cur === gi ? 'selected' : ''}>${esc(g.n)}</option>`).join('')}<option value="new">+ New group…</option></select>`;
-    const row = (sec, code, gi, warn) => {
-      const a = sec === 'direct' ? aP.get(code) : aI.get(code),
-        nm = sec === 'direct' ? pkgLabel(code) : ceLabel(IND_PKG, code);
-      if (ST.pkNo && sec === 'direct' && nm) return '';
-      return `<tr class="cr${warn ? ' loose' : ''}${a === undefined ? ' unused' : ''}"><td class="pi1"><b class="code">${esc(code)}</b></td><td><input class="psnm" data-psn="${sec}|${esc(code)}" value="${esc(nm)}" placeholder="type the name"></td><td>${gSel(sec, code, gi)}</td><td>${a !== undefined ? fmt(a) : '<span class="help">not used yet</span>'}</td><td>${nm ? '<span class="st Coded">Named</span>' : '<span class="st Not">No name yet</span>'}</td><td>${a === undefined ? `<button class="psx" data-pse="drop|${sec}|${esc(code)}" title="Take it out of the list">✕</button>` : ''}</td></tr>`;
-    };
-    const sec = (key, label, sub) => {
-      let h2 = `<tr class="sec"><td colspan="6">${label} <span style="font-weight:400;opacity:.8;margin-left:8px">${sub}</span></td></tr>`;
-      cfg[key].forEach((g, gi) => {
-        h2 +=
-          `<tr class="grp"><td colspan="2"><input class="psgn" data-psgn="${key}|${gi}" value="${esc(g.n)}"></td><td colspan="3" class="help" style="text-align:left">${g.c.length} code${g.c.length === 1 ? '' : 's'}</td><td style="white-space:nowrap"><button class="psx" data-pse="up|${key}|${gi}" title="Move up">↑</button><button class="psx" data-pse="del|${key}|${gi}" title="Remove the group">✕</button></td></tr>` +
-          g.c.map((c) => row(key, c, gi)).join('');
-      });
-      const loose = key === 'direct' ? looseD : looseI;
-      if (loose.length)
-        h2 +=
-          `<tr class="grp warn"><td colspan="6">Not in a group yet – ${loose.length} (from your coding) · choose a group</td></tr>` +
-          loose.map((c) => row(key, c, -1, 1)).join('');
-      h2 += `<tr class="psnew"><td><input class="psnm" id="nC-${key}" placeholder="${key === 'direct' ? 'PKG code' : 'cost element'}"></td><td><input class="psnm" id="nN-${key}" placeholder="name"></td><td><select class="psgs" id="nG-${key}"><option value="">— no group</option>${cfg[key].map((g, gi) => `<option value="${gi}">${esc(g.n)}</option>`).join('')}</select></td><td colspan="3" style="text-align:left;white-space:nowrap"><button class="pri" data-pse="add|${key}">+ Add</button> <button data-pse="new|${key}">+ New group</button></td></tr>`;
-      return h2;
-    };
-    const dir = ST.tab === 'pkl',
-      nn = pkNoName().length;
-    setup = `<div class="panel pscard"><div class="sct"><b>${dir ? 'PKG list' : 'Indirect cost elements'}</b><small>${dir ? 'your packages: a code, a name and a group – the reports show the name · PKGs from your coding come here by themselves' : 'PKG “Indirect” by its cost elements: a name and a group (the heads of the indirect reports)'}</small>
-      ${dir ? `<span class="seg" style="margin-left:auto"><button data-pkno="0" class="${ST.pkNo ? '' : 'on'}">All</button><button data-pkno="1" class="${ST.pkNo ? 'on' : ''}">No name${nn ? ' · ' + nn : ''}</button></span>` : ''}</div>
-      <table class="st pst psetup"><colgroup><col style="width:170px"><col><col style="width:260px"><col style="width:150px"><col style="width:120px"><col style="width:70px"></colgroup><tr><th>Code</th><th>Name</th><th>Group</th><th style="text-align:right">AC to date</th><th>Status</th><th></th></tr>
-      ${dir ? sec('direct', 'Direct', 'rows = PKG') : sec('indirect', 'Indirect', 'rows = cost element of PKG “Indirect”')}</table></div>`;
-  }
-  const nL = [...D.rows.keys()].filter((k) => k.startsWith('U|') || k.startsWith('J|')).length;
-  $('psum').innerHTML =
-    `<div class="psw">${psEdit() ? '' : `<div class="sct" style="gap:8px;margin:0 0 2px"><button data-pse="open" title="Name the PKGs and the indirect cost elements, put them in groups">Edit names and groups · Codes ›${nL ? ` <span class="psbad">${nL} not in a group</span>` : ''}</button></div>`}${
-      psEdit()
-        ? setup
-        : `<div class="panel pscard psrep">
-    <div class="sct" style="gap:8px;margin:0 0 10px"><span class="seg" title="Open the tree to this level">${[
-      ['s', 'Sections'],
-      ['g', 'Groups'],
-      ['r', 'Rows'],
-      ['m', 'MNL'],
-      ['c', 'Cost element'],
+  const nN = pkNoName().length,
+    nLo = [...D.rows.keys()].filter((k) => k.startsWith('U|') || k.startsWith('J|')).length,
+    edBar = `<div class="sct" style="gap:8px;margin:0 0 10px"><span class="seg">${[
+      ['', 'All'],
+      ['noname', 'No name' + (nN ? ' · ' + nN : '')],
+      ['loose', 'Not in a group' + (nLo ? ' · ' + nLo : '')],
     ]
-      .map(([k, l]) => `<button data-psz="${k}" class="${zl === k ? 'on' : ''}">${l}</button>`)
+      .map(([k, l]) => `<button data-pkf="${k}" class="${(ST.pkF || '') === k ? 'on' : ''}">${l}</button>`)
       .join(
         ''
-      )}</span><button data-pse="empty" class="${ST.psAll ? 'on' : ''}" title="Show the codes with no cost yet">${ST.psAll ? '✓ ' : ''}Show empty codes</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><button data-psprint="1" title="Print or save as PDF – A3 portrait, as on screen">🖨 Print A3</button><small>+ / − : PKG › MNL › cost element › items · Indirect: cost element › MNL › items · double-click an amount for its items</small></div>
-    <table class="pshd"><tr><td>Project</td><td><b>${esc(META.project)}</b></td><td rowspan="2" class="pstitle">Cost Report Grand Summary</td></tr><tr><td>Cut off Date</td><td><b>${esc(new Date(ST.cut + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b></td></tr><tr><td></td><td colspan="2" class="pskey"><b><u>KEY::</u></b><br><b>AC</b> : Actual Cost – accumulated to the cut-off date, ties to CJI3</td></tr></table>
+      )}</span><button data-pknew="pkg">+ New PKG</button><button data-pknew="ce">+ New indirect cost element</button><button data-pknew="grp">+ New group</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><small>type a name in the Name column · choose the Group on the row · codes from your coding come here by themselves</small></div>`;
+  const nL = nLo;
+  $('psum').innerHTML =
+    `<div class="psw">${psEdit() ? '' : `<div class="sct" style="gap:8px;margin:0 0 2px"><button data-pse="open" title="Name the PKGs and the indirect cost elements, put them in groups">Edit names and groups · Codes ›${nL ? ` <span class="psbad">${nL} not in a group</span>` : ''}</button></div>`}${`<div class="panel pscard psrep${ED ? ' psed' : ''}">
+    ${
+      ED
+        ? edBar
+        : `<div class="sct" style="gap:8px;margin:0 0 10px"><span class="seg" title="Open the tree to this level">${[
+            ['s', 'Sections'],
+            ['g', 'Groups'],
+            ['r', 'Rows'],
+            ['m', 'MNL'],
+            ['c', 'Cost element'],
+          ]
+            .map(([k, l]) => `<button data-psz="${k}" class="${zl === k ? 'on' : ''}">${l}</button>`)
+            .join(
+              ''
+            )}</span><button data-pse="empty" class="${ST.psAll ? 'on' : ''}" title="Show the codes with no cost yet">${ST.psAll ? '✓ ' : ''}Show empty codes</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><button data-psprint="1" title="Print or save as PDF – A3 portrait, as on screen">🖨 Print A3</button><small>+ / − : PKG › MNL › cost element › items · Indirect: cost element › MNL › items · double-click an amount for its items</small></div>`
+    }
+    <table class="pshd"><tr><td>Project</td><td><b>${esc(META.project)}</b></td><td rowspan="2" class="pstitle">${ED ? 'Codes – PKG list &amp; indirect cost elements' : 'Cost Report Grand Summary'}</td></tr><tr><td>Cut off Date</td><td><b>${esc(new Date(ST.cut + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b></td></tr><tr><td></td><td colspan="2" class="pskey"><b><u>KEY::</u></b><br>${ED ? '<b>Name</b> : what the reports show for the code · <b>Group</b> : the band it sits in · <b>AC</b> : to date, ties to CJI3' : '<b>AC</b> : Actual Cost – accumulated to the cut-off date, ties to CJI3'}</td></tr></table>
     <div class="psa">A- Actual Cost to date</div>
-    <table class="pst fxt" data-fx="psum" data-nosort="1" data-nofill="1" data-maxw="1120" data-growcol="1"><colgroup><col><col><col><col></colgroup><tr class="hb"><th rowspan="2">Package</th><th rowspan="2">Package</th><th colspan="2" class="cs">Current Status</th></tr><tr class="hb2"><th>AC</th><th>Share</th></tr>${h.replace(/<td>(<span class="psb"[^<]*<\/span>)?<\/td><\/tr>/g, '</tr>')}</table></div>`
-    }</div>`;
-  if (!psEdit()) fxScan($('psum'));
+    <table class="pst fxt" data-fx="psum" data-nosort="1" data-nofill="1" data-maxw="1120" data-growcol="1"><colgroup><col><col>${ED ? '<col style="width:230px">' : ''}<col><col></colgroup><tr class="hb"><th rowspan="2">${ED ? 'Code' : 'Package'}</th><th rowspan="2">${ED ? 'Name' : 'Package'}</th>${ED ? '<th rowspan="2">Group</th>' : ''}<th colspan="2" class="cs">Current Status</th></tr><tr class="hb2"><th>AC</th><th>Share</th></tr>${h.replace(/<td>(<span class="psb"[^<]*<\/span>)?<\/td><\/tr>/g, '</tr>')}</table></div>`}</div>`;
+  fxScan($('psum'));
+  const jump = ED && ST.tab === 'icl' && R.psLast !== 'icl';
+  R.psLast = ST.tab;
+  if (jump) {
+    const x = $('pss-I');
+    if (x) x.scrollIntoView({ block: 'start' });
+  }
   const pq = $('psQ');
   if (pq)
     pq.oninput = () => {
@@ -744,9 +729,37 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-pkno]');
-  if (!b) return;
-  ST.pkNo = b.dataset.pkno === '1';
+  const f = e.target.closest('[data-pkf]');
+  if (f) {
+    ST.pkF = f.dataset.pkf;
+    render();
+    return;
+  }
+  const n = e.target.closest('[data-pknew]');
+  if (!n) return;
+  const k = n.dataset.pknew,
+    cfg = psCfg();
+  if (k === 'grp') {
+    const sec = confirm('A Direct group (OK) or an Indirect head (Cancel)?') ? 'direct' : 'indirect',
+      nm = (prompt('Name of the new ' + (sec === 'direct' ? 'Direct group' : 'Indirect head')) || '').trim();
+    if (!nm) return;
+    cfg[sec].push({ n: nm, c: [] });
+    logIt('New group ' + nm, 1);
+  } else {
+    const c = canon(
+      k === 'pkg' ? 'pkg' : 'ce',
+      (prompt(k === 'pkg' ? 'New PKG code (e.g. S12)' : 'New indirect cost element (e.g. SP-30)') || '').trim()
+    );
+    if (!c) return;
+    if (k === 'pkg' && isIndPkg(c)) return toast('“Indirect” is the Indirect section');
+    const nm = (prompt('Name of ' + c) || '').trim();
+    if (k === 'pkg') psPk()[c] = { ...(psPk()[c] || {}), n: nm };
+    else psCe()[IND_PKG + '|' + c] = { ...(psCe()[IND_PKG + '|' + c] || {}), n: nm };
+    psPlace(k === 'pkg' ? 'direct' : 'indirect', c, '');
+    logIt((k === 'pkg' ? 'PKG ' : 'Indirect cost element ') + c + ' added', 1);
+  }
+  persist();
+  lists();
   render();
 });
 // a new PKG typed while coding: name it now (or later in Codes › PKG list)
