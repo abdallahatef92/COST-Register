@@ -19,7 +19,7 @@
 - Ask questions as multiple choice.
 - Follow the owner's files and concepts; keep it simple and consistent.
 - CJI3 is the single source of truth; the difference to CJI3 must be 0.
-- Run `npm test` (the full set, both projects) before every release; all checks must pass. While working use `npm run test:quick` or `npm run test:only -- <sections>`. A changed number is only accepted with `--update` after the owner agrees the new figure is right.
+- Before every release `npm run test:quick` must pass. The full set (`npm test`, both projects) runs before a release that changes the engine (`src/`, `app/engine-entry.js`), the data file / update code (`24-db.js`, `22-data-log.js`, `22-update-files.js`, `24-start-page.js`) or the export; UI-only releases go out after the quick checks. While working use `npm run test:quick` or `npm run test:only -- <sections>`. A changed number is only accepted with `--update` after the owner agrees the new figure is right.
 - The repo is PUBLIC: never commit real SAP files – only masked copies made with `tools/mask-sap.js`.
 - Version: `VERSION` file → `out/Cost_Register_Tool_vX.Y.html` (v30 became 3.0, then 3.1, 3.2 …); bump on every release.
 - Code style: Prettier (`.prettierrc.json`); run `npm run format` after editing – `npm test` refuses unformatted code.

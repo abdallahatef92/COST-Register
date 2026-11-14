@@ -3,7 +3,7 @@
 const SECS = [
   ['dash', 'Dashboard', ['sum', 'flow', 'drv', ...(MATI >= 0 ? ['mrate'] : [])]],
   ['cod', 'Coding', ['cod', 'lines']],
-  ['codes', 'Codes', ['pkl', 'icl']],
+  ['codes', 'Codes', ['pkl']],
   ['xp', 'Expenses', ['xpm']],
   ['adj', 'Adjust', ['adjl', ...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]],
   ['chk', 'Check', ['chk', 'log', 'rules', 'dlog']],
@@ -446,17 +446,6 @@ function renderSide() {
       undefined,
       'PKG',
     ]);
-    items.push([
-      'data-gt="icl"',
-      ST.tab === 'icl',
-      '#2A9D8F',
-      'Indirect cost elements',
-      '',
-      'names and heads of PKG “Indirect”',
-      '',
-      undefined,
-      'Ind',
-    ]);
   } else if (sec === 'xp') {
     head = 'Expenses · reports';
     XPAGES.forEach(([k, l, d], n) =>
@@ -760,12 +749,12 @@ function render() {
           (p === 'sum' && ST.tab === 'sum') ||
           (p === 'flow' && ST.tab === 'flow') ||
           (p === 'drv' && ST.tab === 'drv') ||
-          (p === 'psum' && (ST.tab === 'psum' || ST.tab === 'pkl' || ST.tab === 'icl')) ||
+          (p === 'psum' && (ST.tab === 'psum' || ST.tab === 'pkl')) ||
           (p === 'chk' && ST.tab === 'chk') ||
           (p === 'log' && ST.tab === 'log') ||
           (p === 'rul' && ST.tab === 'rules') ||
           (p === 'mr' && ST.tab === 'mrate') ||
-          (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'icl', 'flow', 'dlog'].includes(ST.tab)))
+          (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'flow', 'dlog'].includes(ST.tab)))
     )
   );
   $('bUndo').disabled = !undo.length;
@@ -783,7 +772,7 @@ function render() {
   else if (ST.tab === 'drv') renderDrivers();
   else if (ST.tab === 'flow') renderFlow();
   else if (ST.tab === 'dlog') renderDlog();
-  else if (ST.tab === 'psum' || ST.tab === 'pkl' || ST.tab === 'icl') renderPsum();
+  else if (ST.tab === 'psum' || ST.tab === 'pkl') renderPsum();
   else renderTable();
 }
 function lists() {

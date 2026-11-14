@@ -93,7 +93,7 @@ const psPk = () => {
     return c.ces || (c.ces = {});
   };
 // Codes › PKG list (direct) and Codes › Indirect cost elements: the names and groups of the PKG summary's rows
-const psEdit = () => ST.tab === 'pkl' || ST.tab === 'icl';
+const psEdit = () => ST.tab === 'pkl';
 // PKGs used in your coding that have no name yet (the reports would show the bare code)
 const pkNoName = () => [...new Set([...R.exp.values()].map((e) => e.pkg))].filter((p) => p && !isIndPkg(p) && !pkgLabel(p));
 const pkgLabel = (p) => (psPk()[p] || {}).n || (psCfg().names || {})[p] || PS_NAMES[p] || '';
@@ -288,11 +288,14 @@ function renderPsum() {
     return sa;
   };
   const da = secH('D', 'Direct', D.cfg.direct),
-    ia = secH('I', 'Indirect', D.cfg.indirect);
-  h +=
-    `<tr class="grp na"><td>${tg('NA', D.naIt.size)}⚠</td><td>Not allocated – no PKG yet</td><td class="dka" data-psk="NA">${fA(D.na)}</td><td>${sh(D.na)}</td><td></td></tr>` +
-    (open.has('NA') ? items(new Map([...D.naIt].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 300)), 'NA', 2) : '');
-  h += `<tr class="t"><td></td><td>Total = counted to the cut date (ties to CJI3)</td>${ED ? '<td></td>' : ''}<td>${fA(da + ia + D.na)}</td><td>${sh(da + ia + D.na)}</td><td></td></tr>`;
+    ia = ED ? 0 : secH('I', 'Indirect', D.cfg.indirect);
+  if (!ED)
+    h +=
+      `<tr class="grp na"><td>${tg('NA', D.naIt.size)}⚠</td><td>Not allocated – no PKG yet</td><td class="dka" data-psk="NA">${fA(D.na)}</td><td>${sh(D.na)}</td><td></td></tr>` +
+      (open.has('NA') ? items(new Map([...D.naIt].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 300)), 'NA', 2) : '');
+  h += ED
+    ? `<tr class="t"><td></td><td>Total Direct</td><td></td><td>${fA(da)}</td><td>${sh(da)}</td><td></td></tr>`
+    : `<tr class="t"><td></td><td>Total = counted to the cut date (ties to CJI3)</td><td>${fA(da + ia + D.na)}</td><td>${sh(da + ia + D.na)}</td><td></td></tr>`;
   const zl = ST.psZ || 'r',
     cfg = D.cfg,
     used = new Set([...cfg.direct, ...cfg.indirect].flatMap((g) => g.c)),
@@ -307,7 +310,7 @@ function renderPsum() {
       .map(([k, l]) => `<button data-pkf="${k}" class="${(ST.pkF || '') === k ? 'on' : ''}">${l}</button>`)
       .join(
         ''
-      )}</span><button data-pknew="pkg">+ New PKG</button><button data-pknew="ce">+ New indirect cost element</button><button data-pknew="grp">+ New group</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><small>type a name in the Name column · choose the Group on the row · codes from your coding come here by themselves</small></div>`;
+      )}</span><button data-pknew="pkg">+ New PKG</button><button data-pknew="grp">+ New group</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><small>type a name in the Name column · choose the Group on the row · codes from your coding come here by themselves</small></div>`;
   const nL = nLo;
   $('psum').innerHTML =
     `<div class="psw">${psEdit() ? '' : `<div class="sct" style="gap:8px;margin:0 0 2px"><button data-pse="open" title="Name the PKGs and the indirect cost elements, put them in groups">Edit names and groups · Codes ›${nL ? ` <span class="psbad">${nL} not in a group</span>` : ''}</button></div>`}${`<div class="panel pscard psrep${ED ? ' psed' : ''}">
@@ -326,16 +329,10 @@ function renderPsum() {
               ''
             )}</span><button data-pse="empty" class="${ST.psAll ? 'on' : ''}" title="Show the codes with no cost yet">${ST.psAll ? '✓ ' : ''}Show empty codes</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><button data-psprint="1" title="Print or save as PDF – A3 portrait, as on screen">🖨 Print A3</button><small>+ / − : PKG › MNL › cost element › items · Indirect: cost element › MNL › items · double-click an amount for its items</small></div>`
     }
-    <table class="pshd"><tr><td>Project</td><td><b>${esc(META.project)}</b></td><td rowspan="2" class="pstitle">${ED ? 'Codes – PKG list &amp; indirect cost elements' : 'Cost Report Grand Summary'}</td></tr><tr><td>Cut off Date</td><td><b>${esc(new Date(ST.cut + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b></td></tr><tr><td></td><td colspan="2" class="pskey"><b><u>KEY::</u></b><br>${ED ? '<b>Name</b> : what the reports show for the code · <b>Group</b> : the band it sits in · <b>AC</b> : to date, ties to CJI3' : '<b>AC</b> : Actual Cost – accumulated to the cut-off date, ties to CJI3'}</td></tr></table>
+    <table class="pshd"><tr><td>Project</td><td><b>${esc(META.project)}</b></td><td rowspan="2" class="pstitle">${ED ? 'Codes – PKG list' : 'Cost Report Grand Summary'}</td></tr><tr><td>Cut off Date</td><td><b>${esc(new Date(ST.cut + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }))}</b></td></tr><tr><td></td><td colspan="2" class="pskey"><b><u>KEY::</u></b><br>${ED ? '<b>Name</b> : what the reports show for the code · <b>Group</b> : the band it sits in · <b>AC</b> : to date, ties to CJI3' : '<b>AC</b> : Actual Cost – accumulated to the cut-off date, ties to CJI3'}</td></tr></table>
     <div class="psa">A- Actual Cost to date</div>
     <table class="pst fxt" data-fx="psum" data-nosort="1" data-nofill="1" data-maxw="1120" data-growcol="1"><colgroup><col><col>${ED ? '<col style="width:230px">' : ''}<col><col></colgroup><tr class="hb"><th rowspan="2">${ED ? 'Code' : 'Package'}</th><th rowspan="2">${ED ? 'Name' : 'Package'}</th>${ED ? '<th rowspan="2">Group</th>' : ''}<th colspan="2" class="cs">Current Status</th></tr><tr class="hb2"><th>AC</th><th>Share</th></tr>${h.replace(/<td>(<span class="psb"[^<]*<\/span>)?<\/td><\/tr>/g, '</tr>')}</table></div>`}</div>`;
   fxScan($('psum'));
-  const jump = ED && ST.tab === 'icl' && R.psLast !== 'icl';
-  R.psLast = ST.tab;
-  if (jump) {
-    const x = $('pss-I');
-    if (x) x.scrollIntoView({ block: 'start' });
-  }
   const pq = $('psQ');
   if (pq)
     pq.oninput = () => {
@@ -501,7 +498,7 @@ document.addEventListener('click', (e) => {
   }
   if (a === 'empty') ST.psAll = !ST.psAll;
   else if (a === 'open') {
-    ST.tab = s === 'c' ? 'icl' : 'pkl';
+    ST.tab = 'pkl';
     render();
     return;
   } else if (a === 'tab') ST.psTab = s;
