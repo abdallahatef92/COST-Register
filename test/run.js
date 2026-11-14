@@ -192,7 +192,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
   eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
-  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'xp', 'adj', 'chk', 'rep']);
+  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'codes', 'xp', 'adj', 'chk', 'rep']);
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
@@ -1443,6 +1443,57 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       eq('difference stays 0', await q.evaluate(() => R.diff), 0);
       await c12.close();
     }
+  }
+
+  if (RUN('7i')) {
+    head('7i. Codes › PKG list: a new PKG asks for its name, the footer warns, the list names it');
+    const { ctx: c13, p: q } = await open(APP);
+    await q.$eval('#tabs [data-s="cod"]', (b) => b.click());
+    await q.waitForTimeout(300);
+    const later = async () => {
+      const m = await q.$('#asLater');
+      if (m) await m.click();
+    };
+    await later();
+    for (const [n, c] of [
+      [0, 'T91'],
+      [1, 'T92'],
+    ]) {
+      const i = (await q.$$('#tb input[data-f="pkg"]'))[n];
+      await i.fill(c);
+      await i.press('Enter');
+      await q.waitForTimeout(500);
+      await later();
+    }
+    ok(
+      'a new PKG typed while coding: "T92 is a new PKG – name it"',
+      await q.evaluate(() => {
+        const m = document.getElementById('pkask');
+        return !!m && !m.hidden && /T92 is a new PKG/.test(m.textContent);
+      })
+    );
+    ok('the footer warns: PKG without a name 2', /PKG without a name\s*2/.test(await q.$eval('#sbar', (e) => e.textContent)));
+    await q.fill('#pkaskN', 'Test package');
+    await q.press('#pkaskN', 'Enter');
+    await q.waitForTimeout(400);
+    ok('naming it there: one left', /PKG without a name\s*1/.test(await q.$eval('#sbar', (e) => e.textContent)));
+    await q.click('#sbar [data-sgo="pkl:no"]');
+    await q.waitForTimeout(700);
+    ok(
+      'the footer opens Codes › PKG list, only the PKGs with no name',
+      await q.evaluate(
+        () =>
+          __ST.tab === 'pkl' &&
+          /T91/.test(document.getElementById('psum').textContent) &&
+          !/Test package/.test(document.getElementById('psum').innerHTML)
+      )
+    );
+    await q.fill('#psum input[data-psn="direct|T91"]', 'Second package');
+    await q.press('#psum input[data-psn="direct|T91"]', 'Tab');
+    await q.waitForTimeout(500);
+    ok('naming it in the list: the warning is gone', !(await q.$('#sbar [data-sgo="pkl:no"]')));
+    eq('difference stays 0', await q.evaluate(() => R.diff), 0);
+    await c13.close();
   }
 
   if (RUN('7g')) {

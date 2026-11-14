@@ -3,6 +3,7 @@
 const SECS = [
   ['dash', 'Dashboard', ['sum', 'flow', 'drv', ...(MATI >= 0 ? ['mrate'] : [])]],
   ['cod', 'Coding', ['cod', 'lines']],
+  ['codes', 'Codes', ['pkl', 'icl']],
   ['xp', 'Expenses', ['xpm']],
   ['adj', 'Adjust', ['adjl', ...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]],
   ['chk', 'Check', ['chk', 'log', 'rules', 'dlog']],
@@ -23,6 +24,7 @@ const NIC = ((d) =>
   ))({
   dash: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   cod: '<path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/>',
+  codes: '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2z"/><path d="M5 19a2 2 0 0 1 2-2h12M9 7h6M9 11h4"/>',
   sub: '<rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="8" height="6" rx="1"/><rect x="13" y="14" width="8" height="6" rx="1"/>',
   xp: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M15 9v11"/>',
   adj: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
@@ -430,6 +432,31 @@ function renderSide() {
         'Log',
       ]);
     }
+  } else if (sec === 'codes') {
+    head = 'Your codes';
+    const nn = pkNoName().length;
+    items.push([
+      'data-gt="pkl"',
+      ST.tab === 'pkl',
+      '#1F4E9A',
+      'PKG list',
+      nn ? `<span style="color:#9B2C2C">${nn}</span>` : '✓',
+      nn ? nn + ' PKG without a name' : 'every PKG has a name',
+      '',
+      undefined,
+      'PKG',
+    ]);
+    items.push([
+      'data-gt="icl"',
+      ST.tab === 'icl',
+      '#2A9D8F',
+      'Indirect cost elements',
+      '',
+      'names and heads of PKG “Indirect”',
+      '',
+      undefined,
+      'Ind',
+    ]);
   } else if (sec === 'xp') {
     head = 'Expenses · reports';
     XPAGES.forEach(([k, l, d], n) =>
@@ -601,6 +628,17 @@ function renderStatus() {
       : []),
     sep,
     ...(hand ? [it('Hand-coded lines', hand.toLocaleString('en-US'), '', 'lines')] : []),
+    ...(pkNoName().length
+      ? [
+          it(
+            '⚠ PKG without a name',
+            String(pkNoName().length),
+            'warn',
+            'pkl:no',
+            'PKGs used in your coding that have no name yet – the reports show only the code. Click to name them'
+          ),
+        ]
+      : []),
   ].join('');
   $('hasv').innerHTML =
     !DBF.db && DBF.pendH
@@ -638,6 +676,9 @@ document.addEventListener('click', (e) => {
     ST.tab = 'xpm';
     ST.xpPage = 'lines';
     ST.xpLF = null;
+  } else if (t === 'pkl') {
+    ST.tab = 'pkl';
+    ST.pkNo = v === 'no';
   } else if (t === 'adj') {
     ST.tab = 'adjl';
     ST.adjK0 = v || '';
@@ -686,8 +727,7 @@ function renderGuide() {
     renderGuide();
   };
   $('gPk').onclick = () => {
-    ST.tab = 'psum';
-    ST.psEd = true;
+    ST.tab = 'pkl';
     render();
     $('wrap').scrollTop = 0;
   };
@@ -720,12 +760,12 @@ function render() {
           (p === 'sum' && ST.tab === 'sum') ||
           (p === 'flow' && ST.tab === 'flow') ||
           (p === 'drv' && ST.tab === 'drv') ||
-          (p === 'psum' && ST.tab === 'psum') ||
+          (p === 'psum' && (ST.tab === 'psum' || ST.tab === 'pkl' || ST.tab === 'icl')) ||
           (p === 'chk' && ST.tab === 'chk') ||
           (p === 'log' && ST.tab === 'log') ||
           (p === 'rul' && ST.tab === 'rules') ||
           (p === 'mr' && ST.tab === 'mrate') ||
-          (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'flow', 'dlog'].includes(ST.tab)))
+          (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'icl', 'flow', 'dlog'].includes(ST.tab)))
     )
   );
   $('bUndo').disabled = !undo.length;
@@ -743,7 +783,7 @@ function render() {
   else if (ST.tab === 'drv') renderDrivers();
   else if (ST.tab === 'flow') renderFlow();
   else if (ST.tab === 'dlog') renderDlog();
-  else if (ST.tab === 'psum') renderPsum();
+  else if (ST.tab === 'psum' || ST.tab === 'pkl' || ST.tab === 'icl') renderPsum();
   else renderTable();
 }
 function lists() {

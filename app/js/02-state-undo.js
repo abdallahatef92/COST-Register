@@ -143,6 +143,10 @@ function canonCfg() {
 }
 function change(list, label) {
   list = list.map(canonCh);
+  const newPk = AS.boot
+    ? ''
+    : (list.find((c) => c.f === 'pkg' && c.v && !isIndPkg(c.v) && !pkgLabel(c.v) && !(R.pkgs || []).includes(c.v)) || {}).v;
+  if (newPk) setTimeout(() => pkAsk(newPk), 50); // a new PKG with no name: ask for it
   const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v);
   if (!rec.length) return;
   rec.forEach((c) => setC(c, c.v));

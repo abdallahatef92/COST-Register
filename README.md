@@ -287,3 +287,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v3.7
 - Part-CJI3 warning names the WBS: *missing n WBS* and *lower in n WBS*, biggest first with their names and amounts (the register's CJI3 cost per WBS and month is kept in its update log).
+
+## v3.8 – Codes section
+- New side-navigation section **Codes**: **PKG list** (code, name, group, AC to date, status; All / No name) and **Indirect cost elements** (names and heads). It replaces the hidden *Codes & groups* inside Reports › PKG summary (the report links to it: *Edit names and groups*).
+- Footer: **⚠ PKG without a name n** – PKGs used in your coding with no name; a click opens the PKG list showing only those.
+- A new PKG typed while coding asks for its name at once (*Save* or *Later*).

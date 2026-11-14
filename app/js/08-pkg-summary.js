@@ -92,6 +92,10 @@ const psPk = () => {
     const c = psCfg();
     return c.ces || (c.ces = {});
   };
+// Codes › PKG list (direct) and Codes › Indirect cost elements: the names and groups of the PKG summary's rows
+const psEdit = () => ST.tab === 'pkl' || ST.tab === 'icl';
+// PKGs used in your coding that have no name yet (the reports would show the bare code)
+const pkNoName = () => [...new Set([...R.exp.values()].map((e) => e.pkg))].filter((p) => p && !isIndPkg(p) && !pkgLabel(p));
 const pkgLabel = (p) => (psPk()[p] || {}).n || (psCfg().names || {})[p] || PS_NAMES[p] || '';
 const ceLabel = (p, c) =>
   (psCe()[(isIndPkg(p) ? IND_PKG : p) + '|' + c] || {}).n || (isIndPkg(p) ? PS_NAMES[c] || (psCfg().names || {})[c] : '') || '';
@@ -273,7 +277,7 @@ function renderPsum() {
     used = new Set([...cfg.direct, ...cfg.indirect].flatMap((g) => g.c)),
     loose = [...D.rows.keys()].filter((k) => k.startsWith('U|')).map((k) => k.slice(2));
   let setup = '';
-  if (ST.psEd) {
+  if (psEdit()) {
     const PK = psPk(),
       CE = psCe(),
       aP = new Map(),
@@ -300,31 +304,35 @@ function renderPsum() {
     const row = (sec, code, gi, warn) => {
       const a = sec === 'direct' ? aP.get(code) : aI.get(code),
         nm = sec === 'direct' ? pkgLabel(code) : ceLabel(IND_PKG, code);
-      return `<tr class="cr${warn ? ' loose' : ''}${a === undefined ? ' unused' : ''}"><td class="pi1"><b class="code">${esc(code)}</b></td><td><input class="psnm" data-psn="${sec}|${esc(code)}" value="${esc(nm)}" placeholder="type the name"></td><td>${gSel(sec, code, gi)}</td><td>${a !== undefined ? fmt(a) : '<span class="help">not used yet</span>'}</td><td>${a === undefined ? `<button class="psx" data-pse="drop|${sec}|${esc(code)}" title="Take it out of the list">✕</button>` : ''}</td></tr>`;
+      if (ST.pkNo && sec === 'direct' && nm) return '';
+      return `<tr class="cr${warn ? ' loose' : ''}${a === undefined ? ' unused' : ''}"><td class="pi1"><b class="code">${esc(code)}</b></td><td><input class="psnm" data-psn="${sec}|${esc(code)}" value="${esc(nm)}" placeholder="type the name"></td><td>${gSel(sec, code, gi)}</td><td>${a !== undefined ? fmt(a) : '<span class="help">not used yet</span>'}</td><td>${nm ? '<span class="st Coded">Named</span>' : '<span class="st Not">No name yet</span>'}</td><td>${a === undefined ? `<button class="psx" data-pse="drop|${sec}|${esc(code)}" title="Take it out of the list">✕</button>` : ''}</td></tr>`;
     };
     const sec = (key, label, sub) => {
-      let h2 = `<tr class="sec"><td colspan="5">${label} <span style="font-weight:400;opacity:.8;margin-left:8px">${sub}</span></td></tr>`;
+      let h2 = `<tr class="sec"><td colspan="6">${label} <span style="font-weight:400;opacity:.8;margin-left:8px">${sub}</span></td></tr>`;
       cfg[key].forEach((g, gi) => {
         h2 +=
-          `<tr class="grp"><td colspan="2"><input class="psgn" data-psgn="${key}|${gi}" value="${esc(g.n)}"></td><td colspan="2" class="help" style="text-align:left">${g.c.length} code${g.c.length === 1 ? '' : 's'}</td><td style="white-space:nowrap"><button class="psx" data-pse="up|${key}|${gi}" title="Move up">↑</button><button class="psx" data-pse="del|${key}|${gi}" title="Remove the group">✕</button></td></tr>` +
+          `<tr class="grp"><td colspan="2"><input class="psgn" data-psgn="${key}|${gi}" value="${esc(g.n)}"></td><td colspan="3" class="help" style="text-align:left">${g.c.length} code${g.c.length === 1 ? '' : 's'}</td><td style="white-space:nowrap"><button class="psx" data-pse="up|${key}|${gi}" title="Move up">↑</button><button class="psx" data-pse="del|${key}|${gi}" title="Remove the group">✕</button></td></tr>` +
           g.c.map((c) => row(key, c, gi)).join('');
       });
       const loose = key === 'direct' ? looseD : looseI;
       if (loose.length)
         h2 +=
-          `<tr class="grp warn"><td colspan="5">Not in a group yet – ${loose.length} (from your coding) · choose a group</td></tr>` +
+          `<tr class="grp warn"><td colspan="6">Not in a group yet – ${loose.length} (from your coding) · choose a group</td></tr>` +
           loose.map((c) => row(key, c, -1, 1)).join('');
-      h2 += `<tr class="psnew"><td><input class="psnm" id="nC-${key}" placeholder="${key === 'direct' ? 'PKG code' : 'cost element'}"></td><td><input class="psnm" id="nN-${key}" placeholder="name"></td><td><select class="psgs" id="nG-${key}"><option value="">— no group</option>${cfg[key].map((g, gi) => `<option value="${gi}">${esc(g.n)}</option>`).join('')}</select></td><td colspan="2" style="text-align:left;white-space:nowrap"><button class="pri" data-pse="add|${key}">+ Add</button> <button data-pse="new|${key}">+ New group</button></td></tr>`;
+      h2 += `<tr class="psnew"><td><input class="psnm" id="nC-${key}" placeholder="${key === 'direct' ? 'PKG code' : 'cost element'}"></td><td><input class="psnm" id="nN-${key}" placeholder="name"></td><td><select class="psgs" id="nG-${key}"><option value="">— no group</option>${cfg[key].map((g, gi) => `<option value="${gi}">${esc(g.n)}</option>`).join('')}</select></td><td colspan="3" style="text-align:left;white-space:nowrap"><button class="pri" data-pse="add|${key}">+ Add</button> <button data-pse="new|${key}">+ New group</button></td></tr>`;
       return h2;
     };
-    setup = `<div class="panel pscard"><div class="sct"><b>Codes &amp; groups</b><small>the report's own rows: name each code and put it in a group · Direct = your PKGs · Indirect = PKG “Indirect”, by its cost elements · new codes from your coding appear under “Not in a group yet”</small></div>
-      <table class="st pst psetup"><colgroup><col style="width:170px"><col><col style="width:260px"><col style="width:150px"><col style="width:90px"></colgroup><tr><th>Code</th><th>Name</th><th>Group</th><th style="text-align:right">AC to date</th><th></th></tr>
-      ${sec('direct', 'Direct', 'rows = PKG')}${sec('indirect', 'Indirect', 'rows = cost element of PKG “Indirect”')}</table></div>`;
+    const dir = ST.tab === 'pkl',
+      nn = pkNoName().length;
+    setup = `<div class="panel pscard"><div class="sct"><b>${dir ? 'PKG list' : 'Indirect cost elements'}</b><small>${dir ? 'your packages: a code, a name and a group – the reports show the name · PKGs from your coding come here by themselves' : 'PKG “Indirect” by its cost elements: a name and a group (the heads of the indirect reports)'}</small>
+      ${dir ? `<span class="seg" style="margin-left:auto"><button data-pkno="0" class="${ST.pkNo ? '' : 'on'}">All</button><button data-pkno="1" class="${ST.pkNo ? 'on' : ''}">No name${nn ? ' · ' + nn : ''}</button></span>` : ''}</div>
+      <table class="st pst psetup"><colgroup><col style="width:170px"><col><col style="width:260px"><col style="width:150px"><col style="width:120px"><col style="width:70px"></colgroup><tr><th>Code</th><th>Name</th><th>Group</th><th style="text-align:right">AC to date</th><th>Status</th><th></th></tr>
+      ${dir ? sec('direct', 'Direct', 'rows = PKG') : sec('indirect', 'Indirect', 'rows = cost element of PKG “Indirect”')}</table></div>`;
   }
   const nL = [...D.rows.keys()].filter((k) => k.startsWith('U|') || k.startsWith('J|')).length;
   $('psum').innerHTML =
-    `<div class="psw"><div class="sct" style="gap:8px;margin:0 0 2px"><span class="seg"><button data-pse="rep" class="${ST.psEd ? '' : 'on'}">Report</button><button data-pse="open" class="${ST.psEd ? 'on' : ''}">Codes &amp; groups${nL ? ` <span class="psbad">${nL} not in a group</span>` : ''}</button></span></div>${
-      ST.psEd
+    `<div class="psw">${psEdit() ? '' : `<div class="sct" style="gap:8px;margin:0 0 2px"><button data-pse="open" title="Name the PKGs and the indirect cost elements, put them in groups">Edit names and groups · Codes ›${nL ? ` <span class="psbad">${nL} not in a group</span>` : ''}</button></div>`}${
+      psEdit()
         ? setup
         : `<div class="panel pscard psrep">
     <div class="sct" style="gap:8px;margin:0 0 10px"><span class="seg" title="Open the tree to this level">${[
@@ -342,7 +350,7 @@ function renderPsum() {
     <div class="psa">A- Actual Cost to date</div>
     <table class="pst fxt" data-fx="psum" data-nosort="1" data-nofill="1" data-maxw="1120" data-growcol="1"><colgroup><col><col><col><col></colgroup><tr class="hb"><th rowspan="2">Package</th><th rowspan="2">Package</th><th colspan="2" class="cs">Current Status</th></tr><tr class="hb2"><th>AC</th><th>Share</th></tr>${h.replace(/<td>(<span class="psb"[^<]*<\/span>)?<\/td><\/tr>/g, '</tr>')}</table></div>`
     }</div>`;
-  if (!ST.psEd) fxScan($('psum'));
+  if (!psEdit()) fxScan($('psum'));
   const pq = $('psQ');
   if (pq)
     pq.oninput = () => {
@@ -508,9 +516,9 @@ document.addEventListener('click', (e) => {
   }
   if (a === 'empty') ST.psAll = !ST.psAll;
   else if (a === 'open') {
-    ST.psEd = true;
-    ST.psF = 'use';
-    if (s) ST.psTab = s;
+    ST.tab = s === 'c' ? 'icl' : 'pkl';
+    render();
+    return;
   } else if (a === 'tab') ST.psTab = s;
   else if (a === 'delp') {
     delete psPk()[s];
@@ -518,8 +526,11 @@ document.addEventListener('click', (e) => {
   } else if (a === 'delc') {
     delete psCe()[ev.dataset.pse.slice(5)];
     persist();
-  } else if (a === 'rep' || a === 'close') ST.psEd = false;
-  else if (a === 'rm') {
+  } else if (a === 'rep' || a === 'close') {
+    ST.tab = 'psum';
+    render();
+    return;
+  } else if (a === 'rm') {
     cfg[s][+gi].c = cfg[s][+gi].c.filter((x) => x !== c);
     persist();
   } else if (a === 'del') {
@@ -563,6 +574,8 @@ document.addEventListener('change', (e) => {
     persist();
     logIt('Name of ' + code + ' = ' + (v || '(none)'), 1);
     lists();
+    renderStatus();   // the footer's "PKG without a name"
+    renderSide();
     return;
   }
   if (t.dataset.psmv !== undefined) {
@@ -729,3 +742,41 @@ document.addEventListener('click', (e) => {
     'to date'
   );
 });
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-pkno]');
+  if (!b) return;
+  ST.pkNo = b.dataset.pkno === '1';
+  render();
+});
+// a new PKG typed while coding: name it now (or later in Codes › PKG list)
+function pkAsk(code) {
+  let m = $('pkask');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'pkask';
+    m.className = 'pkask';
+    document.body.appendChild(m);
+  }
+  m.innerHTML = `<b>${esc(code)}</b> is a new PKG – name it: <input id="pkaskN" placeholder="e.g. Concrete works"><button class="pri" id="pkaskS">Save</button><button id="pkaskL">Later</button>`;
+  m.hidden = false;
+  const save = () => {
+    const v = $('pkaskN').value.trim();
+    if (v) {
+      psPk()[code] = { ...(psPk()[code] || {}), n: v };
+      persist();
+      logIt('Name of ' + code + ' = ' + v, 1);
+      lists();
+      render();
+    }
+    m.hidden = true;
+  };
+  $('pkaskS').onclick = save;
+  $('pkaskL').onclick = () => {
+    m.hidden = true;
+  };
+  $('pkaskN').onkeydown = (e) => {
+    if (e.key === 'Enter') save();
+    if (e.key === 'Escape') m.hidden = true;
+  };
+}
