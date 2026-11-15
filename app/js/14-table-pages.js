@@ -261,7 +261,8 @@ function pageDef() {
       const inc = inB.filter((it) => it.inc !== 'No'),
         tot = inc.reduce((s, it) => s + Math.abs(it.td), 0) || 1,
         done = inc.filter((it) => statusOf(it) === 'Coded').reduce((s, it) => s + Math.abs(it.td), 0);
-      const todo = inc.filter((it) => statusOf(it) !== 'Coded').sort((x, y) => Math.abs(y.td) - Math.abs(x.td));
+      pinSync();
+      const todo = inc.filter((it) => statusOf(it) !== 'Coded' || pinIt(it)).sort((x, y) => Math.abs(y.td) - Math.abs(x.td)); // one you code here stays until the view changes
       let run = done,
         n80 = 0;
       const cum = new Map();

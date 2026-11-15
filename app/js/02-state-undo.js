@@ -141,6 +141,19 @@ function canonCfg() {
     })
   );
 }
+// rows you code while a filter is on stay in the list (marked) until the filter changes – see renderTable
+const PIN = { it: new Set(), ln: new Set(), sig: null, shown: new Set() };
+// the pins hold while the page and its filters stay the same
+function pinSync() {
+  const S0 = vs(),
+    sig = JSON.stringify([ST.tab, ST.bk, ST.next, ST.xpPage, ST.sub, S0.q, S0.st, S0.f]);
+  if (sig !== PIN.sig) {
+    PIN.sig = sig;
+    PIN.it.clear();
+    PIN.ln.clear();
+  }
+}
+const pinIt = (it) => PIN.it.has(it.bi + ':' + it.ii);
 function change(list, label) {
   list = list.map(canonCh);
   const newPk = AS.boot
@@ -150,6 +163,10 @@ function change(list, label) {
   const rec = list.map((c) => ({ ...c, old: getC(c) })).filter((c) => c.old !== c.v);
   if (!rec.length) return;
   rec.forEach((c) => setC(c, c.v));
+  rec.forEach((c) => {
+    if (c.t === 'item') PIN.it.add(c.bi + ':' + c.ii);
+    else if (c.t === 'line') PIN.ln.add(c.i);
+  });
   undo.push({ rec, label });
   redo = [];
   setDirty(DIRTY + 1);

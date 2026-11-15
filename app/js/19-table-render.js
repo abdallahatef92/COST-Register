@@ -580,7 +580,11 @@ function renderTable() {
     ${D.extraTools || ''} ${D.groups && !D.noGroupBtns ? '<button id="bFold">− Collapse all</button><button id="bOpen">+ Expand all</button>' : ''} ${D.noFilter ? '' : `<button id="bClr" class="clr">✕ Clear filters</button>`} ${D.bands ? '' : '<button id="bCols" title="Show or hide columns">Columns ▾</button>'}<button id="bFit" title="Fit every column to its content (drops the widths you dragged)">↔ Fit</button> <span class="help" id="cnt"></span>`;
   const cols = D.cols,
     q = S0.q.trim().toLowerCase();
-  let rows = D.rows.filter((r) => {
+  // a coded row that no longer matches the filter stays until the filter changes (or Refresh)
+  pinSync();
+  PIN.shown.clear();
+  const pinned = (r) => (r.i !== undefined && PIN.ln.has(r.i)) || (r.it && r.it.bi !== undefined && pinIt(r.it));
+  const passes = (r) => {
     if (
       D.status &&
       S0.st !== 'All' &&
@@ -611,6 +615,15 @@ function renderTable() {
                         : '';
       if (!t.toLowerCase().includes(q)) return false;
     }
+    return true;
+  };
+  let rows = D.rows.filter((r) => {
+    if (passes(r)) {
+      if (ST.tab === 'cod' && ST.next && r.i === undefined && pinned(r) && statusOf(r.it) === 'Coded') PIN.shown.add(r); // To code: coded here, kept
+      return true;
+    }
+    if (!pinned(r)) return false;
+    PIN.shown.add(r);
     return true;
   });
   {
@@ -783,7 +796,11 @@ function renderTable() {
     R.nc = nc;
     renderVirtual();
   }
-  $('cnt').textContent = `${rows.length.toLocaleString('en-US')} rows`;
+  $('cnt').innerHTML =
+    `${rows.length.toLocaleString('en-US')} rows` +
+    (PIN.shown.size
+      ? ` <span class="pinb" title="You coded them here – they stay in the list until you change the filter">↻ ${PIN.shown.size} coded row${PIN.shown.size > 1 ? 's' : ''} no longer match the filter <button data-pinr="1">Refresh</button></span>`
+      : '');
   {
     const S1 = vs(),
       on =
@@ -808,7 +825,7 @@ function rowHtml(D, r, gc) {
   const it = r.it,
     exc = r.i !== undefined ? !R.inc[r.i] : it && it.inc === 'No',
     k = it ? selKey(r) : '';
-  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}${D.rowCls ? ' ' + D.rowCls(r) : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`;
+  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}${PIN.shown.has(r) ? ' pin' : ''}${D.rowCls ? ' ' + D.rowCls(r) : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`;
 }
 function renderVirtual() {
   // only the rows on screen are drawn (fast with thousands of rows)
@@ -979,14 +996,14 @@ $('tb').addEventListener('keydown', (e) => {
     if (!r.it.pkg && s.pkg) ch.push({ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'pkg', v: s.pkg });
     if (!r.it.ce && s.ce) ch.push({ t: 'item', bi: r.it.bi, ii: r.it.ii, f: 'ce', v: s.ce });
     change(ch, 'Suggested codes accepted · ' + itemCode(r.it));
-    goTo(ST.next && statusOf(r.it) === 'Coded' ? k : k + 1);
+    goTo(k + 1);
     return;
   }
   if (e.key === 'd' && (e.ctrlKey || e.metaKey) && k > 0) {
     e.preventDefault();
     t.value = list()[k - 1].value;
     t.dispatchEvent(new Event('change', { bubbles: true }));
-    goTo(ST.next && r && r.i === undefined && statusOf(r.it) === 'Coded' ? k : k + 1);
+    goTo(k + 1);
     return;
   }
   if (e.key === 'Escape') {
@@ -996,10 +1013,9 @@ $('tb').addEventListener('keydown', (e) => {
   }
   if (e.key === 'Enter') {
     e.preventDefault();
-    const was = r && r.i === undefined ? r.it : null;
     t.blur();
     setTimeout(() => {
-      const n = ST.next && was && statusOf(was) === 'Coded' ? k : k + 1,
+      const n = k + 1,
         x = list()[n];
       if (x) {
         x.focus();
@@ -1245,3 +1261,9 @@ $('bNone').onclick = () => {
   sel.clear();
   render();
 };
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('[data-pinr]')) return;
+  PIN.it.clear();
+  PIN.ln.clear();
+  render();
+});

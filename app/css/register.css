@@ -393,3 +393,6 @@ body.dropping::after{content:'Drop the new SAP files to update the register';pos
 .upw .f{display:flex;gap:8px;align-items:center;padding:12px 18px;border-top:1px solid #EEF1F5;background:#F7F9FC;border-radius:0 0 12px 12px} .upw .f .n{color:#4B5563;font-size:12px;flex:1}
 .upw .f button{border:1px solid #C9D3E3;border-radius:7px;padding:6px 14px;font-weight:600;background:#fff;color:#14254A;cursor:pointer} .upw .f .p{background:#14254A;color:#fff;border-color:#14254A}
 .upn.fx{position:fixed;top:14px;right:20px;z-index:300;box-shadow:0 6px 18px rgba(20,37,74,.18)} body:has(#start[style*="none"]) .upn.fx{display:none}
+tr.it.pin > td{background:#FFF8E1 !important} tr.it.pin > td:first-child{box-shadow:inset 3px 0 0 #D4A72C}
+.pinb{margin-left:8px;padding:2px 4px 2px 8px;border-radius:7px;background:#FFF3CD;border:1px solid #E7C66A;color:#7A4B00;font-weight:600;white-space:nowrap}
+.pinb button{margin-left:6px;border:1px solid #D4A72C;border-radius:6px;background:#fff;color:#14254A;font-weight:700;padding:1px 8px;cursor:pointer}
