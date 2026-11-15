@@ -60,7 +60,10 @@ $('bImport').onclick = () => $('file').click();
 $('file').onchange = async (e) => {
   const f = e.target.files[0];
   e.target.value = '';
-  if (!f) return;
+  if (f) await importCodes(f);
+};
+// a codes file / a report with Coding sheets (this register's, or the earlier Material / Subcontractor reports) → codes; returns the message
+async function importCodes(f) {
   try {
     if (f.name.toLowerCase().endsWith('.json')) {
       const s = JSON.parse(await f.text());
@@ -68,10 +71,19 @@ $('file').onchange = async (e) => {
       undo = [];
       redo = [];
       after(`Loaded ${f.name}: codes of ${n} items`);
-      return;
+      return `${f.name}: codes of ${n} items`;
     }
     const wb = XLSX.read(await f.arrayBuffer()),
       ch = [];
+    if (wb.Sheets.Summary && wb.Sheets.Summary.A2 && META.project) {
+      const rp = (String(wb.Sheets.Summary.A2.v || '').match(/^([A-Z0-9]{2,8})\b/) || [])[1];
+      if (
+        rp &&
+        rp !== META.project &&
+        !confirm(`${f.name} is a report of project ${rp} – this register is ${META.project}.\n\nRead its codes anyway?`)
+      )
+        return f.name + ': another project (' + rp + ') – not read';
+    }
     let matched = 0,
       sheets = 0;
     // Coding sheets: this register's own export ('<bucket> Coding', 'Coding'), and the reports of the earlier offline tools –
@@ -136,6 +148,51 @@ $('file').onchange = async (e) => {
         });
       });
     });
+    // the Data sheet of the earlier Material report: one row per issue line with its code (Material doc. + Material).
+    // CJI3 keeps the material document in "Ref. document number": a line coded other than its material gets that code on the line.
+    let dataLines = 0;
+    if (L.ref && MATI >= 0 && wb.SheetNames.includes('Data')) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets.Data, { header: 1, defval: '' }),
+        h = (rows[0] || []).map((x) => String(x).trim()),
+        c = (n) => h.indexOf(n);
+      if (c('Material doc.') >= 0 && c('Material') >= 0 && c('PKG') >= 0 && c('MNL') >= 0) {
+        const by = new Map(),
+          cel = c('Cost element'),
+          am = c('Amount');
+        for (const r of rows.slice(1)) {
+          const o = {
+            pkg: String(r[c('PKG')]).trim(),
+            mnl: String(r[c('MNL')]).trim(),
+            ce: cel >= 0 ? String(r[cel]).trim() : '',
+            a: Math.abs(+r[am] || 0),
+          };
+          if (!o.pkg && !o.mnl && !o.ce) continue;
+          const k = String(r[c('Material doc.')]).trim() + '|' + String(r[c('Material')]).trim(),
+            pv = by.get(k);
+          if (!pv || o.a > pv.a) by.set(k, o); // one material document split over codes: the larger part
+        }
+        const itemNow = new Map(); // the item codes after this import
+        ch.forEach((x) => {
+          if (x.t === 'item' && x.bi === MATI) itemNow.set(x.ii + '|' + x.f, x.v);
+        });
+        const items = BK[MATI].items;
+        for (let i = 0; i < N; i++) {
+          if (L.b[i] !== MATI || !S[L.ref[i]]) continue;
+          const it = items[L.it[i]],
+            o = by.get(S[L.ref[i]] + '|' + String(it.vals[3]).trim());
+          if (!o) continue;
+          let n = 0;
+          ['pkg', 'mnl', 'ce'].forEach((fl) => {
+            const iv = itemNow.has(it.ii + '|' + fl) ? itemNow.get(it.ii + '|' + fl) : it[fl] || '';
+            if (o[fl] && o[fl] !== iv) {
+              ch.push({ t: 'line', i, f: fl, v: o[fl] });
+              n++;
+            }
+          });
+          if (n) dataLines++;
+        }
+      }
+    }
     if (wb.SheetNames.includes('Lines')) {
       const rows = XLSX.utils.sheet_to_json(wb.Sheets.Lines, { header: 1, defval: '' }),
         hi = rows.findIndex((r) => r.includes('Line ID') && r.includes('Item PKG'));
@@ -173,15 +230,19 @@ $('file').onchange = async (e) => {
         if (String(r[n]).trim()) ch.push({ t: 'line', i, f: fl, v: String(r[n]).trim() });
       });
     });
-    if (!sheets) return toast('No Coding sheet found in ' + f.name);
+    if (!sheets) {
+      toast('No Coding sheet found in ' + f.name);
+      return f.name + ': no Coding sheet';
+    }
     change(ch, 'Imported ' + f.name);
-    toast(
-      `Imported ${f.name}${old.length ? ' (earlier ' + old.join(' / ') + ' report)' : ''}: ${matched} items matched on ${sheets} Coding sheet${sheets === 1 ? '' : 's'}${lo.length ? ', ' + lo.length + ' line overrides' : ''} (blank cells never wipe a code)`
-    );
+    const msg = `${f.name}${old.length ? ' (earlier ' + old.join(' / ') + ' report)' : ''}: ${matched} items matched on ${sheets} Coding sheet${sheets === 1 ? '' : 's'}${lo.length ? ', ' + lo.length + ' line overrides' : ''}${dataLines ? ', ' + dataLines + ' lines coded from its Data sheet' : ''}`;
+    toast('Imported ' + msg + ' (blank cells never wipe a code)');
+    return msg;
   } catch (err) {
     toast('Could not read ' + f.name + ': ' + err.message);
+    return f.name + ': could not read';
   }
-};
+}
 const dl = (blob, name) => {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

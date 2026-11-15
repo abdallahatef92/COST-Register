@@ -316,3 +316,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v4.12 – PKG list without filters
 - Codes › PKG list: the All / No name / Not in a group buttons are gone – the list always shows every PKG; a PKG without a name shows "No name yet" on its row. The footer warning opens the whole list.
+
+## v4.2 – Earlier reports as last reports, line codes from the Data tab
+- Create the register with **several last reports** (e.g. Material report + Subcontractor report). The first goes into the build; every report is then read like *Import codes* (which understands the earlier tools' Coding sheets).
+- Each CJI3 line keeps its **Ref. document number** (the material document of an issue). The earlier Material report's **Data** tab (Material doc. + Material → PKG / MNL / cost element) codes those lines: a line coded other than its material gets its own code.
+- A report whose Summary names another project asks before its codes are read.

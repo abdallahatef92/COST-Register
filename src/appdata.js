@@ -62,6 +62,7 @@ function toAppData(P, o) {
     cd: [],
     src: [],
     doc: [],
+    ref: [], // CJI3 Ref. document number (the material document of an issue)
     ty: [],
     ce: [],
     cen: [],
@@ -89,6 +90,7 @@ function toAppData(P, o) {
         L.cd.push(isoInt(l.cdate));
         L.src.push(s(l.source || ''));
         L.doc.push(s(l.doc));
+        L.ref.push(s(l.refDoc || ''));
         L.ty.push(s(l.type));
         L.ce.push(s(l.ce));
         L.cen.push(s(l.cen));

@@ -7,6 +7,7 @@ const R = {};
 globalThis.R = R;
 globalThis.__ST = ST;
 globalThis.__BK = BK;
+globalThis.__OVR = () => OVR; // the line codes typed over (tests)
 globalThis.__D = { L, S, N }; // results of compute() (also readable from the browser console)
 const SRC = L.src.map((x) => S[x]);
 // owner-supplied: yes when you said Yes for the material; else no when you said No, or a rule takes out the line's SAP cost element (GL)

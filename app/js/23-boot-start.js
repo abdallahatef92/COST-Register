@@ -71,6 +71,19 @@ render();
   }
 }
 asStart();
+(async () => {
+  let pend = null;
+  try {
+    pend = await idbGet('pendImport');
+    if (pend) await idbSet('pendImport', null);
+  } catch (e) {
+    /* nothing waiting */
+  }
+  if (!pend || !pend.length) return;
+  const said = [];
+  for (const p of pend) said.push(await importCodes(new File([p.data], p.name)));
+  if (said.length > 1) toast('Last reports read – ' + said.join(' · '));
+})();
 if (sessionStorage.getItem('crJob')) {
   sessionStorage.removeItem('crJob');
   setTimeout(() => jobOpen(true), 400);

@@ -1235,6 +1235,78 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         ['DIV 03/S.00/SUB/SUB-0', 'DIV 03/S.01/SUB/SUB-1', 'DIV 03/S.02/SUB/SUB-2']
       );
       eq('difference stays 0 after reading them', await p9.evaluate(() => R.diff), 0);
+      // the Data sheet of the earlier Material report: one issue line (Material doc. = CJI3 "Ref. document number") coded other than its material
+      {
+        const one = await p9.evaluate(() => {
+          const { L, S, N } = __D,
+            mi = __BK.findIndex((x) => x.id === 'Material');
+          for (let i = 0; i < N; i++)
+            if (L.b[i] === mi && L.ref && S[L.ref[i]]) {
+              const it = __BK[mi].items[L.it[i]];
+              return { i, ref: S[L.ref[i]], mat: it.vals[3], g: it.vals[2], d: it.vals[4], n: it.lines ? it.lines.length : 0 };
+            }
+          return null;
+        });
+        ok('CJI3 lines keep the Ref. document number (the material document)', !!one);
+        if (one) {
+          const wb = new ExcelJS.Workbook();
+          wb.addWorksheet('Summary').addRow(['old report']);
+          const ws = wb.addWorksheet('Coding');
+          ws.addRow(['Materials still to code']);
+          ws.addRow(['0']);
+          ws.addRow(['Live']);
+          ws.addRow([
+            'Family',
+            'Division',
+            'Material group (SAP)',
+            'Material',
+            'Description',
+            'Unit',
+            'PKG',
+            'MNL',
+            'Cost element',
+            'Status',
+          ]);
+          ws.addRow(['M', 'M03', one.g, one.mat, one.d, 'TO', 'S.0400', 'MAT', 'MAT-A', 'Coded']);
+          const wd = wb.addWorksheet('Data');
+          wd.addRow([
+            'Family',
+            'Division',
+            'Material group',
+            'Material',
+            'Description',
+            'Unit',
+            'PKG',
+            'MNL',
+            'Cost element',
+            'Period',
+            'Posting date',
+            'WBS element',
+            'Issue type',
+            'Material doc.',
+            'Qty',
+            'Rate',
+            'Amount',
+          ]);
+          wd.addRow(['M', 'M03', one.g, one.mat, one.d, 'TO', 'S.0499', 'MAT', 'MAT-B', '2026-01', '', '', 'Project', one.ref, 1, 1, 1]);
+          const fd = path.join(OUT, 'old_inventory_data.xlsx');
+          await wb.xlsx.writeFile(fd);
+          await p9.setInputFiles('#file', fd);
+          await p9.waitForTimeout(2000);
+          const got = await p9.evaluate((o) => {
+            const it = __BK.find((x) => x.id === 'Material').items.find((x) => x.vals[3] === o.mat),
+              ov = __OVR()[__D.L.id[o.i]] || {};
+            return [it.pkg, it.ce, ov.pkg || '', ov.ce || ''].join('/');
+          }, one);
+          eq(
+            'earlier Material report › Data sheet: the material gets its Coding code, the line its own code from Data',
+            got,
+            'S.0400/MAT-A/S.0499/MAT-B'
+          );
+          ok('…the message counts the line', /1 lines coded from its Data sheet/.test(await p9.$eval('#toast', (e) => e.textContent)));
+          eq('…difference stays 0', await p9.evaluate(() => R.diff), 0);
+        }
+      }
       await c9.close();
     }
   }
@@ -1865,6 +1937,41 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     );
     eq('difference 0', await q.evaluate(() => R.diff), 0);
     await c.close();
+    // two last reports at the create (the earlier Material and Subcontractor reports, made in section 8): both are read
+    const oi = path.join(OUT, 'old_inventory_coding.xlsx'),
+      os2 = path.join(OUT, 'old_subcontract_coding.xlsx');
+    if (fs.existsSync(oi) && fs.existsSync(os2)) {
+      ({ c, q } = await fresh());
+      await q.click('#sDbNew');
+      await q.waitForFunction(() => /_register\.db/.test(document.querySelector('.dbc').textContent));
+      await q.setInputFiles('#pick', [...files(), oi, os2]);
+      await q.waitForFunction(
+        () => /CJI3 loaded/.test(document.querySelector('.stchk') ? document.querySelector('.stchk').textContent : ''),
+        null,
+        {
+          timeout: 120000,
+        }
+      );
+      ok(
+        'two last reports are accepted: "codes come back – from 2 reports"',
+        /from 2 reports/.test(await q.$eval('.stchk', (e) => e.textContent))
+      );
+      await Promise.all([q.waitForEvent('download', { timeout: 240000 }), q.click('#sBuild')]);
+      await q.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 120000 });
+      await q
+        .waitForFunction(() => __BK.find((x) => x.id === 'Subcontractor').items.some((i) => i.pkg === 'S.00'), null, { timeout: 30000 })
+        .catch(() => {});
+      ok(
+        '…after the create: the codes of both reports are in (Material S.030, Subcontractor S.00)',
+        await q.evaluate(
+          () =>
+            __BK.find((x) => x.id === 'Material').items.some((i) => i.pkg === 'S.030') &&
+            __BK.find((x) => x.id === 'Subcontractor').items.some((i) => i.pkg === 'S.00')
+        )
+      );
+      eq('…difference 0', await q.evaluate(() => R.diff), 0);
+      await c.close();
+    } else ok('two last reports: the earlier reports of section 8 are there', false);
   }
   const FAKE = () => {
     const fsDb = () =>

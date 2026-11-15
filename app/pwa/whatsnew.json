@@ -1,5 +1,13 @@
 [
   {
+    "v": "4.2",
+    "n": [
+      "Create the register with several last reports – e.g. the Material report and the Subcontractor report together; the codes of all of them come in",
+      "The earlier Material report: its Data tab codes each issue line (Material doc.) – a line coded other than its material keeps its own code",
+      "A report of another project asks before its codes are read"
+    ]
+  },
+  {
     "v": "4.12",
     "n": [
       "Codes › PKG list shows the whole list – no filter buttons; a PKG without a name says \"No name yet\" on its row"

@@ -65,7 +65,9 @@ function showStart(canCancel) {
         (f) =>
           `<span class="e">• ${esc(f.name)} is project <b>${esc(f.proj)}</b> – the CJI3 is <b>${esc(cjP)}</b>. Wrong file? Remove it with ✕</span>`
       ),
-      n('prev') ? '<span class="ok">✓ Last month\'s codes come back</span>' : '<span class="w">• No last report – first month</span>',
+      n('prev')
+        ? `<span class="ok">✓ Last month's codes come back${n('prev') > 1 ? ' – from ' + n('prev') + ' reports' : ''}</span>`
+        : '<span class="w">• No last report – first month</span>',
       ...(bad.length ? [`<span class="e">• ${bad.length} file${bad.length > 1 ? 's' : ''} not recognised</span>`] : []),
     ];
     el.innerHTML = `<div class="st0"><div class="kick">SAP FILES → COST REGISTER</div><h1>Cost Register</h1><p class="lead">One register per project. Drop the SAP files and press Create – every month after, update it from inside with the new files. CJI3 is the total; the other files only add detail. Nothing leaves your computer.</p>
@@ -177,10 +179,6 @@ function showStart(canCancel) {
         m.innerHTML = '<span style="color:#c00000">At least one CJI3 file is needed.</span>';
         return;
       }
-      if (by('prev').length > 1) {
-        m.innerHTML = '<span style="color:#c00000">Only one last report, please.</span>';
-        return;
-      }
       if (!DBF.db && !DBF.skip) {
         if (!(await dbPickCreate(cjPk() || 'Project'))) DBF.skip = true;
         draw();
@@ -250,6 +248,18 @@ function showStart(canCancel) {
           }
         } else await idbSet('lastBuild', data);
         sessionStorage.setItem('crJob', '1');
+        // every last report is also read like Import codes once the register is open: a second (third …) report,
+        // and the reports of the earlier tools (Material / Subcontractor report: a 'Coding' sheet). The first one went to the build.
+        try {
+          await idbSet(
+            'pendImport',
+            by('prev')
+              .filter((f, i) => i > 0 || !/\.json$/i.test(f.name))
+              .map((f) => ({ name: f.name, data: f.data }))
+          );
+        } catch (e) {
+          /* the first report is in the build */
+        }
         try {
           await idbSet(
             'lastFiles',
