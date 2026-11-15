@@ -368,7 +368,13 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await c0.fill('TCE');
       await c0.press('Enter');
       await p5.waitForTimeout(600);
-      ok('a coded item leaves the list', await p5.$$eval('#tb tr.it', (x, k) => !x.some((tr) => tr.dataset.k === k), k0));
+      ok(
+        'a coded item stays in the list, marked, until Refresh',
+        await p5.$$eval('#tb tr.it.pin', (x, k) => x.some((tr) => tr.dataset.k === k), k0)
+      );
+      await p5.$eval('[data-pinr]', (b) => b.click());
+      await p5.waitForTimeout(400);
+      ok('…Refresh: it leaves the list', await p5.$$eval('#tb tr.it', (x, k) => !x.some((tr) => tr.dataset.k === k), k0));
       const sg = await p5.$('#tb tr.it input.sug[data-f="pkg"]');
       ok(
         'an item of the same material group gets the suggestion',
@@ -1307,6 +1313,12 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           eq('…difference stays 0', await p9.evaluate(() => R.diff), 0);
         }
       }
+      await p9.setInputFiles('#file', [fi, fs2]);
+      await p9.waitForTimeout(3000);
+      ok(
+        'Import codes takes several files at once (Material report + Subcontractor report)',
+        /Imported – old_inventory_coding\.xlsx.*old_subcontract_coding\.xlsx/.test(await p9.$eval('#toast', (e) => e.textContent))
+      );
       await c9.close();
     }
   }
@@ -1607,6 +1619,41 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       )
     );
     await c14.close();
+  }
+
+  if (RUN('7k')) {
+    head('7k. A row coded under a filter stays (marked) until the filter changes or Refresh');
+    const { ctx: c15, p: q } = await open(APP);
+    await q.$eval('#tabs [data-s="cod"]', (x) => x.click());
+    await q.waitForTimeout(600);
+    await q.click('[data-cm="todo"]');
+    await q.waitForTimeout(500);
+    const n0 = await q.evaluate(() => R.rows.length);
+    for (const [f, v] of [
+      ['pkg', 'T81'],
+      ['mnl', 'MAT'],
+      ['ce', 'T81-CE'],
+    ]) {
+      const inp = q.locator('#tb tr.it').first().locator(`input[data-f="${f}"]`);
+      await inp.fill(v);
+      await inp.press('Tab');
+      await q.waitForTimeout(300);
+    }
+    await q.waitForTimeout(500);
+    ok(
+      'To code: the row just coded stays, marked, with the note and Refresh',
+      await q.evaluate(
+        (n) =>
+          R.rows.length === n &&
+          document.querySelectorAll('#tb tr.pin').length === 1 &&
+          /1 coded row no longer match/.test(document.getElementById('cnt').textContent),
+        n0
+      )
+    );
+    await q.$eval('[data-pinr]', (b) => b.click()); // the auto-save question may sit on top
+    await q.waitForTimeout(500);
+    ok('Refresh: it leaves the list', await q.evaluate((n) => R.rows.length === n - 1 && !document.querySelector('#tb tr.pin'), n0));
+    await c15.close();
   }
 
   if (RUN('7g')) {

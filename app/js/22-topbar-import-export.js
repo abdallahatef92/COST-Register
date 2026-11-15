@@ -58,9 +58,11 @@ const norm = (t) =>
     .toLowerCase();
 $('bImport').onclick = () => $('file').click();
 $('file').onchange = async (e) => {
-  const f = e.target.files[0];
+  const fs = [...e.target.files]; // several at once: e.g. the Material report and the Subcontractor report
   e.target.value = '';
-  if (f) await importCodes(f);
+  const said = [];
+  for (const f of fs) said.push(await importCodes(f));
+  if (said.length > 1) toast('Imported – ' + said.join(' · '));
 };
 // a codes file / a report with Coding sheets (this register's, or the earlier Material / Subcontractor reports) → codes; returns the message
 async function importCodes(f) {

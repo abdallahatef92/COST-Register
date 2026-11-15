@@ -321,3 +321,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - Create the register with **several last reports** (e.g. Material report + Subcontractor report). The first goes into the build; every report is then read like *Import codes* (which understands the earlier tools' Coding sheets).
 - Each CJI3 line keeps its **Ref. document number** (the material document of an issue). The earlier Material report's **Data** tab (Material doc. + Material → PKG / MNL / cost element) codes those lines: a line coded other than its material gets its own code.
 - A report whose Summary names another project asks before its codes are read.
+
+## v4.21 – Coded rows stay under a filter
+- On every table page with codes (Coding items, SAP transaction lines, Per Month lines, Subcontractor POs …), a row you code while a filter is on (To code, a column filter, search, Not coded / Coded) stays in the list, marked yellow, until the filter, search, bucket or page changes. Next to the row count: "↻ n coded rows no longer match the filter · Refresh".
+- Enter / Ctrl+D / accepting a suggestion always move on to the next row.
+- **Import codes…** takes several files at once (e.g. Material report + Subcontractor report).
