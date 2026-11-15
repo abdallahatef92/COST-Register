@@ -216,9 +216,7 @@ function renderPsum() {
   };
   const rowE = (sec, code, r) => {
     const dir = secOf(sec) === 'direct',
-      nm = dir ? pkgLabel(code) : ceLabel(IND_PKG, code),
-      loose = sec === 'U' || sec === 'J';
-    if ((ST.pkF === 'noname' && (nm || !dir)) || (ST.pkF === 'loose' && !loose)) return '';
+      nm = dir ? pkgLabel(code) : ceLabel(IND_PKG, code);
     return `<tr class="row${r ? '' : ' zero'}"><td class="pi1"><span class="tg"></span><span class="code">${esc(code)}</span></td><td dir="auto"><input class="psin${nm || !dir ? '' : ' miss'}" data-psn="${secOf(sec)}|${esc(code)}" value="${esc(nm)}" placeholder="type the name">${nm || !dir ? '' : '<span class="psno">No name yet</span>'}</td><td class="psgc">${gSelE(sec, code)}</td><td><b>${r ? fA(r.a) : '-'}</b></td><td>${r ? sh(r.a) : '-'}</td><td></td></tr>`;
   };
   const rowH = (sec, code, r, name) => {
@@ -300,17 +298,8 @@ function renderPsum() {
     cfg = D.cfg,
     used = new Set([...cfg.direct, ...cfg.indirect].flatMap((g) => g.c)),
     loose = [...D.rows.keys()].filter((k) => k.startsWith('U|')).map((k) => k.slice(2));
-  const nN = pkNoName().length,
-    nLo = [...D.rows.keys()].filter((k) => k.startsWith('U|') || k.startsWith('J|')).length,
-    edBar = `<div class="sct" style="gap:8px;margin:0 0 10px"><span class="seg">${[
-      ['', 'All'],
-      ['noname', 'No name' + (nN ? ' · ' + nN : '')],
-      ['loose', 'Not in a group' + (nLo ? ' · ' + nLo : '')],
-    ]
-      .map(([k, l]) => `<button data-pkf="${k}" class="${(ST.pkF || '') === k ? 'on' : ''}">${l}</button>`)
-      .join(
-        ''
-      )}</span><button data-pknew="pkg">+ New PKG</button><button data-pknew="grp">+ New group</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><small>type a name in the Name column · choose the Group on the row · codes from your coding come here by themselves</small></div>`;
+  const nLo = [...D.rows.keys()].filter((k) => k.startsWith('U|') || k.startsWith('J|')).length,
+    edBar = `<div class="sct" style="gap:8px;margin:0 0 10px"><button data-pknew="pkg">+ New PKG</button><button data-pknew="grp">+ New group</button><button data-fxfit="psum" title="Fit every column to its content">↔ Fit</button><small>type a name in the Name column · choose the Group on the row · codes from your coding come here by themselves</small></div>`;
   const nL = nLo;
   $('psum').innerHTML =
     `<div class="psw">${psEdit() ? '' : `<div class="sct" style="gap:8px;margin:0 0 2px"><button data-pse="open" title="Name the PKGs and the indirect cost elements, put them in groups">Edit names and groups · Codes ›${nL ? ` <span class="psbad">${nL} not in a group</span>` : ''}</button></div>`}${`<div class="panel pscard psrep${ED ? ' psed' : ''}">
@@ -726,12 +715,6 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('click', (e) => {
-  const f = e.target.closest('[data-pkf]');
-  if (f) {
-    ST.pkF = f.dataset.pkf;
-    render();
-    return;
-  }
   const n = e.target.closest('[data-pknew]');
   if (!n) return;
   const k = n.dataset.pknew,

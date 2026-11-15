@@ -1,5 +1,11 @@
 [
   {
+    "v": "4.12",
+    "n": [
+      "Codes › PKG list shows the whole list – no filter buttons; a PKG without a name says \"No name yet\" on its row"
+    ]
+  },
+  {
     "v": "4.11",
     "n": [
       "You choose when to update: a new version shows in the top bar with What's new, Update and Later – nothing changes until you press Update",

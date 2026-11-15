@@ -1482,12 +1482,13 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.click('#sbar [data-sgo="pkl:no"]');
     await q.waitForTimeout(700);
     ok(
-      'the footer opens Codes › PKG list, only the PKGs with no name',
+      'the footer opens Codes › PKG list – the whole list, no filters; the PKG with no name says so on its row',
       await q.evaluate(
         () =>
           __ST.tab === 'pkl' &&
-          /T91/.test(document.getElementById('psum').textContent) &&
-          !/Test package/.test(document.getElementById('psum').innerHTML)
+          !document.querySelector('#psum [data-pkf]') &&
+          /Test package/.test(document.getElementById('psum').innerHTML) &&
+          [...document.querySelectorAll('#psum input.psin.miss')].some((i) => /T91/.test(i.dataset.psn))
       )
     );
     await q.fill('#psum input[data-psn="direct|T91"]', 'Second package');

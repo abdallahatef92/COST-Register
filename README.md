@@ -313,3 +313,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - The installed app (GitHub Pages) opens the version it has. A newer version shows a notice in the top bar (and on the start page): **What's new · Update · Later**. Nothing changes until Update; Later asks again next time; offline, no notice.
 - The downloaded `.html` never checks – it stays the version it is.
 - Each release adds its short notes on top of `app/pwa/whatsnew.json` (the site build refuses without them); the build writes `version.json`.
+
+## v4.12 – PKG list without filters
+- Codes › PKG list: the All / No name / Not in a group buttons are gone – the list always shows every PKG; a PKG without a name shows "No name yet" on its row. The footer warning opens the whole list.

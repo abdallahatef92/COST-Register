@@ -687,8 +687,7 @@ document.addEventListener('click', (e) => {
     ST.xpPage = 'lines';
     ST.xpLF = null;
   } else if (t === 'pkl') {
-    ST.tab = 'pkl';
-    ST.pkF = v === 'no' ? 'noname' : '';
+    ST.tab = 'pkl'; // the whole list – a PKG without a name shows "No name yet" on its row
   } else if (t === 'adj') {
     ST.tab = 'adjl';
     ST.adjK0 = v || '';
