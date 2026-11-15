@@ -384,3 +384,12 @@ body.dropping::after{content:'Drop the new SAP files to update the register';pos
 #bJob small{margin-left:6px;color:#D4A72C;font-weight:700}
 .mjob .gos{align-self:center;display:flex;flex-direction:column;gap:6px;align-items:stretch} .mjob .go.x2{background:#fff;color:#14254A;border-color:#14254A}
 .mjob .now .go.x2{background:#D4A72C;color:#14254A;border-color:#D4A72C}
+.upn{display:inline-flex;align-items:center;gap:10px;margin-right:12px;padding:5px 8px 5px 12px;border-radius:9px;background:#FFF7DD;border:1px solid #D4A72C;color:#14254A;font-weight:600;font-size:13.5px;white-space:nowrap}
+.upn .dot{width:8px;height:8px;border-radius:50%;background:#D4A72C} .upn a{color:#14254A;text-decoration:underline;font-weight:500;cursor:pointer}
+.upn button.u{border:0 !important;border-radius:7px;padding:5px 12px;font-weight:700;background:#14254A !important;color:#fff !important;cursor:pointer} .upn button.lt{border:0 !important;background:none !important;color:#4B5563 !important;font-weight:500;padding:5px 6px;cursor:pointer}
+.upw{position:fixed;top:62px;right:250px;width:470px;max-width:94vw;background:#fff;border:1px solid #C9D3E3;border-radius:12px;box-shadow:0 18px 40px rgba(20,37,74,.25);z-index:200;font-size:13.5px;color:#14254A} .upw[hidden]{display:none}
+.upw .h{padding:14px 18px 8px;border-bottom:1px solid #EEF1F5} .upw h3{margin:0;font-size:17px} .upw .s{color:#6B7280;font-size:12.5px;margin-top:2px} .upw .vv{padding:8px 18px 0;font-weight:700;color:#6B7280;font-size:12px}
+.upw ul{margin:8px 0;padding:0 18px 0 36px;line-height:1.55} .upw li{margin:4px 0}
+.upw .f{display:flex;gap:8px;align-items:center;padding:12px 18px;border-top:1px solid #EEF1F5;background:#F7F9FC;border-radius:0 0 12px 12px} .upw .f .n{color:#4B5563;font-size:12px;flex:1}
+.upw .f button{border:1px solid #C9D3E3;border-radius:7px;padding:6px 14px;font-weight:600;background:#fff;color:#14254A;cursor:pointer} .upw .f .p{background:#14254A;color:#fff;border-color:#14254A}
+.upn.fx{position:fixed;top:14px;right:20px;z-index:300;box-shadow:0 6px 18px rgba(20,37,74,.18)} body:has(#start[style*="none"]) .upn.fx{display:none}

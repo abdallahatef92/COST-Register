@@ -46,17 +46,25 @@ const manifest = {
     { src: I512, sizes: '512x512', type: 'image/png', purpose: 'any' },
   ],
 };
-// newest page first when online (so a new version shows by itself), the saved copy when offline
-const sw = `const C = 'cost-register-${VER}', FILES = ['./', 'manifest.webmanifest', '${I192}', '${I512}'];
-self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(C).then((c) => c.addAll(FILES))); });
+// the kept page first: the app stays on its version until the user presses Update (24-app-update.js puts the new page in the cache).
+// version.json always from the web address. The worker itself has no version in it, so a release does not replace it.
+const sw = `const C = 'cost-register-app', FILES = ['./', 'manifest.webmanifest', '${I192}', '${I512}'];
+self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(C).then((c) => c.match('./').then((m) => (m ? null : c.addAll(FILES))))); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== C).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
-self.addEventListener('fetch', (e) => { if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(fetch(e.request).then((r) => { if (r.ok) { const cp = r.clone(); caches.open(C).then((c) => c.put(e.request, cp)); } return r; }).catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match('./')))); });
+self.addEventListener('fetch', (e) => { const u = new URL(e.request.url); if (e.request.method !== 'GET' || u.origin !== location.origin) return;
+  if (/version\\.json$/.test(u.pathname) || e.request.cache === 'reload' || e.request.cache === 'no-store') return; // Update and the version check: always the web address
+  const page = e.request.mode === 'navigate';
+  e.respondWith(caches.open(C).then((c) => c.match(page ? './' : e.request, { ignoreSearch: true }).then((m) => m || fetch(e.request).then((r) => { if (r.ok) c.put(page ? './' : e.request, r.clone()); return r; }))));
+});
 `;
+const notes = JSON.parse(fs.readFileSync(path.join(PWA, 'whatsnew.json'), 'utf8'));
+const V = VER.replace(/^v/, '');
+if (!notes.length || notes[0].v !== V) throw new Error('build-site: app/pwa/whatsnew.json – add the notes of v' + V + ' on top');
 fs.mkdirSync(out, { recursive: true });
 fs.writeFileSync(path.join(out, 'index.html'), html);
 fs.writeFileSync(path.join(out, 'manifest.webmanifest'), JSON.stringify(manifest, null, 1));
 fs.writeFileSync(path.join(out, 'sw.js'), sw);
+fs.writeFileSync(path.join(out, 'version.json'), JSON.stringify({ v: V, notes: notes.slice(0, 12) }));
 fs.writeFileSync(path.join(out, '.nojekyll'), '');
 [
   ['icon-192.png', I192],

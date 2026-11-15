@@ -308,3 +308,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 ## v4.1 – Monthly job: Go to the open place, own export button
 - Step 4 › Go opens the place still open: Not settled, Depreciation, then Owner material (the rates).
 - Step 5 has **⇩ Export the monthly report**: the full report from any page (the top Export Excel on a report page exports only that page); step 5 turns Done at once.
+
+## v4.11 – Manual update of the installed app
+- The installed app (GitHub Pages) opens the version it has. A newer version shows a notice in the top bar (and on the start page): **What's new · Update · Later**. Nothing changes until Update; Later asks again next time; offline, no notice.
+- The downloaded `.html` never checks – it stays the version it is.
+- Each release adds its short notes on top of `app/pwa/whatsnew.json` (the site build refuses without them); the build writes `version.json`.
