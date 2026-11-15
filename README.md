@@ -326,3 +326,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - On every table page with codes (Coding items, SAP transaction lines, Per Month lines, Subcontractor POs …), a row you code while a filter is on (To code, a column filter, search, Not coded / Coded) stays in the list, marked yellow, until the filter, search, bucket or page changes. Next to the row count: "↻ n coded rows no longer match the filter · Refresh".
 - Enter / Ctrl+D / accepting a suggestion always move on to the next row.
 - **Import codes…** takes several files at once (e.g. Material report + Subcontractor report).
+
+## v4.22 – Codes from the Data tab of the earlier reports
+- Import / last report of the earlier Material or Subcontractor report: the **Data** tab is the source – each item (material, or service + description) takes the code that carries most of its amount there; a line coded differently gets its own code (material document). The Coding sheet is used only where the Data tab has nothing (it can be blank or lag behind the Data tab).

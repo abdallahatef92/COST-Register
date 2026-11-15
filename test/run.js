@@ -1273,7 +1273,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
             'Cost element',
             'Status',
           ]);
-          ws.addRow(['M', 'M03', one.g, one.mat, one.d, 'TO', 'S.0400', 'MAT', 'MAT-A', 'Coded']);
+          ws.addRow(['M', 'M03', one.g, one.mat, one.d, 'TO', '', '', '', 'To code']); // blank on the Coding sheet – coded on the Data tab
           const wd = wb.addWorksheet('Data');
           wd.addRow([
             'Family',
@@ -1295,6 +1295,25 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
             'Amount',
           ]);
           wd.addRow(['M', 'M03', one.g, one.mat, one.d, 'TO', 'S.0499', 'MAT', 'MAT-B', '2026-01', '', '', 'Project', one.ref, 1, 1, 1]);
+          wd.addRow([
+            'M',
+            'M03',
+            one.g,
+            one.mat,
+            one.d,
+            'TO',
+            'S.0400',
+            'MAT',
+            'MAT-A',
+            '2026-01',
+            '',
+            '',
+            'Project',
+            'X-OTHER',
+            100,
+            1,
+            100,
+          ]); // most of the amount
           const fd = path.join(OUT, 'old_inventory_data.xlsx');
           await wb.xlsx.writeFile(fd);
           await p9.setInputFiles('#file', fd);
@@ -1305,11 +1324,14 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
             return [it.pkg, it.ce, ov.pkg || '', ov.ce || ''].join('/');
           }, one);
           eq(
-            'earlier Material report › Data sheet: the material gets its Coding code, the line its own code from Data',
+            'earlier Material report › Data tab: blank on the Coding sheet – the material takes the Data code with most of its amount, the line its own',
             got,
             'S.0400/MAT-A/S.0499/MAT-B'
           );
-          ok('…the message counts the line', /1 lines coded from its Data sheet/.test(await p9.$eval('#toast', (e) => e.textContent)));
+          ok(
+            '…the message counts the line',
+            /1 coded from its Data tab.*1 lines with their own code from the Data tab/.test(await p9.$eval('#toast', (e) => e.textContent))
+          );
           eq('…difference stays 0', await p9.evaluate(() => R.diff), 0);
         }
       }

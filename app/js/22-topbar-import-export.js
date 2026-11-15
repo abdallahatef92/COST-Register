@@ -96,6 +96,37 @@ async function importCodes(f) {
       return { rows, hi, h: hi >= 0 ? rows[hi].map((x) => String(x).trim()) : [] };
     };
     const old = [];
+    // the Data tab of the earlier reports holds the code of every line: an item takes the code that carries most of its amount
+    // (the Coding sheet can lag behind the Data tab, or be blank where the lines are coded) – the Coding sheet only where Data has nothing
+    const dMain = { mat: null, sub: null };
+    let fromData = 0;
+    if (wb.SheetNames.includes('Data')) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets.Data, { header: 1, defval: '' }),
+        h = (rows[0] || []).map((x) => String(x).trim()),
+        c = (n) => h.indexOf(n),
+        kind = c('PKG') < 0 || c('MNL') < 0 ? '' : c('Material') >= 0 ? 'mat' : c('Service') >= 0 && c('Description') >= 0 ? 'sub' : '';
+      if (kind) {
+        const acc = new Map(),
+          cel = c('Cost element'),
+          dv = c('DIV'),
+          am = c('Amount');
+        for (const r of rows.slice(1)) {
+          const o = {
+            pkg: String(r[c('PKG')]).trim(),
+            mnl: String(r[c('MNL')]).trim(),
+            ce: cel >= 0 ? String(r[cel]).trim() : '',
+            div: dv >= 0 ? String(r[dv]).trim() : '',
+          };
+          if (!o.pkg && !o.mnl && !o.ce) continue;
+          const k = kind === 'mat' ? String(r[c('Material')]).trim() : String(r[c('Service')]).trim() + '|' + norm(r[c('Description')]),
+            v = JSON.stringify(o),
+            m = acc.get(k) || new Map();
+          m.set(v, (m.get(v) || 0) + Math.abs(+r[am] || 0) + 1e-6);
+          acc.set(k, m);
+        }
+        dMain[kind] = new Map([...acc].map(([k, m]) => [k, JSON.parse([...m].sort((x, y) => y[1] - x[1])[0][0])]));
+      }
+    }
     BK.forEach((b, bi) => {
       let name = wb.SheetNames.find((n) => n === b.short + ' Coding');
       if (!name && wb.SheetNames.includes('Coding')) {
@@ -136,7 +167,14 @@ async function importCodes(f) {
       }
       b.items.forEach((it) => {
         const sv = isSub(bi) ? bySvc.get(it.vals[1]) : null,
+          od =
+            bi === MATI && dMain.mat
+              ? dMain.mat.get(String(it.vals[3]).trim())
+              : isSub(bi) && dMain.sub
+                ? dMain.sub.get(it.vals[1] + '|' + norm(it.vals[2]))
+                : null,
           o =
+            od ||
             byKey.get(it.k) ||
             (isSub(bi)
               ? bySd.get(it.vals[1] + '|' + norm(it.vals[2])) || (sv ? sv.o : null)
@@ -145,6 +183,7 @@ async function importCodes(f) {
                 : null);
         if (!o) return;
         matched++;
+        if (od) fromData++;
         ['pkg', 'mnl', 'ce', 'inc', 'div'].forEach((fl) => {
           if (o[fl] && (fl !== 'div' || isSub(bi))) ch.push({ t: 'item', bi, ii: it.ii, f: fl, v: o[fl] });
         });
@@ -237,7 +276,7 @@ async function importCodes(f) {
       return f.name + ': no Coding sheet';
     }
     change(ch, 'Imported ' + f.name);
-    const msg = `${f.name}${old.length ? ' (earlier ' + old.join(' / ') + ' report)' : ''}: ${matched} items matched on ${sheets} Coding sheet${sheets === 1 ? '' : 's'}${lo.length ? ', ' + lo.length + ' line overrides' : ''}${dataLines ? ', ' + dataLines + ' lines coded from its Data sheet' : ''}`;
+    const msg = `${f.name}${old.length ? ' (earlier ' + old.join(' / ') + ' report)' : ''}: ${matched} items matched on ${sheets} Coding sheet${sheets === 1 ? '' : 's'}${lo.length ? ', ' + lo.length + ' line overrides' : ''}${fromData ? ' (' + fromData + ' coded from its Data tab)' : ''}${dataLines ? ', ' + dataLines + ' lines with their own code from the Data tab' : ''}`;
     toast('Imported ' + msg + ' (blank cells never wipe a code)');
     return msg;
   } catch (err) {

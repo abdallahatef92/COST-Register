@@ -1,5 +1,11 @@
 [
   {
+    "v": "4.22",
+    "n": [
+      "The earlier Material and Subcontractor reports: codes come from their Data tab – each item takes the code that carries most of its amount, a line coded differently keeps its own; the Coding sheet only where the Data tab has nothing"
+    ]
+  },
+  {
     "v": "4.21",
     "n": [
       "A row you code under a filter stays in the list (marked yellow) until you change the filter – or press Refresh",
