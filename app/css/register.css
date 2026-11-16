@@ -396,3 +396,6 @@ body.dropping::after{content:'Drop the new SAP files to update the register';pos
 tr.it.pin > td{background:#FFF8E1 !important} tr.it.pin > td:first-child{box-shadow:inset 3px 0 0 #D4A72C}
 .pinb{margin-left:8px;padding:2px 4px 2px 8px;border-radius:7px;background:#FFF3CD;border:1px solid #E7C66A;color:#7A4B00;font-weight:600;white-space:nowrap}
 .pinb button{margin-left:6px;border:1px solid #D4A72C;border-radius:6px;background:#fff;color:#14254A;font-weight:700;padding:1px 8px;cursor:pointer}
+/* VAT before date: the date goes on its own line under the VAT list, inside the side navigation (it used to push the navigation sideways) */
+#nav .nvat{flex-wrap:wrap;row-gap:6px} #nav .nvat select{max-width:calc(100% - 31px)} #nav .nvat #vatFrom{margin-left:31px;width:calc(100% - 31px);max-width:170px;box-sizing:border-box}
+body:not(.navpin) #nav:not(:hover) .nvat #vatFrom{display:none !important} #nav{overflow-x:hidden}

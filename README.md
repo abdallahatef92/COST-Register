@@ -329,3 +329,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v4.22 – Codes from the Data tab of the earlier reports
 - Import / last report of the earlier Material or Subcontractor report: the **Data** tab is the source – each item (material, or service + description) takes the code that carries most of its amount there; a line coded differently gets its own code (material document). The Coding sheet is used only where the Data tab has nothing (it can be blank or lag behind the Data tab).
+
+## v4.23 – VAT date box
+- Side navigation › *Include VAT before date*: the date box goes on its own line under the VAT list, inside the navigation (it was squeezed at the edge and pushed the navigation sideways).

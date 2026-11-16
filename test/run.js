@@ -1675,6 +1675,23 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.$eval('[data-pinr]', (b) => b.click()); // the auto-save question may sit on top
     await q.waitForTimeout(500);
     ok('Refresh: it leaves the list', await q.evaluate((n) => R.rows.length === n - 1 && !document.querySelector('#tb tr.pin'), n0));
+    // VAT before date: the date box sits inside the side navigation, on its own line
+    {
+      const later = await q.$('#asLater');
+      if (later) await later.click(); // the auto-save question after the first code
+    }
+    await q.selectOption('#vat', 'Include VAT before date');
+    await q.hover('#vat');
+    await q.waitForTimeout(500);
+    ok(
+      'VAT before date: the date box is inside the side navigation, under the VAT list, the navigation does not slide',
+      await q.evaluate(() => {
+        const d = document.getElementById('vatFrom').getBoundingClientRect(),
+          v = document.getElementById('vat').getBoundingClientRect(),
+          n = document.getElementById('nav');
+        return d.width > 100 && d.right <= n.getBoundingClientRect().right && d.top >= v.bottom && n.scrollLeft === 0;
+      })
+    );
     await c15.close();
   }
 

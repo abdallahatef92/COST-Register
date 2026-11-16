@@ -1,5 +1,11 @@
 [
   {
+    "v": "4.23",
+    "n": [
+      "Include VAT before date: the date box sits on its own line under the VAT list – no longer hidden at the edge of the side navigation"
+    ]
+  },
+  {
     "v": "4.22",
     "n": [
       "The earlier Material and Subcontractor reports: codes come from their Data tab – each item takes the code that carries most of its amount, a line coded differently keeps its own; the Coding sheet only where the Data tab has nothing"
