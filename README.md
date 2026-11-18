@@ -332,3 +332,6 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ## v4.23 – VAT date box
 - Side navigation › *Include VAT before date*: the date box goes on its own line under the VAT list, inside the navigation (it was squeezed at the edge and pushed the navigation sideways).
+
+### Fixed release addresses
+- The main address (https://abdallahatef92.github.io/COST-Register/) always has the newest version. A fixed release lives in its own folder on `gh-pages` (e.g. `/v4.23/`): its own manifest id and name, its own version.json (so it never offers an update); the main app's offline worker leaves sub-folders alone.
