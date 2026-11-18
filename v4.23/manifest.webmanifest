@@ -1,0 +1,25 @@
+{
+ "name": "Cost Register 4.23",
+ "short_name": "Cost Reg 4.23",
+ "description": "Project cost register from SAP CJI3 \u2013 coding, checks, reports. Your files stay on your PC.",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#14254A",
+ "theme_color": "#14254A",
+ "id": "/COST-Register/v4.23/",
+ "icons": [
+  {
+   "src": "icon-192-88d1293a.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512-88d1293a.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}
