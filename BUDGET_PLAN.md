@@ -15,3 +15,15 @@ The register already has the actual side (ACWP) by PKG / MNL / cost element, tie
 
 ## Then
 - Map its sheets and formulas exactly, show a PNG mock-up of the PKG page (BAC · BCWP · ACWP · CPI · forecast rate → ETC · EAC · variance) and the monthly progress entry, and ask before building.
+
+## The workbook (SBAY cost report rev03), mapped 19 Nov 2026
+- **Direct plan**: BOQ item code (M, e.g. R-SBAY-01-STR-03-1-01), PKG (J = STR-03, O = S03), SAP code (K), unit (S), take-off per building type × phase B1 (AX…BJ), selling rate (BZ), **EV qty per building type** (DF…DR), provision (EI), budget rate from Cost Analysis (FA), BAC (FD), EV (FH).
+- **Cost Analysis**: level-3 row = BOQ item, level-4 rows = its resources: CSI code = PKG (D), EXP = M / S (E), cost element code (F, e.g. M-2710), unit (N), usage (O), waste (P), rates (R…V), budget rate (W), take-off (AA), BAC (AB = rate × take-off), invoiced qty (AG), EV (AH), resource qty (AI / AJ).
+- **PKG sheets** (EARTHWORK, Reinforced Concrete …, A1 = CSI code): by type (M / S / Labor / Fluctuation / A/O), then per cost element: Budget (rate, take-off, invoiced, BAC) · EV (resource qty, EV) · Actuals (expenses qty / amount + addition-omission + provision) · CV = EV − actuals · remaining qty × forecast rate (defaults to the budget rate) = ETC · EAC = actuals + ETC · VAC = BAC − EAC · losses.
+- **expenses**: the actuals typed from MAT LOG / sc log, coded Main code (STR-03) + cost element – the register replaces it (CJI3, coded).
+
+## Decisions (19 Nov 2026, second round)
+1. PKG codes and names: read from Cost Analysis.
+2. Cost elements for coding = the Cost Analysis resources of the PKG; actuals that do not land on a budget resource show on their own row ("not on a budget resource").
+3. Progress: EV quantity per BOQ item per building type, as in the Direct plan.
+4. Provision and addition / omission: entered in the tool, per PKG and cost element (qty × rate).
