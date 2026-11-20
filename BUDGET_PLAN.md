@@ -36,3 +36,9 @@ The register already has the actual side (ACWP) by PKG / MNL / cost element, tie
 - Scope: Direct PKGs first; Indirect (Indirect Plan) in a later step.
 - One release: read the budget (Direct plan + Cost Analysis) + PKG pages + Progress (per BOQ item per building type) + provision / add-omit entry + Summary + Excel export (a tab per PKG like the S-sheets, and a Summary tab like the report's).
 - The cost report workbook has a second table on each PKG sheet: BOQ item × resource ("Combined Code") – not part of the PKG totals.
+
+## PKG page layout (20 Nov 2026, owner – replaces the red "not on budget" rows)
+- Every line coded to the PKG sits in its MNL group as a normal row – also when its cost element is not a budget resource (small "no budget" tag, BAC 0). It takes a provision and a forecast like any other.
+- Columns: Cost element · Resource · Unit | Budget: rate · take-off qty · BAC | Earned value: EV qty · EV | Actual (register): qty · rate · amount | Add / omit: qty · rate · amount | Provision: qty · rate · amount | Total cost: AC (= actual + add/omit + provision) · CV | Forecast: remaining qty · forecast rate · ETC · **BAC** · EAC · VAC.
+- Typed (yellow): add/omit qty and rate, provision qty and rate, forecast rate; remaining qty too on a no-budget line.
+- Each group has its sum; TOTAL for the PKG at the end.
