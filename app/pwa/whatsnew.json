@@ -1,5 +1,13 @@
 [
   {
+    "v": "4.3",
+    "n": [
+      "New section Budget: read your cost report (Direct plan + Cost Analysis, .xlsb or .xlsx) – budget per PKG and resource",
+      "PKG pages like your S-sheets: budget, earned value, actuals from your coding, add / omission, provision, ETC (qty × rate), EAC, VAC, actual losses",
+      "Progress: done qty per BOQ item and building type; All PKGs summary; Excel: a Budget summary tab and a tab per PKG"
+    ]
+  },
+  {
     "v": "4.23",
     "n": [
       "Include VAT before date: the date box sits on its own line under the VAT list – no longer hidden at the edge of the side navigation"

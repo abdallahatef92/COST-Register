@@ -39,7 +39,7 @@ function page(dataJs) {
       .trim()
       .padStart(2, '0');
   const tpl = assemble().replace(/__VER__/g, VER);
-  const lib = fs.readFileSync(require.resolve('xlsx/dist/xlsx.mini.min.js'), 'utf8'),
+  const lib = fs.readFileSync(require.resolve('xlsx/dist/xlsx.full.min.js'), 'utf8'),
     xl0 = fs.readFileSync(require.resolve('exceljs/dist/exceljs.min.js'), 'utf8');
   // ExcelJS writes <pageSetUpPr> before <outlinePr> inside <sheetPr>; Excel wants the other order and "repairs" the sheet (PKG summary: fit to page + outline).
   // Swap the two calls in the library text; stop the build if the library changed and the text is not found.

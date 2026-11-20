@@ -192,7 +192,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
   eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
-  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'codes', 'xp', 'adj', 'chk', 'rep']);
+  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'codes', 'xp', 'adj', 'chk', 'rep', 'bud']);
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
@@ -1641,6 +1641,164 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       )
     );
     await c14.close();
+  }
+
+  if (RUN('7l')) {
+    head('7l. Budget: read a cost report, PKG page (budget · EV · actuals · provision · ETC · EAC), progress, export');
+    // a small cost report made here (no real figures): 1 PKG TST-01 (division T91), 1 BOQ item of 100 m3 over 2 building types,
+    // done 40 m3; 2 resources: M-100 ready mix 1,000 / m3 and S-50 pouring 50 / m3 → BAC 105,000, EV 40% = 42,000
+    const ExcelJS = require('exceljs');
+    const cw = new ExcelJS.Workbook();
+    const dp = cw.addWorksheet('Direct plan');
+    dp.addRow([
+      'Item code',
+      'PKG',
+      'Division',
+      'Description',
+      'UNIT',
+      'Type A',
+      'Type B',
+      'Contract Quantity',
+      'Type A B1',
+      'Type B B1',
+      'Takeoff B1',
+      'Type A B1',
+      'Type B B1',
+      'EV Q.B1',
+    ]);
+    dp.addRow(['', 'TST-01', '', 'DIVISION 99 - TEST WORKS']);
+    dp.addRow(['R-TST-01-1-01', 'TST-01', 'T91', 'Test concrete', 'M3', 60, 40, 100, 60, 40, 100, 30, 10, 40]);
+    const ca = cw.addWorksheet('Cost Analysis');
+    ca.addRow(['Cost Code', 'Level', 'CSI Code', 'EXP Code', 'Cost Element Code', 'Description']);
+    ca.addRow(['', '', '', '', '', '', 'Res Unit', 'TAKE OFF', 'BAC', 'Resource takeoff Q']);
+    ca.addRow(['R-TST-01-1-01', 3, 'TST-01', '', '', 'Test concrete', '', 100, '', '']);
+    ca.addRow(['R-TST-01-1-01', 4, 'TST-01', 'M', 'M-100', 'Ready mix test', '/m3', 100, 100000, 100]);
+    ca.addRow(['R-TST-01-1-01', 4, 'TST-01', 'S', 'S-50', 'Pouring test', '/m3', 100, 5000, 100]);
+    const crf = path.join(OUT, 'cost_report_test.xlsx');
+    await cw.xlsx.writeFile(crf);
+    const { ctx: c16, p: q } = await open(APP);
+    await q.evaluate(() => {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('cost-register')) localStorage.removeItem(k);
+    });
+    await q.reload();
+    await q.waitForFunction(() => document.querySelector('#tabs button'));
+    await q.waitForTimeout(1200);
+    await q.$eval('#tabs [data-s="bud"]', (x) => x.click());
+    await q.waitForTimeout(400);
+    ok('Budget: before a cost report, the page asks for it', /Read the cost report/.test(await q.$eval('#bud', (e) => e.textContent)));
+    {
+      const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.$eval('[data-bud="read"]', (b) => b.click())]);
+      await fc.setFiles(crf);
+    }
+    await q.waitForFunction(() => document.querySelector('#bud .bd-t'), null, { timeout: 30000 });
+    const T0 = await q.evaluate(() => {
+      const C = __BUD.calc(),
+        t = __BUD.sum([...C.pk.get('TST-01').values()]);
+      return { bac: t.bac, ev: t.ev };
+    });
+    eq('All PKGs: TST-01 with BAC 105,000 (Cost Analysis)', Math.round(T0.bac), 105000);
+    eq('…EV = done 40 of 100 m3 × the resources = 42,000', Math.round(T0.ev), 42000);
+    // code two items of the register to the PKG: one on a budget resource (by the division code T91), one on a cost element not in the budget
+    const pick = await q.evaluate(() => {
+      const mi = __BK.findIndex((b) => b.id === 'Material'),
+        its = __BK[mi].items.filter((x) => x.td > 1000).slice(0, 2);
+      __BUD.code(mi, its[0].ii, 'T91', 'MAT', 'M-100');
+      __BUD.code(mi, its[1].ii, 'TST-01', 'SUB', 'X-9');
+      return { a: its[0].td, b: its[1].td };
+    });
+    await q.waitForTimeout(400);
+    const r1 = await q.evaluate(() => {
+      const m = __BUD.calc().pk.get('TST-01');
+      return { m100: m.get('M-100').aa, x9: m.get('X-9') ? { aa: m.get('X-9').aa, g: m.get('X-9').g, nb: m.get('X-9').nb } : null };
+    });
+    eq('actuals: the line coded T91 (division) + M-100 lands on the M-100 resource', Math.round(r1.m100), Math.round(pick.a));
+    ok(
+      '…a cost element not in the budget (X-9) is its own "no budget" line, in its MNL group (SUB)',
+      r1.x9 && r1.x9.nb && r1.x9.g === 'SUB' && Math.round(r1.x9.aa) === Math.round(pick.b)
+    );
+    // the PKG page: type a provision 10 × 1,000 on M-100 and an ETC rate
+    await q.evaluate(() => {
+      __ST.tab = 'bpkg';
+      __ST.bpk = 'TST-01';
+    });
+    await q.$eval('#side [data-gt="bpkg"]', (x) => x.click());
+    await q.waitForTimeout(500);
+    ok(
+      'PKG page: the groups Material and Subcontractor, the no-budget tag, the TOTAL row',
+      await q.evaluate(
+        () =>
+          /Material · MNL MAT/.test(document.getElementById('bud').textContent) &&
+          /no budget/.test(document.getElementById('bud').textContent) &&
+          !!document.querySelector('#bud tr.bd-tot')
+      )
+    );
+    for (const [f, v] of [
+      ['pq', '10'],
+      ['pu', '1000'],
+    ]) {
+      const inp = q.locator(`#bud input[data-bx="TST-01|M-100"][data-bf="${f}"]`);
+      await inp.fill(v);
+      await inp.press('Tab');
+      await q.waitForTimeout(300);
+    }
+    const r2 = await q.evaluate(() => {
+      const r = __BUD.calc().pk.get('TST-01').get('M-100');
+      return { pv: r.pv, ac: r.ac, aa: r.aa, etc: r.etc, eac: r.eac, bac: r.bac, vac: r.vac, eq: r.eq, er: r.er };
+    });
+    eq('provision qty × UR = 10,000, AC = actual + provision', [Math.round(r2.pv), Math.round(r2.ac)], [10000, Math.round(r2.aa + 10000)]);
+    eq(
+      'ETC = remaining qty (100 − 40) × the UR (1,000) by default · EAC = AC + ETC · VAC = BAC − EAC',
+      [Math.round(r2.eq), Math.round(r2.er), Math.round(r2.eac), Math.round(r2.vac)],
+      [60, 1000, Math.round(r2.ac + 60000), Math.round(100000 - r2.ac - 60000)]
+    );
+    await q.$eval('#bUndo', (b) => b.click()); // the auto-save question may sit on top
+    await q.waitForTimeout(300);
+    eq('Undo takes the provision UR back', await q.evaluate(() => Math.round(__BUD.calc().pk.get('TST-01').get('M-100').pv)), 0);
+    await q.$eval('#bRedo', (b) => b.click());
+    await q.waitForTimeout(300);
+    // progress: done 50 + 30 → EV 80% = 84,000
+    await q.$eval('#side [data-gt="bprog"]', (x) => x.click());
+    await q.waitForTimeout(400);
+    for (const [k, v] of [
+      [0, '50'],
+      [1, '30'],
+    ]) {
+      const inp = q.locator(`#bud input[data-bd="R-TST-01-1-01"][data-bk="${k}"]`);
+      await inp.fill(v);
+      await inp.press('Tab');
+      await q.waitForTimeout(300);
+    }
+    eq(
+      'Progress: done 80 of 100 → EV 84,000',
+      await q.evaluate(() => Math.round(__BUD.sum([...__BUD.calc().pk.get('TST-01').values()]).ev)),
+      84000
+    );
+    eq('…the difference to CJI3 stays 0', await q.evaluate(() => R.diff), 0);
+    // Excel: a Budget summary tab and a tab per PKG
+    eq(
+      'Excel export: Budget summary + a tab per PKG',
+      await q.evaluate(() => {
+        const wb = new ExcelJS.Workbook();
+        __BUD.exp(wb);
+        return wb.worksheets.map((w) => w.name);
+      }),
+      ['Budget summary', 'TST-01']
+    );
+    // it stays: reopen
+    await q.reload();
+    await q.waitForFunction(() => document.querySelector('#tabs button'));
+    await q.waitForTimeout(1500);
+    eq(
+      'reopened: the cost report, the progress and the provision are still there',
+      await q.evaluate(() => {
+        const C = __BUD.calc();
+        if (!C) return null;
+        const t = __BUD.sum([...C.pk.get('TST-01').values()]);
+        return [Math.round(t.ev), Math.round(C.pk.get('TST-01').get('M-100').pv)];
+      }),
+      [84000, 10000]
+    );
+    await c16.close();
   }
 
   if (RUN('7k')) {

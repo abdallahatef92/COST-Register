@@ -180,6 +180,9 @@ function applySnap(s, replaceLines) {
   if (s.own && typeof s.own === 'object') ST.own = { ...s.own };
   if (s.ownSet && typeof s.ownSet === 'object') ST.ownSet = { ...s.ownSet };
   if (Array.isArray(s.ownGl)) ST.ownGl = s.ownGl.map(String);
+  if (s.bud && Array.isArray(s.bud.res)) ST.bud = s.bud;
+  if (s.bdone && typeof s.bdone === 'object') ST.bdone = s.bdone;
+  if (s.bx && typeof s.bx === 'object') ST.bx = s.bx;
   return n;
 }
 function restore() {

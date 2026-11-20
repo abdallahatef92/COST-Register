@@ -8,6 +8,7 @@ const SECS = [
   ['adj', 'Adjust', ['adjl', ...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]],
   ['chk', 'Check', ['chk', 'log', 'rules', 'dlog']],
   ['rep', 'Reports', ['psum', 'gl', 'wbs']],
+  ['bud', 'Budget', ['bsum', 'bprog', 'bpkg']],
 ];
 // the subcontractor pages live in other sections: POs in Coding, Rates & coding in Dashboard, PO register in Reports, Bridge in Check
 const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'rep', bridge: 'chk' };
@@ -25,6 +26,7 @@ const NIC = ((d) =>
   dash: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   cod: '<path d="M4 6h16M4 12h10M4 18h7"/><path d="M17 15l3 3-3 3"/>',
   job: '<path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1.2 1.2L7 4.5M4 12l1.2 1.2L7 11.5"/><circle cx="5" cy="19" r="1.2"/>',
+  bud: '<path d="M4 20h16"/><path d="M6 16l4-5 3 3 5-7"/><path d="M18 7h-3M18 7v3"/>',
   codes: '<path d="M5 3h12a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2z"/><path d="M5 19a2 2 0 0 1 2-2h12M9 7h6M9 11h4"/>',
   sub: '<rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="8" height="6" rx="1"/><rect x="13" y="14" width="8" height="6" rx="1"/>',
   xp: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M15 9v11"/>',
@@ -434,6 +436,9 @@ function renderSide() {
         'Log',
       ]);
     }
+  } else if (sec === 'bud') {
+    head = 'Budget';
+    budSide(items);
   } else if (sec === 'codes') {
     head = 'Your codes';
     const nn = pkNoName().length;
@@ -563,6 +568,7 @@ $('side').addEventListener('click', (e) => {
   if (ST.tab === 'mrate') ST.bk = MATI;
   if (a.dataset.xp) ST.xpPage = a.dataset.xp;
   if (a.dataset.uv) ST.unsView = a.dataset.uv;
+  if (a.dataset.bp) ST.bpk = a.dataset.bp;
   sel.clear();
   if (a.dataset.sv) {
     goSub(a.dataset.sv);
@@ -761,11 +767,12 @@ function render() {
     isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv;
   $('pg-pkg').classList.toggle('on', isPk && !isOv);
   $('pg-sov').classList.toggle('on', isOv);
-  ['sum', 'tbl', 'chk', 'rul', 'mr', 'log', 'drv', 'psum', 'flow', 'dlog'].forEach((p) =>
+  ['sum', 'tbl', 'chk', 'rul', 'mr', 'log', 'drv', 'psum', 'flow', 'dlog', 'bud'].forEach((p) =>
     $('pg-' + p).classList.toggle(
       'on',
       !isPk &&
         ((p === 'dlog' && ST.tab === 'dlog') ||
+          (p === 'bud' && ['bsum', 'bprog', 'bpkg'].includes(ST.tab)) ||
           (p === 'sum' && ST.tab === 'sum') ||
           (p === 'flow' && ST.tab === 'flow') ||
           (p === 'drv' && ST.tab === 'drv') ||
@@ -774,7 +781,8 @@ function render() {
           (p === 'log' && ST.tab === 'log') ||
           (p === 'rul' && ST.tab === 'rules') ||
           (p === 'mr' && ST.tab === 'mrate') ||
-          (p === 'tbl' && !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'flow', 'dlog'].includes(ST.tab)))
+          (p === 'tbl' &&
+            !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'flow', 'dlog', 'bsum', 'bprog', 'bpkg'].includes(ST.tab)))
     )
   );
   $('bUndo').disabled = !undo.length;
@@ -792,6 +800,7 @@ function render() {
   else if (ST.tab === 'drv') renderDrivers();
   else if (ST.tab === 'flow') renderFlow();
   else if (ST.tab === 'dlog') renderDlog();
+  else if (['bsum', 'bprog', 'bpkg'].includes(ST.tab)) renderBudget();
   else if (ST.tab === 'psum' || ST.tab === 'pkl') renderPsum();
   else renderTable();
   renderJob(); // Monthly job: the count on its button, and the panel when it is open

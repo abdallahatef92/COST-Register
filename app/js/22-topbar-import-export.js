@@ -960,6 +960,7 @@ $('bExport').onclick = async (ev) => {
     };
   }
   {
+    budExport(wb); // Budget: a summary tab and a tab per PKG (when the cost report was read)
     const wl2 = wb.addWorksheet('Changes', { properties: { tabColor: { argb: 'FF5F6B7A' } } });
     wl2.addRow(['Date', 'Time', 'Change', 'Cells', 'Cut date']);
     ST.log

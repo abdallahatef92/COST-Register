@@ -335,3 +335,11 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 
 ### Fixed release addresses
 - The main address (https://abdallahatef92.github.io/COST-Register/) always has the newest version. A fixed release lives in its own folder on `gh-pages` (e.g. `/v4.23/`): its own manifest id and name, its own version.json (so it never offers an update); the main app's offline worker leaves sub-folders alone.
+
+## v4.3 – Budget (cost report)
+- New section **Budget**: *Read the cost report…* (or drop it) – the owner's workbook with **Direct plan** and **Cost Analysis** (.xlsb or .xlsx; the tool now carries the full Excel reader). The budget, the BOQ items and their progress are kept in the register and the data file.
+- **All PKGs**: one row per PKG – BAC · EV · % earned · actual · add/omit · provision · AC · CV · CPI · ETC · EAC · VAC.
+- **PKG page** – the cost report's PKG sheet, resource-wise (the item-wise columns are left out): Budget (take-off qty · UR · total) · Earned Value (qty · fluctuation · amount) · Qty variance (EV − actual qty) · Actuals from the register's coding (qty · UR · amount) · Add / Omission and Provision (qty × UR, typed) · Current cost variance · ETC (qty and rate typed, start at the remaining qty and the UR) · At completion (EAC · VAC) · Actual losses. Grouped by MNL with the bucket colours; amounts in thousands on screen.
+- Actuals: the register's to-date cost by PKG and cost element. A register PKG code is the cost report PKG (STR-03) or its Direct plan division code (S03). A cost element that is not a budget resource of the PKG is its own "no budget" line in its MNL group.
+- **Progress**: done qty per BOQ item and building type (B1), starting from the Direct plan; type it or paste a block from Excel. Undo works for every typed figure.
+- Excel export: a **Budget summary** tab and a tab per PKG with the full figures.

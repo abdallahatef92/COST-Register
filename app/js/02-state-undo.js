@@ -56,6 +56,7 @@ addEventListener('beforeunload', (e) => {
 });
 // a change: {t:'item', bi, ii, f, v} or {t:'line', i, f, v}  (v undefined = remove override)
 function getC(c) {
+  if (c.t === 'bx' || c.t === 'bd') return budGet(c);
   if (c.t === 'own') return ST.own[c.k];
   if (c.t === 'ownset') return ST.ownSet[c.k];
   if (c.t === 'owngl') return JSON.stringify(ST.ownGl);
@@ -67,6 +68,7 @@ function getC(c) {
   return o ? o[c.f] : undefined;
 }
 function setC(c, v) {
+  if (c.t === 'bx' || c.t === 'bd') return budSet(c, v);
   if (c.t === 'ownset') {
     if (v === undefined) delete ST.ownSet[c.k];
     else ST.ownSet[c.k] = v;
@@ -227,6 +229,9 @@ function snapshot() {
     own: ST.own,
     ownSet: ST.ownSet,
     ownGl: ST.ownGl,
+    bud: ST.bud || null, // Budget: the cost report read, the progress and the typed figures
+    bdone: ST.bdone || null,
+    bx: ST.bx || null,
   };
 }
 function setSaved(t) {

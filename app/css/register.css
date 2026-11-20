@@ -399,3 +399,22 @@ tr.it.pin > td{background:#FFF8E1 !important} tr.it.pin > td:first-child{box-sha
 /* VAT before date: the date goes on its own line under the VAT list, inside the side navigation (it used to push the navigation sideways) */
 #nav .nvat{flex-wrap:wrap;row-gap:6px} #nav .nvat select{max-width:calc(100% - 31px)} #nav .nvat #vatFrom{margin-left:31px;width:calc(100% - 31px);max-width:170px;box-sizing:border-box}
 body:not(.navpin) #nav:not(:hover) .nvat #vatFrom{display:none !important} #nav{overflow-x:hidden}
+/* Budget (cost report): All PKGs · Progress · PKG pages – the look agreed on the mock-up (bucket colours, borders, dark lines between sections) */
+#bud{padding:12px 16px;font-size:12px;color:#14254A}
+.bd-hd{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px}.bd-hd h2{margin:0;font-size:20px}.bd-sub{color:#6B7280;font-size:12px}.bd-sp{flex:1}
+.bd-hd button,.bd-empty button{border:1px solid #C9D3E3;border-radius:7px;padding:4px 12px;background:#fff;color:#14254A;font-weight:600;cursor:pointer}.bd-empty button.pri{background:#14254A;color:#fff;border-color:#14254A;padding:8px 18px;font-size:14px}
+.bd-empty{max-width:760px;margin:40px auto;background:#fff;border:1px dashed #9AA8C0;border-radius:12px;padding:24px 28px;font-size:14px;line-height:1.5}.bd-empty h2{margin:0 0 6px}
+.bd-kp{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:4px 0 10px}.bd-k{background:#fff;border:1px solid #DCE3EE;border-radius:10px;padding:7px 10px}.bd-k i{display:block;font-style:normal;font-size:10.5px;color:#6B7280;font-weight:700}.bd-k b{font-size:17px}
+.bd-bar{margin:4px 0 8px}.bd-bar select{font-size:13px;padding:3px 6px;border-radius:6px}
+.bd-wrap{overflow-x:auto;border:2px solid #14254A;border-radius:6px;background:#fff}
+.bd-t{border-collapse:collapse;width:100%;background:#fff;font-size:11px}.bd-t th,.bd-t td{border:1px solid #AEB9CB;padding:2px 4px;white-space:nowrap}
+.bd-t th{background:#F7F9FC;font-weight:700;text-align:center;white-space:normal;line-height:1.15;color:#374151;font-size:11px}.bd-t tr:nth-child(2) th{border-bottom:2px solid #14254A}.bd-t th.bd-l,.bd-t td.bd-l{text-align:left}
+.bd-t td.n{text-align:right;font-variant-numeric:tabular-nums}.bd-t td.b{font-weight:700}.bd-t .bd-gs{box-shadow:inset 2px 0 0 #14254A}
+.bd-t td.bd-nm{min-width:180px;max-width:240px;white-space:normal;font-weight:600;line-height:1.25}
+.bd-t tr.bd-r td:first-child{box-shadow:inset 4px 0 0 var(--bc,#C9D3E3)}.bd-t tr.bd-r:nth-child(even) td{background:#FAFBFD}.bd-t tr.bd-go{cursor:pointer}.bd-t tr.bd-go:hover td{background:#EEF4FF}
+.bd-t tr.bd-grp td{background:var(--bc);color:#fff;font-weight:700;border-color:var(--bc)}.bd-t tr.bd-grp[style*="E9B949"] td{color:#14254A}
+.bd-t tr.bd-sum td{background:color-mix(in srgb,var(--bc) 14%,#fff);font-weight:800;border-top:2px solid var(--bc)}
+.bd-t tr.bd-tot td{background:#14254A;color:#fff;font-weight:800;border-top:2px solid #14254A}.bd-t tr.bd-tot td span{color:#fff !important}
+.bd-t tr.bd-nb td:first-child{box-shadow:inset 4px 0 0 #D97706}.bd-tag{display:inline-block;padding:0 4px;border-radius:4px;background:#FDECD2;color:#9A4A00;font-weight:700;font-size:10px}
+.bd-t td.bd-to{color:#6B7280}.bd-in{width:50px;border:1px solid #E7C66A;background:#FFF8D6;border-radius:3px;padding:1px 3px;text-align:right;font:inherit;font-weight:700;color:#14254A}.bd-in::placeholder{color:#9A8A55;font-weight:500}
+.bd-note{color:#6B7280;font-size:11.5px;margin:8px 0;line-height:1.45}.bd-ok{color:#1E7B34;font-weight:700}.bd-w{color:#B45309;font-weight:700}.bd-bad{color:#B42318;font-weight:700}
