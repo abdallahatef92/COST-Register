@@ -30,7 +30,8 @@ The register already has the actual side (ACWP) by PKG / MNL / cost element, tie
 
 ## Decisions (20 Nov 2026, third round)
 - PKG page: resources grouped Material / Subcontractor, each with a sum, then a TOTAL row for the PKG.
-- Cost without a budget resource must be assigned, line by line: to a resource of the PKG, or to "Material – other" / "Subcontractor – other" of the PKG. A red band counts what is left; the PKG is not done until it is 0 (like the difference to CJI3).
+- ~~Assign cost without a budget resource on the PKG page~~ – replaced (20 Nov, owner): the coding is done in Coding (PKG + MNL + cost element). The budget pages only report. A mismatch is only in the cost element: the line has its PKG and MNL but its cost element is not a budget resource of the PKG. It then stays in its MNL group (MAT → Material, SUB → Subcontractor, LAB → Labor, EQU / OTHER / ACC → their own group) on a red row "not on budget", listing the cost elements, counted in AC / EAC / VAC, with a link to fix the cost element in Coding.
+- Groups on the PKG page follow the MNL: MAT, SUB, LAB, then EQU / OTHER / ACC (no budget resources).
 - AC by type follows the resource (cost coded to M-2710 counts as Material), so the by-type and by-resource tables always agree.
 - Scope: Direct PKGs first; Indirect (Indirect Plan) in a later step.
 - One release: read the budget (Direct plan + Cost Analysis) + PKG pages + Progress (per BOQ item per building type) + provision / add-omit entry + Summary + Excel export (a tab per PKG like the S-sheets, and a Summary tab like the report's).
