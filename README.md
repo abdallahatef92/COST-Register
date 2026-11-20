@@ -349,3 +349,8 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - All PKGs and the side navigation are grouped as in the cost report's Summary sheet (Civil work Packages · Arch work Packages · MEP …), with a sum per group and a dashed border between groups.
 - New tab **Cost Analysis**: the budget as the Cost Analysis sheet – each BOQ item (dashed border) with its resources: EXP, cost element, description, unit, usage, waste, total resource qty, SC / material / equipment / labor / other rate, budget rate, take-off, BAC, resource take-off, EV qty and EV amount. One PKG or all.
 - Read the cost report again to get the new columns and the groups.
+
+## v4.41 – Budget: search, All PKGs, MNL
+- A search box in the header of every Budget page: it looks in every column (on Cost Analysis also the BOQ item code and its PKG); sums follow; *✕ Clear filters* clears it too.
+- Cost Analysis opens on **All PKGs**.
+- An **MNL** column (MAT / SUB / LAB / EQU – the EXP code of Cost Analysis) on Cost Analysis and on the PKG pages.

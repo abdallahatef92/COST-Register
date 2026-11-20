@@ -1801,6 +1801,17 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ]),
       [1, 2, true]
     );
+    await q.locator('#bud input[data-bsr]').fill('Pouring');
+    await q.waitForTimeout(800);
+    eq(
+      'Search (Cost Analysis, All PKGs, MNL column): "Pouring" → the S-50 line, MNL SUB',
+      await q.evaluate(() =>
+        [...document.querySelectorAll('#bud .bd-ca tr.bd-r')].map((r) => r.cells[0].textContent + ' ' + r.cells[1].textContent)
+      ),
+      ['SUB S-50']
+    );
+    await q.locator('#bud input[data-bsr]').fill('');
+    await q.waitForTimeout(600);
     // Excel: a Budget summary tab and a tab per PKG
     eq(
       'Excel export: Budget summary + a tab per PKG',

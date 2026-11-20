@@ -1,5 +1,12 @@
 [
   {
+    "v": "4.41",
+    "n": [
+      "Budget: a search box on every page – it looks in every column",
+      "Cost Analysis opens on All PKGs; an MNL column (MAT / SUB / LAB / EQU) on Cost Analysis and the PKG pages"
+    ]
+  },
+  {
     "v": "4.4",
     "n": [
       "Budget: a filter under every column – text, or >1000 / <0 for numbers; sums follow",

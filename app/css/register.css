@@ -423,3 +423,4 @@ body:not(.navpin) #nav:not(:hover) .nvat #vatFrom{display:none !important} #nav{
 .bd-t tr.bd-gend td{border-bottom:2px dashed #14254A}.bd-t tr.bd-grp+tr.bd-r td{border-top:0}
 .bd-t tr.bd-item td{background:#EEF2F8;font-weight:600;border-top:2px dashed #7F8FB0}.bd-t tr.bd-item td:first-child{box-shadow:inset 4px 0 0 var(--bc)}.bd-t tr.bd-gap td{height:3px;padding:0;border:0;background:#fff}
 .bd-t td.bd-nm2{white-space:normal;min-width:160px;max-width:240px}.bd-hd button[data-bfclr]{margin-left:6px;padding:1px 8px;font-size:11px}
+.bd-srch{width:260px;border:1px solid #C9D3E3;border-radius:7px;padding:4px 9px;font:inherit;font-size:12.5px}.bd-srch:not(:placeholder-shown){background:#FFF3CD;border-color:#D4A72C;font-weight:700}
