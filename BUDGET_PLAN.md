@@ -27,3 +27,11 @@ The register already has the actual side (ACWP) by PKG / MNL / cost element, tie
 2. Cost elements for coding = the Cost Analysis resources of the PKG; actuals that do not land on a budget resource show on their own row ("not on a budget resource").
 3. Progress: EV quantity per BOQ item per building type, as in the Direct plan.
 4. Provision and addition / omission: entered in the tool, per PKG and cost element (qty × rate).
+
+## Decisions (20 Nov 2026, third round)
+- PKG page: resources grouped Material / Subcontractor, each with a sum, then a TOTAL row for the PKG.
+- Cost without a budget resource must be assigned, line by line: to a resource of the PKG, or to "Material – other" / "Subcontractor – other" of the PKG. A red band counts what is left; the PKG is not done until it is 0 (like the difference to CJI3).
+- AC by type follows the resource (cost coded to M-2710 counts as Material), so the by-type and by-resource tables always agree.
+- Scope: Direct PKGs first; Indirect (Indirect Plan) in a later step.
+- One release: read the budget (Direct plan + Cost Analysis) + PKG pages + Progress (per BOQ item per building type) + provision / add-omit entry + Summary + Excel export (a tab per PKG like the S-sheets, and a Summary tab like the report's).
+- The cost report workbook has a second table on each PKG sheet: BOQ item × resource ("Combined Code") – not part of the PKG totals.
