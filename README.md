@@ -343,3 +343,9 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - Actuals: the register's to-date cost by PKG and cost element. A register PKG code is the cost report PKG (STR-03) or its Direct plan division code (S03). A cost element that is not a budget resource of the PKG is its own "no budget" line in its MNL group.
 - **Progress**: done qty per BOQ item and building type (B1), starting from the Direct plan; type it or paste a block from Excel. Undo works for every typed figure.
 - Excel export: a **Budget summary** tab and a tab per PKG with the full figures.
+
+## v4.4 – Budget: filters, report groups, Cost Analysis tab
+- A filter box under every column of the Budget tables (All PKGs, PKG page, Cost Analysis, Progress): text matches anywhere; `>1000`, `<0`, `>=`, `<=`, `=5` compare numbers. Sums and totals follow the filter; *✕ Clear filters* in the header.
+- All PKGs and the side navigation are grouped as in the cost report's Summary sheet (Civil work Packages · Arch work Packages · MEP …), with a sum per group and a dashed border between groups.
+- New tab **Cost Analysis**: the budget as the Cost Analysis sheet – each BOQ item (dashed border) with its resources: EXP, cost element, description, unit, usage, waste, total resource qty, SC / material / equipment / labor / other rate, budget rate, take-off, BAC, resource take-off, EV qty and EV amount. One PKG or all.
+- Read the cost report again to get the new columns and the groups.

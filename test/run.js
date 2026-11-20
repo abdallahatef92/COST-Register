@@ -1774,6 +1774,33 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       84000
     );
     eq('…the difference to CJI3 stays 0', await q.evaluate(() => R.diff), 0);
+    // a filter on the PKG page: only M-100; the sum follows
+    await q.$eval('#side [data-gt="bpkg"]', (x) => x.click());
+    await q.waitForTimeout(300);
+    await q.locator('#bud input[data-bflt="pkg:TST-01|0"]').fill('M-100');
+    await q.waitForTimeout(800);
+    eq(
+      'PKG page filter (cost element M-100): one line, the TOTAL follows it',
+      await q.evaluate(() => [
+        document.querySelectorAll('#bud tr.bd-r').length,
+        /filter on/.test(document.getElementById('bud').textContent),
+      ]),
+      [1, true]
+    );
+    await q.$eval('[data-bfclr]', (b) => b.click());
+    await q.waitForTimeout(300);
+    // the Cost Analysis tab: the BOQ item and its 2 resources
+    await q.$eval('#side [data-gt="bca"]', (x) => x.click());
+    await q.waitForTimeout(400);
+    eq(
+      'Cost Analysis tab: the BOQ item with its 2 resources, BAC 105,000',
+      await q.evaluate(() => [
+        document.querySelectorAll('#bud tr.bd-item').length,
+        document.querySelectorAll('#bud .bd-ca tr.bd-r').length,
+        /BAC 105,000/.test(document.getElementById('bud').textContent),
+      ]),
+      [1, 2, true]
+    );
     // Excel: a Budget summary tab and a tab per PKG
     eq(
       'Excel export: Budget summary + a tab per PKG',

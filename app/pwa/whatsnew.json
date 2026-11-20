@@ -1,5 +1,13 @@
 [
   {
+    "v": "4.4",
+    "n": [
+      "Budget: a filter under every column – text, or >1000 / <0 for numbers; sums follow",
+      "All PKGs grouped as in your report (Civil · Arch · MEP) with dashed borders and a sum per group",
+      "New tab Cost Analysis: each BOQ item with its resources – usage, waste, rates by type, budget rate, BAC, EV"
+    ]
+  },
+  {
     "v": "4.3",
     "n": [
       "New section Budget: read your cost report (Direct plan + Cost Analysis, .xlsb or .xlsx) – budget per PKG and resource",

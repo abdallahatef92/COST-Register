@@ -79,14 +79,31 @@ function budRead(wb, file) {
     kUnit = ac(/^res unit/i, A2),
     kTO = ac(/^take ?off$/i, A2),
     kBAC = ac(/^bac$/i, A2),
-    kRQ = ac(/^resource takeoff/i, A2);
+    kRQ = ac(/^resource takeoff/i, A2),
+    // the rest of the Cost Analysis line (the Cost Analysis tab shows it as the sheet does)
+    kIName = ac(/^item name$/i),
+    kIUnit = ac(/^unit$/i, A2),
+    kIQty = ac(/^quantity$/i, A2),
+    kUse = ac(/^res qty/i, A2),
+    kWaste = ac(/^waste$/i, A2),
+    kTot = ac(/^total re[cs]/i, A2),
+    kSC = ac(/^sc unit/i, A2),
+    kMat = ac(/^material unit/i, A2),
+    kEq = ac(/^equipment unit/i, A2),
+    kLab = ac(/^labo/i, A2),
+    kOth = ac(/^other$/i, A2),
+    kBR = ac(/^budget rate$/i, A2),
+    gv = (r, k) => (k >= 0 ? budNum(r[k]) : 0);
   if ([kCode, kCsi, kCe, kTO, kBAC, kRQ].some((c) => c < 0))
     throw new Error('Cost Analysis: missing columns (Cost Code, CSI Code, Cost Element Code, TAKE OFF, BAC, Resource takeoff)');
-  const res = [];
+  const res = [],
+    cai = {}; // the BOQ items as Cost Analysis has them (level 3): name, unit, quantity
   for (const r of A.slice(ar + 2)) {
     const ce = budStr(r[kCe]),
       pkg = budStr(r[kCsi]),
       code = budStr(r[kCode]);
+    if (code && pkg && !ce && kLvl >= 0 && budNum(r[kLvl]) === 3 && !cai[code])
+      cai[code] = { n: budStr(r[kIName >= 0 ? kIName : kName]), u: kIUnit >= 0 ? budStr(r[kIUnit]) : '', q: gv(r, kIQty) };
     if (!ce || !pkg || !code || (kLvl >= 0 && budNum(r[kLvl]) < 4)) continue;
     const bac = budNum(r[kBAC]),
       rq = budNum(r[kRQ]);
@@ -101,16 +118,35 @@ function budRead(wb, file) {
       tq: budNum(r[kTO]),
       rq,
       bac,
+      o: gv(r, kUse),
+      w: gv(r, kWaste),
+      t: gv(r, kTot),
+      rt: [gv(r, kSC), gv(r, kMat), gv(r, kEq), gv(r, kLab), gv(r, kOth)],
+      br: gv(r, kBR),
     });
   }
   // PKG names: the Summary sheet (code · name), else the Direct plan division rows
-  const sm = sh('Summary');
-  if (sm)
+  // and the groups of the direct PKGs as the report has them: Civil work Packages · Arch work Packages · MEP …
+  const sm = sh('Summary'),
+    groups = [];
+  if (sm) {
+    let g = null,
+      direct = false;
     for (const r of rows(sm)) {
-      const c = budStr(r[0]);
-      if (/^[A-Z]{2,4}-\d+$/.test(c) && budStr(r[1])) names[c] = budStr(r[1]);
+      const c = budStr(r[0]),
+        b = budStr(r[1]);
+      if (/^direct$/i.test(c)) {
+        direct = true;
+        continue;
+      }
+      if (/^indirect/i.test(c)) break;
+      if (/^[A-Z]{2,4}-\d+$/.test(c)) {
+        if (b) names[c] = b;
+        if (direct && g) g.p.push(c);
+      } else if (direct && !c && b) groups.push((g = { n: b, p: [] }));
     }
-  return { file, at: new Date().toISOString(), bts, items, res, divMap, names };
+  }
+  return { file, at: new Date().toISOString(), bts, items, res, divMap, names, cai, groups: groups.filter((x) => x.p.length) };
 }
 
 // ---------------------------------------------------------------- the figures of one PKG, or all of them
@@ -228,6 +264,39 @@ const bIn = (k, f, v, ph) =>
   `<input class="bd-in" data-bx="${esc(k)}" data-bf="${f}" value="${v === undefined || v === '' ? '' : esc(String(v))}" placeholder="${ph || ''}">`;
 
 // ---------------------------------------------------------------- pages
+// filters: a box under every column header – text matches anywhere in the cell; >1000, <0, >=, <=, =5 compare numbers
+const bfTxt = (h) => {
+  const t = String(h)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (t) return t;
+  const m = /value="([^"]*)"/.exec(String(h));
+  return m ? m[1] : '';
+};
+const bfGet = (pg) => (ST.bflt && ST.bflt[pg]) || {};
+function bfPass(pg, cells) {
+  const F = bfGet(pg);
+  for (const i in F) {
+    const f = String(F[i] || '').trim();
+    if (!f) continue;
+    const c = bfTxt(cells[i] === undefined ? '' : cells[i]),
+      m = /^(>=|<=|>|<|=)\s*(-?[\d,.]+)$/.exec(f);
+    if (m) {
+      const v = budNum(c.replace(/[^\d.-]/g, '')),
+        x = budNum(m[2]);
+      const okN = m[1] === '>' ? v > x : m[1] === '<' ? v < x : m[1] === '>=' ? v >= x : m[1] === '<=' ? v <= x : Math.abs(v - x) < 0.005;
+      if (!okN) return false;
+    } else if (!c.toLowerCase().includes(f.toLowerCase())) return false;
+  }
+  return true;
+}
+const bfOn = (pg) => Object.values(bfGet(pg)).some((v) => String(v || '').trim());
+const bfRow = (pg, n) =>
+  `<tr class="bd-flt">${Array.from({ length: n }, (_, i) => `<th><input data-bflt="${pg}|${i}" value="${esc(bfGet(pg)[i] || '')}" placeholder="▾" title="Filter: text, or >1000 · <0 · =5 for numbers"></th>`).join('')}</tr>`;
+const bfNote = (pg) =>
+  bfOn(pg) ? ` · <b class="bd-w">filter on</b> – sums show the lines you see <button data-bfclr="${pg}">✕ Clear filters</button>` : '';
+
 function renderBudget() {
   const el = $('bud');
   if (!ST.bud) {
@@ -236,17 +305,36 @@ function renderBudget() {
   }
   const C = budCalc();
   if (ST.tab === 'bprog') return budProgress(el);
+  if (ST.tab === 'bca') return budCA(el);
   if (ST.tab === 'bpkg' && ST.bpk && C.pk.has(ST.bpk)) return budPkgPage(el, C, ST.bpk);
   return budSummary(el, C);
 }
 function budHead(title, sub) {
   return `<div class="bd-hd"><h2>${title}</h2><span class="bd-sub">${sub}</span><span class="bd-sp"></span><span class="bd-sub">cost report: ${esc(ST.bud.file || '')} · read ${esc(String(ST.bud.at).slice(0, 10))}</span><button data-bud="read">Read again…</button></div>`;
 }
-// All PKGs: one row per PKG, like the cost report's Summary
+// the PKG groups of the report (Civil · Arch · MEP …, from its Summary sheet); PKGs in no group come last
+function budGroups(ps) {
+  const B = ST.bud,
+    seen = new Set(),
+    out = [];
+  for (const g of B.groups || []) {
+    const p = g.p.filter((x) => ps.includes(x) && !seen.has(x));
+    p.forEach((x) => seen.add(x));
+    if (p.length) out.push({ n: g.n, p });
+  }
+  const rest = ps.filter((x) => !seen.has(x));
+  if (rest.length) out.push({ n: out.length ? 'Other PKGs' : 'Direct PKGs', p: rest });
+  return out;
+}
+const budPkgColor = (p) => {
+  const gs = budGroups(budPkgs(budCalc()));
+  const i = gs.findIndex((g) => g.p.includes(p));
+  return PAL[(i < 0 ? 7 : i) % PAL.length];
+};
+// All PKGs: one row per PKG, grouped like the report (Civil · Arch · MEP), dashed borders between the groups
 function budSummary(el, C) {
-  const ps = budPkgs(C),
-    rs = ps.map((p) => ({ p, ...budSum([...C.pk.get(p).values()]) })),
-    T = budSum(rs),
+  const pg = 'sum',
+    ps = budPkgs(C),
     ind = (t) =>
       !t.ac
         ? ''
@@ -255,18 +343,67 @@ function budSummary(el, C) {
           : t.cpi >= 0.85
             ? '<span class="bd-w">over</span>'
             : '<span class="bd-bad">over</span>';
+  const cells = (r) => [
+    `<b>${esc(r.p)}</b>`,
+    esc(budName(r.p)),
+    bK(r.bac),
+    bK(r.ev),
+    r.bac ? bP(r.ev / r.bac) : '-',
+    bK(r.aa),
+    bK(r.ao),
+    bK(r.pv),
+    `<b>${bK(r.ac)}</b>`,
+    `<span${bCol(r.cv)}>${bK(r.cv)}</span>`,
+    r.ac ? r.cpi.toFixed(2) : '-',
+    bK(r.etc),
+    `<b>${bK(r.eac)}</b>`,
+    `<span${bCol(r.vac)}>${bK(r.vac)}</span>`,
+    ind(r),
+  ];
+  const HD = [
+    'PKG',
+    'Name',
+    'BAC',
+    'EV',
+    '% earned',
+    'Actual',
+    'Add / omit',
+    'Provision',
+    'AC',
+    'CV',
+    'CPI',
+    'ETC',
+    'EAC',
+    'VAC',
+    'Status',
+  ];
+  const tot = (lab, t, cls, bc) =>
+    `<tr class="${cls}"${bc ? ` style="--bc:${bc}"` : ''}><td colspan="2">${lab}</td>${[bK(t.bac), bK(t.ev), t.bac ? bP(t.ev / t.bac) : '-', bK(t.aa), bK(t.ao), bK(t.pv), bK(t.ac), bK(t.cv), t.ac ? t.cpi.toFixed(2) : '-', bK(t.etc), bK(t.eac), bK(t.vac)].map((v) => `<td class="n">${v}</td>`).join('')}<td></td></tr>`;
+  let body = '',
+    all = [];
+  budGroups(ps).forEach((g, gi) => {
+    const bc = PAL[gi % PAL.length],
+      rs = g.p.map((p) => ({ p, ...budSum([...C.pk.get(p).values()]) })).filter((r) => bfPass(pg, cells(r)));
+    if (!rs.length) return;
+    all = all.concat(rs);
+    body +=
+      `<tr class="bd-grp" style="--bc:${bc}"><td colspan="${HD.length}">${esc(g.n)} · ${rs.length} PKG${rs.length > 1 ? 's' : ''}</td></tr>` +
+      rs
+        .map(
+          (r) =>
+            `<tr class="bd-r bd-go" style="--bc:${bc}" data-bp="${esc(r.p)}">${cells(r)
+              .map((v, i) => `<td class="${i < 2 ? 'bd-l' : i === 14 ? '' : 'n'}">${v}</td>`)
+              .join('')}</tr>`
+        )
+        .join('') +
+      tot('Sum ' + esc(g.n), budSum(rs), 'bd-sum bd-gend', bc);
+  });
+  const T = budSum(all);
   el.innerHTML =
-    budHead('Budget · All PKGs', 'amounts in thousands (EGP 000) · click a PKG for its page') +
+    budHead('Budget · All PKGs', 'grouped as in your report · amounts in thousands (EGP 000) · click a PKG for its page' + bfNote(pg)) +
     budKpi(T) +
-    `<div class="bd-wrap"><table class="bd-t"><tr><th>PKG</th><th class="bd-l">Name</th><th>BAC</th><th>EV</th><th>% earned</th><th>Actual</th><th>Add / omit</th><th>Provision</th><th>AC</th><th>CV</th><th>CPI</th><th>ETC</th><th>EAC</th><th>VAC</th><th>Status</th></tr>${rs
-      .map(
-        (r) =>
-          `<tr class="bd-r bd-go" data-bp="${esc(r.p)}"><td><b>${esc(r.p)}</b></td><td class="bd-l">${esc(budName(r.p))}</td><td class="n">${bK(r.bac)}</td><td class="n">${bK(r.ev)}</td><td class="n">${r.bac ? bP(r.ev / r.bac) : '-'}</td><td class="n">${bK(r.aa)}</td><td class="n">${bK(r.ao)}</td><td class="n">${bK(r.pv)}</td><td class="n b">${bK(r.ac)}</td><td class="n"${bCol(r.cv)}>${bK(r.cv)}</td><td class="n">${r.ac ? r.cpi.toFixed(2) : '-'}</td><td class="n">${bK(r.etc)}</td><td class="n b">${bK(r.eac)}</td><td class="n"${bCol(r.vac)}>${bK(r.vac)}</td><td>${ind(r)}</td></tr>`
-      )
-      .join(
-        ''
-      )}<tr class="bd-tot"><td colspan="2">TOTAL direct · ${ps.length} PKGs</td><td class="n">${bK(T.bac)}</td><td class="n">${bK(T.ev)}</td><td class="n">${T.bac ? bP(T.ev / T.bac) : '-'}</td><td class="n">${bK(T.aa)}</td><td class="n">${bK(T.ao)}</td><td class="n">${bK(T.pv)}</td><td class="n">${bK(T.ac)}</td><td class="n">${bK(T.cv)}</td><td class="n">${T.ac ? T.cpi.toFixed(2) : '-'}</td><td class="n">${bK(T.etc)}</td><td class="n">${bK(T.eac)}</td><td class="n">${bK(T.vac)}</td><td></td></tr></table></div>
-    <div class="bd-note">Actual = the register's cost coded to a PKG of the cost report (its code, or the Direct plan division code such as S03) · cost coded to other PKGs or not coded: <b>${bK(C.off)}</b> thousand – not in this page · AC = actual + add / omission + provision · EAC = AC + ETC · VAC = BAC − EAC</div>`;
+    `<div class="bd-wrap"><table class="bd-t"><tr>${HD.map((h, i) => `<th class="${i < 2 ? 'bd-l' : ''}">${h}</th>`).join('')}</tr>${bfRow(pg, HD.length)}${body}${tot(`TOTAL direct · ${all.length} PKGs`, T, 'bd-tot')}</table></div>
+    <div class="bd-note">Actual = the register's cost coded to a PKG of the cost report (its code, or the Direct plan division code such as S03) · cost coded to other PKGs or not coded: <b>${bK(C.off)}</b> thousand – not on this page · AC = actual + add / omission + provision · EAC = AC + ETC · VAC = BAC − EAC</div>`;
 }
 function budKpi(T) {
   const k = (l, v, c) => `<div class="bd-k"><i>${l}</i><b${c || ''}>${v}</b></div>`;
@@ -347,13 +484,15 @@ const BUD_COLS = [
   ],
 ];
 function budPkgPage(el, C, p) {
-  const m = C.pk.get(p),
-    all = [...m.values()],
+  const pg = 'pkg:' + p,
+    cols = BUD_COLS.flatMap(([g, cs]) => cs.map((c, i) => ({ g, h: c[0], f: c[1], s: c[2], first: i === 0 })));
+  const cellsOf = (r) => [esc(r.ce), esc(r.n) + (r.nb ? ' no budget' : ''), esc(r.u), ...cols.map((c) => c.f(r))];
+  const all = [...C.pk.get(p).values()].filter((r) => bfPass(pg, cellsOf(r))),
     T = budSum(all);
-  const cols = BUD_COLS.flatMap(([g, cs]) => cs.map((c, i) => ({ g, h: c[0], f: c[1], s: c[2], first: i === 0 })));
   const head =
     `<tr><th colspan="3"></th>${BUD_COLS.map(([g, cs]) => `<th colspan="${cs.length}" class="bd-gs">${g}</th>`).join('')}</tr>` +
-    `<tr><th>Code</th><th class="bd-l">Cost element</th><th>Res. unit</th>${cols.map((c) => `<th class="${c.first ? 'bd-gs' : ''}">${c.h}</th>`).join('')}</tr>`;
+    `<tr><th>Code</th><th class="bd-l">Cost element</th><th>Res. unit</th>${cols.map((c) => `<th class="${c.first ? 'bd-gs' : ''}">${c.h}</th>`).join('')}</tr>` +
+    bfRow(pg, cols.length + 3);
   const sumRow = (lab, t, cls, bc) =>
     `<tr class="${cls}"${bc ? ` style="--bc:${bc}"` : ''}><td colspan="3">${lab}</td>${cols.map((c) => `<td class="n${c.first ? ' bd-gs' : ''}">${c.s ? bK(t[c.s]) : ''}</td>`).join('')}</tr>`;
   let body = '';
@@ -369,30 +508,138 @@ function budPkgPage(el, C, p) {
             `<tr class="bd-r${r.nb ? ' bd-nb' : ''}" style="--bc:${bc}"><td>${esc(r.ce)}</td><td class="bd-l bd-nm">${esc(r.n)}${r.nb ? ' <span class="bd-tag">no budget</span>' : ''}</td><td>${esc(r.u)}</td>${cols.map((c) => `<td class="n${c.first ? ' bd-gs' : ''}">${c.f(r)}</td>`).join('')}</tr>`
         )
         .join('') +
-      sumRow('Sum ' + BUD_GN[g], budSum(rs), 'bd-sum', bc);
+      sumRow('Sum ' + BUD_GN[g], budSum(rs), 'bd-sum bd-gend', bc);
   }
   el.innerHTML =
-    budHead(`${esc(p)} · ${esc(budName(p))}`, 'PKG · resource-wise · amounts in thousands (EGP 000) · yellow = you type it') +
+    budHead(`${esc(p)} · ${esc(budName(p))}`, 'PKG · resource-wise · amounts in thousands (EGP 000) · yellow = you type it' + bfNote(pg)) +
     budKpi(T) +
     `<div class="bd-wrap"><table class="bd-t bd-pkg">${head}${body}${sumRow('TOTAL ' + esc(p), T, 'bd-tot')}</table></div>
     <div class="bd-note">Budget = take-off qty × UR (Cost Analysis) · EV qty = the BOQ items' done qty (Progress) × the resource qty per item unit · Qty variance = EV qty − actual qty − add/omit qty · Grand total = actual + add/omission + provision · CV = EV − grand total · ETC = qty × rate (qty starts at the remaining resource qty, rate at the UR – type over them) · EAC = grand total + ETC · VAC = total budget − EAC · actual loss = EV qty − used qty · a <span class="bd-tag">no budget</span> line: cost coded to this PKG with a cost element that is not one of its budget resources – fix the cost element in Coding, or give it an ETC</div>`;
+}
+// Cost Analysis: the budget as the cost report's Cost Analysis sheet – each BOQ item with its resources under it (dashed borders between items)
+function budCA(el) {
+  const B = ST.bud,
+    X = budIndex(),
+    ps = [...new Set(B.res.map((x) => x.p))].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  const p = ST.bcaP === '*' ? '*' : ST.bcaP && ps.includes(ST.bcaP) ? ST.bcaP : ps[0],
+    pg = 'ca';
+  const f0 = (v) => (Math.abs(v) < 0.5 ? '-' : Math.round(v).toLocaleString('en-US'));
+  const HD = [
+    'Cost code · EXP',
+    'Cost element',
+    'Description',
+    'Unit',
+    'Usage',
+    'Waste',
+    'Total res. qty',
+    'SC rate',
+    'Material rate',
+    'Equipment rate',
+    'Labor rate',
+    'Other rate',
+    'Budget rate',
+    'Take-off',
+    'Total budget (BAC)',
+    'Res. take-off qty',
+    'EV qty',
+    'EV amount',
+  ];
+  const byItem = new Map();
+  for (const x of B.res) {
+    if (p !== '*' && x.p !== p) continue;
+    let a = byItem.get(x.i);
+    if (!a) byItem.set(x.i, (a = []));
+    a.push(x);
+  }
+  let body = '',
+    nI = 0,
+    nR = 0,
+    tB = 0,
+    tE = 0;
+  for (const [code, rs] of byItem) {
+    const it = X.itemOf.get(code),
+      ci = (B.cai || {})[code] || {},
+      done = it ? budDone(it).reduce((s, v) => s + budNum(v), 0) : 0;
+    const rows = rs
+      .map((x) => {
+        const q = x.tq ? (done * x.rq) / x.tq : 0,
+          ev = x.rq ? (q * x.bac) / x.rq : 0,
+          rt = x.rt || [0, 0, 0, 0, 0];
+        const cells = [
+          x.g === 'MAT' ? 'M' : x.g === 'SUB' ? 'S' : x.g === 'LAB' ? 'L' : x.g === 'EQU' ? 'E' : '',
+          esc(x.ce),
+          esc(x.n),
+          esc(x.u),
+          bQ(x.o || 0),
+          bQ(x.w || 0),
+          bQ(x.t || 0),
+          ...rt.map((v) => bQ(v)),
+          bQ(x.br || (x.tq ? x.bac / x.tq : 0)),
+          bQ(x.tq),
+          f0(x.bac),
+          bQ(x.rq),
+          bQ(q),
+          f0(ev),
+        ];
+        return { x, q, ev, cells };
+      })
+      .filter((r) => bfPass(pg, r.cells));
+    if (!rows.length) continue;
+    nI++;
+    nR += rows.length;
+    const sb = rows.reduce((s, r) => s + r.x.bac, 0),
+      se = rows.reduce((s, r) => s + r.ev, 0);
+    tB += sb;
+    tE += se;
+    const bc = PAL[(ps.indexOf(rs[0].p) + 0) % PAL.length];
+    body +=
+      `<tr class="bd-item" style="--bc:${bc}"><td><b>${esc(code)}</b></td><td>${esc(rs[0].p)}</td><td class="bd-l bd-nm">${esc(ci.n || (it && it.d) || '')}</td><td>${esc(ci.u || (it && it.u) || '')}</td><td colspan="9" class="bd-sub">${rows.length} resource${rows.length > 1 ? 's' : ''} · done ${bQ(done)} of ${bQ(rows[0].x.tq)}</td><td class="n">${bQ(rows[0].x.tq)}</td><td class="n b">${f0(sb)}</td><td></td><td></td><td class="n b">${f0(se)}</td></tr>` +
+      rows
+        .map(
+          (r) =>
+            `<tr class="bd-r" style="--bc:${BUD_GC[r.x.g] || '#C9D3E3'}">${r.cells.map((v, i) => `<td class="${i === 2 ? 'bd-l bd-nm2' : i > 3 ? 'n' : ''}">${v}</td>`).join('')}</tr>`
+        )
+        .join('') +
+      '<tr class="bd-gap"><td colspan="18"></td></tr>';
+  }
+  el.innerHTML =
+    budHead('Cost Analysis', 'the budget as your Cost Analysis sheet: each BOQ item and its resources · full amounts' + bfNote(pg)) +
+    `<div class="bd-bar">PKG <select data-bud="cap"><option value="*" ${p === '*' ? 'selected' : ''}>All PKGs</option>${ps.map((x) => `<option ${x === p ? 'selected' : ''} value="${esc(x)}">${esc(x)} · ${esc(budName(x))}</option>`).join('')}</select> <span class="bd-sub">${nI} BOQ items · ${nR} resource lines · BAC ${f0(tB)} · EV ${f0(tE)}</span></div>
+    <div class="bd-wrap"><table class="bd-t bd-ca"><tr>${HD.map((h, i) => `<th class="${i === 2 ? 'bd-l' : ''}">${h}</th>`).join('')}</tr>${bfRow(pg, HD.length)}${body}<tr class="bd-tot"><td colspan="14">TOTAL · ${nI} BOQ items</td><td class="n">${f0(tB)}</td><td></td><td></td><td class="n">${f0(tE)}</td></tr></table></div>
+    <div class="bd-note">From Cost Analysis: usage (resource qty per item unit), waste, total resource qty, the unit rates by type, budget rate, take-off, BAC and the resource take-off qty · EV qty = the item's done qty (Progress) × the resource qty per item unit · EXP: M material · S subcontract · L labor · E equipment</div>`;
 }
 // Progress: done qty per BOQ item and building type (B1) – starts from the Direct plan, you update it each month
 function budProgress(el) {
   const B = ST.bud,
     ps = [...new Set(B.items.map((x) => x.p))].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
-  const p = ST.bprogP && ps.includes(ST.bprogP) ? ST.bprogP : ps[0];
-  const its = B.items.filter((x) => x.p === p),
-    used = B.bts.map((_, k) => its.some((x) => x.tq[k] || budDone(x)[k]));
+  const p = ST.bprogP && ps.includes(ST.bprogP) ? ST.bprogP : ps[0],
+    pg = 'prog:' + p;
+  const its0 = B.items.filter((x) => x.p === p),
+    used = B.bts.map((_, k) => its0.some((x) => x.tq[k] || budDone(x)[k]));
   const ks = used.map((u, k) => (u ? k : -1)).filter((k) => k >= 0);
+  const cellsOf = (x) => {
+    const d = budDone(x),
+      td = x.tq.reduce((s, v) => s + v, 0),
+      dd = d.reduce((s, v) => s + budNum(v), 0);
+    return [
+      x.c,
+      x.d,
+      x.u,
+      ...ks.flatMap((k) => [bQ(x.tq[k]), String(budNum(d[k]) || '')]),
+      bQ(dd) + ' / ' + bQ(td),
+      td ? bP(dd / td) : '-',
+    ];
+  };
+  const its = its0.filter((x) => bfPass(pg, cellsOf(x)));
   el.innerHTML =
     budHead(
       'Progress',
-      'done qty to date per BOQ item and building type (B1) · grey = take-off · yellow = done – type it, or paste a block from Excel'
+      'done qty to date per BOQ item and building type (B1) · grey = take-off · yellow = done – type it, or paste a block from Excel' +
+        bfNote(pg)
     ) +
     `<div class="bd-bar">PKG <select data-bud="pp">${ps.map((x) => `<option ${x === p ? 'selected' : ''} value="${esc(x)}">${esc(x)} · ${esc(budName(x))}</option>`).join('')}</select></div>
     <div class="bd-wrap"><table class="bd-t bd-prog"><tr><th colspan="3"></th>${ks.map((k) => `<th colspan="2" class="bd-gs">${esc(B.bts[k])}</th>`).join('')}<th colspan="2" class="bd-gs">Item</th></tr>
-    <tr><th>BOQ item</th><th class="bd-l">Description</th><th>Unit</th>${ks.map(() => '<th class="bd-gs">Take-off</th><th>Done</th>').join('')}<th class="bd-gs">Done / take-off</th><th>%</th></tr>${its
+    <tr><th>BOQ item</th><th class="bd-l">Description</th><th>Unit</th>${ks.map(() => '<th class="bd-gs">Take-off</th><th>Done</th>').join('')}<th class="bd-gs">Done / take-off</th><th>%</th></tr>${bfRow(pg, 3 + ks.length * 2 + 2)}${its
       .map((x) => {
         const d = budDone(x),
           td = x.tq.reduce((s, v) => s + v, 0),
@@ -411,28 +658,41 @@ function budSide(items) {
     '#14254A',
     'All PKGs',
     '',
-    ST.bud ? 'BAC · EV · AC · EAC per PKG' : 'read the cost report',
+    ST.bud ? 'grouped as your report · EAC per PKG' : 'read the cost report',
     '',
     undefined,
     'All',
   ]);
   if (!ST.bud) return;
+  items.push([
+    'data-gt="bca"',
+    ST.tab === 'bca',
+    '#3B5BA9',
+    'Cost Analysis',
+    '',
+    'the budget: BOQ items and their resources',
+    '',
+    undefined,
+    'CA',
+  ]);
   items.push(['data-gt="bprog"', ST.tab === 'bprog', '#2E7D32', 'Progress', '', 'done qty per BOQ item', '', undefined, 'Prg']);
   const C = budCalc();
-  budPkgs(C).forEach((p, n) => {
-    const t = budSum([...C.pk.get(p).values()]);
-    items.push([
-      `data-gt="bpkg" data-bp="${esc(p)}"`,
-      ST.tab === 'bpkg' && ST.bpk === p,
-      PAL[n % PAL.length],
-      p + ' ' + budName(p),
-      t.bac ? `<span${bCol(t.vac)}>${bK(t.vac)}</span>` : '',
-      'VAC · EAC ' + bK(t.eac),
-      '',
-      undefined,
-      p.replace(/^[A-Z]+-/, ''),
-    ]);
-  });
+  budGroups(budPkgs(C)).forEach((g, gi) =>
+    g.p.forEach((p) => {
+      const t = budSum([...C.pk.get(p).values()]);
+      items.push([
+        `data-gt="bpkg" data-bp="${esc(p)}"`,
+        ST.tab === 'bpkg' && ST.bpk === p,
+        PAL[gi % PAL.length],
+        p + ' ' + budName(p),
+        t.bac ? `<span${bCol(t.vac)}>${bK(t.vac)}</span>` : '',
+        g.n + ' · EAC ' + bK(t.eac),
+        '',
+        undefined,
+        p.replace(/^[A-Z]+-/, ''),
+      ]);
+    })
+  );
 }
 
 // ---------------------------------------------------------------- reading the file, typing, pasting
@@ -488,6 +748,11 @@ document.addEventListener('change', (e) => {
     render();
     return;
   }
+  if (t.matches('[data-bud="cap"]')) {
+    ST.bcaP = t.value;
+    render();
+    return;
+  }
   if (t.matches('input[data-bx]')) {
     const v = t.value.trim().replace(/,/g, '');
     change(
@@ -500,6 +765,32 @@ document.addEventListener('change', (e) => {
     const v = t.value.trim().replace(/,/g, '');
     change([{ t: 'bd', k: t.dataset.bd, i: +t.dataset.bk, v: v === '' ? 0 : +v }], 'Progress ' + t.dataset.bd);
   }
+});
+// the filter boxes: the page follows as you type (the box keeps the focus)
+let bfT = null;
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (!t.matches || !t.matches('input[data-bflt]')) return;
+  const [pg, i] = t.dataset.bflt.split('|');
+  if (!ST.bflt) ST.bflt = {};
+  ST.bflt[pg] = { ...(ST.bflt[pg] || {}), [i]: t.value };
+  clearTimeout(bfT);
+  bfT = setTimeout(() => {
+    const key = t.dataset.bflt,
+      pos = t.selectionStart;
+    render();
+    const n = document.querySelector(`input[data-bflt="${key}"]`);
+    if (n) {
+      n.focus();
+      n.setSelectionRange(pos, pos);
+    }
+  }, 350);
+});
+document.addEventListener('click', (e) => {
+  const c = e.target.closest('[data-bfclr]');
+  if (!c) return;
+  if (ST.bflt) delete ST.bflt[c.dataset.bfclr];
+  render();
 });
 // paste a block from Excel into the progress grid: it fills from the cell you are in, right and down
 document.addEventListener('paste', (e) => {
@@ -532,7 +823,7 @@ document.addEventListener('paste', (e) => {
 document.addEventListener(
   'drop',
   (e) => {
-    if (!['bsum', 'bprog', 'bpkg'].includes(ST.tab)) return;
+    if (!['bsum', 'bca', 'bprog', 'bpkg'].includes(ST.tab)) return;
     const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
     if (!f || !/\.xls[bxm]$/i.test(f.name) || !e.target.closest('#bud')) return;
     e.preventDefault();

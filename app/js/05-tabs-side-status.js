@@ -8,7 +8,7 @@ const SECS = [
   ['adj', 'Adjust', ['adjl', ...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]],
   ['chk', 'Check', ['chk', 'log', 'rules', 'dlog']],
   ['rep', 'Reports', ['psum', 'gl', 'wbs']],
-  ['bud', 'Budget', ['bsum', 'bprog', 'bpkg']],
+  ['bud', 'Budget', ['bsum', 'bca', 'bprog', 'bpkg']],
 ];
 // the subcontractor pages live in other sections: POs in Coding, Rates & coding in Dashboard, PO register in Reports, Bridge in Check
 const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'rep', bridge: 'chk' };
@@ -772,7 +772,7 @@ function render() {
       'on',
       !isPk &&
         ((p === 'dlog' && ST.tab === 'dlog') ||
-          (p === 'bud' && ['bsum', 'bprog', 'bpkg'].includes(ST.tab)) ||
+          (p === 'bud' && ['bsum', 'bca', 'bprog', 'bpkg'].includes(ST.tab)) ||
           (p === 'sum' && ST.tab === 'sum') ||
           (p === 'flow' && ST.tab === 'flow') ||
           (p === 'drv' && ST.tab === 'drv') ||
@@ -782,7 +782,9 @@ function render() {
           (p === 'rul' && ST.tab === 'rules') ||
           (p === 'mr' && ST.tab === 'mrate') ||
           (p === 'tbl' &&
-            !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'flow', 'dlog', 'bsum', 'bprog', 'bpkg'].includes(ST.tab)))
+            !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'flow', 'dlog', 'bsum', 'bca', 'bprog', 'bpkg'].includes(
+              ST.tab
+            )))
     )
   );
   $('bUndo').disabled = !undo.length;
@@ -800,7 +802,7 @@ function render() {
   else if (ST.tab === 'drv') renderDrivers();
   else if (ST.tab === 'flow') renderFlow();
   else if (ST.tab === 'dlog') renderDlog();
-  else if (['bsum', 'bprog', 'bpkg'].includes(ST.tab)) renderBudget();
+  else if (['bsum', 'bca', 'bprog', 'bpkg'].includes(ST.tab)) renderBudget();
   else if (ST.tab === 'psum' || ST.tab === 'pkl') renderPsum();
   else renderTable();
   renderJob(); // Monthly job: the count on its button, and the panel when it is open

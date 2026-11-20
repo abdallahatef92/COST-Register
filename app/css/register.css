@@ -418,3 +418,8 @@ body:not(.navpin) #nav:not(:hover) .nvat #vatFrom{display:none !important} #nav{
 .bd-t tr.bd-nb td:first-child{box-shadow:inset 4px 0 0 #D97706}.bd-tag{display:inline-block;padding:0 4px;border-radius:4px;background:#FDECD2;color:#9A4A00;font-weight:700;font-size:10px}
 .bd-t td.bd-to{color:#6B7280}.bd-in{width:50px;border:1px solid #E7C66A;background:#FFF8D6;border-radius:3px;padding:1px 3px;text-align:right;font:inherit;font-weight:700;color:#14254A}.bd-in::placeholder{color:#9A8A55;font-weight:500}
 .bd-note{color:#6B7280;font-size:11.5px;margin:8px 0;line-height:1.45}.bd-ok{color:#1E7B34;font-weight:700}.bd-w{color:#B45309;font-weight:700}.bd-bad{color:#B42318;font-weight:700}
+/* Budget v4.31: filters under the headers, PKG groups with dashed borders, the Cost Analysis tab */
+.bd-t tr.bd-flt th{background:#fff;padding:1px 2px;border-bottom:2px solid #14254A}.bd-t tr.bd-flt input{width:100%;min-width:34px;box-sizing:border-box;border:1px solid #DCE3EE;border-radius:3px;font:inherit;font-weight:400;padding:1px 3px;background:#FBFCFE}.bd-t tr.bd-flt input:not(:placeholder-shown){background:#FFF3CD;border-color:#D4A72C;font-weight:700}
+.bd-t tr.bd-gend td{border-bottom:2px dashed #14254A}.bd-t tr.bd-grp+tr.bd-r td{border-top:0}
+.bd-t tr.bd-item td{background:#EEF2F8;font-weight:600;border-top:2px dashed #7F8FB0}.bd-t tr.bd-item td:first-child{box-shadow:inset 4px 0 0 var(--bc)}.bd-t tr.bd-gap td{height:3px;padding:0;border:0;background:#fff}
+.bd-t td.bd-nm2{white-space:normal;min-width:160px;max-width:240px}.bd-hd button[data-bfclr]{margin-left:6px;padding:1px 8px;font-size:11px}
