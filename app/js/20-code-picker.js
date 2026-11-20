@@ -13,24 +13,44 @@ function pklRows(t) {
     sg = t.dataset.sug || '',
     q = t.value.trim().toUpperCase();
   let all = [];
-  if (f === 'pkg')
-    all = (R.pkgs || []).map((c) => [c, isIndPkg(c) ? 'Indirect cost (G&A, site, equipment, fleet, house rent)' : pkgLabel(c)]);
-  else {
-    let pkg = '';
+  const bud = typeof budPick === 'function' ? budPick() : null; // the cost report read in Budget: its PKGs and resources come first
+  if (f === 'pkg') {
+    all = (R.pkgs || []).map((c) => [
+      c,
+      isIndPkg(c)
+        ? 'Indirect cost (G&A, site, equipment, fleet, house rent)'
+        : pkgLabel(c) || (bud && bud.pkgOf(c) ? (budName(bud.pkgOf(c)) || '') + ' (' + bud.pkgOf(c) + ')' : ''),
+      '',
+      bud && bud.pkgOf(c) ? 'b' : '',
+    ]);
+    if (bud) for (const [c, n] of bud.pkgs) if (!all.some((x) => x[0] === c)) all.push([c, n, '', 'b']);
+  } else {
+    let pkg = '',
+      mnl = '';
     if (r && r.it) {
       const o = r.i !== undefined ? OVR[L.id[r.i]] : null;
       pkg = (o && o.pkg !== undefined ? o.pkg : r.it.pkg) || (r.i === undefined ? (sugOf(r.it) || {}).pkg : '') || '';
+      mnl = (o && o.mnl !== undefined ? o.mnl : r.it.mnl) || '';
     }
-    if (pkg) {
+    const bp = bud && pkg ? bud.pkgOf(pkg) : '';
+    if (bp) {
+      // the budget resources of the PKG (of the row's MNL when it has one), then your other codes of the PKG – not in the budget
+      const rs = bud.res(bp, mnl);
+      all = rs.map((x) => [x.ce, x.n + ' · ' + x.g + ' · BAC ' + fmtM(x.bac), '', 'b']);
+      const x = ceCodes(pkg);
+      x.list.forEach((c) => {
+        if (!rs.some((y) => y.ce === c)) all.push([c, ceLabel(x.p, c), '', 'n']);
+      });
+    } else if (pkg) {
       const x = ceCodes(pkg);
       all = x.list.map((c) => [c, ceLabel(x.p, c)]);
     } else all = ceAll().map((x) => [x.c, ceLabel(x.p, x.c), x.p]);
   }
   const hit = (c, n) => (!q ? 2 : c.toUpperCase().startsWith(q) ? 2 : (c + ' ' + (n || '')).toUpperCase().includes(q) ? 1 : 0);
   const rows = all
-    .map(([c, n, p]) => ({ c, n: n || '', p: p || '', h: hit(c, n), sg: !q && c === sg }))
+    .map(([c, n, p, b]) => ({ c, n: n || '', p: p || '', b: b || '', h: hit(c, n), sg: !q && c === sg }))
     .filter((x) => x.h)
-    .sort((a, b) => b.sg - a.sg || b.h - a.h);
+    .sort((a, b) => b.sg - a.sg || b.h - a.h || (a.b === 'b' ? 0 : 1) - (b.b === 'b' ? 0 : 1));
   if (!q && sg && !rows.some((x) => x.sg)) rows.unshift({ c: sg, n: '', h: 2, sg: true });
   return rows;
 }
@@ -57,10 +77,10 @@ function pklShow(t) {
     rows
       .map(
         (x, i) =>
-          `<div data-i="${i}" class="${i === PKL.hi || (PKL.hi < 0 && x.sg) ? 'on' : ''}"><b>${esc(x.c)}</b><span dir="auto">${esc(x.n) || '<i>no name yet</i>'}</span>${x.sg ? '<em>suggested ↵</em>' : x.p ? `<em class="pk">${esc(x.p)}</em>` : ''}</div>`
+          `<div data-i="${i}" class="${i === PKL.hi || (PKL.hi < 0 && x.sg) ? 'on' : ''}"><b>${esc(x.c)}</b><span dir="auto">${esc(x.n) || '<i>no name yet</i>'}</span>${x.b === 'b' ? '<em class="bdg">budget</em>' : x.b === 'n' ? '<em class="nbd">not in budget</em>' : ''}${x.sg ? '<em>suggested ↵</em>' : x.p ? `<em class="pk">${esc(x.p)}</em>` : ''}</div>`
       )
       .join('') +
-    `<div class="ft">${t.dataset.f === 'pkg' ? 'your PKG list' : rows.some((x) => x.p) ? 'no PKG on this row yet – picking a cost element fills its PKG too' : 'cost elements of this PKG'} · type to filter · ↑ ↓ to choose</div>`;
+    `<div class="ft">${t.dataset.f === 'pkg' ? 'your PKG list' + (rows.some((x) => x.b) ? ' · <em class="bdg">budget</em> = a PKG of the cost report' : '') : rows.some((x) => x.b === 'b') ? 'the budget resources of this PKG first – pick one so the cost lands on its budget' : rows.some((x) => x.p) ? 'no PKG on this row yet – picking a cost element fills its PKG too' : 'cost elements of this PKG'} · type to filter · ↑ ↓ to choose</div>`;
   PKL.el.hidden = false;
   const rc = t.getBoundingClientRect(),
     h = PKL.el.offsetHeight,

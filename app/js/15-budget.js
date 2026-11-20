@@ -1078,3 +1078,28 @@ globalThis.__BUD = {
       'test coding'
     ),
 };
+
+// ---------------------------------------------------------------- Coding: the cost report's PKGs and resources in the pick list
+function budPick() {
+  const B = ST.bud;
+  if (!B) return null;
+  const X = budIndex();
+  if (!X.pick) {
+    const by = new Map(); // budget PKG → Map(ce → {ce, n, g, bac})
+    for (const x of B.res) {
+      let m = by.get(x.p);
+      if (!m) by.set(x.p, (m = new Map()));
+      const o = m.get(x.ce) || m.set(x.ce, { ce: x.ce, n: x.n, g: x.g, bac: 0 }).get(x.ce);
+      o.bac += x.bac;
+    }
+    // the register's PKG codes for them: the Direct plan division codes (S03 → STR-03), named after the budget PKG
+    const pk = Object.entries(B.divMap || {}).map(([d, p]) => [d, budName(p) ? budName(p) + ' (' + p + ')' : p]);
+    X.pick = { by, pkgs: pk };
+  }
+  return {
+    pkgs: X.pick.pkgs,
+    pkgOf: budPkgOf,
+    res: (p, mnl) =>
+      [...(X.pick.by.get(p) || new Map()).values()].filter((x) => !mnl || !BUD_GN[mnl] || x.g === mnl).sort((a, b) => b.bac - a.bac),
+  };
+}
