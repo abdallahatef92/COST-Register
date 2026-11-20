@@ -1067,6 +1067,7 @@ globalThis.__BUD = {
   calc: budCalc,
   sum: budSum,
   exp: budExport,
+  pick: () => budPick(),
   // tests: code an item the way Coding does (undo, log, data file)
   code: (bi, ii, pkg, mnl, ce) =>
     change(

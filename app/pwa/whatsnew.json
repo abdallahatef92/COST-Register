@@ -1,5 +1,12 @@
 [
   {
+    "v": "4.42",
+    "n": [
+      "Coding follows your cost report: the PKG list shows its PKGs with their names (S03 · CONCRETE (STR-03)), tagged budget",
+      "The cost element list of a budget PKG starts with its budget resources (of the row's MNL) with their BAC – pick one so the cost lands on its budget"
+    ]
+  },
+  {
     "v": "4.41",
     "n": [
       "Budget: a search box on every page – it looks in every column",

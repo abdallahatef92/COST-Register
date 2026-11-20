@@ -1812,6 +1812,19 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     );
     await q.locator('#bud input[data-bsr]').fill('');
     await q.waitForTimeout(600);
+    eq(
+      'Coding pick list: the division code T91 is a budget PKG (TST-01, named); its MAT resources = M-100, its SUB resources = S-50',
+      await q.evaluate(() => {
+        const b = __BUD.pick();
+        return [
+          b.pkgOf('T91'),
+          b.pkgs.some((x) => x[0] === 'T91' && /TEST WORKS|TST-01/.test(x[1])),
+          b.res('TST-01', 'MAT').map((x) => x.ce),
+          b.res('TST-01', 'SUB').map((x) => x.ce),
+        ];
+      }),
+      ['TST-01', true, ['M-100'], ['S-50']]
+    );
     // Excel: a Budget summary tab and a tab per PKG
     eq(
       'Excel export: Budget summary + a tab per PKG',

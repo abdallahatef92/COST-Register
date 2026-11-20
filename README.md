@@ -354,3 +354,7 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 - A search box in the header of every Budget page: it looks in every column (on Cost Analysis also the BOQ item code and its PKG); sums follow; *✕ Clear filters* clears it too.
 - Cost Analysis opens on **All PKGs**.
 - An **MNL** column (MAT / SUB / LAB / EQU – the EXP code of Cost Analysis) on Cost Analysis and on the PKG pages.
+
+## v4.42 – Coding follows the cost report
+- With a cost report read (Budget), the PKG pick list in Coding shows its PKGs by their register code (the Direct plan division code, e.g. S03) with the cost report name, tagged *budget*.
+- The cost element pick list of a row whose PKG is in the budget starts with that PKG's budget resources – of the row's MNL – with name, MNL and BAC, tagged *budget*; your other codes of the PKG follow, tagged *not in budget*. Any code can still be typed.
