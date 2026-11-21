@@ -358,3 +358,7 @@ The published page is the empty Tool; the SAP files you drop are read on your PC
 ## v4.42 – Coding follows the cost report
 - With a cost report read (Budget), the PKG pick list in Coding shows its PKGs by their register code (the Direct plan division code, e.g. S03) with the cost report name, tagged *budget*.
 - The cost element pick list of a row whose PKG is in the budget starts with that PKG's budget resources – of the row's MNL – with name, MNL and BAC, tagged *budget*; your other codes of the PKG follow, tagged *not in budget*. Any code can still be typed.
+
+## v4.5 – The new ZSCPRG01 output replaces ZSCSRV1
+- ZSCPRG01 now carries `BUn` (unit) and `SC Type` (type of works) on every line. The tool reads them: units, the type of works of each PO, and the **PO title = its type of works**. ZSCSRV1 is no longer needed; when it is dropped with the files it is still used, and the ZSCPRG01 values fill what it lacks.
+- Amounts, certificates and the tie to CJI3 do not change (SBAY: subcontract to date 63,488,972, difference 0 – with or without ZSCSRV1).

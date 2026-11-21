@@ -1924,6 +1924,42 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         'ZSCPRG01: certificates per month (all POs)',
         !dl.cov.zscprg01 || Object.values(dl.cov.zscprg01).reduce((t, c) => t + c.n, 0) === dl.certs.length
       );
+      // the newer ZSCPRG01 output: unit (BUn) and type of works (SC Type) on every line – it replaces ZSCSRV1; the PO title = its type of works
+      {
+        const SCm = require('../src/subcontract'),
+          XL = require('xlsx'),
+          pf = path.join(DATA, [].concat(F.zscprg01)[0]),
+          wb0 = XL.readFile(pf),
+          ws0 = wb0.Sheets[wb0.SheetNames[0]],
+          rows = XL.utils.sheet_to_json(ws0, { header: 1, defval: '' }),
+          h = rows.findIndex((r) => r.includes('SC Work Current Cost')),
+          ip = rows[h].indexOf('Pur. Doc.');
+        // the unit goes in the existing BUn column (the file may already have an empty one), else a new one
+        let iu = rows[h].indexOf('BUn');
+        if (iu < 0) iu = rows[h].push('BUn') - 1;
+        const it = rows[h].push('SC Type') - 1;
+        rows.slice(h + 1).forEach((r) => {
+          r[iu] = r[ip] ? 'M3' : '';
+          r[it] = r[ip] ? 'مقاولين-خرسانه' : '';
+        });
+        const nwb = XL.utils.book_new();
+        XL.utils.book_append_sheet(nwb, XL.utils.aoa_to_sheet(rows), 'Data');
+        const nf = path.join(OUT, 'zscprg01_new_output.xlsx');
+        XL.writeFile(nwb, nf);
+        const a = SCm.readProg([pf]),
+          b = SCm.readProg([nf]),
+          po = b.lines[0].po;
+        ok(
+          'new ZSCPRG01 output (BUn, SC Type): read as before – the same lines and amount',
+          b.lines.length === a.lines.length && r2(b.lines.reduce((t, l) => t + l.amt, 0)) === r2(a.lines.reduce((t, l) => t + l.amt, 0))
+        );
+        eq(
+          '…and it carries what ZSCSRV1 gave: unit, type of works, PO title = type of works',
+          [b.serv.unit.get(b.lines[0].svc), b.serv.poType.get(po), b.serv.poTitle.get(po)],
+          ['M3', 'مقاولين-خرسانه', 'مقاولين-خرسانه']
+        );
+        ok('…the old output gives none of it (ZSCSRV1 still needed there)', !a.serv);
+      }
       // ZINTC1 merge: order + month, newest file wins – the same file twice is counted once and listed as an overlap
       const ZI = require('../src/zintc1'),
         zf = [].concat(F.zintc1).map((f) => path.join(DATA, f)),

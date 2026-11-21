@@ -30,7 +30,7 @@ const PROG = {
   certText: 'Short Text',
   wbs: 'WBS Element',
   gl: 'G/L Acct',
-  // the newer ZSCPRG01 output also carries what ZSCSRV1 gave: unit, type of works, a description of the PO
+  // the newer ZSCPRG01 output also carries what ZSCSRV1 gave: unit (BUn) and type of works (SC Type – also the PO title)
   uom: 'BUn',
   scType: 'SC Type',
   desc: 'Description',
@@ -113,8 +113,7 @@ function readProg(files) {
     for (const x of all.flat()) {
       if (x.svc && x.uom) tally(unit.get(x.svc) || unit.set(x.svc, new Map()).get(x.svc), x.uom);
       if (x.scType) tally(poType.get(x.po) || poType.set(x.po, new Map()).get(x.po), normTow(x.scType), Math.abs(x.amt) + 1);
-      const t = [x.desc, x.mgd].filter(Boolean).join(' · ');
-      if (t) tally(poTitle.get(x.po) || poTitle.set(x.po, new Map()).get(x.po), t, Math.abs(x.amt) + 1);
+      if (x.scType) tally(poTitle.get(x.po) || poTitle.set(x.po, new Map()).get(x.po), normTow(x.scType), Math.abs(x.amt) + 1); // the PO title is its type of works (owner)
       if (x.supName && !poSup.has(x.po)) poSup.set(x.po, x.supName);
     }
     const tops = (m) => new Map([...m].map(([k, v]) => [k, top(v)]));

@@ -1,5 +1,12 @@
 [
   {
+    "v": "4.5",
+    "n": [
+      "The new ZSCPRG01 output (with BUn and SC Type) replaces ZSCSRV1: unit and type of works come from the certificates",
+      "The PO title is the PO's type of works · ZSCSRV1 is optional – dropped with the files, it is still used"
+    ]
+  },
+  {
     "v": "4.42",
     "n": [
       "Coding follows your cost report: the PKG list shows its PKGs with their names (S03 · CONCRETE (STR-03)), tagged budget",
