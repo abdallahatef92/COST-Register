@@ -30,7 +30,13 @@ const PROG = {
   certText: 'Short Text',
   wbs: 'WBS Element',
   gl: 'G/L Acct',
+  // the newer ZSCPRG01 output also carries what ZSCSRV1 gave: unit, type of works, a description of the PO
+  uom: 'BUn',
+  scType: 'SC Type',
+  desc: 'Description',
+  mgd: 'Material Group Desc.',
 };
+const PROG_OPT = ['gl', 'wbs', 'certText', 'docNo', 'uom', 'scType', 'desc', 'mgd'];
 const SERV = {
   po: 'Purchase Order',
   svc: 'PO Service Code',
@@ -98,6 +104,25 @@ function readProg(files) {
     if (x.date > c.date) c.date = x.date;
   }
   res.certs = [...cert.values()].map((c) => ({ ...c, amt: r2(c.amt) }));
+  // what ZSCSRV1 gave, from the certificates themselves when the file has it (unit · type of works · PO title · subcontractor)
+  {
+    const unit = new Map(),
+      poType = new Map(),
+      poTitle = new Map(),
+      poSup = new Map();
+    for (const x of all.flat()) {
+      if (x.svc && x.uom) tally(unit.get(x.svc) || unit.set(x.svc, new Map()).get(x.svc), x.uom);
+      if (x.scType) tally(poType.get(x.po) || poType.set(x.po, new Map()).get(x.po), normTow(x.scType), Math.abs(x.amt) + 1);
+      const t = [x.desc, x.mgd].filter(Boolean).join(' · ');
+      if (t) tally(poTitle.get(x.po) || poTitle.set(x.po, new Map()).get(x.po), t, Math.abs(x.amt) + 1);
+      if (x.supName && !poSup.has(x.po)) poSup.set(x.po, x.supName);
+    }
+    const tops = (m) => new Map([...m].map(([k, v]) => [k, top(v)]));
+    res.serv =
+      unit.size || poType.size || poTitle.size
+        ? { unit: tops(unit), poType: tops(poType), poTitle: tops(poTitle), poSup, fromProg: true }
+        : null;
+  }
   res.files = all.map((rows, k) => {
     const ds = rows
         .map((x) => x.date)
@@ -125,7 +150,7 @@ function progRows(file) {
     C = {};
   for (const [k, n] of Object.entries(PROG)) {
     if (ix.has(n)) C[k] = ix.get(n);
-    else if (!['gl', 'wbs', 'certText', 'docNo'].includes(k)) throw new Error('ZSCPRG01: column "' + n + '" is missing.');
+    else if (!PROG_OPT.includes(k)) throw new Error('ZSCPRG01: column "' + n + '" is missing.');
   }
   const g = (r, k) => (C[k] === undefined ? null : r[C[k]]),
     rows = [];
@@ -156,6 +181,10 @@ function progRows(file) {
       certText: str(g(r, 'certText')),
       wbs: str(g(r, 'wbs')),
       gl: str(g(r, 'gl')),
+      uom: str(g(r, 'uom')),
+      scType: str(g(r, 'scType')),
+      desc: str(g(r, 'desc')),
+      mgd: str(g(r, 'mgd')),
     });
   }
   return rows;

@@ -61,6 +61,12 @@ function prepare(opts) {
     step('Certificates (ZSCPRG01, ZSCSRV1)');
     prog = SC.readProg(opts.zscprg01);
     serv = opts.zscsrv1 ? SC.readServ(opts.zscsrv1) : null;
+    // the newer ZSCPRG01 carries unit, type of works and a PO description: it fills what ZSCSRV1 does not give (or all of it, without ZSCSRV1)
+    if (prog.serv) {
+      if (!serv) serv = prog.serv;
+      else
+        for (const k of ['unit', 'poType', 'poTitle', 'poSup']) for (const [a, b] of prog.serv[k]) if (!serv[k].has(a)) serv[k].set(a, b);
+    }
     const ceNames = new Map(cji.lines.map((l) => [l.ce, l.cen]));
     subRes = SC.buildSubcontractor(
       cji.lines.filter((l) => l.bucket === 'Subcontractor'),
