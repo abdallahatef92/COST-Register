@@ -196,7 +196,7 @@ async function updStart(fileList) {
 async function updGo() {
   const U = R.upd;
   if (!U) return;
-  updBox('<h3>Updating the register…</h3><div class="sub">about 20–30 seconds · logged in Check › Data log › Updates</div>');
+  updBox('<h3>Updating the register…</h3><div class="sub">about 20–30 seconds · logged in More › Data log › Updates</div>');
   await pause(60);
   try {
     await dbSave(); // your latest codes go with the update

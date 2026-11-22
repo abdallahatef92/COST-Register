@@ -29,7 +29,7 @@ function jobSteps() {
           ? ['dep', 'Depreciation ›']
           : own && own.noRate
             ? ['own', 'Owner material ›']
-            : ['adjl', 'Adjust ›'];
+            : ['adjl', 'Decide ›'];
   return [
     {
       t: 'Update with the new SAP files',

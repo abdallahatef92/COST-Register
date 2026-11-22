@@ -12,7 +12,7 @@ const ruleMatch = (r, i) => {
     (!r.wbs || n(S[L.wbs[i]]).startsWith(n(r.wbs)))
   );
 };
-function renderRules() {
+function renderYourRules() {
   const BKS = META.bucketIds || BK.map((b) => b.id),
     ur = ST.rules;
   // preview: lines (and amount) each of your rules catches now, and in which bucket those lines are today
@@ -34,7 +34,7 @@ function renderRules() {
   const unc = META.unclass || [],
     uncN = unc.reduce((s0, x) => s0 + x.n, 0),
     uncA = unc.reduce((s0, x) => s0 + x.amt, 0);
-  $('rul').innerHTML =
+  $('rulY').innerHTML =
     `<div class="cards" style="grid-template-columns:repeat(4,minmax(160px,1fr))"><div class="card ${uncN ? 'red' : 'green'}"><span>Unclassified lines</span><b>${uncN.toLocaleString('en-US')}</b></div><div class="card"><span>Unclassified amount</span><b>${fmt(uncA)}</b></div><div class="card"><span>Your rules</span><b>${ur.length}</b></div><div class="card"><span>Lines by your rules (this build)</span><b>${(META.yours || 0).toLocaleString('en-US')}</b></div></div>
    <div class="panel"><h2>Your rules<span class="note">checked FIRST, before the built-in rules · fill only what must match (cost element exact, name, document type, WBS starts with) · first matching rule wins</span></h2>
     <table class="s"><tr><th>#</th><th style="text-align:left">Cost element</th><th style="text-align:left">Cost element name</th><th style="text-align:left">Doc. type</th><th style="text-align:left">WBS starts with</th><th style="text-align:left">→ Bucket</th><th style="text-align:left">G&amp;A sub-group</th><th>Lines it catches</th><th>Amount</th><th style="text-align:left">Those lines are now in</th><th></th></tr>
@@ -54,37 +54,7 @@ function renderRules() {
     <div style="display:flex;gap:8px;margin-top:10px;align-items:center"><button id="rAdd">+ Add rule</button><button class="pri" id="rApply">Apply rules – rebuild</button><span class="help" id="rMsg">Your rules are kept with your codes (Save codes, Excel export) and used by every next build.</span></div></div>
    <div class="panel"><h2>Indirect presets<span class="note">SAP GL → PKG “Indirect” + indirect cost element (from the CJI3 master, mapped to the indirect template) · applied to G&amp;A, Equipment, Fleet, House rent and Depreciation · fills empty codes only, every build</span></h2>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><button id="ipTog" class="${ST.indOff ? '' : 'pri'}">${ST.indOff ? 'Off – turn on' : 'On'}</button><button id="ipNow">Fill empty codes now</button><span class="help">Ctrl+Z undoes a fill · a code you type always wins</span></div>
-    <table class="s"><tr><th style="text-align:left">Indirect code</th><th style="text-align:left">Name</th><th style="text-align:left">SAP GL cost elements</th><th>Items now</th><th>To date</th></tr>${(() => {
-      const by = new Map();
-      BK.forEach((b) =>
-        b.items.forEach((it) => {
-          const p = indPreset(it);
-          if (!p) return;
-          const e = by.get(p.ce) || by.set(p.ce, { n: 0, a: 0 }).get(p.ce);
-          e.n++;
-          e.a += it.td;
-        })
-      );
-      const names = new Map([...new Set(Object.values(IND_GL).join(' ').split(' '))].map((g) => [g, '']));
-      for (let i = 0; i < N; i++) {
-        const g = S[L.ce[i]];
-        if (names.has(g) && !names.get(g)) names.set(g, S[L.cen[i]]);
-      }
-      return [...Object.keys(IND_GL), 'SE-03', 'SE-07', 'SE-11', 'SE-01', 'SE-05', 'SE-08']
-        .filter((c, i, a) => a.indexOf(c) === i)
-        .map(
-          (c) =>
-            `<tr><td style="text-align:left"><b>${esc(c)}</b></td><td style="text-align:left">${esc(PS_NAMES[c] || '')}</td><td style="text-align:left" class="help">${
-              IND_GL[c]
-                ? IND_GL[c]
-                    .split(' ')
-                    .map((g) => esc(g + (names.get(g) ? ' ' + names.get(g) : '')))
-                    .join(' · ')
-                : 'Inhouse Charge EQ (30103100) – by the equipment order name'
-            }</td><td>${(by.get(c) || {}).n || '-'}</td><td>${by.get(c) ? fmt(by.get(c).a) : '-'}</td></tr>`
-        )
-        .join('');
-    })()}</table></div>
+    <div class="help">The GL → cost element list is on tab 2 · Indirect rules.</div></div>
    <div class="panel"><h2>Coding rules<span class="note">a code typed on a material group (Material › Rate analysis) or a subcontractor work item (Rates &amp; coding) is kept here – every new item of that group / service gets it in the next builds</span></h2>
     <table class="s"><tr><th style="text-align:left">Applies to</th><th style="text-align:left">Group / service</th><th style="text-align:left">Codes</th><th>Items now</th><th>Coded by it</th><th></th></tr>
     ${
@@ -108,8 +78,6 @@ function renderRules() {
    <div class="panel"><h2>Unclassified lines<span class="note">cost elements no rule catches – they show on Checks until a rule takes them</span></h2>
     <table class="s"><tr><th style="text-align:left">Cost element</th><th style="text-align:left">Name</th><th>Doc. type</th><th>Lines</th><th>Amount</th><th style="text-align:left">Main WBS</th><th></th></tr>
     ${unc.map((x, k) => `<tr><td style="text-align:left">${esc(x.ce)}</td><td style="text-align:left">${esc(x.cen)}</td><td>${esc(x.type)}</td><td>${x.n}</td><td>${fmt(x.amt)}</td><td style="text-align:left" class="help">${esc(x.wbs.join(' · '))}</td><td><button data-mk="${k}">Make rule</button></td></tr>`).join('') || '<tr><td colspan="7" class="help" style="text-align:left">None – every line has a bucket.</td></tr>'}</table></div>
-   <div class="panel"><h2>Built-in rules<span class="note">in this order, after your rules · first match wins</span></h2><table class="s"><tr><th>#</th><th style="text-align:left">When the line…</th><th style="text-align:left">It goes to</th><th style="text-align:left">Note</th></tr>
-    ${(META.ruleTable || []).map((r) => `<tr><td>${esc(r[0])}</td><td style="text-align:left">${esc(r[1])}</td><td style="text-align:left"><b>${esc(r[2])}</b></td><td style="text-align:left" class="help">${esc(r[3])}</td></tr>`).join('')}</table></div>
    <datalist id="dl-cen">${[...new Set(L.cen.map((x) => S[x]))]
      .sort()
      .map((x) => `<option value="${esc(x)}">`)
@@ -117,7 +85,7 @@ function renderRules() {
   const save = () => {
     persist();
   };
-  $('rul')
+  $('rulY')
     .querySelectorAll('[data-r]')
     .forEach((el) => {
       el.onchange = () => {
@@ -126,7 +94,7 @@ function renderRules() {
         renderRules();
       };
     });
-  $('rul')
+  $('rulY')
     .querySelectorAll('[data-del]')
     .forEach((el) => {
       el.onclick = () => {
@@ -135,7 +103,7 @@ function renderRules() {
         renderRules();
       };
     });
-  $('rul')
+  $('rulY')
     .querySelectorAll('[data-mk]')
     .forEach((el) => {
       el.onclick = () => {
@@ -161,7 +129,7 @@ function renderRules() {
         renderRules();
       };
     });
-  $('rul')
+  $('rulY')
     .querySelectorAll('[data-crx]')
     .forEach((el) => {
       el.onclick = () => {

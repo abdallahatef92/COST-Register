@@ -1,16 +1,19 @@
 // =====================================================================================  tabs
-// the 5 steps of the month (top) – each holds the pages you work through, listed in the sidebar
+// the pages, by section: the 4 work steps of the month (in the nav) and the report / setup sections (Reports menu, Mapping rules, More)
 const SECS = [
-  ['dash', 'Dashboard', ['sum', 'flow', 'drv', ...(MATI >= 0 ? ['mrate'] : [])]],
-  ['cod', 'Coding', ['cod', 'lines']],
-  ['codes', 'Codes', ['pkl']],
-  ['xp', 'Expenses', ['xpm']],
-  ['adj', 'Adjust', ['adjl', ...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]],
-  ['chk', 'Check', ['chk', 'log', 'rules', 'dlog']],
+  ['chk', 'Update', ['chk', 'log', 'dlog']],
+  ['cod', 'Code', ['cod', 'lines']],
+  ['adj', 'Decide', ['adjl', ...(HASUNS ? ['uns'] : []), ...(HASOWN ? ['own'] : []), ...(DEPI >= 0 ? ['dep'] : [])]],
+  ['bud', 'Forecast', ['bsum', 'bca', 'bprog', 'bpkg']],
+  ['dash', 'Reports', ['sum', 'flow', 'drv', ...(MATI >= 0 ? ['mrate'] : [])]],
+  ['xp', 'Reports', ['xpm']],
   ['rep', 'Reports', ['psum', 'gl', 'wbs']],
-  ['bud', 'Budget', ['bsum', 'bca', 'bprog', 'bpkg']],
+  ['codes', 'PKG names', ['pkl']],
+  ['rul', 'Mapping rules', ['rules']],
 ];
-// the subcontractor pages live in other sections: POs in Coding, Rates & coding in Dashboard, PO register in Reports, Bridge in Check
+const STEPS = ['chk', 'cod', 'adj', 'bud'],
+  REPSEC = ['dash', 'xp', 'rep'];
+// the subcontractor pages live in other sections: POs in Code, Packages & rates and PO register in Reports, Bridge in Update
 const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'rep', bridge: 'chk' };
 const secOf = (t) => (t === 'sub' ? SUBSEC[ST.sub] || 'dash' : (SECS.find((x) => x[2].includes(t)) || SECS[0])[0]),
   LASTT = {},
@@ -41,10 +44,12 @@ const NIC = ((d) =>
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/>',
   vat: '<path d="M6 18L18 6"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>',
   pin: '<path d="M9 4h6l-1 6 3 3H7l3-3z"/><path d="M12 13v7"/>',
+  rul: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
+  more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
 });
-$('tabs').innerHTML = SECS.map(
-  ([k, l]) =>
-    `<button data-s="${k}"><span class="ni">${NIC[k]}<i class="dot"></i></span><span class="tx">${l}<small></small></span><span class="nb"></span></button>`
+$('tabs').innerHTML = STEPS.map(
+  (k, n) =>
+    `<button data-s="${k}"><span class="ni"><i class="stc">${n + 1}</i></span><span class="tx">${n + 1} ${(SECS.find((x) => x[0] === k) || [])[1]}<small></small></span></button>`
 ).join('');
 [
   ['bJob', 'job'],
@@ -54,6 +59,11 @@ $('tabs').innerHTML = SECS.map(
   ['bSave', 'save'],
   ['bNew', 'build'],
   ['bHelp', 'help'],
+  ['bDlog', 'db'],
+  ['bPkl', 'codes'],
+  ['bRules', 'rul'],
+  ['bReports', 'rep'],
+  ['bMore', 'more'],
 ].forEach(([id, k]) => {
   $(id).querySelector('.ni').innerHTML = NIC[k];
 });
@@ -89,6 +99,9 @@ const goSec = (k) => {
   render();
   $('wrap').scrollTop = 0;
 };
+globalThis.__GO = goSec; // for the checks (test/run.js): open a section, as the nav or the Reports menu does
+globalThis.__SEC = () => secOf(ST.tab);
+globalThis.__SECS = () => SECS.map((x) => x[0]);
 $('tabs').onclick = (e) => {
   const b = e.target.closest('button');
   if (b) goSec(b.dataset.s);
@@ -118,65 +131,225 @@ function leftStats() {
   });
   return { bk, a: A, l: Lf, n, pc: A ? Math.floor((100 * (A - Lf)) / A) : 100 };
 }
+// the page name on the top bar: the step (2 Code) or the report
+const PGNAME = {
+  sum: 'Summary',
+  flow: 'Cost flow',
+  drv: 'Cost drivers',
+  mrate: 'Material rates',
+  xpm: 'Expenses',
+  psum: 'PKG summary',
+  gl: 'GL · WBS',
+  wbs: 'GL · WBS',
+  pkl: 'PKG names',
+  rules: 'Mapping rules',
+  bsum: 'Budget',
+  bca: 'Cost Analysis',
+  bprog: 'Progress',
+  bpkg: 'PKG pages',
+};
 function renderProg() {
-  const sec = secOf(ST.tab);
-  $('hpage').textContent = (SECS.find((x) => x[0] === sec) || [])[1] || '';
+  const sec = secOf(ST.tab),
+    n = STEPS.indexOf(sec);
+  $('hpage').textContent =
+    ST.tab === 'sub' && ST.sub === 'reg'
+      ? 'PO register'
+      : ST.tab === 'sub' && ST.sub === 'pkg'
+        ? 'Packages & rates'
+        : n >= 0
+          ? n + 1 + ' ' + SECS[SECS.findIndex((x) => x[0] === sec)][1]
+          : PGNAME[ST.tab] || (SECS.find((x) => x[0] === sec) || [])[1] || '';
 }
-// month-close checklist on the 5 steps: how far each one is
-function navBadges() {
-  const ls = leftStats(),
-    pc = ls.pc;
-  const B = {
-    dash: ['', '', 'The month at a glance', 'the month at a glance'],
+// the 4 steps of the month, each with where it is: ✓ done · gold = the step you are on · number = still to do
+function stepState() {
+  const J = jobSteps(),
+    ok = J[1].done;
+  return {
+    chk: [ok, ok ? 'SAP files in · difference 0.00 ✓' : J[1].s],
     cod: [
-      pc + '%',
-      pc >= 100 ? 'ok' : 'mid',
-      'Coded share of the to-date cost',
-      ls.n ? ls.n.toLocaleString('en-US') + ' item' + (ls.n === 1 ? '' : 's') + ' left · ' + fmtM(ls.l) : 'everything is coded',
+      J[2].done,
+      (() => {
+        const ls = leftStats(),
+          nn = pkNoName().length;
+        return (
+          (ls.n
+            ? `${ls.pc}% coded · ${ls.n.toLocaleString('en-US')} item${ls.n === 1 ? '' : 's'} left · ${fmtM(ls.l)}`
+            : 'everything is coded') + (nn ? ` · ${nn} PKG without a name` : '')
+        );
+      })(),
     ],
+    adj: [J[3].done, J[3].s],
+    bud: [!!ST.bud, ST.bud ? 'progress · ETC per PKG' : 'read the cost report first'],
   };
-  if (SUBI >= 0) {
-    const pos = new Map();
-    for (let i = 0; i < N; i++) {
-      if (L.b[i] !== SUBI) continue;
-      const po = S[L.po[i]];
-      if (!po || po[0] === '(') continue;
-      if (efPkg(i)) pos.set(po, true);
-      else if (!pos.has(po)) pos.set(po, false);
-    }
-    const a = [...pos.values()].filter(Boolean).length;
-    B.sub = [a + '/' + pos.size, a === pos.size && a ? 'ok' : 'mid', 'POs in a package', 'POs in a package'];
-  }
-  if (SECS.some((x) => x[0] === 'adj')) {
-    const d = [ST.uns.mode, ST.unsc.mode, ST.depx.mode].some((m) => m && m !== 'none');
-    B.adj = [
-      d ? '✓' : 'open',
-      d ? 'ok' : '',
-      d ? 'Decisions made (include / exclude)' : 'Not yet decided: unsettled orders, certificates not in CJI3, depreciation',
-      d ? 'decisions made' : 'not decided yet',
-    ];
-  }
-  const ok = Math.abs(R.diff) < 0.01 && !META.dupes && !META.unclassified;
-  B.chk = [
-    ok ? '✓' : '!',
-    ok ? 'ok' : 'bad',
-    ok ? 'Every reconciliation check is OK' : 'A check needs a look',
-    ok ? 'difference 0.00' : 'a check needs a look',
-  ];
-  B.xp = ['', '', 'Every item of every bucket by month – a report you can export', 'every item by month · Excel'];
-  B.rep = ['', '', 'PKG summary, per month, by PKG, GL, WBS', 'PKG summary · per month · GL · WBS'];
-  document.querySelectorAll('#tabs button').forEach((b) => {
-    const x = B[b.dataset.s];
-    if (!x) return;
-    const g = b.querySelector('.nb');
-    g.textContent = x[0];
-    g.className = 'nb ' + x[1];
-    g.style.display = x[0] ? '' : 'none';
-    b.querySelector('.dot').className = 'dot ' + (x[0] ? x[1] || 'off' : 'none');
-    b.querySelector('small').textContent = x[3];
-    b.title = b.querySelector('.tx').firstChild.textContent + ' · ' + x[2];
-  });
 }
+// the SAP files in the register and the months they cover, against the cut (gold line)
+function dataIn() {
+  const D = META.dlog || { files: [] },
+    cut = String(ST.cut).slice(0, 7),
+    by = new Map();
+  (D.files || []).forEach((f) => {
+    const e = by.get(f.src) || by.set(f.src, { first: '', last: '', n: 0 }).get(f.src);
+    e.n++;
+    if (f.first && (!e.first || f.first < e.first)) e.first = f.first;
+    if (f.last && f.last > e.last) e.last = f.last;
+  });
+  const ms = [...by.values()].flatMap((e) => [e.first, e.last]).filter(Boolean),
+    lo = ms.concat(cut).sort()[0],
+    hiM = ms.concat(cut).sort().pop(),
+    mi = (ym) => (+ym.slice(0, 4) - +lo.slice(0, 4)) * 12 + +ym.slice(5, 7) - +lo.slice(5, 7),
+    span = mi(hiM) + 1,
+    pc = (v) => Math.max(0, Math.min(100, (100 * v) / span)).toFixed(1),
+    cx = pc(mi(cut) + 1);
+  const row = (k, lab) => {
+    const e = by.get(k);
+    if (!e) return '';
+    let c = '#4CAF6A',
+      note = '',
+      rng = e.first ? `${ymLbl(e.first)} → ${ymLbl(e.last)}` : 'stock · ' + ymLbl(cut);
+    if (e.last && e.last < cut) {
+      c = '#D64545';
+      note = `ends ${ymLbl(e.last)} – before the cut`;
+    } else if (e.last && e.last > cut && k !== 'zintc1') {
+      c = '#E9B949';
+      note = k === 'zscprg01' ? `${ymLbl(e.last)} certificates: after the cut – not in CJI3 yet` : `${ymLbl(e.last)}: after the cut`;
+    }
+    const bar = e.first
+      ? `<i style="left:${pc(mi(e.first))}%;width:${(pc(mi(e.last) + 1) - pc(mi(e.first))).toFixed(1)}%"></i>`
+      : `<i style="left:${(cx - 3).toFixed(1)}%;width:3%"></i>`;
+    return `<div class="f"><span class="d" style="background:${c}"></span><b>${lab}</b><em>${rng}</em><span class="bar">${bar}<u style="left:${cx}%"></u></span>${note ? `<span class="note">${esc(note)}</span>` : ''}</div>`;
+  };
+  const cr = ST.bud
+    ? `<div class="f"><span class="d" style="background:#4CAF6A"></span><b>Cost report</b><em>read ${esc(String(ST.bud.at || '').slice(0, 10))}</em></div>`
+    : `<div class="f miss"><span class="d" style="background:#D97706"></span><b>Cost report</b><em>not read</em><span class="note">Budget, EV and EAC need it</span></div>`;
+  const cd = new Date(String(ST.cut) + 'T00:00:00');
+  return `<div class="t">DATA IN <b>cut ${isNaN(cd) ? esc(ST.cut) : cd.getDate() + ' ' + MON[cd.getMonth()] + ' ' + cd.getFullYear()}</b></div>${[
+    ['cji3', 'CJI3'],
+    ['zscprg01', 'ZSCPRG01'],
+    ['zintc1', 'ZINTC1'],
+    ['mb52', 'MB52'],
+  ]
+    .map(([k, l]) => row(k, l))
+    .join('')}${cr}<div class="lg">gold line = the cut · click for the Data log</div>`;
+}
+function navBadges() {
+  const st = stepState(),
+    cur = secOf(ST.tab),
+    now = STEPS.includes(cur) ? cur : '';
+  document.querySelectorAll('#tabs button').forEach((b, n) => {
+    const k = b.dataset.s,
+      [done, txt] = st[k],
+      c = b.querySelector('.stc');
+    c.className = 'stc ' + (k === now ? 'now' : done ? 'ok' : 'todo');
+    c.textContent = done && k !== now ? '✓' : String(n + 1);
+    b.querySelector('small').textContent = txt;
+    b.title = n + 1 + ' ' + SECS.find((x) => x[0] === k)[1] + ' · ' + txt;
+  });
+  {
+    const mon = new Date(String(ST.cut) + 'T00:00:00');
+    $('nmon').textContent =
+      'THE MONTH' + (isNaN(mon) ? '' : ' · ' + MON[mon.getMonth()].toUpperCase() + '-' + String(mon.getFullYear()).slice(2));
+  }
+  $('din').innerHTML = dataIn();
+  const um = mapUnmapped();
+  $('rulSt').innerHTML = um ? `<b class="bad">${um.toLocaleString('en-US')} not mapped</b>` : '<b class="ok">all mapped ✓</b>';
+  $('bRules').classList.toggle('on', ST.tab === 'rules');
+  $('bReports').classList.toggle('on', REPSEC.includes(cur) || (ST.tab === 'sub' && ['reg', 'pkg'].includes(ST.sub)) || !$('repm').hidden);
+}
+$('din').onclick = () => {
+  ST.tab = 'dlog';
+  render();
+};
+$('bRules').onclick = () => {
+  ST.tab = 'rules';
+  sel.clear();
+  render();
+};
+$('bDlog').onclick = () => {
+  ST.tab = 'dlog';
+  render();
+};
+$('bPkl').onclick = () => {
+  ST.tab = 'pkl';
+  render();
+};
+$('bMore').onclick = () => {
+  $('nmore').hidden = !$('nmore').hidden;
+  $('bMore').classList.toggle('on', !$('nmore').hidden);
+  const n = document.querySelector('#nav .nin');
+  n.scrollTop = n.scrollHeight;
+};
+// Reports: one menu – Cost · Budget · Subcontract · Material
+function repMenu() {
+  const a = (go, l, d, on) => `<a data-rgo="${go}" class="${on ? 'on' : ''}">${l}${d ? ` <small>${d}</small>` : ''}</a>`,
+    isSub = (v) => ST.tab === 'sub' && ST.sub === v,
+    g = (t, c, links) => `<div class="grp" style="--c:${c}"><h4>${t}</h4>${links.join('')}</div>`;
+  return (
+    g('COST', '#1F4E9A', [
+      a('sum', 'Summary', 'one screen', ST.tab === 'sum'),
+      a('xpm', 'Expenses', 'per month · by PKG', ST.tab === 'xpm'),
+      a('flow', 'Cost flow', 'bucket › PKG', ST.tab === 'flow'),
+      a('drv', 'Cost drivers', 'rates and monthly costs', ST.tab === 'drv'),
+      a('psum', 'PKG summary', 'Direct · Indirect', ST.tab === 'psum'),
+      a(ST.glw || 'gl', 'GL · WBS', 'by cost element or WBS', ST.tab === 'gl' || ST.tab === 'wbs'),
+    ]) +
+    g('BUDGET', '#2E7D32', [
+      a('bsum', 'All PKGs', 'Civil · Arch · MEP', ST.tab === 'bsum'),
+      a('bpkg', 'PKG pages', 'EVM · ETC · EAC', ST.tab === 'bpkg'),
+      a('bca', 'Cost Analysis', 'BOQ items · resources', ST.tab === 'bca'),
+    ]) +
+    (SUBI >= 0
+      ? g('SUBCONTRACT', '#E07B39', [
+          a('sub:reg', 'PO register', 'every PO and its status', isSub('reg')),
+          a('sub:pkg', 'Packages &amp; rates', 'rate per unit by month', isSub('pkg')),
+        ])
+      : '') +
+    (MATI >= 0
+      ? g('MATERIAL', '#8E5EA2', [
+          a('mrate', 'Material rates', 'rate per unit by month', ST.tab === 'mrate'),
+          ...(HASOWN ? [a('own', 'Owner material', 'quantity × your rate', ST.tab === 'own')] : []),
+        ])
+      : '') +
+    `<div class="ft">Every report has ⇩ Excel · the monthly report (all of them in one file) is ⇩ Export Excel on the top bar</div>`
+  );
+}
+const repClose = () => {
+  $('repm').hidden = true;
+  $('bReports').classList.toggle('on', REPSEC.includes(secOf(ST.tab)) || (ST.tab === 'sub' && ['reg', 'pkg'].includes(ST.sub)));
+};
+$('bReports').onclick = (e) => {
+  e.stopPropagation();
+  if (!$('repm').hidden) return repClose();
+  const m = $('repm'),
+    r = $('bReports').getBoundingClientRect();
+  m.innerHTML = repMenu();
+  m.hidden = false;
+  m.style.left = r.right + 8 + 'px';
+  m.style.top = Math.max(64, Math.min(r.top - 40, innerHeight - m.offsetHeight - 12)) + 'px';
+  $('bReports').classList.add('on');
+};
+$('repm').onclick = (e) => {
+  const a = e.target.closest('[data-rgo]');
+  if (!a) return;
+  const g = a.dataset.rgo;
+  repClose();
+  sel.clear();
+  if (g.startsWith('sub:')) {
+    ST.tab = 'sub';
+    goSub(g.slice(4));
+    return;
+  }
+  ST.tab = g;
+  if (g === 'mrate') ST.bk = MATI;
+  if (g === 'gl' || g === 'wbs') ST.glw = g;
+  render();
+  $('wrap').scrollTop = 0;
+};
+document.addEventListener('click', (e) => {
+  if (!$('repm').hidden && !e.target.closest('#repm') && !e.target.closest('#bReports')) repClose();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('repm').hidden) repClose();
+});
 let SIDEC = innerWidth < 1500;
 try {
   const v = localStorage.getItem('cr-side');
@@ -216,7 +389,12 @@ const sdi = (go, on, c, t, a, s1, s2, pg) =>
 function renderSide() {
   const sec = ST.tab === 'sub' && ST.sub === 'pkg' ? 'sub' : secOf(ST.tab),
     el = $('side'),
-    items = []; // the packages page keeps its own list of packages   // items: [go-attrs, on, colour, title, right, sub1, sub2, progress, rail-label]
+    items = [];
+  if (sec === 'rul') {
+    el.className = 'hid';
+    el.innerHTML = '';
+    return;
+  } // the packages page keeps its own list of packages   // items: [go-attrs, on, colour, title, right, sub1, sub2, progress, rail-label]
   let head = '',
     foot = '',
     extra = {};
@@ -288,9 +466,9 @@ function renderSide() {
   } else if (sec === 'sub') {
     const ps = pkSide(SIDEC),
       more = [
-        ['po', 'POs', 'in Coding › Subcontractor'],
+        ['po', 'POs', 'in 2 Code › Subcontractor'],
         ['reg', 'PO register', 'in Reports'],
-        ['bridge', 'Bridge to CJI3', 'in Check'],
+        ['bridge', 'Bridge to CJI3', 'in 1 Update'],
       ];
     if (SIDEC) {
       el.className = 'col';
@@ -298,10 +476,10 @@ function renderSide() {
       return;
     }
     el.className = '';
-    el.innerHTML = `<div class="sh">Packages<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${ps.body}<div class="sec">More</div>${sdi('data-gt="sum"', false, '#14254A', '← Dashboard', '', 'Summary, Cost flow, Cost drivers, Rate analysis', '')}${more.map(([k, l, d], i) => sdi(`data-gt="sub" data-sv="${k}"`, ST.sub === k, '#C9CED6', l, '', d, '')).join('')}</div><div class="ft">${ps.foot}</div>`;
+    el.innerHTML = `<div class="sh">Packages<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${ps.body}<div class="sec">More</div>${sdi('data-gt="sum"', false, '#14254A', '← Summary', '', 'Summary, Cost flow, Cost drivers, Rate analysis', '')}${more.map(([k, l, d], i) => sdi(`data-gt="sub" data-sv="${k}"`, ST.sub === k, '#C9CED6', l, '', d, '')).join('')}</div><div class="ft">${ps.foot}</div>`;
     return;
   } else if (sec === 'adj') {
-    head = 'Adjust';
+    head = '3 Decide';
     {
       const ar = adjRows().filter((r) => r.on);
       items.push([
@@ -375,7 +553,7 @@ function renderSide() {
       ]);
     }
   } else if (sec === 'chk') {
-    head = 'Check';
+    head = '1 Update';
     const ok = Math.abs(R.diff) < 0.01;
     items.push([
       'data-gt="chk"',
@@ -411,17 +589,6 @@ function renderSide() {
         undefined,
         'Brg',
       ]);
-    items.push([
-      'data-gt="rules"',
-      ST.tab === 'rules',
-      '#9CA3AF',
-      'Rules',
-      META.unclassified ? `<span style="color:#9B2C2C">${META.unclassified}</span>` : '✓',
-      META.unclassified ? 'lines without a bucket' : 'every line has a bucket',
-      '',
-      undefined,
-      'Rul',
-    ]);
     {
       const ov = ((META.dlog && META.dlog.ovl) || []).length;
       items.push([

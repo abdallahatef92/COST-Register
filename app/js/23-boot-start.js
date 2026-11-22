@@ -31,7 +31,7 @@ render();
       () =>
         toast(
           ch.filter((c) => c.f === 'ce').length +
-            ' indirect items (G&A, equipment, fleet, house rent…) got their code automatically from their SAP GL – see Check › Rules · Ctrl+Z to undo'
+            ' indirect items (G&A, equipment, fleet, house rent…) got their code automatically from their SAP GL – see Mapping rules › 2 · Indirect rules · Ctrl+Z to undo'
         ),
       900
     );

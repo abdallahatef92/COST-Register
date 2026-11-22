@@ -1,5 +1,14 @@
 [
   {
+    "v": "4.6",
+    "n": [
+      "A simpler menu: the month is 4 steps – 1 Update · 2 Code · 3 Decide · 4 Forecast – each with where it stands",
+      "Data in: the SAP files and the months they cover against the cut (gold line) – click it for the Data log",
+      "Reports: one menu for every report (Cost · Budget · Subcontract · Material); Data log, PKG names, VAT and the data file are under ⋯ More",
+      "Mapping rules: every bucket with the rules that fill it in plain words, GL name + number, and the lines each one catches (click to see them) · indirect cost elements on tab 2 · ⇩ Excel"
+    ]
+  },
+  {
     "v": "4.5",
     "n": [
       "The new ZSCPRG01 output (with BUn and SC Type) replaces ZSCSRV1: unit and type of works come from the certificates",

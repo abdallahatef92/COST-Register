@@ -54,6 +54,10 @@ const files = () =>
   Object.values(F)
     .flat()
     .map((f) => path.join(DATA, f));
+// the nav keeps the data file, import / save codes, VAT and the monthly job under ⋯ More: open it first, as a user does
+const more = async (q) => {
+  if (await q.evaluate(() => document.getElementById('nmore').hidden)) await q.click('#bMore');
+};
 
 // ---------------------------------------------------------------------------------------------- tiny test kit
 const results = [];
@@ -191,8 +195,8 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   };
   const { ctx, p } = await open(APP);
   head('4. Opening the register');
-  eq('opens on the Dashboard', await p.$eval('#tabs button.on', (b) => b.dataset.s), 'dash');
-  eq('tabs', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['dash', 'cod', 'codes', 'xp', 'adj', 'chk', 'rep', 'bud']);
+  eq('opens on the Summary (Reports)', await p.evaluate(() => __SEC()), 'dash');
+  eq('the 4 steps of the month', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['chk', 'cod', 'adj', 'bud']);
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));
@@ -245,9 +249,9 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
 
   if (RUN('6')) {
     head('6. Every page opens');
-    const pages = await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s));
+    const pages = await p.evaluate(() => __SECS());
     for (const s of pages) {
-      await p.$eval(`#tabs [data-s="${s}"]`, (b) => b.click());
+      await p.evaluate((x) => __GO(x), s);
       await p.waitForTimeout(300);
       const side = await p.$$eval('#side [data-gt]', (x) => [
         ...new Set(x.map((y) => y.dataset.gt + '|' + (y.dataset.bk || '') + '|' + (y.dataset.uv || '') + '|' + (y.dataset.sv || ''))),
@@ -271,7 +275,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       }
     }
     // Check page: every reconciliation check OK
-    await p.$eval('#tabs [data-s="chk"]', (b) => b.click());
+    await p.evaluate(() => __GO('chk'));
     await p.click('#side [data-gt="chk"]');
     await p.waitForTimeout(300);
     eq('Check › no reconciliation line asks for a look', await p.$$eval('#chk .chk', (x) => x.length), 0, 0);
@@ -279,7 +283,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
 
   if (RUN('7')) {
     head('7. Coding, undo, Lines');
-    await p.$eval('#tabs [data-s="cod"]', (b) => b.click());
+    await p.evaluate(() => __GO('cod'));
     await p.click('#side [data-gt="cod"][data-bk="0"]');
     await p.waitForTimeout(400);
     ok('Start here guide on the Code page', await p.$eval('#guide', (g) => !g.hidden));
@@ -326,11 +330,11 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p.waitForTimeout(400);
       }
     }
-    await p.$eval('#tabs [data-s="dash"]', (b) => b.click());
+    await p.evaluate(() => __GO('dash'));
     await p.click('#side [data-rates]'); // Rates (Material first)
     await p.waitForTimeout(800);
     ok('Code › Rate analysis (Material) opens', await p.$eval('#pg-mr', (e) => e.classList.contains('on') && e.innerText.length > 100));
-    await p.$eval('#tabs [data-s="cod"]', (b) => b.click());
+    await p.evaluate(() => __GO('cod'));
     await p.click('[data-cv="cod"]:visible');
     await p.waitForTimeout(300);
   }
@@ -339,7 +343,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     head('7b. Next to code: biggest first, suggestions, keys');
     {
       const { ctx: c5, p: p5 } = await open(APP);
-      await p5.$eval('#tabs [data-s="cod"]', (b) => b.click());
+      await p5.evaluate(() => __GO('cod'));
       await p5.click('#side [data-gt="cod"][data-bk="0"]');
       await p5.waitForTimeout(300);
       await p5.click('[data-cm="all"]:visible');
@@ -452,7 +456,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     head('7c. Codes in one spelling');
     {
       const { ctx: c6, p: p6 } = await open(APP);
-      await p6.$eval('#tabs [data-s="cod"]', (b) => b.click());
+      await p6.evaluate(() => __GO('cod'));
       await p6.click('#side [data-gt="cod"][data-bk="0"]');
       await p6.waitForTimeout(300);
       const ks = await p6.$$eval('#tb tr.it', (x) => x.slice(0, 2).map((tr) => tr.dataset.k));
@@ -492,7 +496,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p6.evaluate((k) => __BK[0].items[+k.split(':')[1]].ce, ks[0]),
         'SP-17'
       );
-      await p6.$eval('#tabs [data-s="chk"]', (b) => b.click());
+      await p6.evaluate(() => __GO('chk'));
       await p6.click('#side [data-gt="log"]');
       await p6.waitForTimeout(400);
       ok('…and it is in the Changes log', /Codes in capitals/.test(await p6.$eval('#pages .page.on', (e) => e.innerText)));
@@ -507,7 +511,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       const { ctx: c7, p: p7 } = await open(APP);
       ok(
         'top bar: project › page name and the cut date',
-        (await p7.$eval('header.top .crumb', (e) => /Dashboard/.test(e.textContent))) &&
+        (await p7.$eval('header.top .crumb', (e) => /Summary/.test(e.textContent))) &&
           (await p7.$eval('header.top .cut', (e) => /CUT DATE/.test(e.textContent) && !!e.querySelector('#cut').value))
       );
       const w0 = await p7.$eval('#nav', (e) => e.getBoundingClientRect().width);
@@ -593,7 +597,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ok('a range from Opening to the cut month is the cost to date again', Math.abs((await flNum()) - fl.td) <= 2);
       await p7.hover('#nav');
       await p7.waitForTimeout(400);
-      await p7.click('#tabs [data-s="cod"]');
+      await p7.evaluate(() => __GO('cod'));
       await p7.mouse.move(900, 500);
       await p7.waitForTimeout(600);
       ok(
@@ -621,7 +625,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p7.$eval(
           '#tabs [data-s="cod"]',
           (e, n) =>
-            /%/.test(e.querySelector('.nb').textContent) &&
+            /% coded/.test(e.querySelector('small').textContent) &&
             e.querySelector('small').textContent.includes(n.toLocaleString('en-US') + ' item'),
           left
         ),
@@ -676,10 +680,10 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     head('7e. Expenses: three report pages, export, hand-coded lines');
     {
       const { ctx: c8, p: p8 } = await open(APP, { acceptDownloads: true });
-      await p8.$eval('#tabs [data-s="cod"]', (b) => b.click());
+      await p8.evaluate(() => __GO('cod'));
       await p8.waitForTimeout(400);
       eq('Coding has two tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines']);
-      await p8.$eval('#tabs [data-s="xp"]', (b) => b.click());
+      await p8.evaluate(() => __GO('xp'));
       await p8.waitForTimeout(1200);
       eq('the side list holds the four pages', await p8.$$eval('#side [data-xp]', (x) => x.map((e) => e.dataset.xp)), [
         'sum',
@@ -947,7 +951,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           const it = __BK[b].items.slice().sort((x, y) => Math.abs(y.td) - Math.abs(x.td))[0];
           return { b, ii: it.ii, code: it.vals[3] };
         });
-        await p8.$eval('#tabs [data-s="cod"]', (b) => b.click());
+        await p8.evaluate(() => __GO('cod'));
         await p8.waitForTimeout(400);
         await p8.click(`#side [data-gt="cod"][data-bk="${it0.b}"]`);
         await p8.waitForTimeout(400);
@@ -969,7 +973,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await lp.fill('T32');
         await lp.press('Tab');
         await p8.waitForTimeout(500);
-        await p8.$eval('#tabs [data-s="xp"]', (b) => b.click());
+        await p8.evaluate(() => __GO('xp'));
         await p8.click('#side [data-xp="sum"]');
         await p8.waitForTimeout(800);
         eq(
@@ -999,7 +1003,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           w2 = await p8.evaluate((x) => __BK[x.b].items[x.ii].td, it0);
         ok('…and the two rows add up to the item', Math.abs(t2 - w2) <= 1, t2 + ' vs ' + w2);
       }
-      await p8.$eval('#tabs [data-s="xp"]', (b) => b.click());
+      await p8.evaluate(() => __GO('xp'));
       await p8.click('#side [data-xp="month"]');
       await p8.waitForTimeout(800);
       await p8.evaluate(() => document.querySelector('#th .fb').click());
@@ -1013,7 +1017,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await p8.mouse.click(900, 880);
       {
         const si = await p8.evaluate(() => __BK.findIndex((x) => x.id === 'Subcontractor'));
-        await p8.$eval('#tabs [data-s="cod"]', (b) => b.click());
+        await p8.evaluate(() => __GO('cod'));
         await p8.waitForTimeout(300);
         await p8.click(`#side .rh[data-bk="${si}"]`);
         await p8.waitForTimeout(400);
@@ -1022,14 +1026,10 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         ok(
           'Coding › Subcontractor has a POs tab (the PO view)',
           await p8.evaluate(
-            () =>
-              __ST.tab === 'sub' &&
-              __ST.sub === 'po' &&
-              document.querySelectorAll('#tb tr.grp').length > 0 &&
-              document.querySelector('#tabs button.on').dataset.s === 'cod'
+            () => __ST.tab === 'sub' && __ST.sub === 'po' && document.querySelectorAll('#tb tr.grp').length > 0 && __SEC() === 'cod'
           )
         );
-        await p8.$eval('#tabs [data-s="dash"]', (b) => b.click());
+        await p8.evaluate(() => __GO('dash'));
         await p8.click('#side [data-rates]');
         await p8.waitForTimeout(500);
         await p8.click('[data-rt="s"]'); // Rates › Subcontractor
@@ -1040,14 +1040,11 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
             () => __ST.sub === 'pkg' && __ST.pkView === 'rate' && document.getElementById('pg-pkg').classList.contains('on')
           )
         );
-        await p8.$eval('#tabs [data-s="chk"]', (b) => b.click());
+        await p8.evaluate(() => __GO('chk'));
         await p8.click('#side [data-sv="bridge"]');
         await p8.waitForTimeout(600);
-        ok(
-          'Check › Bridge to CJI3',
-          await p8.evaluate(() => __ST.sub === 'bridge' && document.querySelector('#tabs button.on').dataset.s === 'chk')
-        );
-        await p8.$eval('#tabs [data-s="rep"]', (b) => b.click());
+        ok('Check › Bridge to CJI3', await p8.evaluate(() => __ST.sub === 'bridge' && __SEC() === 'chk'));
+        await p8.evaluate(() => __GO('rep'));
         await p8.click('#side [data-sv="reg"]');
         await p8.waitForTimeout(800);
         ok('Reports › PO register', await p8.evaluate(() => __ST.sub === 'reg' && document.querySelectorAll('#tb tr.it').length > 5));
@@ -1077,7 +1074,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       });
       if (!n0) ok('no owner-supplied lines in this project', true);
       else {
-        await p10.$eval('#tabs [data-s="adj"]', (b) => b.click());
+        await p10.evaluate(() => __GO('adj'));
         await p10.waitForTimeout(300);
         await p10.click('#side [data-gt="own"]');
         await p10.waitForTimeout(700);
@@ -1088,14 +1085,14 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         ok(
           '…and Check counts the ones still without a rate',
           (await p10.evaluate(() => {
-            document.querySelector('#tabs [data-s="chk"]').click();
+            __GO('chk');
             return true;
           })) &&
             (await p10.click('#side [data-gt="chk"]'),
             await p10.waitForTimeout(400),
             await p10.evaluate(() => /Owner-supplied material/.test(document.querySelector('#pages .page.on').innerText)))
         );
-        await p10.$eval('#tabs [data-s="adj"]', (b) => b.click());
+        await p10.evaluate(() => __GO('adj'));
         await p10.click('#side [data-gt="own"]');
         await p10.waitForTimeout(500);
         const k = await p10.$eval('#tb input.ownr', (x) => x.dataset.k),
@@ -1376,7 +1373,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await p4.goto('file://' + APP);
       await p4.waitForFunction(() => document.querySelector('#tabs button'), null, { timeout: 60000 });
       await p4.waitForTimeout(1200);
-      await p4.$eval('#tabs [data-s="cod"]', (b) => b.click());
+      await p4.evaluate(() => __GO('cod'));
       await p4.waitForTimeout(300);
       const i4 = await p4.$('#tb input[data-f="pkg"]');
       await i4.fill('T03');
@@ -1441,8 +1438,8 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         v.dispatchEvent(new Event('change', { bubbles: true }));
       });
       await q.waitForTimeout(600);
-      if (await q.$('#tabs [data-s="adj"]')) {
-        await q.$eval('#tabs [data-s="adj"]', (b) => b.click());
+      if (await q.evaluate(() => __SECS().includes('adj'))) {
+        await q.evaluate(() => __GO('adj'));
         await q.waitForTimeout(300);
         if (await q.$('#side [data-gt="own"]')) {
           await q.click('#side [data-gt="own"]');
@@ -1458,7 +1455,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         const m = await q.$('#asLater');
         if (m) await m.click();
       }
-      await q.$eval('#tabs [data-s="adj"]', (b) => b.click());
+      await q.evaluate(() => __GO('adj'));
       await q.waitForTimeout(300);
       await q.click('#side [data-gt="adjl"]');
       await q.waitForTimeout(900);
@@ -1515,7 +1512,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         })
       );
       // Expenses › Summary: Source column and filter, period
-      await q.$eval('#tabs [data-s="xp"]', (b) => b.click());
+      await q.evaluate(() => __GO('xp'));
       await q.waitForTimeout(300);
       await q.click('#side [data-xp="sum"]');
       await q.waitForTimeout(800);
@@ -1556,7 +1553,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   if (RUN('7i')) {
     head('7i. Codes › PKG list: a new PKG asks for its name, the footer warns, the list names it');
     const { ctx: c13, p: q } = await open(APP);
-    await q.$eval('#tabs [data-s="cod"]', (b) => b.click());
+    await q.evaluate(() => __GO('cod'));
     await q.waitForTimeout(300);
     const later = async () => {
       const m = await q.$('#asLater');
@@ -1609,7 +1606,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     head('7j. Monthly job: 5 steps with their status, Go opens the place');
     const { ctx: c14, p: q } = await open(APP);
     ok('the side navigation shows Monthly job n / 5', /Monthly job\s*\d \/ 5/.test(await q.$eval('#bJob', (e) => e.textContent)));
-    await q.click('#bJob');
+    await more(q).then(() => q.click('#bJob'));
     await q.waitForTimeout(500);
     ok(
       'the panel: 5 steps, Update and Check done (difference 0)',
@@ -1628,7 +1625,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ok('step 4 › Go points at a place of Adjust (' + g4 + ')', ['uns', 'dep', 'own', 'adjl'].includes(g4));
     }
     // from the Expenses page, where the top Export Excel exports only the page: the panel's button exports the monthly report
-    if (await q.evaluate(() => document.getElementById('mjob').hidden)) await q.click('#bJob');
+    if (await q.evaluate(() => document.getElementById('mjob').hidden)) await more(q).then(() => q.click('#bJob'));
     await q.evaluate(() => document.querySelectorAll('#mjob .st')[4].querySelector('.go').click());
     await q.waitForTimeout(600);
     ok('step 5 › Expenses opens the Expenses page', await q.evaluate(() => __ST.tab === 'xpm'));
@@ -1852,6 +1849,66 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await c16.close();
   }
 
+  if (RUN('7m')) {
+    head('7m. Simpler screens: 4 steps, Data in, Reports menu, Mapping rules (every line by its rule)');
+    const { ctx: c16, p: q } = await open(APP);
+    eq('the nav: 4 steps of the month', await q.$$eval('#tabs button .tx', (b) => b.map((x) => x.firstChild.textContent.trim())), [
+      '1 Update',
+      '2 Code',
+      '3 Decide',
+      '4 Forecast',
+    ]);
+    ok(
+      'Data in: CJI3 with the months it covers and the cut line',
+      await q.$eval('#din', (e) => /CJI3/.test(e.textContent) && !!e.querySelector('.bar u'))
+    );
+    await q.evaluate(() => document.body.classList.add('navpin'));
+    await q.click('#bReports');
+    await q.waitForTimeout(200);
+    ok(
+      'Reports menu: Cost, Budget and the report pages',
+      await q.$eval(
+        '#repm',
+        (e) => !e.hidden && /COST/.test(e.textContent) && /BUDGET/.test(e.textContent) && !!e.querySelector('[data-rgo="xpm"]')
+      )
+    );
+    await q.click('#repm [data-rgo="xpm"]');
+    await q.waitForTimeout(400);
+    ok(
+      '…a report opens from it and the menu closes',
+      (await q.evaluate(() => __SEC())) === 'xp' && (await q.$eval('#repm', (e) => e.hidden))
+    );
+    await q.click('#bRules');
+    await q.waitForTimeout(500);
+    const C = await q.evaluate(() => __MR.check());
+    eq('Mapping rules: every CJI3 line meets a rule of its own bucket (else it is one of your rules)', C.by['-2'] || 0, C.yours);
+    eq('…lines with no bucket', C.by[String(C.last)] || 0, C.unclassified);
+    eq(
+      '…rule lines + client deductions = the CJI3 cost (subcontractor rounding lines aside)',
+      Math.round((C.a + C.cd) * 100) / 100,
+      Math.round(C.cost * 100) / 100,
+      1
+    );
+    ok('…tab 1: a block per bucket, the counts open the lines', await q.$$eval('.mrb', (x) => x.length >= 12));
+    const ln = await q.$('.mrb a.lk[data-mrl]');
+    await ln.click();
+    await q.waitForTimeout(300);
+    ok(
+      '…a count opens its CJI3 lines in the drawer',
+      await q.$eval('#drawer', (e) => e.classList.contains('open') && /CJI3 lines/.test(e.textContent))
+    );
+    await q.click('#dClose');
+    await q.click('[data-mrt="i"]');
+    await q.waitForTimeout(300);
+    ok(
+      '…tab 2: the indirect cost elements in their groups',
+      await q.$eval('#rul', (e) => /Personnel and Manning/.test(e.textContent) && /SF-01/.test(e.textContent))
+    );
+    await q.click('[data-mrt="y"]');
+    await q.waitForTimeout(300);
+    ok('…tab 3: your rules and the settings', await q.$eval('#rul', (e) => /Your rules/.test(e.textContent) && !!e.querySelector('#rAdd')));
+    await c16.close();
+  }
   if (RUN('7k')) {
     head('7k. A row coded under a filter stays (marked) until the filter changes or Refresh');
     const { ctx: c15, p: q } = await open(APP);
@@ -1889,6 +1946,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       const later = await q.$('#asLater');
       if (later) await later.click(); // the auto-save question after the first code
     }
+    await more(q);
     await q.selectOption('#vat', 'Include VAT before date');
     await q.hover('#vat');
     await q.waitForTimeout(500);
@@ -1977,7 +2035,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     }
     {
       const { ctx: c11, p: p11 } = await open(APP);
-      await p11.$eval('#tabs [data-s="chk"]', (b) => b.click());
+      await p11.evaluate(() => __GO('chk'));
       await p11.waitForTimeout(300);
       await p11.click('#side [data-gt="dlog"]');
       await p11.waitForTimeout(700);
@@ -2225,7 +2283,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.waitForTimeout(1000);
     const f3 = path.join(SP, 'm2.db');
     {
-      const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]);
+      const [fc] = await Promise.all([q.waitForEvent('filechooser'), more(q).then(() => q.click('#bAdd'))]);
       await fc.setFiles(files());
       await q.waitForFunction(
         () => document.querySelector('#updm [data-upd="go"]') && !document.querySelector('#updm [data-upd="go"]').disabled,
@@ -2251,7 +2309,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await q.evaluate((kk) => __BK[0].items.find((x) => x.k === kk).pkg, k),
       'T77'
     );
-    await q.$eval('#tabs [data-s="chk"]', (b) => b.click());
+    await q.evaluate(() => __GO('chk'));
     await q.click('#side [data-gt="dlog"]');
     await q.waitForTimeout(800);
     ok(
@@ -2397,7 +2455,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       'after the build the Tool opens from the data file by itself',
       await q.evaluate(() => DBF.cur === 1 && /Test_register\.db/.test(document.getElementById('hasv').textContent))
     );
-    await q.$eval('#tabs [data-s="cod"]', (b) => b.click());
+    await q.evaluate(() => __GO('cod'));
     await q.waitForTimeout(400);
     {
       const m = await q.$('#asLater');
@@ -2448,7 +2506,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       '…and changes go to the file again',
       await q.evaluate((ww) => (window.__writes || 0) > ww && JSON.parse(dbOne('SELECT codes FROM builds WHERE id = 1').codes).at > '', w)
     );
-    await q.click('#bDb');
+    await more(q).then(() => q.click('#bDb'));
     await q.waitForTimeout(300);
     ok(
       'side navigation › Data file: open another, new, download a copy, data log',
@@ -2493,7 +2551,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.waitForTimeout(1500);
     const m1 = await q.evaluate(() => ({ cut: __DL.data.META.cut, files: dbBuildFiles(DBF.cur).length }));
     ok('month 1 built into the data file, with its SAP files kept in it', m1.files === first.length, JSON.stringify(m1));
-    await q.$eval('#tabs [data-s="cod"]', (b) => b.click());
+    await q.evaluate(() => __GO('cod'));
     await q.waitForTimeout(300);
     {
       const m = await q.$('#asLater');
@@ -2511,7 +2569,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.waitForFunction(() => !DBF.busy && !DBF.again);
     await q.waitForTimeout(1500);
     // month 2: Add new SAP files…
-    const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]);
+    const [fc] = await Promise.all([q.waitForEvent('filechooser'), more(q).then(() => q.click('#bAdd'))]);
     await fc.setFiles(neu);
     await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]'), null, { timeout: 120000 });
     const box = await q.$eval('#updm', (e) => e.textContent);
@@ -2547,7 +2605,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       m2.roles
     );
     eq('…your code came along', await q.evaluate((kk) => __BK.flatMap((b) => b.items).find((x) => x.k === kk).pkg, k), 'T66');
-    await q.$eval('#tabs [data-s="chk"]', (b) => b.click());
+    await q.evaluate(() => __GO('chk'));
     await q.click('#side [data-gt="dlog"]');
     await q.waitForTimeout(800);
     ok(
@@ -2557,7 +2615,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       )
     );
     {
-      const [fc2] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]);
+      const [fc2] = await Promise.all([q.waitForEvent('filechooser'), more(q).then(() => q.click('#bAdd'))]);
       await fc2.setFiles([F1]);
       await q.waitForFunction(
         () => document.querySelector('#updm [data-upd]') && /same file/.test(document.getElementById('updm').textContent),
@@ -2590,7 +2648,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         XLm.utils.book_append_sheet(nb, XLm.utils.aoa_to_sheet(keep, { cellDates: true }), wb.SheetNames[0]);
         XLm.writeFile(nb, cPart);
       }
-      const [fc3] = await Promise.all([q.waitForEvent('filechooser'), q.click('#bAdd')]);
+      const [fc3] = await Promise.all([q.waitForEvent('filechooser'), more(q).then(() => q.click('#bAdd'))]);
       await fc3.setFiles([cPart]);
       await q.waitForFunction(() => document.querySelector('#updm [data-upd="go"]'), null, { timeout: 120000 });
       ok(

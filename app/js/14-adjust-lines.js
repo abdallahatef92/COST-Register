@@ -21,7 +21,7 @@ function adjRows() {
         !!R.inc[i],
         (b === SUBI ? 'ZSCPRG01 certificate' : 'ZINTC1 order charge') +
           ' – not in CJI3 yet · ' +
-          (R.inc[i] ? 'included on Adjust › ' + (b === SUBI ? 'Certificates not in CJI3' : 'Orders not settled') : 'not included')
+          (R.inc[i] ? 'included on 3 Decide › ' + (b === SUBI ? 'Certificates not in CJI3' : 'Orders not settled') : 'not included')
       );
       continue;
     }
@@ -32,7 +32,7 @@ function adjRows() {
         -R.amt[i],
         true,
         dep
-          ? 'month taken out on Adjust › Asset depreciation'
+          ? 'month taken out on 3 Decide › Asset depreciation'
           : 'Include = No (' + (OVR[L.id[i]] && OVR[L.id[i]].inc === 'No' ? 'the line' : 'the item') + ')'
       );
       continue;

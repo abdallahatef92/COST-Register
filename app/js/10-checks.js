@@ -33,7 +33,7 @@ function renderChecks() {
     'Lines with no bucket (Unclassified)',
     META.unclassified,
     'zero',
-    'A cost element without a rule – Check › Rules (bottom of the list): make a rule and apply it.'
+    'A cost element without a rule – Mapping rules › 3 · Your rules: make a rule and apply it.'
   );
   const subP = SUBI >= 0 ? R.bkP[SUBI] : null;
   if (SUB && subP) {
@@ -55,7 +55,7 @@ function renderChecks() {
       'Owner-supplied material: materials with quantity and no amount, still without a rate',
       o.noRate,
       'info',
-      `${o.n} owner-supplied materials${o.out ? ` · ${o.out} set as not owner-supplied` : ''} · valued so far ${fmt(R.ownIn)} – Adjust › Owner-supplied material.`
+      `${o.n} owner-supplied materials${o.out ? ` · ${o.out} set as not owner-supplied` : ''} · valued so far ${fmt(R.ownIn)} – 3 Decide › Owner-supplied material.`
     );
   }
   add(

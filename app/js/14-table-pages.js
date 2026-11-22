@@ -832,7 +832,7 @@ function pageDef() {
               : '',
             hint: LF
               ? 'the CJI3 lines behind the row you clicked – the same amount'
-              : 'every CJI3 line of every bucket with its codes, at its CJI3 amount (pure cost – adjustments are on Adjust › Adjustment lines; client deductions are booked with revenue) · click an item in Expenses to see only its lines',
+              : 'every CJI3 line of every bucket with its codes, at its CJI3 amount (pure cost – adjustments are on 3 Decide › Adjustment lines; client deductions are booked with revenue) · click an item in Expenses to see only its lines',
           }
         : null,
       rowCls: (r) => (isOB(r.i) ? 'obr' : ''),
