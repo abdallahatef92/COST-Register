@@ -10,9 +10,10 @@ const SECS = [
   ['rep', 'Reports', ['psum', 'gl', 'wbs']],
   ['codes', 'PKG names', ['pkl']],
   ['rul', 'Mapping rules', ['rules']],
+  ['cli', 'Reports', ['cinv']],
 ];
 const STEPS = ['chk', 'cod', 'adj', 'bud'],
-  REPSEC = ['dash', 'xp', 'rep'];
+  REPSEC = ['dash', 'xp', 'rep', 'cli'];
 // the subcontractor pages live in other sections: POs in Code, Packages & rates and PO register in Reports, Bridge in Update
 const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'rep', bridge: 'chk' };
 const secOf = (t) => (t === 'sub' ? SUBSEC[ST.sub] || 'dash' : (SECS.find((x) => x[2].includes(t)) || SECS[0])[0]),
@@ -143,6 +144,7 @@ const PGNAME = {
   wbs: 'GL · WBS',
   pkl: 'PKG names',
   rules: 'Mapping rules',
+  cinv: 'Client invoices',
   bsum: 'Budget',
   bca: 'Cost Analysis',
   bprog: 'Progress',
@@ -297,6 +299,7 @@ function repMenu() {
       a('psum', 'PKG summary', 'Direct · Indirect', ST.tab === 'psum'),
       a(ST.glw || 'gl', 'GL · WBS', 'by cost element or WBS', ST.tab === 'gl' || ST.tab === 'wbs'),
     ]) +
+    g('CLIENT', '#0F766E', [a('cinv', 'Client invoices', 'invoice register · WBS × month · margin', ST.tab === 'cinv')]) +
     g('BUDGET', '#2E7D32', [
       a('bsum', 'All PKGs', 'Civil · Arch · MEP', ST.tab === 'bsum'),
       a('bpkg', 'PKG pages', 'EVM · ETC · EAC', ST.tab === 'bpkg'),
@@ -395,7 +398,7 @@ function renderSide() {
   const sec = ST.tab === 'sub' && ST.sub === 'pkg' ? 'sub' : secOf(ST.tab),
     el = $('side'),
     items = [];
-  if (sec === 'rul') {
+  if (sec === 'rul' || sec === 'cli') {
     el.className = 'hid';
     el.innerHTML = '';
     return;
@@ -939,7 +942,7 @@ function render() {
     isPk = (ST.tab === 'sub' && ST.sub === 'pkg') || isOv;
   $('pg-pkg').classList.toggle('on', isPk && !isOv);
   $('pg-sov').classList.toggle('on', isOv);
-  ['sum', 'tbl', 'chk', 'rul', 'mr', 'log', 'drv', 'psum', 'flow', 'dlog', 'bud'].forEach((p) =>
+  ['sum', 'tbl', 'chk', 'rul', 'mr', 'log', 'drv', 'psum', 'flow', 'dlog', 'bud', 'cli'].forEach((p) =>
     $('pg-' + p).classList.toggle(
       'on',
       !isPk &&
@@ -952,9 +955,10 @@ function render() {
           (p === 'chk' && ST.tab === 'chk') ||
           (p === 'log' && ST.tab === 'log') ||
           (p === 'rul' && ST.tab === 'rules') ||
+          (p === 'cli' && ST.tab === 'cinv') ||
           (p === 'mr' && ST.tab === 'mrate') ||
           (p === 'tbl' &&
-            !['sum', 'chk', 'rules', 'mrate', 'log', 'drv', 'psum', 'pkl', 'flow', 'dlog', 'bsum', 'bca', 'bprog', 'bpkg'].includes(
+            !['sum', 'chk', 'rules', 'cinv', 'mrate', 'log', 'drv', 'psum', 'pkl', 'flow', 'dlog', 'bsum', 'bca', 'bprog', 'bpkg'].includes(
               ST.tab
             )))
     )
@@ -969,6 +973,7 @@ function render() {
   else if (ST.tab === 'sum') renderSummary();
   else if (ST.tab === 'chk') renderChecks();
   else if (ST.tab === 'rules') renderRules();
+  else if (ST.tab === 'cinv') renderCiv();
   else if (ST.tab === 'mrate') renderMRate();
   else if (ST.tab === 'log') renderLog();
   else if (ST.tab === 'drv') renderDrivers();

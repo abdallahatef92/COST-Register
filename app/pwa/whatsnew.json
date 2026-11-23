@@ -1,5 +1,13 @@
 [
   {
+    "v": "5.0",
+    "n": [
+      "New report: Reports › Client › Client invoices – every client invoice in CJI3 (billing documents RV) and the opening balance",
+      "Tab 1 · Invoice register: by month, one row per invoice with gross, each client deduction GL and net, cumulative · click an invoice for its lines by WBS",
+      "Tab 2 · WBS × month: following the WBS structure, net invoiced per month, cost to date on that WBS and below, margin and % · WBS never invoiced together in one row · ⇩ Excel"
+    ]
+  },
+  {
     "v": "4.9",
     "n": [
       "Mapping rules › 2 · Indirect rules can be changed: ✕ takes a GL off a cost element, + GL adds one, and a GL not on the list yet gets a cost element from its pick list",

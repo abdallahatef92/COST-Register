@@ -126,6 +126,10 @@ function toAppData(P, o) {
       s(l.ce),
       s(l.cen),
       s(l.wbs),
+      s(l.type), // 7-10: for Reports › Client invoices – document type, SAP document, the invoice (Ref. document), its text
+      s(l.doc),
+      s(l.refDoc || ''),
+      s(l.header || l.name || ''),
     ]);
   // WBS names (CO Object Name of the CJI3 lines – the most frequent per WBS element)
   const wn = new Map();

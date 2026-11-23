@@ -1988,6 +1988,53 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     eq('Ctrl+Z undoes it: list and items', [await q.evaluate(() => __ST.indgl), await coded()], [null, n0]);
     await c17.close();
   }
+  if (RUN('7o')) {
+    head('7o. Reports › Client invoices: invoice register by month, WBS × month with cost and margin');
+    const { ctx: c18, p: q } = await open(APP);
+    await q.evaluate(() => document.body.classList.add('navpin'));
+    await q.click('#bReports');
+    await q.waitForTimeout(200);
+    await q.click('#repm [data-rgo="cinv"]');
+    await q.waitForTimeout(500);
+    ok(
+      'the Reports menu opens Client invoices',
+      await q.$eval('#cli', (e) => /Invoice register/.test(e.textContent) && !!e.querySelector('.civc'))
+    );
+    const X = await q.evaluate(() => {
+      const rows = __CIV.rows(),
+        inv = __CIV.inv(rows),
+        T = __CIV.tree(rows),
+        tops = [...T.values()].filter((n) => n.lv === 0);
+      return {
+        n: inv.length,
+        rv: rows.every((r) => r.ty === 'RV' || r.p === 0),
+        net: inv.reduce((s, e) => s + e.g - e.dt, 0),
+        lines: -rows.reduce((s, r) => s + r.a, 0),
+        tree: tops.reduce((s, t) => s + t.inv, 0),
+        cost: tops.reduce((s, t) => s + t.cost, 0),
+        cji: __CIV.cost(),
+      };
+    });
+    ok('…invoices: billing documents RV and the opening balance only', X.n > 0 && X.rv, JSON.stringify(X));
+    eq('…the register net = its lines', X.net, X.lines);
+    eq('…the WBS tree net = the register net', X.tree, X.net);
+    eq('…cost to date in the tree = the CJI3 cost to the cut', X.cost, X.cji, 1);
+    const iv = await q.$('#cli [data-civi]');
+    await iv.click();
+    await q.waitForTimeout(300);
+    ok(
+      '…an invoice opens its lines by WBS',
+      await q.$eval('#drawer', (e) => e.classList.contains('open') && /Invoice/.test(e.textContent))
+    );
+    await q.click('#dClose');
+    await q.click('[data-civt="w"]');
+    await q.waitForTimeout(300);
+    ok(
+      '…tab 2: WBS × month with cost and margin',
+      await q.$eval('#cli', (e) => /Cost to date/.test(e.textContent) && /Margin/.test(e.textContent))
+    );
+    await c18.close();
+  }
   if (RUN('7k')) {
     head('7k. A row coded under a filter stays (marked) until the filter changes or Refresh');
     const { ctx: c15, p: q } = await open(APP);

@@ -469,3 +469,12 @@ body:not(.navpin) #nav:not(:hover) .nst{opacity:0}
 .mrpg .ch u{text-decoration:none;color:#9AA4B2;margin-left:5px;cursor:pointer;font-weight:700} .mrpg .ch u:hover{color:#B42318}
 .mrpg .ch.add2{background:#fff;border-style:dashed;color:#2E7D32;font-weight:700;cursor:pointer} .mrpg .ch.add2:hover{background:#EFFAF2}
 .mrpg .mradd{width:130px;padding:1px 6px;border:1px solid #1D4ED8;border-radius:5px;font-size:12px} .mrpg .mrup{margin:4px 0} .mrpg .mrup select{font-size:12px;padding:1px 4px;border-radius:5px;border:1px solid #C9D3E3;color:#1D4ED8}
+/* Reports › Client invoices */
+.civ{padding:12px 18px 30px;color:#14254A;font-size:12.5px} .civh{display:flex;align-items:center;gap:12px} .civh h2{margin:0;font-size:21px} .civh .sp{flex:1}
+.civc{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin:10px 0} .civc>div{background:#fff;border:1px solid #DCE3EE;border-radius:10px;padding:8px 12px} .civc span{font-size:11px;color:#6B7280;letter-spacing:.04em} .civc b{display:block;font-size:18px;margin-top:2px;white-space:nowrap} .civc .r b{color:#B42318} .civc .g b{color:#1E7B34}
+.civbar{display:flex;gap:8px;align-items:center;margin:0 0 8px} .civbar input{border:1px solid #C9D3E3;border-radius:7px;padding:5px 10px;width:240px} .civbar button{border:1px solid #C9D3E3;background:#fff;border-radius:7px;padding:4px 10px}
+.civt{border-collapse:collapse;width:100%;background:#fff;border:1px solid #DCE3EE} .civt th{background:#F2F5FA;text-align:left;padding:6px 8px;border-bottom:1px solid #DCE3EE;color:#4B5563;white-space:nowrap;vertical-align:bottom;position:sticky;top:0;z-index:1} .civt th small{display:block;font-weight:400;color:#9AA4B2}
+.civt td{padding:5px 8px;border-top:1px solid #EEF1F5;white-space:nowrap} .civt td.n,.civt th.n{text-align:right;font-variant-numeric:tabular-nums} .civt td.b{font-weight:800} .civt td.red{color:#B42318} .civt td.grn{color:#1E7B34} .civt s{text-decoration:none;color:#9AA4B2;font-weight:400}
+.civt tr.mh td{background:#EEF2F8;font-weight:800;border-top:1px dashed #9AA8C0;cursor:pointer} .civt tfoot td{font-weight:800;background:#F2F5FA;border-top:2px solid #14254A}
+.civt tr.top td{background:#E3EAF6;font-weight:700} .civt tr.l1 td{background:#F2F5FA} .civt tr.l2 td{background:#F9FAFC} .civt tr.nb td{color:#6B7280} .civt [data-civw]{cursor:pointer}
+.civt th.dg{background:#FBEDED;color:#9B2C2C} .civt th.cm{background:#EFFAF2;color:#1E7B34} .civ a.lk{color:#1D4ED8;font-weight:700;cursor:pointer}
