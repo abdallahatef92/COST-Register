@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.2",
+    "n": [
+      "Built-in indirect list: 30605800 Location service → SE-12 Surveying Equipment · 32000039 DC-Furn. & Fixture → SP-09 · 32000057 ACs & Computers and 32000056 IT Equip&Telec. Dev. → SP-15",
+      "Items with an empty cost element get it from the list; a code you typed stays"
+    ]
+  },
+  {
     "v": "5.1",
     "n": [
       "Excel export › Lines: a Name (CJI3) column next to Description",
