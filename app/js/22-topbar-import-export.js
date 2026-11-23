@@ -1066,6 +1066,7 @@ $('bExport').onclick = async (ev) => {
     'Period',
     'Item',
     'Description',
+    'Name (CJI3)',
     'PO',
     'Subcontractor',
     'Qty',
@@ -1099,6 +1100,7 @@ $('bExport').onclick = async (ev) => {
       PER[R.per[i]],
       itemCode(it),
       S[L.desc[i]],
+      S[L.name[i]],
       S[L.po[i]],
       S[L.sup[i]],
       L.qty[i] || null,
@@ -1121,15 +1123,15 @@ $('bExport').onclick = async (ev) => {
     ]);
   }
   wl.addRows(rowsL);
-  wl.getColumn(9).numFmt = NUM2;
-  wl.getColumn(8).numFmt = '#,##0.###';
-  [16, 11, 8, 12, 40, 11, 24, 10, 14, 10, 7, 12, 8, 10, 11, 6, 11, 24, 20, 26, 9, 8, 9, 8].forEach((w, i) => {
+  wl.getColumn(10).numFmt = NUM2;
+  wl.getColumn(9).numFmt = '#,##0.###';
+  [16, 11, 8, 12, 40, 30, 11, 24, 10, 14, 10, 7, 12, 8, 10, 11, 6, 11, 24, 20, 26, 9, 8, 9, 8].forEach((w, i) => {
     wl.getColumn(i + 1).width = w;
   });
-  for (let c = 21; c <= 24; c++) {
+  for (let c = 22; c <= 25; c++) {
     wl.getColumn(c).font = { name: A, size: 8, color: { argb: 'FFA6A6A6' } };
   }
-  [10, 11, 12, 13].forEach((c) => {
+  [11, 12, 13, 14].forEach((c) => {
     wl.getColumn(c).fill = fill('FFEEF3FB');
   });
   wl.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }];

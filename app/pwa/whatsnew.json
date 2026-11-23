@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.1",
+    "n": [
+      "Excel export › Lines: a Name (CJI3) column next to Description",
+      "The Lines sheet still reads back with Import codes – a PKG, MNL or cost element typed on a line comes back for that line"
+    ]
+  },
+  {
     "v": "5.0",
     "n": [
       "New report: Reports › Client › Client invoices – every client invoice in CJI3 (billing documents RV) and the opening balance",

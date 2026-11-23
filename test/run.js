@@ -2269,6 +2269,36 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('the export opens in Excel format', sheets.length > 5, sheets.join(', '));
     for (const n of ['Summary', 'Expenses', 'PKG summary', 'Lines', 'Checks']) ok(`sheet "${n}"`, sheets.includes(n));
     {
+      // Lines: the CJI3 Name next to the description, and the sheet reads back with nothing changed
+      const wl = wb.getWorksheet('Lines'),
+        h = wl.getRow(4).values,
+        cn = h.indexOf('Name (CJI3)'),
+        filled = [];
+      wl.eachRow((r, n) => n > 4 && r.getCell(cn).value && filled.push(n));
+      ok(
+        'Lines: a Name (CJI3) column after Description, filled',
+        cn === h.indexOf('Description') + 1 && filled.length > 0,
+        cn + ' · ' + filled.length
+      );
+      eq('Lines: Amount is still a number column', typeof wl.getRow(5).getCell(h.indexOf('Amount')).value, 'number');
+      const codes = () => p.evaluate(() => JSON.stringify(__BK.map((b) => b.items.map((it) => [it.pkg, it.mnl, it.ce, it.inc]))));
+      const c0 = await codes();
+      await p.setInputFiles('#file', xl);
+      await p.waitForTimeout(2500);
+      eq('the export read back: no code changes, difference 0', [(await codes()) === c0, await p.evaluate(() => R.diff)], [true, 0]);
+      // a PKG typed on one line of the Lines sheet comes back as that line's code
+      const r5 = wl.getRow(5),
+        id = String(r5.getCell(h.indexOf('Line ID')).value);
+      r5.getCell(h.indexOf('PKG')).value = 'ZZ9';
+      const xl2 = path.join(OUT, 'export_edit.xlsx');
+      await wb.xlsx.writeFile(xl2);
+      await p.setInputFiles('#file', xl2);
+      await p.waitForTimeout(2500);
+      eq('…a PKG typed on the Lines sheet is read back for that line', await p.evaluate((x) => (__OVR()[x] || {}).pkg, id), 'ZZ9');
+      await p.keyboard.press('Control+z');
+      await p.waitForTimeout(500);
+    }
+    {
       const JSZip = require('jszip'),
         z = await JSZip.loadAsync(fs.readFileSync(path.join(OUT, 'export.xlsx'))),
         bad = [],
