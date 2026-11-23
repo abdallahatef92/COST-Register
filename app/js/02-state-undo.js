@@ -5,6 +5,7 @@ const ST = {
   own: {},
   ownSet: {},
   ownGl: [],
+  indgl: null, // your indirect list (GL → cost element); null = the built-in one
   indOff: !!META.indOffState,
   log: (META.logState || []).slice(-3000),
   crules: { ...(META.cruleState || {}) },
@@ -60,6 +61,7 @@ function getC(c) {
   if (c.t === 'own') return ST.own[c.k];
   if (c.t === 'ownset') return ST.ownSet[c.k];
   if (c.t === 'owngl') return JSON.stringify(ST.ownGl);
+  if (c.t === 'indgl') return JSON.stringify(ST.indgl || null);
   if (c.t === 'uns') return JSON.stringify(ST.uns);
   if (c.t === 'unsc') return JSON.stringify(ST.unsc);
   if (c.t === 'depx') return JSON.stringify(ST.depx);
@@ -76,6 +78,10 @@ function setC(c, v) {
   }
   if (c.t === 'owngl') {
     ST.ownGl = JSON.parse(v);
+    return;
+  }
+  if (c.t === 'indgl') {
+    ST.indgl = JSON.parse(v);
     return;
   }
   if (c.t === 'own') {
@@ -229,6 +235,7 @@ function snapshot() {
     own: ST.own,
     ownSet: ST.ownSet,
     ownGl: ST.ownGl,
+    indgl: ST.indgl || null, // your indirect list (Mapping rules › 2)
     bud: ST.bud || null, // Budget: the cost report read, the progress and the typed figures
     bdone: ST.bdone || null,
     bx: ST.bx || null,

@@ -1,5 +1,12 @@
 [
   {
+    "v": "4.9",
+    "n": [
+      "Mapping rules › 2 · Indirect rules can be changed: ✕ takes a GL off a cost element, + GL adds one, and a GL not on the list yet gets a cost element from its pick list",
+      "The items coded by the list follow the change (a code you typed yourself stays) · one Ctrl+Z undoes it · kept in the data file and the Changes log · Reset to built-in"
+    ]
+  },
+  {
     "v": "4.8",
     "n": [
       "A register built before the rules changed tells you: Mapping rules shows the lines the new rules put elsewhere and ↻ Rebuild with the current rules (from the SAP files in your data file, codes kept)",

@@ -179,7 +179,7 @@ const MR_EQW = {
   'SE-11': 'generator · مولد',
   'SE-17': 'any other equipment',
 };
-const MRV = { tab: 'b', fold: new Set(['zy']), c: null };
+const MRV = { tab: 'b', fold: new Set(['zy']), c: null, add: '' };
 // every CJI3 line → its rule (index in MR_BOOK, 'zy' or 'yours'), worked out once per build
 function mrCalc() {
   if (MRV.c && MRV.c.n === N) return MRV.c;
@@ -381,12 +381,12 @@ function mrIndData() {
       q.a += L.amt[i];
     }
   }
-  const placed = new Set(Object.values(IND_GL).flatMap((g) => g.split(' ')));
+  const placed = new Set(Object.values(indGl()).flatMap((g) => String(g).split(' ').filter(Boolean)));
   placed.add('30103100');
   const groups = MR_IGRP.map(([g, codes]) => ({
     g,
     ce: codes.map((k) => {
-      const gls = (IND_GL[k] || '')
+      const gls = String(indGl()[k] || '')
         .split(' ')
         .filter(Boolean)
         .map((x) => ({ g: x, n: C.nm.get(x) || '', c: (per.get(x) || {}).n || 0, a: (per.get(x) || {}).a || 0 }));
@@ -409,29 +409,88 @@ function mrIndData() {
 }
 function mrTab2() {
   const D = mrIndData(),
+    C = mrCalc(),
     f = (v) => (Math.abs(v) < 0.5 ? '-' : fmt(v)),
-    chip = (y) =>
-      `<span class="ch${y.c ? ' lk' : ' z'}"${y.c ? ` data-mrg="${esc(y.g)}" title="${y.c} lines – click to see them"` : ' title="no line in this CJI3"'}>${y.n ? esc(y.n) + ' ' : ''}<s>${esc(y.g)}${y.c ? ' · ' + y.c.toLocaleString('en-US') : ''}</s></span>`;
+    chip = (y, ce) =>
+      `<span class="ch${y.c ? ' lk' : ' z'}"${y.c ? ` data-mrg="${esc(y.g)}" title="${y.c} lines – click to see them"` : ' title="no line in this CJI3"'}>${y.n ? esc(y.n) + ' ' : ''}<s>${esc(y.g)}${y.c ? ' · ' + y.c.toLocaleString('en-US') : ''}</s>${ce ? `<u data-mrx="${esc(ce)}|${esc(y.g)}" title="take ${esc(y.g)} off ${esc(ce)}">✕</u>` : ''}</span>`,
+    add = (ce) =>
+      MRV.add === ce
+        ? `<input class="mradd" data-mrin="${esc(ce)}" list="dl-mrgl" placeholder="GL number" autofocus>`
+        : `<span class="ch add2" data-mrp="${esc(ce)}" title="add a GL to ${esc(ce)}">+ GL</span>`,
+    ces = MR_IGRP.flatMap(([, c]) => c),
+    mine = !!ST.indgl;
+  // the GL numbers to pick from: those with indirect cost first, then every GL in this CJI3
+  const ind = new Set(D.unplaced.map((y) => y.g));
+  D.groups.forEach((g) => g.ce.forEach((x) => x.gls.forEach((y) => y.c && ind.add(y.g))));
+  const dl = `<datalist id="dl-mrgl">${[...ind, ...[...C.nm.keys()].filter((g) => !ind.has(g) && !g.startsWith('4')).sort()]
+    .map((g) => `<option value="${esc(g)}">${esc(C.nm.get(g) || '')}</option>`)
+    .join('')}</datalist>`;
   return `<div class="mrlv"><b>Indirect line → PKG Indirect + cost element</b><span>for the lines in the buckets G&amp;A · Equipment / fuel · Fleet / transportation · House rent · Asset depreciation</span></div>
   <div class="mrhow"><div><b>PKG</b> = Indirect</div><div><b>MNL</b> = EQU for Equipment / fuel and Fleet · OTHER for the rest</div><div><b>Cost element</b> = by the GL that carries most of the item's cost · <b>Inhouse Charge EQ 30103100</b> by the equipment name</div><div>your own code on an item always wins</div></div>
-  <table class="mrtb mr2"><tr><th style="width:96px">Cost element</th><th style="width:290px">Name</th><th>GL (name · number · lines)</th><th class="n" style="width:80px">Lines</th><th class="n" style="width:120px">Amount</th></tr>${D.groups
+  <table class="mrtb mr2"><tr><th style="width:96px">Cost element</th><th style="width:290px">Name</th><th>GL (name · number · lines) – ✕ take off · + GL add</th><th class="n" style="width:80px">Lines</th><th class="n" style="width:120px">Amount</th></tr>${D.groups
     .map(
       (g) =>
         `<tr class="gh"><td colspan="5">${esc(g.g)} · ${g.ce.length} cost elements · ${f(g.ce.reduce((s, x) => s + x.a, 0))}</td></tr>` +
         g.ce
           .map(
             (x) =>
-              `<tr class="${x.gls.length || x.eq ? '' : 'zero'}"><td><b>${esc(x.k)}</b></td><td>${esc(x.name)}</td><td>${x.gls.map(chip).join('')}${x.eq ? `<span class="ch eqn${x.eq.n ? ' lk' : ''}"${x.eq.n ? ` data-mre="${x.k}"` : ''}>Inhouse Charge EQ <s>30103100</s> + name <b>${esc(MR_EQW[x.k])}</b>${x.eq.n ? ' <s>· ' + x.eq.n + '</s>' : ''}</span>` : ''}${x.gls.length || x.eq ? '' : '<span class="help">no GL yet</span>'}</td><td class="n">${x.n ? x.n.toLocaleString('en-US') : '-'}</td><td class="n">${f(x.a)}</td></tr>`
+              `<tr class="${x.gls.length || x.eq ? '' : 'zero'}"><td><b>${esc(x.k)}</b></td><td>${esc(x.name)}</td><td>${x.gls.map((y) => chip(y, x.k)).join('')}${x.eq ? `<span class="ch eqn${x.eq.n ? ' lk' : ''}"${x.eq.n ? ` data-mre="${x.k}"` : ''}>Inhouse Charge EQ <s>30103100</s> + name <b>${esc(MR_EQW[x.k])}</b>${x.eq.n ? ' <s>· ' + x.eq.n + '</s>' : ''}</span>` : ''}${add(x.k)}</td><td class="n">${x.n ? x.n.toLocaleString('en-US') : '-'}</td><td class="n">${f(x.a)}</td></tr>`
           )
           .join('')
     )
     .join('')}</table>
   ${
     D.unplaced.length
-      ? `<div class="mrun"><b>GL with indirect cost not on the list yet: ${D.unplaced.length}</b> ${D.unplaced.map((y) => chip(y) + ` <span class="help">${f(y.a)}</span>`).join(' · ')} <span class="help">– until placed, its items get no indirect cost element (type one on the item)</span></div>`
+      ? `<div class="mrun"><b>GL with indirect cost not on the list yet: ${D.unplaced.length}</b>${D.unplaced
+          .map(
+            (y) =>
+              `<div class="mrup">${chip(y)} <span class="help">${f(y.a)}</span> → <select data-mrmv="${esc(y.g)}"><option value="">choose a cost element ▾</option>${ces.map((c) => `<option value="${esc(c)}">${esc(c)} · ${esc(PS_NAMES[c] || '')}</option>`).join('')}</select></div>`
+          )
+          .join('')}<span class="help">until placed, its items get no indirect cost element (or type one on the item)</span></div>`
       : '<div class="mrun ok"><b>Every GL with indirect cost has a cost element ✓</b></div>'
   }
-  <div class="mrnote">The list is the built-in one · grey = no line on that GL in this CJI3 · counts are CJI3 lines on the GL; an item takes the cost element of the GL that carries most of its cost</div>`;
+  <div class="mrnote">${mine ? '<b>Your list</b> (changed from the built-in one) · <a class="lk" data-mra="indreset">Reset to built-in</a>' : 'The built-in list'} · a change goes to Undo, the data file and the Changes log · items coded by the list follow it; a code you typed yourself stays · grey = no line on that GL in this CJI3</div>${dl}`;
+}
+// a new indirect list: the list and the items coded by it, in one undo step
+function mrIndSet(next, label) {
+  const norm = (m) =>
+      JSON.stringify(
+        Object.keys(m)
+          .sort()
+          .map((k) => [k, String(m[k]).split(' ').filter(Boolean).sort().join(' ')])
+          .filter((x) => x[1])
+      ),
+    same = norm(next) === norm(IND_GL),
+    nv = same ? null : next,
+    its = [];
+  BK.forEach((b) => {
+    if (MR_IND.includes(b.id)) b.items.forEach((it) => its.push([it, indPreset(it)]));
+  });
+  const keep = ST.indgl;
+  ST.indgl = nv;
+  const ch = [{ t: 'indgl', v: JSON.stringify(nv) }];
+  its.forEach(([it, p0]) => {
+    const p1 = indPreset(it);
+    if (p0 && it.ce === p0.ce && (!p1 || p1.ce !== p0.ce)) ch.push({ t: 'item', bi: it.bi, ii: it.ii, f: 'ce', v: p1 ? p1.ce : '' });
+    else if (!p0 && p1 && !ST.indOff && !it.ce && (!it.pkg || isIndPkg(it.pkg)))
+      ch.push({ t: 'item', bi: it.bi, ii: it.ii, f: 'ce', v: p1.ce });
+  });
+  ST.indgl = keep;
+  MRV.add = '';
+  change(ch, label);
+}
+// the list with a GL moved: off every cost element, then (if ce) onto ce
+function mrIndMove(gl, ce) {
+  const next = {};
+  Object.entries(indGl()).forEach(([c, g]) => {
+    const a = String(g)
+      .split(' ')
+      .filter((x) => x && x !== gl);
+    if (c === ce) a.push(gl);
+    if (a.length) next[c] = a.join(' ');
+  });
+  if (ce && !next[ce]) next[ce] = gl;
+  return next;
 }
 function renderRules() {
   const um = mapUnmapped(),
@@ -461,11 +520,27 @@ $('rul').addEventListener('click', (e) => {
   if (ac) {
     const a = ac.dataset.mra;
     if (a === 'xl') mrExport();
+    else if (a === 'indreset') mrIndSet(JSON.parse(JSON.stringify(IND_GL)), 'Indirect list: back to the built-in one');
     else if (a === 'rebuild') updRebuild();
     else {
       MRV.fold = a === 'open' ? new Set() : new Set([...MR_ORDER, 'zy', 'yours']);
       renderRules();
     }
+    return;
+  }
+  const x = e.target.closest('[data-mrx]');
+  if (x) {
+    e.stopPropagation();
+    const [ce, gl] = x.dataset.mrx.split('|');
+    mrIndSet(mrIndMove(gl, ''), `Indirect list: ${gl} taken off ${ce}`);
+    return;
+  }
+  const pl = e.target.closest('[data-mrp]');
+  if (pl) {
+    MRV.add = pl.dataset.mrp;
+    renderRules();
+    const i = document.querySelector('#rul [data-mrin]');
+    if (i) i.focus();
     return;
   }
   const ln = e.target.closest('[data-mrl]');
@@ -505,6 +580,33 @@ $('rul').addEventListener('click', (e) => {
       if (eqCode(itemDesc(it) + ' ' + itemCode(it)) === k) idx.push(i);
     }
     mrShow(k + ' · Inhouse Charge EQ 30103100', idx);
+  }
+});
+$('rul').addEventListener('change', (e) => {
+  const mv = e.target.closest('[data-mrmv]');
+  if (mv && mv.value) {
+    mrIndSet(mrIndMove(mv.dataset.mrmv, mv.value), `Indirect list: ${mv.dataset.mrmv} → ${mv.value}`);
+    return;
+  }
+  const inp = e.target.closest('[data-mrin]');
+  if (inp) {
+    const gl = (String(inp.value).match(/\d{6,10}/) || [''])[0],
+      ce = inp.dataset.mrin;
+    if (!gl) {
+      toast('Type a GL number (8 digits)');
+      return;
+    }
+    if (gl === '30103100') {
+      toast('30103100 Inhouse Charge EQ goes by the equipment name – it stays as it is');
+      return;
+    }
+    mrIndSet(mrIndMove(gl, ce), `Indirect list: ${gl} → ${ce}`);
+  }
+});
+$('rul').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && e.target.closest('[data-mrin]')) {
+    MRV.add = '';
+    renderRules();
   }
 });
 // both tabs as one workbook: bucket › rule › GL (fold with + / −), cost element group › cost element › GL

@@ -23,8 +23,24 @@ const IND_GL = {
   'CO-01': '30605300',
   Sponsorship: '30701100 32000092 32000069 30604200 31201200 31301800 31001500 32000083 30606200 32000084 31001200 32000019',
 };
-const IND_MAP = new Map();
-Object.entries(IND_GL).forEach(([c, gl]) => gl.split(' ').forEach((g) => IND_MAP.set(g, c)));
+// the list in use: yours (Mapping rules › 2 · Indirect rules, kept with your codes) or the built-in one
+const indGl = () => ST.indgl || IND_GL;
+let IND_MK = null,
+  IND_MC = null;
+const indMap = () => {
+  const g = indGl();
+  if (IND_MK !== g) {
+    IND_MC = new Map();
+    Object.entries(g).forEach(([c, gl]) =>
+      String(gl)
+        .split(' ')
+        .filter(Boolean)
+        .forEach((x) => IND_MC.set(x, c))
+    );
+    IND_MK = g;
+  }
+  return IND_MC;
+};
 const IND_BK = ['G&A', 'Equipment / fuel', 'Fleet / transportation', 'House rent', 'Asset depreciation'];
 const eqCode = (t) => {
   t = String(t || '').toLowerCase();
@@ -60,7 +76,7 @@ function indPreset(it) {
       best = g;
     }
   });
-  let ce = best === '30103100' ? eqCode(itemDesc(it) + ' ' + itemCode(it)) : IND_MAP.get(best);
+  let ce = best === '30103100' ? eqCode(itemDesc(it) + ' ' + itemCode(it)) : indMap().get(best);
   if (!ce) return null;
   return { gl: best, ce, mnl: ['Equipment / fuel', 'Fleet / transportation'].includes(b.id) ? 'EQU' : 'OTHER' };
 }

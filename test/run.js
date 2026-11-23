@@ -1932,6 +1932,62 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('…tab 3: your rules and the settings', await q.$eval('#rul', (e) => /Your rules/.test(e.textContent) && !!e.querySelector('#rAdd')));
     await c16.close();
   }
+  if (RUN('7n')) {
+    head('7n. Mapping rules › Indirect rules: take a GL off, add it, place a GL, undo, reset');
+    const { ctx: c17, p: q } = await open(APP);
+    await q.click('#bRules');
+    await q.waitForTimeout(300);
+    await q.click('[data-mrt="i"]');
+    await q.waitForTimeout(400);
+    // the GL with the most indirect lines and its cost element; the items coded by the list
+    const pick = await q.evaluate(() => {
+      const I = __MR.ind();
+      let best = null;
+      I.groups.forEach((g) => g.ce.forEach((x) => x.gls.forEach((y) => (!best || y.c > best.c) && (best = { ce: x.k, g: y.g, c: y.c }))));
+      return best;
+    });
+    ok('a GL of the list has lines', pick && pick.c > 0, JSON.stringify(pick));
+    const coded = () => q.evaluate((ce) => __BK.reduce((n, b) => n + b.items.filter((it) => it.ce === ce).length, 0), pick.ce);
+    const n0 = await coded();
+    await q.click(`[data-mrx="${pick.ce}|${pick.g}"]`);
+    await q.waitForTimeout(500);
+    ok(
+      '✕ takes the GL off its cost element (your list)',
+      await q.evaluate(
+        (g) =>
+          !Object.values(__ST.indgl || {})
+            .join(' ')
+            .split(' ')
+            .includes(g),
+        pick.g
+      )
+    );
+    ok('…and it is listed as not placed yet', await q.$eval('#rul .mrun', (e, g) => e.textContent.includes(g), pick.g));
+    ok('…items coded by the list follow it (fewer on ' + pick.ce + ')', (await coded()) < n0, (await coded()) + ' vs ' + n0);
+    await q.selectOption(`[data-mrmv="${pick.g}"]`, pick.ce);
+    await q.waitForTimeout(500);
+    eq('placing it back: the items get their cost element again', await coded(), n0, 0);
+    eq('…the list is the built-in one again (nothing of yours kept)', await q.evaluate(() => __ST.indgl), null);
+    if (await q.$('#asLater')) await q.click('#asLater'); // the first change asks for a data file
+    await q.click(`[data-mrp="SP-01"]`);
+    await q.waitForTimeout(200);
+    await q.fill('[data-mrin="SP-01"]', pick.g);
+    await q.press('[data-mrin="SP-01"]', 'Enter');
+    await q.waitForTimeout(500);
+    ok('+ GL moves a GL to another cost element', await q.evaluate((g) => (__ST.indgl || {})['SP-01'] === g, pick.g));
+    ok(
+      '…and the items follow',
+      (await q.evaluate(() => __BK.reduce((n, b) => n + b.items.filter((it) => it.ce === 'SP-01').length, 0))) > 0
+    );
+    ok(
+      '…in the Changes log',
+      await q.evaluate((g) => __ST.log.some((x) => String(x[1] || x.label || JSON.stringify(x)).includes(g)), pick.g)
+    );
+    await q.keyboard.press('Control+z');
+    await q.waitForTimeout(500);
+    eq('Ctrl+Z undoes it: list and items', [await q.evaluate(() => __ST.indgl), await coded()], [null, n0]);
+    await c17.close();
+  }
   if (RUN('7k')) {
     head('7k. A row coded under a filter stays (marked) until the filter changes or Refresh');
     const { ctx: c15, p: q } = await open(APP);
