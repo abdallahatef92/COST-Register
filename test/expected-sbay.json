@@ -46,7 +46,7 @@
   "House rent:140652",
   "G&A:16340426"
  ],
- "presetItems": 51,
+ "presetItems": 52,
  "presetCodes": {
   "Equipment / fuel SE-11": 1,
   "Equipment / fuel SE-18": 9,
@@ -58,6 +58,7 @@
   "G&A Sponsorship": 2,
   "G&A SP-17": 3,
   "G&A SP-28": 3,
+  "G&A SE-12": 1,
   "G&A SS-01": 3,
   "G&A CO-01": 1,
   "G&A SP-18": 1,

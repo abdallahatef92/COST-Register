@@ -54,7 +54,7 @@
   "Asset depreciation:9250805",
   "G&A:113048440"
  ],
- "presetItems": 347,
+ "presetItems": 348,
  "presetCodes": {
   "Equipment / fuel SE-11": 10,
   "Equipment / fuel SE-03": 3,
@@ -80,6 +80,7 @@
   "G&A SP-19": 1,
   "G&A SP-15": 1,
   "G&A SP-16": 1,
+  "G&A SE-12": 1,
   "G&A SP-14": 1,
   "G&A SP-18": 1
  },
