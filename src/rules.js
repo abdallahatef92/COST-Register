@@ -36,7 +36,10 @@ const GA = {
 function classifyOne(l) {
   const { cen, type, wbs } = l;
   if (l.ce.startsWith('4')) return ['Revenue', ''];
-  if (/^Client-?\s*Deduction/i.test(cen)) return ['Revenue', 'Client deductions']; // decision: shown with revenue
+  // decision: shown with revenue, each with its GL name – GL 30402xxx (Client-Deductions, Liquid Damage, Poor workmanship, Utilities,
+  // penalty …), the name Client-Deduction, or an RV (billing) line with a positive amount on a GL that is not revenue (4…)
+  if (/^Client-?\s*Deduction/i.test(cen) || l.ce.startsWith('30402') || (type === 'RV' && l.amt > 0))
+    return ['Revenue', 'Client deductions'];
   if (type === 'SC') return cen === 'Other Deduction' || cen === 'Main Material' ? ['Subcontractor deductions', ''] : ['Subcontractor', ''];
   if (cen === 'Other Deduction') return ['Subcontractor deductions', ''];
   if (type === 'WA') return ['Material', ''];
@@ -123,7 +126,12 @@ function classify(lines, userRules = []) {
 
 const RULES = [
   ['1', 'Cost element starts with 4', 'Revenue', 'Revenue is never netted against cost.'],
-  ['2', 'Cost element "Client-Deductions"', 'Revenue (client deductions)', 'Decision: shown with revenue, reported on its own line.'],
+  [
+    '2',
+    'GL 30402xxx (Client-Deductions, Liquid Damage LDFD, Poor workmanship, Utilites, penalty), or an RV line with a positive amount',
+    'Revenue (client deductions)',
+    'Decision: shown with revenue, each with its GL name.',
+  ],
   ['3', 'Document type SC (subcontract), cost element Other Deduction or Main Material', 'Subcontractor deductions', 'Own sheet.'],
   ['4', 'Document type SC, any other cost element', 'Subcontractor', ''],
   ['5', 'Document type WA (goods issue)', 'Material', 'The line carries a SAP material number and a quantity.'],

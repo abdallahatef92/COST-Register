@@ -42,7 +42,13 @@ function adjRows() {
   }
   REV.forEach((x, k) => {
     if (!x[3])
-      out.push({ rv: k, g: ADJK.cd, a: -x[2], on: true, why: 'client deduction booked with revenue – in the CJI3 total, not cost' });
+      out.push({
+        rv: k,
+        g: ADJK.cd,
+        a: -x[2],
+        on: true,
+        why: `client deduction · ${S[x[5]]} ${S[x[4]]} – booked with revenue, in the CJI3 total, not cost`,
+      });
   });
   return out;
 }

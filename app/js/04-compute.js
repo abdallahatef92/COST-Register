@@ -246,6 +246,14 @@ function compute() {
     if (is4) R.rev4 += -a;
     else R.cd += a;
   }
+  // client deductions to the cut, by GL (name + number) – shown on the Summary
+  R.cdBy = new Map();
+  for (const x of REV) {
+    const p = x[1] === 0 ? 0 : x[1] < 0 || !x[0] || x[0] > cutI ? NP - 1 : x[1];
+    if (x[3] || p === NP - 1) continue;
+    const k = S[x[5]] + ' ' + S[x[4]];
+    R.cdBy.set(k, (R.cdBy.get(k) || 0) + x[2]);
+  }
   R.cdAll = REV.filter((x) => !x[3]).reduce((s, x) => s + x[2], 0);
   R.unsIn = r2(R.unsIn);
   R.unsExc = r2(R.unsExc);

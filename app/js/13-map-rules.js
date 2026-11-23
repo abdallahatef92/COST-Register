@@ -34,6 +34,14 @@ const MR_GA = [
     ],
   ],
 ];
+// the client-deduction GLs of the SAP chart (shown with their number even before a line uses them)
+const MR_GLNO = {
+  'Client-Deductions': '30402000',
+  'Liquid Damage LDFD': '30402100',
+  'Poor workmanship': '30402200',
+  Utilites: '30402300',
+  penalty: '30402400',
+};
 const MR_EQUIP = ['Fuel', 'Diesel', 'Oil and Lubricant', 'Other Equip Exp.', 'Maintenace & repairs', 'Insurance For Equip'],
   MR_ODC = ['Main Material', 'Consumables Material', 'Material Damages'],
   MR_HOUSE = ['Housing Rent', 'Housing expenses', 'Housing Commission', 'HO-Housing Rent'];
@@ -43,8 +51,14 @@ const MR_BOOK = [
   {
     b: 'Revenue',
     g: 'client deductions',
-    w: [['GL name starts with', ['Client-Deduction'], 1]],
-    t: (x) => /^Client-?\s*Deduction/i.test(x.cen),
+    w: [
+      ['GL number starts with', ['30402'], 1],
+      ['', ['Client-Deductions', 'Liquid Damage LDFD', 'Poor workmanship', 'Utilites', 'penalty']],
+      ['· or GL name starts with', ['Client-Deduction'], 1],
+      ['· or Document type is', ['RV'], 1],
+      ['with a positive amount (GL not starting with 4)'],
+    ],
+    t: (x) => /^Client-?\s*Deduction/i.test(x.cen) || x.ce.startsWith('30402') || (x.ty === 'RV' && x.amt > 0),
   },
   {
     b: 'Subcontractor deductions',
@@ -174,7 +188,7 @@ function mrCalc() {
     nm = new Map(); // GL number → name
   for (let i = 0; i < N; i++) {
     if (L.uns[i] || L.b[i] < 0) continue; // added by you (not in CJI3)
-    const x = { ce: S[L.ce[i]], cen: S[L.cen[i]], ty: S[L.ty[i]], wbs: S[L.wbs[i]], b: BK[L.b[i]].id };
+    const x = { ce: S[L.ce[i]], cen: S[L.cen[i]], ty: S[L.ty[i]], wbs: S[L.wbs[i]], b: BK[L.b[i]].id, amt: L.amt[i] };
     if (!x.ce) continue;
     if (!nm.has(x.ce)) nm.set(x.ce, x.cen);
     const s = nums.get(x.cen) || nums.set(x.cen, new Set()).get(x.cen);
@@ -267,11 +281,11 @@ function mrChips(q, k, D) {
     .map(([txt, chips, raw]) => {
       if (!chips) return `<span class="mrt">${esc(txt)}</span>`;
       return (
-        `<span class="mrt">${esc(txt)}</span> ` +
+        (txt ? `<span class="mrt">${esc(txt)}</span> ` : '') +
         chips
           .map((c) => {
             if (raw) return `<span class="ch raw">${esc(c)}</span>`;
-            const ns = D.C.nums.get(c),
+            const ns = D.C.nums.get(c) || (MR_GLNO[c] ? [MR_GLNO[c]] : null),
               n = e && e.gl.get(c);
             return `<span class="ch${n ? ' lk' : ' z'}"${n ? ` data-mrl="${k}" data-mrc="${esc(c)}" title="${n.toLocaleString('en-US')} lines – click to see them"` : ' title="no line in this CJI3"'}>${esc(c)}${ns ? ` <s>${esc([...ns].join(' · '))}</s>` : ''}</span>`;
           })
@@ -485,7 +499,7 @@ async function mrExport() {
       ws.getRow(r).height = 28;
     };
   const D = mrBucketData(),
-    words = (q) => q.w.map(([t, c]) => t + (c ? ' ' + c.join(' · ') : '')).join(' ');
+    words = (q) => q.w.map(([t, c]) => [t, c ? c.join(' · ') : ''].filter(Boolean).join(' ')).join(' ');
   const ws = wb.addWorksheet('Bucket rules', {
     properties: { tabColor: { argb: NAVY }, outlineProperties: { summaryBelow: false } },
     views: [{ state: 'frozen', ySplit: 4 }],
@@ -509,7 +523,7 @@ async function mrExport() {
       cr.font = { bold: true, color: { argb: r.n ? 'FF14254A' : 'FF9AA4B2' } };
       cr.eachCell({ includeEmpty: true }, (c) => (c.fill = fill('FFF2F5FA')));
       (r.gls || []).forEach((g) => {
-        const ns = D.C.nums.get(g),
+        const ns = D.C.nums.get(g) || (MR_GLNO[g] ? [MR_GLNO[g]] : null),
           e = D.st.get(r.k),
           gr = ws.addRow([title, r.no, '', g, ns ? [...ns].join(', ') : '(not in this CJI3)', r.g || '', (e && e.gl.get(g)) || 0, '']);
         gr.outlineLevel = 2;

@@ -1,5 +1,12 @@
 [
   {
+    "v": "4.7",
+    "n": [
+      "Client deductions: every GL 30402xxx (Client-Deductions, Liquid Damage LDFD, Poor workmanship, Utilites, penalty) and RV lines with a positive amount (not on revenue GLs 4…) go to Revenue › Client deductions",
+      "Each client deduction shows its GL name: on the Summary (one row per GL), in Adjustment lines (Why) and in Mapping rules"
+    ]
+  },
+  {
     "v": "4.6",
     "n": [
       "A simpler menu: the month is 4 steps – 1 Update · 2 Code · 3 Decide · 4 Forecast – each with where it stands",

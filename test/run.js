@@ -157,6 +157,22 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     )
   );
   eq('no unclassified lines', D.META.unclassified || 0, 0, 0);
+  {
+    // client deductions: GL 30402xxx by number, and an RV (billing) line with a positive amount unless the GL is revenue (4…)
+    const t = [
+      { ce: '30402100', cen: 'Liquid Damage LDFD', type: 'KR', wbs: '', amt: 500 },
+      { ce: '30402400', cen: 'penalty', type: 'SA', wbs: '', amt: -20 },
+      { ce: '30605100', cen: 'Miscel. allowances', type: 'RV', wbs: '', amt: 75 },
+      { ce: '40101100', cen: 'Op contracts Income', type: 'RV', wbs: '', amt: 900 },
+      { ce: '30605100', cen: 'Miscel. allowances', type: 'RV', wbs: '', amt: -75 },
+    ];
+    require('../src/rules').classify(t, []);
+    eq(
+      'client deductions: 30402xxx and RV with a positive amount (not on 4…)',
+      t.map((l) => l.bucket + (l.sub ? ' · ' + l.sub : '')).join(' | '),
+      'Revenue · Client deductions | Revenue · Client deductions | Revenue · Client deductions | Revenue | G&A · Site running costs'
+    );
+  }
   eq('no duplicate line keys', D.META.dupes || 0, 0, 0);
 
   // ---------------------------------------------------------------------------- 3. build the Tool and a test app with the data inside
@@ -1863,6 +1879,12 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await q.$eval('#din', (e) => /CJI3/.test(e.textContent) && !!e.querySelector('.bar u'))
     );
     await q.evaluate(() => document.body.classList.add('navpin'));
+    await q.evaluate(() => __GO('dash'));
+    await q.waitForTimeout(400);
+    ok(
+      'Summary: each client deduction with its GL name and number',
+      await q.$$eval('#sum tr.cdg', (x) => x.length > 0 && x.every((e) => /\d{8}/.test(e.textContent)))
+    );
     await q.click('#bReports');
     await q.waitForTimeout(200);
     ok(

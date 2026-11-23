@@ -174,7 +174,12 @@ function renderSummary() {
     <div class="sc"><div class="sct"><b>Cost per month</b><small>up to the cut date</small></div><div class="sleg">${leg}</div><div style="flex:1;min-height:0">${svg}</div></div></div>
    <div class="srow r2"><div class="sc"><div class="sct"><b>Cost drivers</b><small>${all.length} drivers · <b style="color:#1B2A41">${R.toDate ? ((100 * sT(all)) / R.toDate).toFixed(0) : 0}% of the cost to date</b> · this month vs its 6-month average · ▲ red = dearer</small><span class="sp"></span><a class="lk" data-gotab="drv" style="font-weight:600">Full list – all buckets ›</a></div>${dtab}</div>
     <div class="sc"><div class="sct"><b>Reconciliation to CJI3</b><small>CJI3 is the single source of truth</small></div>${recH}<div class="sct" style="margin-top:10px"><b>Needs attention</b></div>${attH}
-     <div class="sct" style="margin-top:10px"><b>Revenue</b><small>kept apart, to the cut date</small></div><table class="st rec"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr><tr class="t"><td>Net revenue</td><td>${fmt(netRev)}</td></tr></table></div></div></div>`;
+     <div class="sct" style="margin-top:10px"><b>Revenue</b><small>kept apart, to the cut date</small></div><table class="st rec"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr>${[
+       ...R.cdBy,
+     ]
+       .sort((x, y) => x[1] - y[1])
+       .map(([g, a]) => `<tr class="cdg"><td>· ${esc(g)}</td><td>${fmt(-a)}</td></tr>`)
+       .join('')}<tr class="t"><td>Net revenue</td><td>${fmt(netRev)}</td></tr></table></div></div></div>`;
   $('sum')
     .querySelectorAll('[data-gotab]')
     .forEach((a) => {
