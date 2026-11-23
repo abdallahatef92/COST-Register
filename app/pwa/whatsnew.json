@@ -1,5 +1,12 @@
 [
   {
+    "v": "4.8",
+    "n": [
+      "A register built before the rules changed tells you: Mapping rules shows the lines the new rules put elsewhere and ↻ Rebuild with the current rules (from the SAP files in your data file, codes kept)",
+      "3 · Your rules › Apply rules – rebuild now uses the SAP files in your data file"
+    ]
+  },
+  {
     "v": "4.7",
     "n": [
       "Client deductions: every GL 30402xxx (Client-Deductions, Liquid Damage LDFD, Poor workmanship, Utilites, penalty) and RV lines with a positive amount (not on revenue GLs 4…) go to Revenue › Client deductions",

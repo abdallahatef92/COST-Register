@@ -198,7 +198,8 @@ function mrCalc() {
       continue;
     }
     const k = MR_BOOK.findIndex((q) => q.t(x));
-    r[i] = MR_BOOK[k].b === x.b ? k : -2; // -2: your own rule took it
+    // -2: one of your rules took it · -4: sorted with older rules – the rules of this version put it in another bucket (rebuild)
+    r[i] = MR_BOOK[k].b === x.b ? k : ST.rules.some((u) => u.bucket && ruleMatch(u, i)) ? -2 : -4;
   }
   MRV.c = { n: N, r, nums, nm };
   return MRV.c;
@@ -206,6 +207,19 @@ function mrCalc() {
 function mapUnmapped() {
   return META.unclassified || 0;
 }
+// lines sorted with older rules: the bucket of this build differs from what the rules of this version give
+function mapStale() {
+  const C = mrCalc();
+  let n = 0;
+  for (let i = 0; i < N; i++) if (C.r[i] === -4) n++;
+  return n;
+}
+const mrStaleBar = () => {
+  const n = mapStale();
+  return n
+    ? `<div class="mrstale"><b>${n.toLocaleString('en-US')} line${n === 1 ? ' was' : 's were'} sorted with older rules</b> – this register was built before the rules changed; the rules of __VER__ put ${n === 1 ? 'it' : 'them'} in another bucket. <a class="lk" data-mrl="-4">See ${n === 1 ? 'it' : 'them'}</a><span class="sp"></span><button class="pri" data-mra="rebuild">↻ Rebuild with the current rules</button><span class="help">uses the SAP files in your data file · your codes are kept · about 30 seconds</span></div>`
+    : '';
+};
 // the lines of one rule (and one GL name), as a list in the drawer
 function mrLines(rk, cen, ce) {
   const C = mrCalc(),
@@ -423,7 +437,7 @@ function renderRules() {
   const um = mapUnmapped(),
     t = MRV.tab;
   $('rul').innerHTML =
-    `<div class="mrpg"><div class="mrhd"><h2>Mapping rules</h2><span class="mrtabs"><button data-mrt="b" class="${t === 'b' ? 'on' : ''}">1 · Bucket rules<small>CJI3 line → bucket</small></button><button data-mrt="i" class="${t === 'i' ? 'on' : ''}">2 · Indirect rules<small>indirect line → cost element</small></button><button data-mrt="y" class="${t === 'y' ? 'on' : ''}">3 · Your rules<small>your own rules · settings</small></button></span><span class="sp"></span><span class="mrok ${um ? 'bad' : ''}">${um ? 'Lines without a bucket: ' + um.toLocaleString('en-US') : 'Unmapped lines: 0 ✓'}</span><button data-mra="xl" class="pri">⇩ Export to Excel</button></div><div id="rulY"></div></div>`;
+    `<div class="mrpg"><div class="mrhd"><h2>Mapping rules</h2><span class="mrtabs"><button data-mrt="b" class="${t === 'b' ? 'on' : ''}">1 · Bucket rules<small>CJI3 line → bucket</small></button><button data-mrt="i" class="${t === 'i' ? 'on' : ''}">2 · Indirect rules<small>indirect line → cost element</small></button><button data-mrt="y" class="${t === 'y' ? 'on' : ''}">3 · Your rules<small>your own rules · settings</small></button></span><span class="sp"></span><span class="mrok ${um ? 'bad' : ''}">${um ? 'Lines without a bucket: ' + um.toLocaleString('en-US') : 'Unmapped lines: 0 ✓'}</span><button data-mra="xl" class="pri">⇩ Export to Excel</button></div>${mrStaleBar()}<div id="rulY"></div></div>`;
   if (t === 'b') $('rulY').innerHTML = mrTab1();
   else if (t === 'i') $('rulY').innerHTML = mrTab2();
   else renderYourRules();
@@ -447,6 +461,7 @@ $('rul').addEventListener('click', (e) => {
   if (ac) {
     const a = ac.dataset.mra;
     if (a === 'xl') mrExport();
+    else if (a === 'rebuild') updRebuild();
     else {
       MRV.fold = a === 'open' ? new Set() : new Set([...MR_ORDER, 'zy', 'yours']);
       renderRules();
@@ -458,7 +473,14 @@ $('rul').addEventListener('click', (e) => {
     const k = ln.dataset.mrl,
       c = ln.dataset.mrc || '',
       q = MR_BOOK[+k],
-      lab = +k === -1 ? 'Accrual reversals (ZY)' : +k === -2 ? 'Your own rules' : `# ${+k + 1} → ${q.b}${q.g ? ' · ' + q.g : ''}`;
+      lab =
+        +k === -1
+          ? 'Accrual reversals (ZY)'
+          : +k === -2
+            ? 'Your own rules'
+            : +k === -4
+              ? 'Sorted with older rules – rebuild'
+              : `# ${+k + 1} → ${q.b}${q.g ? ' · ' + q.g : ''}`;
     if (+k === 0 || +k === 1) mrShowRev(lab + (c ? ' · ' + c : ''), +k, c);
     else mrShow(lab + (c ? ' · ' + c : ''), mrLines(k, c));
     return;

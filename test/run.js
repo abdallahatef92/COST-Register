@@ -1904,6 +1904,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.waitForTimeout(500);
     const C = await q.evaluate(() => __MR.check());
     eq('Mapping rules: every CJI3 line meets a rule of its own bucket (else it is one of your rules)', C.by['-2'] || 0, C.yours);
+    eq('…no line sorted with older rules (a fresh build)', C.by['-4'] || 0, 0);
     eq('…lines with no bucket', C.by[String(C.last)] || 0, C.unclassified);
     eq(
       '…rule lines + client deductions = the CJI3 cost (subcontractor rounding lines aside)',

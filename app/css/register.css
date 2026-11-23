@@ -465,3 +465,4 @@ body:not(.navpin) #nav:not(:hover) .nst{opacity:0}
 .mrnote{margin-top:8px;color:#6B7280}
 #nav button.nlk .tx{white-space:normal} #nav #bMore .tx{flex:none} #nav #bMore .nst{overflow:hidden;text-overflow:ellipsis}
 #sum .rec tr.cdg td{color:#6B7280;font-size:12px;padding-left:16px}
+.mrstale{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border:1px solid #E7C66A;background:#FFFBEB;border-radius:8px;color:#5C4600} .mrstale .sp{flex:1}

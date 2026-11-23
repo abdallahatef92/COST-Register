@@ -176,6 +176,12 @@ function renderYourRules() {
       m.innerHTML = '<span style="color:#c00000">Every rule needs a bucket and at least one field to match.</span>';
       return;
     }
+    if (DBF.db) {
+      // the SAP files are in the data file: rebuild from them
+      persist();
+      await updRebuild();
+      return;
+    }
     let files = null;
     try {
       files = await idbGet('lastFiles');

@@ -193,6 +193,20 @@ async function updStart(fileList) {
   updShow();
 }
 
+// rebuild the register from the SAP files already in the data file – with the rules of this version (no new file)
+async function updRebuild() {
+  if (!DBF.db) {
+    toast('Open your data file first (⋯ More › Data file) – the rebuild uses the SAP files kept in it');
+    return;
+  }
+  const kept = dbBuildFiles(latestId()).filter((f) => f.role !== 'replaced');
+  if (!kept.some((f) => f.kind === 'cji3')) {
+    toast('There is no CJI3 in the data file – drop the SAP files once (⋯ More › Update with new SAP files)');
+    return;
+  }
+  R.upd = { kept, good: [], repl: new Map(), rebuild: true };
+  await updGo();
+}
 async function updGo() {
   const U = R.upd;
   if (!U) return;
@@ -219,8 +233,10 @@ async function updGo() {
       ...[...U.repl.keys()].map((fid) => ({ fid, role: 'replaced' })),
     ]);
     dbLog(
-      'update',
-      `${U.good.length} new file(s): ${U.good.map((o) => o.name).join(', ')} · ${U.repl.size} replaced · cut ${data.META.cut}`,
+      U.rebuild ? 'rebuild' : 'update',
+      U.rebuild
+        ? `rebuilt with the rules of __VER__ · cut ${data.META.cut}`
+        : `${U.good.length} new file(s): ${U.good.map((o) => o.name).join(', ')} · ${U.repl.size} replaced · cut ${data.META.cut}`,
       id
     );
     dbTidy();
@@ -241,7 +257,7 @@ async function updGo() {
       await pause(1500);
     }
     sessionStorage.setItem('crOpen', '');
-    sessionStorage.setItem('crJob', '1'); // a new month: the Monthly job opens by itself
+    if (!U.rebuild) sessionStorage.setItem('crJob', '1'); // a new month: the Monthly job opens by itself
     location.reload();
   } catch (e) {
     console.error(e);

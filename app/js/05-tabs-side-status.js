@@ -251,7 +251,12 @@ function navBadges() {
   }
   $('din').innerHTML = dataIn();
   const um = mapUnmapped();
-  $('rulSt').innerHTML = um ? `<b class="bad">${um.toLocaleString('en-US')} not mapped</b>` : '<b class="ok">all mapped ✓</b>';
+  const stl = mapStale();
+  $('rulSt').innerHTML = stl
+    ? `<b class="bad">↻ rebuild</b>`
+    : um
+      ? `<b class="bad">${um.toLocaleString('en-US')} not mapped</b>`
+      : '<b class="ok">all mapped ✓</b>';
   $('bRules').classList.toggle('on', ST.tab === 'rules');
   $('bReports').classList.toggle('on', REPSEC.includes(cur) || (ST.tab === 'sub' && ['reg', 'pkg'].includes(ST.sub)) || !$('repm').hidden);
 }
