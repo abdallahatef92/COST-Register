@@ -184,6 +184,7 @@ function applySnap(s, replaceLines) {
   if (s.bud && Array.isArray(s.bud.res)) ST.bud = s.bud;
   if (s.bdone && typeof s.bdone === 'object') ST.bdone = s.bdone;
   if (s.bx && typeof s.bx === 'object') ST.bx = s.bx;
+  if (s.budMaps && typeof s.budMaps === 'object') ST.budMaps = s.budMaps;
   return n;
 }
 function restore() {

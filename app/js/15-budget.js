@@ -10,175 +10,235 @@ const budNum = (v) => (typeof v === 'number' ? v : +String(v || '').replace(/,/g
 const budStr = (v) => (v === undefined || v === null ? '' : String(v).trim());
 
 // ---------------------------------------------------------------- read the cost report workbook
-function budRead(wb, file) {
-  const sh = (n) => wb.Sheets[wb.SheetNames.find((x) => x.trim().toLowerCase() === n.toLowerCase())];
-  const dp = sh('Direct plan'),
-    ca = sh('Cost Analysis');
-  if (!dp || !ca) throw new Error('no "Direct plan" and "Cost Analysis" sheets – is this the cost report?');
-  const rows = (ws) => XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
-  const D = rows(dp),
-    A = rows(ca);
-  // Direct plan: the header row has "Item code"; building types before "Contract Quantity"; take-off before "Takeoff B1"; done before "EV Q.B1"
-  const hr = D.findIndex((r) => r.some((x) => /^item code$/i.test(budStr(x))));
-  if (hr < 0) throw new Error('Direct plan: no "Item code" header');
-  const H = D[hr].map((x) => budStr(x).replace(/\s+/g, ' ')),
-    col = (re, from = 0) => H.findIndex((x, i) => i >= from && re.test(x));
-  const cItem = col(/^item code$/i),
-    cPkg = col(/^pkg$/i),
+// The budget needs a few columns of two sheets. The tool finds them by their headers; when a required one is not found
+// (another layout), "Match the columns" opens with its guesses and you pick the rest – kept per layout in ST.budMaps.
+// Direct plan: the item totals only (take-off, done qty) – no building columns. An item's PKG comes from the Cost Analysis.
+// [key, label, header pattern, required, in the sub-header row (Cost Analysis with two header rows)]
+const BUD_F = {
+  dp: [
+    ['item', 'Item code', /^item code$/i, 1],
+    ['desc', 'Description', /^description$/i, 0],
+    ['unit', 'Unit', /^unit$/i, 0],
+    ['to', 'Take-off (item total)', /^take ?off( ?b1)?$/i, 1],
+    ['ev', 'Done qty – EV Q. (item total)', /^ev q\.?( ?b1)?$/i, 1],
+    ['div', 'Division (S-code)', null, 0],
+    ['pkg', 'PKG', /^pkg$/i, 0],
+  ],
+  ca: [
+    ['code', 'Cost code (BOQ item)', /^cost code$/i, 1],
+    ['lvl', 'Level', /^level$/i, 0],
+    ['csi', 'PKG (CSI code)', /^csi code/i, 1],
+    ['exp', 'Resource type (M / S / L / E)', /^exp code/i, 0],
+    ['ce', 'Cost element', /^cost element code/i, 1],
+    ['name', 'Resource name', /^description$/i, 0],
+    ['unit', 'Resource unit', /^res unit/i, 0, 1],
+    ['to', 'Item take-off', /^take ?off$/i, 1, 1],
+    ['bac', 'BAC', /^bac$/i, 1, 1],
+    ['rq', 'Resource quantity', /^resource takeoff/i, 1, 1],
+    ['iname', 'Item name', /^item name$/i, 0],
+    ['iunit', 'Item unit', /^unit$/i, 0, 1],
+    ['iqty', 'Item quantity', /^quantity$/i, 0, 1],
+    ['use', 'Res qty per unit', /^res qty/i, 0, 1],
+    ['waste', 'Waste %', /^waste/i, 0, 1],
+    ['tot', 'Total res qty', /^total re[cs]/i, 0, 1],
+    ['sc', 'SC rate', /^sc unit/i, 0, 1],
+    ['mat', 'Material rate', /^material unit/i, 0, 1],
+    ['eq', 'Equipment rate', /^equipment unit/i, 0, 1],
+    ['lab', 'Labor rate', /^labo/i, 0, 1],
+    ['oth', 'Other rate', /^other$/i, 0, 1],
+    ['br', 'Budget rate', /^budget rate$/i, 0, 1],
+  ],
+};
+const budRows = (ws) => (ws ? XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }) : []);
+const budH = (r) => (r || []).map((x) => budStr(x).replace(/\s+/g, ' '));
+// the layout of a workbook: its two sheets and their header rows – the key under which a matching is kept
+const budSig = (M, D, A) => [M.dp.sheet, M.ca.sheet, budH(D[M.dp.hr]).join('|'), budH(A[M.ca.hr]).join('|')].join('¦');
+// the tool's guess: sheets by name (or by the header they hold), header rows, columns by header, levels from the data
+function budGuess(wb) {
+  const find = (re, hre) =>
+    wb.SheetNames.find((n) => re.test(n.trim())) ||
+    wb.SheetNames.find((n) =>
+      budRows(wb.Sheets[n])
+        .slice(0, 30)
+        .some((r) => r.some((x) => hre.test(budStr(x))))
+    );
+  const M = {
+    dp: { sheet: find(/^direct plan$/i, /^item code$/i) || '', hr: -1, c: {} },
+    ca: { sheet: find(/^cost analysis$/i, /^cost code$/i) || '', hr: -1, two: false, c: {}, il: 0, rl: 0 },
+  };
+  budFill(wb, M);
+  return M;
+}
+// fill what is not set yet: header rows, columns, levels (keeps what you picked)
+function budFill(wb, M, force) {
+  const D = budRows(wb.Sheets[M.dp.sheet]),
+    A = budRows(wb.Sheets[M.ca.sheet]);
+  if (M.dp.hr < 0) M.dp.hr = D.slice(0, 40).findIndex((r) => r.some((x) => /^item code$/i.test(budStr(x))));
+  if (M.ca.hr < 0) M.ca.hr = A.slice(0, 40).findIndex((r) => r.some((x) => /^cost code$/i.test(budStr(x))));
+  const H = budH(D[M.dp.hr]),
+    A1 = budH(A[M.ca.hr]),
+    A2r = budH(A[M.ca.hr + 1]);
+  if (M.ca.two === undefined || force !== 'keep2') M.ca.two = A2r.some((x) => /^(res unit|bac|take ?off)$/i.test(x));
+  const A2 = M.ca.two ? A2r : A1;
+  for (const [k, , re] of BUD_F.dp) if (M.dp.c[k] === undefined && re) M.dp.c[k] = H.findIndex((x) => re.test(x));
+  if (M.dp.c.div === undefined) {
     // two "Division" columns: 02 / 03 … and S02 / S03 … – the register's PKG codes are the S-codes
-    cDiv = (() => {
-      const cs = H.map((x, i) => (/^division$/i.test(x) ? i : -1)).filter((i) => i >= 0),
-        sample = D.slice(hr + 1, hr + 80).filter((r) => budStr(r[cItem]));
-      return cs.find((c) => sample.some((r) => /^[A-Z]+\d/.test(budStr(r[c])))) ?? -1;
-    })(),
-    cDesc = col(/^description$/i),
-    cUnit = col(/^unit$/i),
-    cCQ = col(/contract quantity/i),
-    cTO = col(/^takeoff b1$/i),
-    cEV = col(/^ev q\.?\s*b1$/i);
-  if (cItem < 0 || cPkg < 0) throw new Error('Direct plan: missing columns (Item code, PKG)');
-  const firstBT = cUnit >= 0 ? cUnit + 1 : cCQ - 13;
-  // the take-off and done quantity of each building type, in one of two layouts:
-  //  1 · building columns B1 … then "Takeoff B1" / "EV Q.B1" after the take-off and done columns (the SUTH / SBAY report)
-  //  2 · "B04 Q." per building, and "B04 Takeoff" / "B04 EV Q." for each (the building name in the row above)
-  let bts, toC, evC;
-  if (cTO >= 0 && cEV >= 0) {
-    bts = H.slice(firstBT, cCQ).filter(Boolean);
-    toC = bts.map((_, k) => cTO - bts.length + k);
-    evC = bts.map((_, k) => cEV - bts.length + k);
-  } else {
-    const esc2 = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-      top = D[hr - 1] || [],
-      bt = H.slice(firstBT, cCQ)
-        .map((h, k) => ({ h, i: firstBT + k, m: /^(.+?)\s*Q\.?$/i.exec(h) }))
-        .filter((x) => x.m)
-        .map((x) => ({ ...x, p: x.m[1].trim() }))
-        .map((x) => ({
-          ...x,
-          t: col(new RegExp('^' + esc2(x.p) + '\\s*take ?off$', 'i')),
-          e: col(new RegExp('^' + esc2(x.p) + '\\s*ev q\\.?$', 'i')),
-        }))
-        .filter((x) => x.t >= 0 && x.e >= 0);
-    if (!bt.length)
-      throw new Error(
-        'Direct plan: no take-off and done columns per building – "Takeoff B1" and "EV Q.B1", or "B04 Takeoff" and "B04 EV Q."'
-      );
-    bts = bt.map((x) => budStr(top[x.i]) || x.p);
-    toC = bt.map((x) => x.t);
-    evC = bt.map((x) => x.e);
+    const cs = H.map((x, i) => (/^division$/i.test(x) ? i : -1)).filter((i) => i >= 0),
+      ci = M.dp.c.item,
+      sample = D.slice(M.dp.hr + 1, M.dp.hr + 80).filter((r) => ci >= 0 && budStr(r[ci]));
+    M.dp.c.div = cs.find((c) => sample.some((r) => /^[A-Z]+\d/.test(budStr(r[c])))) ?? -1;
   }
-  const nb = bts.length;
-  const items = [],
-    divMap = {},
-    names = {};
-  for (const r of D.slice(hr + 1)) {
-    const code = budStr(r[cItem]),
-      pkg = budStr(r[cPkg]);
-    if (!pkg) continue;
-    // a heading (DIVISION 03 - Concrete …): no item code – or a code but no unit and no quantity at all
-    const head = !code || (cUnit >= 0 && !budStr(r[cUnit]) && ![...toC, ...evC].some((c) => budNum(r[c])));
-    if (head) {
-      if (!names[pkg] && cDesc >= 0 && budStr(r[cDesc])) names[pkg] = budStr(r[cDesc]).replace(/^DIVISION\s+\d+\s*-\s*/i, '');
-      continue;
-    }
-    const div = cDiv >= 0 ? budStr(r[cDiv]) : '';
-    if (div && !divMap[div]) divMap[div] = pkg;
-    items.push({
-      c: code,
-      p: pkg,
-      d: cDesc >= 0 ? budStr(r[cDesc]) : '',
-      u: cUnit >= 0 ? budStr(r[cUnit]) : '',
-      tq: toC.map((c) => budNum(r[c])),
-      dq: evC.map((c) => budNum(r[c])),
+  for (const [k, , re, , sub] of BUD_F.ca) if (M.ca.c[k] === undefined) M.ca.c[k] = (sub ? A2 : A1).findIndex((x) => re.test(x));
+  if (!M.ca.rl && M.ca.c.lvl >= 0 && M.ca.c.ce >= 0) {
+    const n = new Map();
+    A.slice(M.ca.hr + 1).forEach((r) => {
+      if (budStr(r[M.ca.c.ce])) n.set(budNum(r[M.ca.c.lvl]), (n.get(budNum(r[M.ca.c.lvl])) || 0) + 1);
     });
+    const top = [...n].sort((a, b) => b[1] - a[1])[0];
+    if (top) {
+      M.ca.rl = top[0];
+      M.ca.il = top[0] - 1;
+    }
   }
-  // Cost Analysis: header "Cost Code" (row 3), sub-headers one row below (Res Unit, Budget Rate, TAKE OFF, BAC, Resource takeoff …)
-  const ar = A.findIndex((r) => r.some((x) => /^cost code$/i.test(budStr(x))));
-  if (ar < 0) throw new Error('Cost Analysis: no "Cost Code" header');
-  // one header row (Cost Code … BAC … Resource takeoff Qty) or two (the sub-headers Res Unit, TAKE OFF, BAC … one row below)
-  const A1 = A[ar].map((x) => budStr(x).replace(/\s+/g, ' ')),
-    A2r = (A[ar + 1] || []).map((x) => budStr(x).replace(/\s+/g, ' ')),
-    two = A2r.some((x) => /^(res unit|bac|take ?off)$/i.test(x)),
-    A2 = two ? A2r : A1,
-    ac = (re, h = A1) => h.findIndex((x) => re.test(x));
-  const kCode = ac(/^cost code$/i),
-    kLvl = ac(/^level$/i),
-    kCsi = ac(/^csi code/i),
-    kExp = ac(/^exp code$/i),
-    kCe = ac(/^cost element code/i),
-    kName = ac(/^description$/i),
-    kUnit = ac(/^res unit/i, A2),
-    kTO = ac(/^take ?off$/i, A2),
-    kBAC = ac(/^bac$/i, A2),
-    kRQ = ac(/^resource takeoff/i, A2),
-    // the rest of the Cost Analysis line (the Cost Analysis tab shows it as the sheet does)
-    kIName = ac(/^item name$/i),
-    kIUnit = ac(/^unit$/i, A2),
-    kIQty = ac(/^quantity$/i, A2),
-    kUse = ac(/^res qty/i, A2),
-    kWaste = ac(/^waste/i, A2),
-    kTot = ac(/^total re[cs]/i, A2),
-    kSC = ac(/^sc unit/i, A2),
-    kMat = ac(/^material unit/i, A2),
-    kEq = ac(/^equipment unit/i, A2),
-    kLab = ac(/^labo/i, A2),
-    kOth = ac(/^other$/i, A2),
-    kBR = ac(/^budget rate$/i, A2),
-    gv = (r, k) => (k >= 0 ? budNum(r[k]) : 0);
-  if ([kCode, kCsi, kCe, kTO, kBAC, kRQ].some((c) => c < 0))
-    throw new Error('Cost Analysis: missing columns (Cost Code, CSI Code, Cost Element Code, TAKE OFF, BAC, Resource takeoff)');
+  return { D, A };
+}
+// what is still to pick: the required fields not found
+const budMissing = (M) => [
+  ...(M.dp.hr < 0 ? ['Direct plan header row'] : BUD_F.dp.filter((f) => f[3] && !(M.dp.c[f[0]] >= 0)).map((f) => 'Direct plan › ' + f[1])),
+  ...(M.ca.hr < 0
+    ? ['Cost Analysis header row']
+    : BUD_F.ca.filter((f) => f[3] && !(M.ca.c[f[0]] >= 0)).map((f) => 'Cost Analysis › ' + f[1])),
+];
+// read the budget with a matching M → the budget (ST.bud) and the check figures (BAC and EV against the file's own totals)
+function budRead(wb, file, M0) {
+  const M = M0 || budGuess(wb);
+  if (!M.dp.sheet || !M.ca.sheet) throw new Error('no "Direct plan" and "Cost Analysis" sheets – is this the cost report?');
+  const { D, A } = budFill(wb, M, 'keep2'),
+    miss = budMissing(M);
+  if (miss.length) {
+    const e = new Error('columns not found: ' + miss.join(', '));
+    e.miss = miss;
+    e.M = M;
+    throw e;
+  }
+  const c = M.dp.c,
+    k = M.ca.c,
+    gv = (r, i) => (i >= 0 ? budNum(r[i]) : 0),
+    gs = (r, i) => (i >= 0 ? budStr(r[i]) : '');
+  // Cost Analysis: the resources (level rl) and the BOQ items (level il)
   const res = [],
-    cai = {}; // the BOQ items as Cost Analysis has them (level 3): name, unit, quantity
-  for (const r of A.slice(ar + (two ? 2 : 1))) {
-    const ce = budStr(r[kCe]),
-      pkg = budStr(r[kCsi]),
-      code = budStr(r[kCode]);
-    // the BOQ item row: level 3 (or 4 when the resources are level 5), no cost element
-    if (code && pkg && !ce && kLvl >= 0 && budNum(r[kLvl]) >= 3 && !cai[code])
-      cai[code] = { n: budStr(r[kIName >= 0 ? kIName : kName]), u: kIUnit >= 0 ? budStr(r[kIUnit]) : '', q: gv(r, kIQty) };
-    if (!ce || !pkg || !code || (kLvl >= 0 && budNum(r[kLvl]) < 4)) continue;
-    const bac = budNum(r[kBAC]),
-      rq = budNum(r[kRQ]);
+    cai = {},
+    pOf = {};
+  for (const r of A.slice(M.ca.hr + (M.ca.two ? 2 : 1))) {
+    const ce = gs(r, k.ce),
+      pkg = gs(r, k.csi),
+      code = gs(r, k.code),
+      lv = k.lvl >= 0 ? budNum(r[k.lvl]) : null;
+    if (code && !ce && (lv === null || lv === M.ca.il || (lv >= 3 && lv < M.ca.rl)) && !cai[code])
+      cai[code] = { n: gs(r, k.iname >= 0 ? k.iname : k.name), u: gs(r, k.iunit), q: gv(r, k.iqty) };
+    if (!ce || !pkg || !code || (lv !== null && M.ca.rl && lv !== M.ca.rl)) continue;
+    const bac = gv(r, k.bac),
+      rq = gv(r, k.rq);
     if (!bac && !rq) continue;
+    if (!pOf[code]) pOf[code] = pkg;
     res.push({
       p: pkg,
-      g: BUD_GRP[budStr(r[kExp]).toUpperCase()] || 'OTHER',
+      g: BUD_GRP[gs(r, k.exp).toUpperCase()] || 'OTHER',
       ce,
-      n: kName >= 0 ? budStr(r[kName]) : '',
-      u: kUnit >= 0 ? budStr(r[kUnit]) : '',
+      n: gs(r, k.name),
+      u: gs(r, k.unit),
       i: code,
-      tq: budNum(r[kTO]),
+      tq: gv(r, k.to),
       rq,
       bac,
-      o: gv(r, kUse),
-      w: gv(r, kWaste),
-      t: gv(r, kTot),
-      rt: [gv(r, kSC), gv(r, kMat), gv(r, kEq), gv(r, kLab), gv(r, kOth)],
-      br: gv(r, kBR),
+      o: gv(r, k.use),
+      w: gv(r, k.waste),
+      t: gv(r, k.tot),
+      rt: [gv(r, k.sc), gv(r, k.mat), gv(r, k.eq), gv(r, k.lab), gv(r, k.oth)],
+      br: gv(r, k.br),
     });
   }
-  // PKG names: the Summary sheet (code · name), else the Direct plan division rows
-  // and the groups of the direct PKGs as the report has them: Civil work Packages · Arch work Packages · MEP …
-  const sm = sh('Summary'),
+  // Direct plan: one item per code with its take-off and done qty (item totals); headings name the PKG
+  const items = [],
+    divMap = {},
+    names = {},
+    heads = [];
+  for (const r of D.slice(M.dp.hr + 1)) {
+    const code = gs(r, c.item),
+      dpk = gs(r, c.pkg),
+      div = gs(r, c.div),
+      to = gv(r, c.to),
+      ev = gv(r, c.ev),
+      unit = gs(r, c.unit);
+    if (!code && !dpk && !div) continue;
+    // a heading (DIVISION 03 - Concrete …): no item code – or a code but no unit and no quantity
+    if (!code || (c.unit >= 0 && !unit && !to && !ev)) {
+      const d = gs(r, c.desc);
+      if (d) heads.push([dpk || div, d.replace(/^DIVISION\s+\d+\s*-\s*/i, '')]);
+      continue;
+    }
+    const p = pOf[code] || dpk;
+    if (div && p && !divMap[div]) divMap[div] = p;
+    items.push({ c: code, p, d: gs(r, c.desc), u: unit, tq: [to], dq: [ev] });
+  }
+  heads.forEach(([key, n]) => {
+    if (key && !names[key]) names[key] = n;
+    if (key && divMap[key] && !names[divMap[key]]) names[divMap[key]] = n;
+  });
+  // PKG names and groups from a Summary sheet (code · name; Civil work Packages · Arch work Packages · MEP …)
+  const smn = wb.SheetNames.find((x) => x.trim().toLowerCase() === 'summary'),
     groups = [];
-  if (sm) {
+  if (smn) {
     let g = null,
       direct = false;
-    for (const r of rows(sm)) {
-      const c = budStr(r[0]),
+    for (const r of budRows(wb.Sheets[smn])) {
+      const c0 = budStr(r[0]),
         b = budStr(r[1]);
-      if (/^direct$/i.test(c)) {
+      if (/^direct$/i.test(c0)) {
         direct = true;
         continue;
       }
-      if (/^indirect/i.test(c)) break;
-      if (/^[A-Z]{2,4}-\d+$/.test(c)) {
-        if (b) names[c] = b;
-        if (direct && g) g.p.push(c);
-      } else if (direct && !c && b) groups.push((g = { n: b, p: [] }));
+      if (/^indirect/i.test(c0)) break;
+      if (/^[A-Z]{2,4}-\d+$/.test(c0)) {
+        if (b) names[c0] = b;
+        if (direct && g) g.p.push(c0);
+      } else if (direct && !c0 && b) groups.push((g = { n: b, p: [] }));
     }
   }
-  return { file, at: new Date().toISOString(), bts, items, res, divMap, names, cai, groups: groups.filter((x) => x.p.length) };
+  // the check: BAC read and EV (done qty × resource BAC / item take-off) against the totals the sheet shows above its header
+  const itemOf = new Map(items.map((x) => [x.c, x])),
+    bacR = res.reduce((s, x) => s + x.bac, 0),
+    evR = res.reduce((s, x) => {
+      const it = itemOf.get(x.i);
+      return s + (it && x.tq ? (x.bac * it.dq[0]) / x.tq : 0);
+    }, 0),
+    above = (re) => {
+      for (let i = 0; i < M.ca.hr; i++)
+        for (let j = 0; j < (A[i] || []).length; j++)
+          if (re.test(budStr(A[i][j])) && typeof (A[i + 1] || [])[j] === 'number') return A[i + 1][j];
+      return null;
+    };
+  const chk = {
+    bac: bacR,
+    ev: evR,
+    bacF: above(/^bac$/i),
+    evF: above(/^ev$/i),
+    np: res.filter((x) => !x.bac).length,
+    done: items.filter((x) => x.dq[0]).length,
+  };
+  return {
+    file,
+    at: new Date().toISOString(),
+    bts: ['Item'],
+    items,
+    res,
+    divMap,
+    names,
+    cai,
+    groups: groups.filter((x) => x.p.length),
+    chk,
+    sig: budSig(M, D, A),
+  };
 }
 
 // ---------------------------------------------------------------- the figures of one PKG, or all of them
@@ -354,7 +414,7 @@ function renderBudget() {
   return budSummary(el, C);
 }
 function budHead(title, sub) {
-  return `<div class="bd-hd"><h2>${title}</h2><span class="bd-sub">${sub}</span><span class="bd-sp"></span><input type="search" class="bd-srch" data-bsr="1" value="${esc(ST.bsr || '')}" placeholder="Search…  code, resource, item"><span class="bd-sub">cost report: ${esc(ST.bud.file || '')} · read ${esc(String(ST.bud.at).slice(0, 10))}</span><button data-bud="read">Read again…</button></div>`;
+  return `<div class="bd-hd"><h2>${title}</h2><span class="bd-sub">${sub}</span><span class="bd-sp"></span><input type="search" class="bd-srch" data-bsr="1" value="${esc(ST.bsr || '')}" placeholder="Search…  code, resource, item"><span class="bd-sub">cost report: ${esc(ST.bud.file || '')} · read ${esc(String(ST.bud.at).slice(0, 10))}</span><button data-bud="read">Read again…</button><button data-bud="read" data-ask="1" title="Read the cost report and check which column the tool takes for each field">Check the columns…</button></div>`;
 }
 // the PKG groups of the report (Civil · Arch · MEP …, from its Summary sheet); PKGs in no group come last
 function budGroups(ps) {
@@ -657,41 +717,37 @@ function budProgress(el) {
   const B = ST.bud,
     ps = [...new Set(B.items.map((x) => x.p))].sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
   const p = ST.bprogP && ps.includes(ST.bprogP) ? ST.bprogP : ps[0],
-    pg = 'prog:' + p;
+    pg = 'prog:' + p,
+    sum = (a) => (a || []).reduce((s, v) => s + budNum(v), 0);
+  // one row per BOQ item: take-off and done to date (item totals – a done qty typed per building earlier counts as its sum)
   const its0 = B.items.filter((x) => x.p === p),
-    used = B.bts.map((_, k) => its0.some((x) => x.tq[k] || budDone(x)[k]));
-  const ks = used.map((u, k) => (u ? k : -1)).filter((k) => k >= 0);
-  const cellsOf = (x) => {
-    const d = budDone(x),
-      td = x.tq.reduce((s, v) => s + v, 0),
-      dd = d.reduce((s, v) => s + budNum(v), 0);
-    return [
-      x.c,
-      x.d,
-      x.u,
-      ...ks.flatMap((k) => [bQ(x.tq[k]), String(budNum(d[k]) || '')]),
-      bQ(dd) + ' / ' + bQ(td),
-      td ? bP(dd / td) : '-',
-    ];
-  };
-  const its = its0.filter((x) => bfPass(pg, cellsOf(x)));
+    cellsOf = (x) => {
+      const td = sum(x.tq),
+        dd = sum(budDone(x));
+      return [x.c, x.d, x.u, bQ(td), String(dd || ''), bQ(td - dd), td ? bP(dd / td) : '-'];
+    },
+    its = its0.filter((x) => bfPass(pg, cellsOf(x))),
+    started = its0.filter((x) => sum(budDone(x))).length,
+    full = its0.filter((x) => sum(x.tq) && sum(budDone(x)) >= sum(x.tq) - 1e-9).length;
+  const C = budCalc(),
+    t = C && C.pk.get(p) ? budSum([...C.pk.get(p).values()]) : null;
   el.innerHTML =
     budHead(
       'Progress',
-      'done qty to date per BOQ item and building type (B1) · grey = take-off · yellow = done – type it, or paste a block from Excel' +
-        bfNote(pg)
+      'done quantity to date per BOQ item · grey = take-off · yellow = done – type it, or paste a column from Excel' + bfNote(pg)
     ) +
-    `<div class="bd-bar">PKG <select data-bud="pp">${ps.map((x) => `<option ${x === p ? 'selected' : ''} value="${esc(x)}">${esc(x)} · ${esc(budName(x))}</option>`).join('')}</select></div>
-    <div class="bd-wrap"><table class="bd-t bd-prog"><tr><th colspan="3"></th>${ks.map((k) => `<th colspan="2" class="bd-gs">${esc(B.bts[k])}</th>`).join('')}<th colspan="2" class="bd-gs">Item</th></tr>
-    <tr><th>BOQ item</th><th class="bd-l">Description</th><th>Unit</th>${ks.map(() => '<th class="bd-gs">Take-off</th><th>Done</th>').join('')}<th class="bd-gs">Done / take-off</th><th>%</th></tr>${bfRow(pg, 3 + ks.length * 2 + 2)}${its
+    `<div class="bd-bar">PKG <select data-bud="pp">${ps.map((x) => `<option ${x === p ? 'selected' : ''} value="${esc(x)}">${esc(x || '(no PKG)')} · ${esc(budName(x))}</option>`).join('')}</select><span class="bd-sub">${its0.length} BOQ items · ${started} started · ${full} complete</span></div>
+    <div class="bd-wrap"><table class="bd-t bd-prog"><tr><th>BOQ item</th><th class="bd-l">Description</th><th>Unit</th><th class="bd-gs">Take-off</th><th>Done to date</th><th>Left</th><th>% done</th></tr>${bfRow(pg, 7)}${its
       .map((x) => {
-        const d = budDone(x),
-          td = x.tq.reduce((s, v) => s + v, 0),
-          dd = d.reduce((s, v) => s + budNum(v), 0);
-        return `<tr class="bd-r"><td>${esc(x.c)}</td><td class="bd-l">${esc(x.d)}</td><td>${esc(x.u)}</td>${ks.map((k) => `<td class="n bd-gs bd-to">${bQ(x.tq[k])}</td><td class="n">${x.tq[k] || budNum(d[k]) ? `<input class="bd-in" data-bd="${esc(x.c)}" data-bk="${k}" value="${budNum(d[k]) ? budNum(d[k]) : ''}">` : ''}</td>`).join('')}<td class="n bd-gs"><b>${bQ(dd)}</b> / ${bQ(td)}</td><td class="n">${td ? bP(dd / td) : '-'}</td></tr>`;
+        const td = sum(x.tq),
+          dd = sum(budDone(x)),
+          pc = td ? Math.max(0, Math.min(1, dd / td)) : 0;
+        return `<tr class="bd-r"><td>${esc(x.c)}</td><td class="bd-l">${esc(x.d)}</td><td>${esc(x.u)}</td><td class="n bd-gs bd-to">${bQ(td)}</td><td class="n"><input class="bd-in" data-bd="${esc(x.c)}" data-bk="0" value="${dd || ''}"></td><td class="n">${bQ(td - dd)}</td><td class="bd-pc"><span class="bd-bg"><i style="width:${(100 * pc).toFixed(0)}%"></i></span>${td ? bP(dd / td) : '-'}</td></tr>`;
       })
-      .join('')}</table></div>
-    <div class="bd-note">Started from the Direct plan's EV quantities · the PKG pages follow at once · each change goes to Undo and to the data file</div>`;
+      .join(
+        ''
+      )}${t ? `<tr class="bd-tot"><td colspan="3">PKG ${esc(p)}</td><td colspan="4">EV ${bK(t.ev)} of BAC ${bK(t.bac)}${t.bac ? ' · ' + bP(t.ev / t.bac) : ''}</td></tr>` : ''}</table></div>
+    <div class="bd-note">Started from the Direct plan's done quantity (item total) · the PKG pages follow at once · each change goes to Undo and to the data file · the PKG of an item comes from the Cost Analysis</div>`;
 }
 
 // ---------------------------------------------------------------- the side navigation of Budget
@@ -740,41 +796,191 @@ function budSide(items) {
 }
 
 // ---------------------------------------------------------------- reading the file, typing, pasting
-async function budFile(f) {
+async function budFile(f, ask) {
   toast('Reading the cost report… (a big workbook takes a few seconds)');
   await new Promise((r) => setTimeout(r, 30));
+  let wb;
   try {
-    const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', sheets: ['Direct plan', 'Cost Analysis', 'Summary'] });
-    const b = budRead(wb, f.name);
-    const was = ST.bud;
-    ST.bud = b;
-    if (!ST.bdone) ST.bdone = {};
-    persist();
-    logIt(
-      'Cost report read: ' +
-        f.name +
-        ' – ' +
-        b.items.length +
-        ' BOQ items, ' +
-        b.res.length +
-        ' resource lines' +
-        (was ? ' (replaces ' + was.file + ')' : ''),
-      1
-    );
-    if (ST.tab !== 'bpkg' && ST.tab !== 'bprog') ST.tab = 'bsum';
-    render();
-    toast(`Cost report read: ${b.items.length} BOQ items · ${b.res.length} resource lines · ${new Set(b.res.map((x) => x.p)).size} PKGs`);
+    const buf = await f.arrayBuffer(),
+      names = XLSX.read(buf, { type: 'array', bookSheets: true }).SheetNames,
+      known = names.filter((n) => /^(direct plan|cost analysis|summary)$/i.test(n.trim()));
+    // the two sheets by name: read only those (a big workbook); else every sheet, to find them by their headers
+    wb = XLSX.read(buf, known.length >= 2 ? { type: 'array', sheets: known } : { type: 'array' });
   } catch (e) {
+    toast('Could not read ' + f.name + ': ' + e.message);
+    return;
+  }
+  const G = budGuess(wb),
+    D = budRows(wb.Sheets[G.dp.sheet]),
+    A = budRows(wb.Sheets[G.ca.sheet]),
+    key = G.dp.sheet && G.ca.sheet ? budSig(G, D, A) : '',
+    saved = key && ST.budMaps && ST.budMaps[key];
+  const M = saved ? JSON.parse(JSON.stringify(saved)) : G;
+  if (ask || budMissing(M).length || !M.dp.sheet || !M.ca.sheet) return budMatch(wb, f.name, M, key);
+  try {
+    budApply(budRead(wb, f.name, M));
+  } catch (e) {
+    if (e.miss) return budMatch(wb, f.name, M, key);
     toast('Could not read ' + f.name + ': ' + e.message);
   }
 }
+// the budget read: into the register, the data file and the Changes log
+function budApply(b) {
+  const was = ST.bud;
+  ST.bud = b;
+  if (!ST.bdone) ST.bdone = {};
+  persist();
+  logIt(
+    'Cost report read: ' +
+      b.file +
+      ' – ' +
+      b.items.length +
+      ' BOQ items, ' +
+      b.res.length +
+      ' resource lines' +
+      (was ? ' (replaces ' + was.file + ')' : ''),
+    1
+  );
+  if (ST.tab !== 'bpkg' && ST.tab !== 'bprog') ST.tab = 'bsum';
+  render();
+  toast(`Cost report read: ${b.items.length} BOQ items · ${b.res.length} resource lines · ${new Set(b.res.map((x) => x.p)).size} PKGs`);
+}
+// ---------------------------------------------------------------- Match the columns: only when the tool cannot find a required column (or you ask)
+const BMX = { wb: null, file: '', M: null, key: '' };
+function budMatch(wb, file, M, key) {
+  Object.assign(BMX, { wb, file, M, key });
+  let m = $('bmx');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'bmx';
+    m.className = 'bmx';
+    document.body.appendChild(m);
+  }
+  m.style.display = 'flex';
+  budMatchDraw();
+}
+function budMatchDraw() {
+  const { wb, file, M } = BMX,
+    D = budRows(wb.Sheets[M.dp.sheet]),
+    A = budRows(wb.Sheets[M.ca.sheet]),
+    H = budH(D[M.dp.hr]),
+    A1 = budH(A[M.ca.hr]),
+    A2 = M.ca.two ? budH(A[M.ca.hr + 1]) : A1,
+    L = (i) => {
+      let s = '';
+      for (i++; i; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + ((i - 1) % 26)) + s;
+      return s;
+    },
+    sheetSel = (side) =>
+      `<select data-bmx="${side}.sheet">${wb.SheetNames.map((n) => `<option ${n === M[side].sheet ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`,
+    rowSel = (side, rows) =>
+      `<select data-bmx="${side}.hr"><option value="-1">–</option>${rows
+        .slice(0, 40)
+        .map(
+          (r, i) =>
+            `<option value="${i}" ${i === M[side].hr ? 'selected' : ''}>${i + 1} · ${esc(budH(r).filter(Boolean).slice(0, 3).join(' · ').slice(0, 40))}</option>`
+        )
+        .join('')}</select>`,
+    // a pick list of the sheet's columns: the likely ones (header matches part of the field) first
+    colSel = (side, k, hdr) => {
+      const v = M[side].c[k] ?? -1,
+        opts = hdr.map((h, i) => [i, h]).filter((x) => x[1]);
+      return `<select data-bmx="${side}.c.${k}" class="${v >= 0 ? 'ok' : ''}"><option value="-1">– pick a column</option>${opts.map(([i, h]) => `<option value="${i}" ${i === v ? 'selected' : ''}>${esc(h.slice(0, 60))}  · col ${L(i)}</option>`).join('')}</select>`;
+    },
+    row = (side, f, hdr) => {
+      const [k, lab, , req] = f,
+        v = M[side].c[k] ?? -1,
+        st =
+          v >= 0
+            ? `<span class="ok">✓ ${esc((hdr[v] || '').slice(0, 30))}</span>`
+            : req
+              ? '<span class="bad">! still to pick</span>'
+              : '<span class="op">optional</span>';
+      return `<tr class="${req ? '' : 'opt'}${req && v < 0 ? ' miss' : ''}"><td>${esc(lab)}</td><td>${colSel(side, k, hdr)}</td><td>${st}</td></tr>`;
+    };
+  const miss = budMissing(M);
+  let pv = '',
+    can = !miss.length;
+  if (can)
+    try {
+      const b = budRead(wb, file, JSON.parse(JSON.stringify(M))),
+        C = b.chk,
+        eqF = (a, f) =>
+          f === null ? '<s>not shown in the file</s>' : Math.abs(a - f) < 1 ? '= the file ✓' : `<b class="bad">file ${fmt2(f)}</b>`;
+      pv = `<div><span>BOQ ITEMS</span><b>${b.items.length.toLocaleString('en-US')}</b></div><div><span>PKGs</span><b>${new Set(b.res.map((x) => x.p)).size} · ${Object.keys(b.names).length} named</b></div><div><span>RESOURCES</span><b>${b.res.length.toLocaleString('en-US')}${C.np ? ' · ' + C.np.toLocaleString('en-US') + ' not priced' : ''}</b></div><div><span>BAC READ</span><b>${fmt2(C.bac)}</b><small>${eqF(C.bac, C.bacF)}</small></div><div><span>EV READ</span><b>${fmt2(C.ev)}</b><small>${eqF(C.ev, C.evF)}</small></div><div><span>DONE ITEMS</span><b>${C.done.toLocaleString('en-US')}</b></div>`;
+      if (!b.items.length || !b.res.length) can = false;
+    } catch (e) {
+      pv = `<div class="bad">${esc(e.message)}</div>`;
+      can = false;
+    }
+  $('bmx').innerHTML =
+    `<div class="bmd"><div class="bmh"><h2>Match the columns</h2><span>${esc(file)} · the budget (4 Forecast)</span><button data-bmx-a="x">✕</button></div>
+  <div class="bmw">${miss.length ? 'The tool could not find every column by its header. Pick the column for each red line – the rest it found by itself.' : 'Every required column is found – check them, change any, then read.'} Done once: the matching is kept with your codes and this layout reads in one click next time.</div>
+  <div class="bmc"><div class="bmb"><h3>Direct plan ${sheetSel('dp')} <small>header row</small> ${rowSel('dp', D)}</h3><table>${M.dp.hr >= 0 ? BUD_F.dp.map((f) => row('dp', f, H)).join('') : ''}</table><div class="bms">The item totals only – no building columns · an item's PKG comes from the Cost Analysis · rows with no unit and no quantity are headings and name the PKG</div></div>
+  <div class="bmb"><h3>Cost Analysis ${sheetSel('ca')} <small>header row</small> ${rowSel('ca', A)} <label><input type="checkbox" data-bmx="ca.two" ${M.ca.two ? 'checked' : ''}> sub-headers one row below</label></h3><table>${
+    M.ca.hr >= 0
+      ? BUD_F.ca
+          .filter((f) => f[3] || ['lvl', 'exp', 'name', 'unit'].includes(f[0]))
+          .map((f) => row('ca', f, f[4] ? A2 : A1))
+          .join('') +
+        (M.ca.c.lvl >= 0
+          ? `<tr><td>BOQ item level · resource level</td><td><input data-bmx="ca.il" value="${M.ca.il}" size="2"> · <input data-bmx="ca.rl" value="${M.ca.rl}" size="2"></td><td><span class="op">from the levels of the rows with a cost element</span></td></tr>`
+          : '')
+      : ''
+  }</table><div class="bms">The rates, waste and item name columns are read too when their header is found (shown on the Cost Analysis tab)</div></div></div>
+  <div class="bmp ${can ? '' : 'no'}">${pv || '<div>Pick the red lines to see what will be read</div>'}${miss.length ? `<div class="bmn bad">${miss.length} still to pick: ${esc(miss.join(' · '))}</div>` : ''}</div>
+  <div class="bmf"><button data-bmx-a="x">Cancel</button><span>Kept under this layout (its sheets and headers) – a file with the same headers reads in one click.</span><span class="sp"></span><button data-bmx-a="reset">Reset to the guesses</button><button class="pri" data-bmx-a="go" ${can ? '' : 'disabled'}>Save matching &amp; read</button></div></div>`;
+}
+document.addEventListener('change', (e) => {
+  const t = e.target.closest('#bmx [data-bmx]');
+  if (!t) return;
+  const M = BMX.M,
+    [side, f, k] = t.dataset.bmx.split('.');
+  if (f === 'sheet') {
+    M[side] = side === 'dp' ? { sheet: t.value, hr: -1, c: {} } : { sheet: t.value, hr: -1, two: false, c: {}, il: 0, rl: 0 };
+    budFill(BMX.wb, M);
+  } else if (f === 'hr') {
+    M[side].hr = +t.value;
+    M[side].c = {};
+    if (side === 'ca') M.ca.rl = M.ca.il = 0;
+    budFill(BMX.wb, M);
+  } else if (f === 'two') {
+    M.ca.two = t.checked;
+    M.ca.c = {};
+    budFill(BMX.wb, M, 'keep2');
+  } else if (f === 'il' || f === 'rl') M.ca[f] = budNum(t.value);
+  else if (f === 'c') M[side].c[k] = +t.value;
+  budMatchDraw();
+});
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('#bmx [data-bmx-a]');
+  if (!a) return;
+  const k = a.dataset.bmxA;
+  if (k === 'x') $('bmx').style.display = 'none';
+  else if (k === 'reset') {
+    BMX.M = budGuess(BMX.wb);
+    budMatchDraw();
+  } else if (k === 'go') {
+    try {
+      const b = budRead(BMX.wb, BMX.file, BMX.M);
+      if (BMX.key) {
+        ST.budMaps = { ...(ST.budMaps || {}), [BMX.key]: JSON.parse(JSON.stringify(BMX.M)) };
+        logIt('Budget columns matched for ' + BMX.file, 1);
+      }
+      $('bmx').style.display = 'none';
+      budApply(b);
+    } catch (err) {
+      toast('Could not read: ' + err.message);
+    }
+  }
+});
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-bud="read"]');
   if (b) {
     const i = document.createElement('input');
     i.type = 'file';
     i.accept = '.xlsb,.xlsx,.xlsm';
-    i.onchange = () => i.files[0] && budFile(i.files[0]);
+    i.onchange = () => i.files[0] && budFile(i.files[0], b.dataset.ask === '1');
     i.click();
     return;
   }
@@ -884,7 +1090,7 @@ document.addEventListener(
 function budGet(c) {
   if (c.t === 'bx') return budX(c.k)[c.f];
   const it = ST.bud && ST.bud.items.find((x) => x.c === c.k);
-  return it ? budNum(budDone(it)[c.i]) : 0;
+  return it ? budDone(it).reduce((t, v) => t + budNum(v), 0) : 0; // one done qty per item (a split by building counts as its sum)
 }
 function budSet(c, v) {
   if (c.t === 'bx') {
@@ -899,9 +1105,7 @@ function budSet(c, v) {
   const it = ST.bud && ST.bud.items.find((x) => x.c === c.k);
   if (!it) return;
   if (!ST.bdone) ST.bdone = {};
-  const d = [...budDone(it)];
-  d[c.i] = v;
-  ST.bdone[c.k] = d;
+  ST.bdone[c.k] = [budNum(v)];
 }
 
 // ---------------------------------------------------------------- Excel: a tab per PKG (the full figures) and a Budget summary

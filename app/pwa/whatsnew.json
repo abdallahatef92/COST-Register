@@ -1,5 +1,13 @@
 [
   {
+    "v": "5.13",
+    "n": [
+      "Budget: the Direct plan is read by its item totals (Takeoff, EV Q.) – no building columns needed; an item's PKG comes from the Cost Analysis",
+      "Progress: one done quantity per BOQ item (take-off, done to date, left, % done) – a split by building typed before counts as its sum",
+      "Another cost report layout: when a column is not found, Match the columns opens with the tool's guesses – pick the red ones; BAC and EV are checked against the file; kept for next time · Check the columns… on the Budget page"
+    ]
+  },
+  {
     "v": "5.12",
     "n": [
       "Budget: reads a cost report in a second layout too – per building \"B04 Takeoff\" / \"B04 EV Q.\" and one Cost Analysis header row (\"CSI Code (PKG)\", items at level 4, resources at level 5)",

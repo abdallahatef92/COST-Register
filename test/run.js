@@ -1769,20 +1769,17 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     eq('Undo takes the provision UR back', await q.evaluate(() => Math.round(__BUD.calc().pk.get('TST-01').get('M-100').pv)), 0);
     await q.$eval('#bRedo', (b) => b.click());
     await q.waitForTimeout(300);
-    // progress: done 50 + 30 → EV 80% = 84,000
+    // progress per BOQ item: done 80 → EV 80% = 84,000
     await q.$eval('#side [data-gt="bprog"]', (x) => x.click());
     await q.waitForTimeout(400);
-    for (const [k, v] of [
-      [0, '50'],
-      [1, '30'],
-    ]) {
-      const inp = q.locator(`#bud input[data-bd="R-TST-01-1-01"][data-bk="${k}"]`);
-      await inp.fill(v);
+    {
+      const inp = q.locator('#bud input[data-bd="R-TST-01-1-01"]');
+      await inp.fill('80');
       await inp.press('Tab');
       await q.waitForTimeout(300);
     }
     eq(
-      'Progress: done 80 of 100 → EV 84,000',
+      'Progress (one done qty per BOQ item): done 80 of 100 → EV 84,000',
       await q.evaluate(() => Math.round(__BUD.sum([...__BUD.calc().pk.get('TST-01').values()]).ev)),
       84000
     );
@@ -2036,81 +2033,131 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await c18.close();
   }
   if (RUN('7p')) {
-    head('7p. Budget: a cost report in the second layout (B04 Takeoff / B04 EV Q., one Cost Analysis header row)');
+    head('7p. Budget: another layout – item totals only, Match the columns when a column is not found, kept for next time');
     const ExcelJS = require('exceljs'),
-      wb = new ExcelJS.Workbook(),
-      dp = wb.addWorksheet('Direct plan'),
-      ca = wb.addWorksheet('Cost Analysis');
-    // Direct plan: building names above, "B04 Q." per building, then take-off and done per building
-    dp.addRow(['', '', '', '', '', 'Building 04', 'Building 05']);
-    dp.addRow([
-      'PKG',
-      'Item code',
-      'Division',
-      'Description',
-      'UNIT',
-      'B04 Q.',
-      'B05 Q.',
-      'Contract Quantity',
-      'B04 Takeoff',
-      'B05 Takeoff',
-      'B04 EV Q.',
-      'B05 EV Q.',
-    ]);
-    dp.addRow(['S03', 'X-01-03', 'S03', 'DIVISION 03 - Concrete', '', '', '', '', '', '', '', '']);
-    dp.addRow(['S03', 'X-01-03-0001', 'S03', 'Slab', 'm3', 10, 20, 30, 10, 20, 5, 0]);
-    dp.addRow(['S03', 'X-01-03-0002', 'S03', 'Beam', 'm3', 4, 0, 4, 4, 0, 4, 0]);
-    ca.addRow([]);
-    ca.addRow([]);
-    ca.addRow([
-      'Cost Code',
-      'Level',
-      'CSI Code (PKG)',
-      'EXP Code',
-      'Cost Element Code\n(= Estimate Res. Code)',
-      'Item Name',
-      'Description',
-      'Unit',
-      'Quantity',
-      'Res Unit',
-      'Waste %',
-      'Budget Rate',
-      'TAKE OFF',
-      'BAC',
-      'Resource takeoff Qty',
-    ]);
-    ca.addRow(['X-01-03-0001', 4, 'S03', '', '', 'Slab', 'Slab', 'm3', 30]);
-    ca.addRow(['X-01-03-0001', 5, 'S03', 'M', 'M001', 'Slab', 'Concrete', 'm3', 30, 'm3', 0.05, 100, 30, 3150, 31.5]);
-    ca.addRow(['X-01-03-0002', 5, 'S03', 'S', 'S001', 'Beam', 'SC beams', 'm3', 4, 'm3', 0, 50, 4, 200, 4]);
-    const f2 = path.join(OUT, 'cost_report_layout2.xlsx');
-    await wb.xlsx.writeFile(f2);
+      mk = async (doneHdr, file) => {
+        const wb = new ExcelJS.Workbook(),
+          dp = wb.addWorksheet('Direct plan'),
+          ca = wb.addWorksheet('Cost Analysis');
+        dp.addRow(['', '', '', '', '', 'Building 04', 'Building 05']);
+        dp.addRow([
+          'PKG',
+          'Item code',
+          'Division',
+          'Description',
+          'UNIT',
+          'B04 Q.',
+          'B05 Q.',
+          'Contract Quantity',
+          'B04 Takeoff',
+          'B05 Takeoff',
+          'Takeoff',
+          'B04 EV Q.',
+          'B05 EV Q.',
+          doneHdr,
+        ]);
+        dp.addRow(['S03', 'X-01-03', 'S03', 'DIVISION 03 - Concrete']);
+        dp.addRow(['', 'X-01-03-0001', 'S03', 'Slab', 'm3', 10, 20, 30, 10, 20, 30, 5, 0, 5]);
+        dp.addRow(['', 'X-01-03-0002', 'S03', 'Beam', 'm3', 4, 0, 4, 4, 0, 4, 4, 0, 4]);
+        ca.addRow(['', '', '', '', '', '', '', '', '', '', '', '', '', 'BAC']);
+        ca.addRow(['', '', '', '', '', '', '', '', '', '', '', '', '', 3350]);
+        ca.addRow([
+          'Cost Code',
+          'Level',
+          'CSI Code (PKG)',
+          'EXP Code',
+          'Cost Element Code\n(= Estimate Res. Code)',
+          'Item Name',
+          'Description',
+          'Unit',
+          'Quantity',
+          'Res Unit',
+          'Waste %',
+          'Budget Rate',
+          'TAKE OFF',
+          'BAC',
+          'Resource takeoff Qty',
+        ]);
+        ca.addRow(['X-01-03-0001', 4, 'S03', '', '', 'Slab', 'Slab', 'm3', 30]);
+        ca.addRow(['X-01-03-0001', 5, 'S03', 'M', 'M001', 'Slab', 'Concrete', 'm3', 30, 'm3', 0.05, 100, 30, 3150, 31.5]);
+        ca.addRow(['X-01-03-0002', 5, 'S03', 'S', 'S001', 'Beam', 'SC beams', 'm3', 4, 'm3', 0, 50, 4, 200, 4]);
+        const f = path.join(OUT, file);
+        await wb.xlsx.writeFile(f);
+        return f;
+      };
+    const fA = await mk('EV Q.', 'cost_report_layout2.xlsx'),
+      fB = await mk('Done to date', 'cost_report_layout3.xlsx');
     const { ctx: c19, p: q } = await open(APP);
     await q.evaluate(() => __GO('bud'));
     await q.waitForTimeout(400);
-    const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.$eval('[data-bud="read"]', (b) => b.click())]);
-    await fc.setFiles(f2);
-    await q.waitForTimeout(2500);
-    const B = await q.evaluate(() => {
-      const b = __ST.bud;
-      return (
-        b && {
-          bts: b.bts,
-          items: b.items.map((x) => [x.c, x.tq, x.dq]),
-          bac: b.res.reduce((s, x) => s + x.bac, 0),
-          n: b.res.length,
-          name: b.names.S03,
-          cai: Object.keys(b.cai),
-        }
-      );
-    });
-    eq('read: the building names from the row above', B && B.bts, ['Building 04', 'Building 05']);
-    eq('…the items with take-off and done per building (the division row is a heading)', B && B.items, [
-      ['X-01-03-0001', [10, 20], [5, 0]],
-      ['X-01-03-0002', [4, 0], [4, 0]],
+    const read = async (f) => {
+      const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.$eval('[data-bud="read"]', (b) => b.click())]);
+      await fc.setFiles(f);
+      await q.waitForTimeout(2500);
+    };
+    const bud = () =>
+      q.evaluate(() => {
+        const b = __ST.bud;
+        return (
+          b && {
+            file: b.file,
+            items: b.items.map((x) => [x.c, x.p, x.tq, x.dq]),
+            bac: b.res.reduce((s, x) => s + x.bac, 0),
+            n: b.res.length,
+            name: b.names.S03,
+            cai: Object.keys(b.cai),
+          }
+        );
+      });
+    await read(fA);
+    ok(
+      'every column found by its header: read at once, no Match the columns',
+      !(await q.$('#bmx')) || (await q.$eval('#bmx', (e) => e.style.display === 'none'))
+    );
+    const B = await bud();
+    eq(
+      '…the item totals (Takeoff, EV Q.) – no building columns; the PKG from the Cost Analysis; the division row a heading',
+      B && B.items,
+      [
+        ['X-01-03-0001', 'S03', [30], [5]],
+        ['X-01-03-0002', 'S03', [4], [4]],
+      ]
+    );
+    eq('…the resources and BAC from one header row, items at level 4, the PKG name', B && [B.n, B.bac, B.name, B.cai], [
+      2,
+      3350,
+      'Concrete',
+      ['X-01-03-0001'],
     ]);
-    eq('…the resources and BAC from one header row', B && [B.n, B.bac], [2, 3350]);
-    eq('…the PKG name from the division row', B && B.name, 'Concrete');
-    eq('…the BOQ item rows at level 4', B && B.cai, ['X-01-03-0001']);
+    // a done column the tool does not know: the screen opens with the rest found; pick it, read
+    await read(fB);
+    ok(
+      'a column not found (done qty): Match the columns opens',
+      await q.$eval(
+        '#bmx',
+        (e) => e.style.display === 'flex' && /Done qty/.test(e.textContent) && !!e.querySelector('[data-bmx-a="go"][disabled]')
+      )
+    );
+    await q.selectOption('#bmx [data-bmx="dp.c.ev"]', {
+      label: (await q.$$eval('#bmx [data-bmx="dp.c.ev"] option', (o) => o.map((x) => x.textContent))).find((t) => /^Done to date/.test(t)),
+    });
+    await q.waitForTimeout(300);
+    ok(
+      '…after the pick: BAC and EV checked against the file, Read on',
+      await q.$eval(
+        '#bmx',
+        (e) => /BAC READ/.test(e.textContent) && /= the file ✓/.test(e.textContent) && !e.querySelector('[data-bmx-a="go"]').disabled
+      )
+    );
+    await q.click('#bmx [data-bmx-a="go"]');
+    await q.waitForTimeout(800);
+    eq('…read with your pick', await q.evaluate(() => __ST.bud.file), 'cost_report_layout3.xlsx');
+    await q.evaluate(() => (__ST.bud = null));
+    await read(fB);
+    ok(
+      'the same layout again: read in one click (the matching is kept)',
+      (await q.$eval('#bmx', (e) => e.style.display === 'none')) && (await q.evaluate(() => !!__ST.bud && __ST.bud.items.length === 2))
+    );
     await c19.close();
   }
   if (RUN('7k')) {

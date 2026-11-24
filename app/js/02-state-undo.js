@@ -239,6 +239,7 @@ function snapshot() {
     bud: ST.bud || null, // Budget: the cost report read, the progress and the typed figures
     bdone: ST.bdone || null,
     bx: ST.bx || null,
+    budMaps: ST.budMaps || null, // Budget: the columns you matched, per cost report layout
   };
 }
 function setSaved(t) {
