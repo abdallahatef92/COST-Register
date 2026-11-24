@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.12",
+    "n": [
+      "Budget: reads a cost report in a second layout too – per building \"B04 Takeoff\" / \"B04 EV Q.\" and one Cost Analysis header row (\"CSI Code (PKG)\", items at level 4, resources at level 5)",
+      "Division rows that carry an item code are read as headings and give the PKG its name"
+    ]
+  },
+  {
     "v": "5.11",
     "n": [
       "Built-in indirect list: 30605800 Location service → SE-12 Surveying Equipment · 32000039 DC-Furn. & Fixture → SP-09 · 32000057 ACs & Computers and 32000056 IT Equip&Telec. Dev. → SP-15",

@@ -36,12 +36,38 @@ function budRead(wb, file) {
     cCQ = col(/contract quantity/i),
     cTO = col(/^takeoff b1$/i),
     cEV = col(/^ev q\.?\s*b1$/i);
-  if ([cItem, cPkg, cTO, cEV].some((c) => c < 0)) throw new Error('Direct plan: missing columns (Item code, PKG, Takeoff B1, EV Q.B1)');
-  const firstBT = cUnit >= 0 ? cUnit + 1 : cCQ - 13,
+  if (cItem < 0 || cPkg < 0) throw new Error('Direct plan: missing columns (Item code, PKG)');
+  const firstBT = cUnit >= 0 ? cUnit + 1 : cCQ - 13;
+  // the take-off and done quantity of each building type, in one of two layouts:
+  //  1 · building columns B1 … then "Takeoff B1" / "EV Q.B1" after the take-off and done columns (the SUTH / SBAY report)
+  //  2 · "B04 Q." per building, and "B04 Takeoff" / "B04 EV Q." for each (the building name in the row above)
+  let bts, toC, evC;
+  if (cTO >= 0 && cEV >= 0) {
     bts = H.slice(firstBT, cCQ).filter(Boolean);
-  const nb = bts.length,
-    to0 = cTO - nb,
-    ev0 = cEV - nb;
+    toC = bts.map((_, k) => cTO - bts.length + k);
+    evC = bts.map((_, k) => cEV - bts.length + k);
+  } else {
+    const esc2 = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      top = D[hr - 1] || [],
+      bt = H.slice(firstBT, cCQ)
+        .map((h, k) => ({ h, i: firstBT + k, m: /^(.+?)\s*Q\.?$/i.exec(h) }))
+        .filter((x) => x.m)
+        .map((x) => ({ ...x, p: x.m[1].trim() }))
+        .map((x) => ({
+          ...x,
+          t: col(new RegExp('^' + esc2(x.p) + '\\s*take ?off$', 'i')),
+          e: col(new RegExp('^' + esc2(x.p) + '\\s*ev q\\.?$', 'i')),
+        }))
+        .filter((x) => x.t >= 0 && x.e >= 0);
+    if (!bt.length)
+      throw new Error(
+        'Direct plan: no take-off and done columns per building – "Takeoff B1" and "EV Q.B1", or "B04 Takeoff" and "B04 EV Q."'
+      );
+    bts = bt.map((x) => budStr(top[x.i]) || x.p);
+    toC = bt.map((x) => x.t);
+    evC = bt.map((x) => x.e);
+  }
+  const nb = bts.length;
   const items = [],
     divMap = {},
     names = {};
@@ -49,7 +75,9 @@ function budRead(wb, file) {
     const code = budStr(r[cItem]),
       pkg = budStr(r[cPkg]);
     if (!pkg) continue;
-    if (!code) {
+    // a heading (DIVISION 03 - Concrete …): no item code – or a code but no unit and no quantity at all
+    const head = !code || (cUnit >= 0 && !budStr(r[cUnit]) && ![...toC, ...evC].some((c) => budNum(r[c])));
+    if (head) {
       if (!names[pkg] && cDesc >= 0 && budStr(r[cDesc])) names[pkg] = budStr(r[cDesc]).replace(/^DIVISION\s+\d+\s*-\s*/i, '');
       continue;
     }
@@ -60,21 +88,24 @@ function budRead(wb, file) {
       p: pkg,
       d: cDesc >= 0 ? budStr(r[cDesc]) : '',
       u: cUnit >= 0 ? budStr(r[cUnit]) : '',
-      tq: Array.from({ length: nb }, (_, k) => budNum(r[to0 + k])),
-      dq: Array.from({ length: nb }, (_, k) => budNum(r[ev0 + k])),
+      tq: toC.map((c) => budNum(r[c])),
+      dq: evC.map((c) => budNum(r[c])),
     });
   }
   // Cost Analysis: header "Cost Code" (row 3), sub-headers one row below (Res Unit, Budget Rate, TAKE OFF, BAC, Resource takeoff …)
   const ar = A.findIndex((r) => r.some((x) => /^cost code$/i.test(budStr(x))));
   if (ar < 0) throw new Error('Cost Analysis: no "Cost Code" header');
-  const A1 = A[ar].map(budStr),
-    A2 = (A[ar + 1] || []).map((x) => budStr(x).replace(/\s+/g, ' ')),
+  // one header row (Cost Code … BAC … Resource takeoff Qty) or two (the sub-headers Res Unit, TAKE OFF, BAC … one row below)
+  const A1 = A[ar].map((x) => budStr(x).replace(/\s+/g, ' ')),
+    A2r = (A[ar + 1] || []).map((x) => budStr(x).replace(/\s+/g, ' ')),
+    two = A2r.some((x) => /^(res unit|bac|take ?off)$/i.test(x)),
+    A2 = two ? A2r : A1,
     ac = (re, h = A1) => h.findIndex((x) => re.test(x));
   const kCode = ac(/^cost code$/i),
     kLvl = ac(/^level$/i),
-    kCsi = ac(/^csi code$/i),
+    kCsi = ac(/^csi code/i),
     kExp = ac(/^exp code$/i),
-    kCe = ac(/^cost element code$/i),
+    kCe = ac(/^cost element code/i),
     kName = ac(/^description$/i),
     kUnit = ac(/^res unit/i, A2),
     kTO = ac(/^take ?off$/i, A2),
@@ -85,7 +116,7 @@ function budRead(wb, file) {
     kIUnit = ac(/^unit$/i, A2),
     kIQty = ac(/^quantity$/i, A2),
     kUse = ac(/^res qty/i, A2),
-    kWaste = ac(/^waste$/i, A2),
+    kWaste = ac(/^waste/i, A2),
     kTot = ac(/^total re[cs]/i, A2),
     kSC = ac(/^sc unit/i, A2),
     kMat = ac(/^material unit/i, A2),
@@ -98,11 +129,12 @@ function budRead(wb, file) {
     throw new Error('Cost Analysis: missing columns (Cost Code, CSI Code, Cost Element Code, TAKE OFF, BAC, Resource takeoff)');
   const res = [],
     cai = {}; // the BOQ items as Cost Analysis has them (level 3): name, unit, quantity
-  for (const r of A.slice(ar + 2)) {
+  for (const r of A.slice(ar + (two ? 2 : 1))) {
     const ce = budStr(r[kCe]),
       pkg = budStr(r[kCsi]),
       code = budStr(r[kCode]);
-    if (code && pkg && !ce && kLvl >= 0 && budNum(r[kLvl]) === 3 && !cai[code])
+    // the BOQ item row: level 3 (or 4 when the resources are level 5), no cost element
+    if (code && pkg && !ce && kLvl >= 0 && budNum(r[kLvl]) >= 3 && !cai[code])
       cai[code] = { n: budStr(r[kIName >= 0 ? kIName : kName]), u: kIUnit >= 0 ? budStr(r[kIUnit]) : '', q: gv(r, kIQty) };
     if (!ce || !pkg || !code || (kLvl >= 0 && budNum(r[kLvl]) < 4)) continue;
     const bac = budNum(r[kBAC]),

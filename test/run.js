@@ -2035,6 +2035,84 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     );
     await c18.close();
   }
+  if (RUN('7p')) {
+    head('7p. Budget: a cost report in the second layout (B04 Takeoff / B04 EV Q., one Cost Analysis header row)');
+    const ExcelJS = require('exceljs'),
+      wb = new ExcelJS.Workbook(),
+      dp = wb.addWorksheet('Direct plan'),
+      ca = wb.addWorksheet('Cost Analysis');
+    // Direct plan: building names above, "B04 Q." per building, then take-off and done per building
+    dp.addRow(['', '', '', '', '', 'Building 04', 'Building 05']);
+    dp.addRow([
+      'PKG',
+      'Item code',
+      'Division',
+      'Description',
+      'UNIT',
+      'B04 Q.',
+      'B05 Q.',
+      'Contract Quantity',
+      'B04 Takeoff',
+      'B05 Takeoff',
+      'B04 EV Q.',
+      'B05 EV Q.',
+    ]);
+    dp.addRow(['S03', 'X-01-03', 'S03', 'DIVISION 03 - Concrete', '', '', '', '', '', '', '', '']);
+    dp.addRow(['S03', 'X-01-03-0001', 'S03', 'Slab', 'm3', 10, 20, 30, 10, 20, 5, 0]);
+    dp.addRow(['S03', 'X-01-03-0002', 'S03', 'Beam', 'm3', 4, 0, 4, 4, 0, 4, 0]);
+    ca.addRow([]);
+    ca.addRow([]);
+    ca.addRow([
+      'Cost Code',
+      'Level',
+      'CSI Code (PKG)',
+      'EXP Code',
+      'Cost Element Code\n(= Estimate Res. Code)',
+      'Item Name',
+      'Description',
+      'Unit',
+      'Quantity',
+      'Res Unit',
+      'Waste %',
+      'Budget Rate',
+      'TAKE OFF',
+      'BAC',
+      'Resource takeoff Qty',
+    ]);
+    ca.addRow(['X-01-03-0001', 4, 'S03', '', '', 'Slab', 'Slab', 'm3', 30]);
+    ca.addRow(['X-01-03-0001', 5, 'S03', 'M', 'M001', 'Slab', 'Concrete', 'm3', 30, 'm3', 0.05, 100, 30, 3150, 31.5]);
+    ca.addRow(['X-01-03-0002', 5, 'S03', 'S', 'S001', 'Beam', 'SC beams', 'm3', 4, 'm3', 0, 50, 4, 200, 4]);
+    const f2 = path.join(OUT, 'cost_report_layout2.xlsx');
+    await wb.xlsx.writeFile(f2);
+    const { ctx: c19, p: q } = await open(APP);
+    await q.evaluate(() => __GO('bud'));
+    await q.waitForTimeout(400);
+    const [fc] = await Promise.all([q.waitForEvent('filechooser'), q.$eval('[data-bud="read"]', (b) => b.click())]);
+    await fc.setFiles(f2);
+    await q.waitForTimeout(2500);
+    const B = await q.evaluate(() => {
+      const b = __ST.bud;
+      return (
+        b && {
+          bts: b.bts,
+          items: b.items.map((x) => [x.c, x.tq, x.dq]),
+          bac: b.res.reduce((s, x) => s + x.bac, 0),
+          n: b.res.length,
+          name: b.names.S03,
+          cai: Object.keys(b.cai),
+        }
+      );
+    });
+    eq('read: the building names from the row above', B && B.bts, ['Building 04', 'Building 05']);
+    eq('…the items with take-off and done per building (the division row is a heading)', B && B.items, [
+      ['X-01-03-0001', [10, 20], [5, 0]],
+      ['X-01-03-0002', [4, 0], [4, 0]],
+    ]);
+    eq('…the resources and BAC from one header row', B && [B.n, B.bac], [2, 3350]);
+    eq('…the PKG name from the division row', B && B.name, 'Concrete');
+    eq('…the BOQ item rows at level 4', B && B.cai, ['X-01-03-0001']);
+    await c19.close();
+  }
   if (RUN('7k')) {
     head('7k. A row coded under a filter stays (marked) until the filter changes or Refresh');
     const { ctx: c15, p: q } = await open(APP);
