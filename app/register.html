@@ -12,42 +12,46 @@
 <body>
 <div id="start" class="start" style="display:none"></div>
 <header class="top">
-  <div class="logo"><span class="lg" title="Cost Register"><svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="crg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3D7BE0"/><stop offset="1" stop-color="#1A3A8A"/></linearGradient></defs> <rect width="512" height="512" rx="110" fill="url(#crg)"/> <rect x="110" y="86" width="250" height="320" rx="26" fill="#fff"/><rect x="150" y="146" width="170" height="26" rx="13" fill="#9FB3D1"/><rect x="150" y="200" width="170" height="26" rx="13" fill="#9FB3D1"/><rect x="150" y="254" width="120" height="26" rx="13" fill="#9FB3D1"/> <circle cx="350" cy="350" r="112" fill="#FFD966" stroke="#fff" stroke-width="18"/><text x="350" y="392" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="120" fill="#14254A">$</text></svg></span><h1>Cost Register <span class="ver" title="Tool version">__VER__</span></h1></div>
-  <div class="crumb"><span id="hsub"></span> &nbsp;›&nbsp; <b id="hpage"></b></div>
-  <label class="cut" title="Cut date – the month you are closing. Click to change"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><small>CUT DATE</small><select id="cut"></select></span></label>
+  <button id="bFold" class="hb" title="Open / fold the menu">☰</button>
+  <span class="brand" title="Cost Register __VER__"><img class="bl1" src="__LOGO__" alt="Alshorouk Construction Company"><img class="bl2" src="__MARK__" alt=""></span>
+  <span class="tname">Cost Register <small>__VER__</small></span>
+  <div class="crumb"><span id="hsub"></span><span class="cs">›</span><span id="hgrp"></span><span class="cs" id="hgs">›</span><b id="hpage"></b></div>
   <div class="sp"></div>
+  <label class="cut" title="Cut date – the month you are closing. Click to change"><span><small>CUT</small><select id="cut"></select></span></label>
   <span id="hasv"></span>
-  <button id="bUndo" title="Undo (Ctrl+Z)">↶<span class="bl"> Undo</span></button><button id="bRedo" title="Redo (Ctrl+Y)">↷</button>
-  <button id="bExport" class="hp" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button>
   <input type="file" id="file" accept=".xlsx,.xlsm,.json" multiple hidden><span id="saved" hidden></span>
 </header>
 <nav id="nav"><div class="nin">
-  <div class="nhd"><span id="nmon">THE MONTH</span><button id="bPin" title="Keep the list open / let it hide by itself"></button></div>
+  <div class="nprj" id="nprj"></div>
+  <div class="ng">MONTH CLOSE</div>
   <div class="secs" id="tabs"></div>
-  <div class="nsep"></div>
-  <div class="din" id="din" title="The SAP files in this register and the months they cover – click for the Data log"></div>
-  <button id="bRules" class="nlk" title="How every CJI3 line gets its bucket and its indirect cost element"><span class="ni"></span><span class="tx">Mapping rules</span><span class="nst" id="rulSt"></span></button>
-  <div class="nsep"></div>
-  <button id="bReports" class="nlk" title="Every report: cost, budget, subcontract, material"><span class="ni"></span><span class="tx">Reports</span><span class="nst">▸</span></button>
+  <div class="ng">REPORTS</div>
+  <div class="nrep" id="nrep"></div>
+  <button id="bReports" class="nlk" title="Every report: cost, budget, client, subcontract, material"><span class="ni">⋯</span><span class="tx">All reports</span></button>
+  <div class="ng">SETTINGS</div>
+  <button id="bRules" class="nlk" title="How every CJI3 line gets its bucket and its indirect cost element"><span class="ni">◎</span><span class="tx">Mapping rules</span><span class="nst" id="rulSt"></span></button>
+  <button id="bData" class="nlk" title="The SAP files in this register and the months they cover"><span class="ni">⇅</span><span class="tx">Data files</span><span class="nst" id="dataSt"></span></button>
+  <button id="bPkl" class="nlk nfo" title="Your PKG list: the name of every PKG"><span class="ni">▦</span><span class="tx">PKG names</span><span class="nst" id="pklSt"></span></button>
   <div class="nsp"></div>
   <div class="nft" id="nft">
     <div class="nmore" id="nmore" hidden>
-    <button id="bDlog" title="Every file read, what it covers and how it is merged"><span class="ni"></span><span class="tx">Data log</span></button>
-    <button id="bPkl" title="Your PKG list: the name of every PKG"><span class="ni"></span><span class="tx">PKG names</span></button>
-    <label class="nvat" title="VAT on subcontractor certificates"><span class="ni"></span><select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none"></label>
-    <button id="bDb" title="The data file on your computer: every build, your codes and the data log"><span class="ni"></span><span class="tx">Data file</span></button>
-    <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file"><span class="ni"></span><span class="tx">Import codes…</span></button>
-    <button id="bSave" title="Save all codes (and line overrides) as a small file"><span class="ni"></span><span class="tx">Save codes to a file</span></button>
-    <button id="bAdd" title="Update the register: drop or choose only the new SAP files – the others come from the data file"><span class="ni"></span><span class="tx">Update with new SAP files…</span></button>
-    <button id="bNew" title="A register for another project – a new data file"><span class="ni"></span><span class="tx">New project register…</span></button>
-    <button id="bJob" title="The steps of the month, each with where you are"><span class="ni"></span><span class="tx">Monthly job <small id="jobN"></small></span></button>
-    <button id="bHelp" title="Show / hide the coding guide (Start here)"><span class="ni"></span><span class="tx">Coding guide</span></button>
+    <button id="bDlog" title="Every file read, what it covers and how it is merged"><span class="tx">Data log</span></button>
+    <label class="nvat" title="VAT on subcontractor certificates"><select id="vat"><option>Exclude VAT</option><option>Include VAT</option><option>Include VAT before date</option></select><input type="date" id="vatFrom" style="display:none"></label>
+    <button id="bDb" title="The data file on your computer: every build, your codes and the data log"><span class="tx">Data file</span></button>
+    <button id="bImport" title="Read codes from a register Excel, your SC report, an exported report or a saved codes file"><span class="tx">Import codes…</span></button>
+    <button id="bSave" title="Save all codes (and line overrides) as a small file"><span class="tx">Save codes to a file</span></button>
+    <button id="bAdd" title="Update the register: drop or choose only the new SAP files – the others come from the data file"><span class="tx">Update with new SAP files…</span></button>
+    <button id="bNew" title="A register for another project – a new data file"><span class="tx">New project register…</span></button>
+    <button id="bJob" title="The steps of the month, each with where you are"><span class="tx">Monthly job <small id="jobN"></small></span></button>
+    <button id="bHelp" title="Show / hide the coding guide (Start here)"><span class="tx">Coding guide</span></button>
     </div>
-    <button id="bMore" title="Data log, PKG names, VAT, data file, import / save codes, new project"><span class="ni"></span><span class="tx">More</span><span class="nst" id="moreSt">data log · PKG names · VAT</span></button>
-    <div class="ncr" title="Cost Register __VER__ · by A. Atef">Cost Register __VER__ · by A. Atef</div>
-  </div></div></nav>
+    <button id="bMore" class="nlk" title="Data log, VAT, data file, import / save codes, new project"><span class="ni">⋯</span><span class="tx">More</span></button>
+  </div></div>
+  <div class="din" id="din" hidden></div></nav>
 <div id="repm" class="repm" hidden></div>
-<div id="mainrow"><aside id="side"></aside><div id="pages">
+<div id="repm" class="repm" hidden></div>
+<div id="mainrow"><div id="cmdbar" class="cmdbar"><button id="cUpd" class="pri" title="Update the register with the new SAP files">⇪ Update SAP files</button><button id="bUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="bRedo" title="Redo (Ctrl+Y)">↷</button><i class="sep"></i><button id="bExport" title="Light Excel report: values, formatted, cut date as now">⇩ Export Excel</button><span class="sp"></span><span id="cmdNav"></span></div>
+<div id="phd" class="phd"></div><aside id="side"></aside><div id="pages">
 <!-- Summary -->
 <div class="page" id="pg-sum"><div class="dash" id="sum"></div></div>
 <!-- Coding / Per Month / Lines / Expenses / Subcontractor: table pages -->

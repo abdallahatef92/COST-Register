@@ -336,13 +336,13 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     );
     {
       const n0 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, ''));
-      const g = await p.$$eval('#side [data-grp]', (x) => (x.find((y) => y.dataset.grp) || {}).dataset?.grp || '');
+      const g = await p.$$eval('#side [data-grpsel] option', (x) => (x.find((y) => y.value) || {}).value || '');
       if (g) {
-        await p.click(`#side [data-grp="${g}"]`);
+        await p.selectOption('#side [data-grpsel]', g);
         await p.waitForTimeout(700);
         const n1 = await p.$eval('#tools', (e) => +((e.textContent.match(/([\d,]+) rows/) || [])[1] || '0').replace(/,/g, ''));
-        ok('Lines follow the group chosen in the side list', n1 > 0 && n1 < n0, n0 + ' → ' + n1);
-        await p.click('#side [data-grp=""]');
+        ok('Lines follow the group chosen in the Group pick list', n1 > 0 && n1 < n0, n0 + ' → ' + n1);
+        await p.selectOption('#side [data-grpsel]', '');
         await p.waitForTimeout(400);
       }
     }
@@ -526,27 +526,31 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     {
       const { ctx: c7, p: p7 } = await open(APP);
       ok(
-        'top bar: project › page name and the cut date',
-        (await p7.$eval('header.top .crumb', (e) => /Summary/.test(e.textContent))) &&
-          (await p7.$eval('header.top .cut', (e) => /CUT DATE/.test(e.textContent) && !!e.querySelector('#cut').value))
+        'top bar: logo, project › Reports › page name and the cut date',
+        (await p7.$eval('header.top .crumb', (e) => /SBAY|SUTH|[A-Z]{3,}/.test(e.textContent) && /Summary/.test(e.textContent))) &&
+          (await p7.$eval('header.top .cut', (e) => /CUT/.test(e.textContent) && !!e.querySelector('#cut').value)) &&
+          !!(await p7.$('header.top .brand img'))
       );
       const w0 = await p7.$eval('#nav', (e) => e.getBoundingClientRect().width);
-      await p7.hover('#nav');
-      await p7.waitForTimeout(500);
-      const w1 = await p7.$eval('#nav', (e) => e.getBoundingClientRect().width);
-      ok('the side navigation hides to a strip and opens under the mouse', w0 < 70 && w1 > 200, w0 + ' → ' + w1);
-      await p7.click('#bPin');
-      await p7.mouse.move(900, 500);
-      await p7.waitForTimeout(500);
       ok(
-        'pin keeps it open (and the page moves aside)',
-        (await p7.$eval('#nav', (e) => e.getBoundingClientRect().width)) > 200 &&
-          (await p7.$eval('#mainrow', (e) => e.getBoundingClientRect().left)) > 200
+        'the menu: open with words – MONTH CLOSE · REPORTS · SETTINGS',
+        w0 > 200 &&
+          (await p7.$eval(
+            '#nav',
+            (e) => /MONTH CLOSE/.test(e.textContent) && /REPORTS/.test(e.textContent) && /SETTINGS/.test(e.textContent)
+          )),
+        String(w0)
       );
-      await p7.click('#bPin');
-      await p7.mouse.move(900, 500);
-      await p7.waitForTimeout(500);
-      ok('unpinned, it hides again', (await p7.$eval('#nav', (e) => e.getBoundingClientRect().width)) < 70);
+      await p7.click('#bFold');
+      await p7.waitForTimeout(300);
+      ok(
+        '☰ folds it to a rail (icon + word), the page gets the width',
+        (await p7.$eval('#nav', (e) => e.getBoundingClientRect().width)) < 90 &&
+          (await p7.$eval('#mainrow', (e) => e.getBoundingClientRect().left)) < 90
+      );
+      await p7.click('#bFold');
+      await p7.waitForTimeout(300);
+      ok('…and opens it again', (await p7.$eval('#nav', (e) => e.getBoundingClientRect().width)) > 200);
       // Cost flow: the bands (plus the credits that cannot be drawn) are the cost to date
       await p7.click('#side [data-gt="flow"]');
       await p7.waitForTimeout(700);
@@ -637,19 +641,20 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         return n;
       });
       ok(
-        'navigation: Coding shows the % coded and the items left',
+        'navigation: Code shows the items left (badge; % coded and items left on hover)',
         await p7.$eval(
           '#tabs [data-s="cod"]',
           (e, n) =>
-            /% coded/.test(e.querySelector('small').textContent) &&
-            e.querySelector('small').textContent.includes(n.toLocaleString('en-US') + ' item'),
+            /% coded/.test(e.title) &&
+            e.title.includes(n.toLocaleString('en-US') + ' item') &&
+            /\d|k/.test(e.querySelector('.nb').textContent),
           left
         ),
-        (await p7.$eval('#tabs [data-s="cod"]', (e) => e.textContent)) + ' · expected ' + left
+        (await p7.$eval('#tabs [data-s="cod"]', (e) => e.title)) + ' · expected ' + left
       );
       ok(
         'work list: every bucket with something left shows it',
-        await p7.$$eval('#side .rk .r1', (x) => x.length > 0 && x.some((e) => / left/.test(e.textContent)))
+        await p7.$$eval('#side .rk .rh', (x) => x.length > 0 && x.some((e) => / left/.test(e.textContent)))
       );
       // pick list: code one item, then the next PKG box offers that code; ↓ + Enter takes it
       const k1 = await p7.$eval('#tb tr.it', (tr) => tr.dataset.k);
@@ -698,7 +703,11 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       const { ctx: c8, p: p8 } = await open(APP, { acceptDownloads: true });
       await p8.evaluate(() => __GO('cod'));
       await p8.waitForTimeout(400);
-      eq('Coding has two tabs', await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent)), ['Items', 'SAP transaction lines']);
+      eq(
+        'Coding has the views Items and SAP transaction lines',
+        (await p8.$$eval('.ctabs button b', (x) => x.map((e) => e.textContent))).slice(0, 2),
+        ['Items', 'SAP transaction lines']
+      );
       await p8.evaluate(() => __GO('xp'));
       await p8.waitForTimeout(1200);
       eq('the side list holds the four pages', await p8.$$eval('#side [data-xp]', (x) => x.map((e) => e.dataset.xp)), [
@@ -1425,8 +1434,9 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         );
       }
       ok(
-        'top bar: SUTH_register.db · updated · saved',
-        await p4.$eval('#hasv', (e) => /SUTH_register\.db · updated/.test(e.textContent)),
+        'saved to SUTH_register.db: ✓ Saved in the top bar, the file on the project card',
+        (await p4.$eval('#hasv', (e) => /Saved/.test(e.textContent) && /SUTH_register\.db/.test(e.querySelector('[title]').title))) &&
+          (await p4.$eval('#nprj', (e) => /SUTH_register\.db/.test(e.textContent))),
         await p4.$eval('#hasv', (e) => e.textContent.slice(0, 300))
       );
       const w0 = await p4.evaluate(() => window.__file.writes);
@@ -1865,12 +1875,11 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   if (RUN('7m')) {
     head('7m. Simpler screens: 4 steps, Data in, Reports menu, Mapping rules (every line by its rule)');
     const { ctx: c16, p: q } = await open(APP);
-    eq('the nav: 4 steps of the month', await q.$$eval('#tabs button .tx', (b) => b.map((x) => x.firstChild.textContent.trim())), [
-      '1 Update',
-      '2 Code',
-      '3 Decide',
-      '4 Forecast',
-    ]);
+    eq(
+      'the menu: the 4 steps of the month',
+      await q.$$eval('#tabs button', (b) => b.map((x) => x.querySelector('.ni').textContent + ' ' + x.querySelector('.tx').textContent)),
+      ['1 Update', '2 Code', '3 Decide', '4 Forecast']
+    );
     ok(
       'Data in: CJI3 with the months it covers and the cut line',
       await q.$eval('#din', (e) => /CJI3/.test(e.textContent) && !!e.querySelector('.bar u'))
@@ -2328,14 +2337,14 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         lines: dbOne('SELECT count(*) AS n FROM lines').n,
         codes: dbOne('SELECT count(*) AS n FROM codes').n,
         n: __D.N,
-        pill: document.getElementById('hasv').textContent,
+        pill: document.getElementById('nprj').textContent,
       }));
       ok(
         'Create data file: written to the file, this build and its lines inside',
         s1.st === 'ok' && s1.b === 1 && s1.lines === s1.n && s1.codes > 0,
         JSON.stringify(s1)
       );
-      ok('…the top bar shows the data file', /Test_register\.db/.test(s1.pill), s1.pill);
+      ok('…the project card in the menu shows the data file', /Test_register\.db/.test(s1.pill), s1.pill);
       const k = await p11.evaluate(() => {
         const it = __BK[0].items.find((x) => !x.pkg);
         __ST.tab = 'cod';

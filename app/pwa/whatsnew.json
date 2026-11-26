@@ -1,5 +1,14 @@
 [
   {
+    "v": "5.14",
+    "n": [
+      "New menu: MONTH CLOSE (1 Update · 2 Code · 3 Decide · 4 Forecast, each with a badge) · REPORTS · SETTINGS – always with words; ☰ folds it to a thin rail for more table width",
+      "On top of each page: one command bar (Update SAP files · Undo · Export · ‹ back · Next ›) and a header with the key figures of the step",
+      "The pages of a step are tabs above the table (Code: Material 538 · Subcontractor 97 …), the groups in a Group pick list; a step opens on its first open task",
+      "Your company logo in the header and on a new start page built around the 4 steps"
+    ]
+  },
+  {
     "v": "5.13",
     "n": [
       "Budget: the Direct plan is read by its item totals (Takeoff, EV Q.) – no building columns needed; an item's PKG comes from the Cost Analysis",

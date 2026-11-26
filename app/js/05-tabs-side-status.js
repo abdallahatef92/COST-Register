@@ -48,52 +48,63 @@ const NIC = ((d) =>
   rul: '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>',
   more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
 });
+// the menu: MONTH CLOSE (the 4 steps) · REPORTS (the main reports, All reports) · SETTINGS – words always; ☰ folds it to a rail
+const NAVREP = [
+  ['sum', '▤', 'Summary'],
+  ['xpm', '▤', 'Expenses'],
+  ['psum', '▤', 'PKG summary'],
+  ['bsum', '▤', 'Budget'],
+  ['cinv', '▤', 'Client invoices'],
+  ...(SUBI >= 0 ? [['sub:reg', '▤', 'PO register']] : []),
+];
 $('tabs').innerHTML = STEPS.map(
   (k, n) =>
-    `<button data-s="${k}"><span class="ni"><i class="stc">${n + 1}</i></span><span class="tx">${n + 1} ${(SECS.find((x) => x[0] === k) || [])[1]}<small></small></span></button>`
+    `<button data-s="${k}"><span class="ni">${n + 1}</span><span class="tx">${(SECS.find((x) => x[0] === k) || [])[1]}</span><em class="nb"></em></button>`
 ).join('');
-[
-  ['bJob', 'job'],
-  ['bDb', 'db'],
-  ['bAdd', 'add'],
-  ['bImport', 'imp'],
-  ['bSave', 'save'],
-  ['bNew', 'build'],
-  ['bHelp', 'help'],
-  ['bDlog', 'db'],
-  ['bPkl', 'codes'],
-  ['bRules', 'rul'],
-  ['bReports', 'rep'],
-  ['bMore', 'more'],
-].forEach(([id, k]) => {
-  $(id).querySelector('.ni').innerHTML = NIC[k];
-});
-document.querySelector('#nav .nvat .ni').innerHTML = NIC.vat;
-let NAVPIN = false;
+$('nrep').innerHTML = NAVREP.map(
+  ([g, i, l], n) =>
+    `<button class="nlk${n > 1 ? ' nfo' : ''}" data-ngo="${g}"><span class="ni">${i}</span><span class="tx">${l}</span></button>`
+).join('');
+$('nrep').onclick = (e) => {
+  const b = e.target.closest('[data-ngo]');
+  if (!b) return;
+  const g = b.dataset.ngo;
+  sel.clear();
+  if (g.startsWith('sub:')) {
+    ST.tab = 'sub';
+    goSub(g.slice(4));
+    return;
+  }
+  ST.tab = g;
+  render();
+};
+let NAVFOLD = false;
 try {
-  NAVPIN = localStorage.getItem('cr-navpin') === '1';
+  NAVFOLD = localStorage.getItem('cr-navfold') === '1';
 } catch (e) {
   /* per-viewer only */
 }
-const navPin = () => {
-  document.body.classList.toggle('navpin', NAVPIN);
-  $('bPin').innerHTML = NIC.pin + (NAVPIN ? ' pinned' : ' pin');
-  $('bPin').classList.toggle('on', NAVPIN);
-};
-navPin();
-$('bPin').onclick = () => {
-  NAVPIN = !NAVPIN;
+const navFold = () => document.body.classList.toggle('navfold', NAVFOLD);
+navFold();
+$('bFold').onclick = () => {
+  NAVFOLD = !NAVFOLD;
   try {
-    localStorage.setItem('cr-navpin', NAVPIN ? '1' : '0');
+    localStorage.setItem('cr-navfold', NAVFOLD ? '1' : '0');
   } catch (e) {
     /* none */
   }
-  navPin();
+  navFold();
   window.dispatchEvent(new Event('resize'));
   render();
 };
+$('cUpd').onclick = () => $('bAdd').click();
+// a step opens where you left it, else on its first open task (2 Code: the bucket with the most left; 3 Decide: the first question)
 const goSec = (k) => {
   const sc = SECS.find((x) => x[0] === k);
+  if (!LASTT[k] && ['cod', 'adj'].includes(k)) {
+    const f = stepFirst(k);
+    if (f) return stepGo(f);
+  }
   ST.tab = sc[0] === 'chk' ? 'chk' : LASTT[sc[0]] || sc[2][0];
   if (ST.tab === 'sub') ST.sub = LASTS[sc[0]] || 'pkg';
   sel.clear();
@@ -150,18 +161,99 @@ const PGNAME = {
   bprog: 'Progress',
   bpkg: 'PKG pages',
 };
+// what each page is for, in one line (the page header)
+const PGLINE = {
+  chk: 'the new SAP files are in and every line ties to CJI3',
+  cod: 'give the new items their PKG, MNL and cost element – the largest cost first',
+  adj: 'what is not in CJI3 yet – add it to the cost or not',
+  bud: 'the budget from your cost report · progress · ETC and EAC per PKG',
+  sum: 'the month on one screen',
+  flow: 'where the cost goes: bucket › PKG',
+  drv: 'rates and monthly costs behind the cost',
+  mrate: 'rate per unit, month by month',
+  xpm: 'every item of every bucket by month',
+  psum: 'Direct by PKG · Indirect by cost element',
+  gl: 'by cost element or by WBS element',
+  wbs: 'by cost element or by WBS element',
+  cinv: 'the client invoices in CJI3 and the opening balance',
+  rules: 'how every CJI3 line gets its bucket and its cost element',
+  pkl: 'the name of every PKG',
+  dlog: 'every file read, what it covers and how it is merged',
+  log: 'every change you made, with time',
+};
+const pgName = () =>
+  ST.tab === 'sub' && ST.sub === 'reg'
+    ? 'PO register'
+    : ST.tab === 'sub' && ST.sub === 'pkg'
+      ? 'Packages & rates'
+      : ST.tab === 'sub' && ST.sub === 'bridge'
+        ? 'Bridge to CJI3'
+        : PGNAME[ST.tab] || (ST.tab === 'dlog' ? 'Data log' : ST.tab === 'log' ? 'Changes' : '');
 function renderProg() {
   const sec = secOf(ST.tab),
-    n = STEPS.indexOf(sec);
-  $('hpage').textContent =
-    ST.tab === 'sub' && ST.sub === 'reg'
-      ? 'PO register'
-      : ST.tab === 'sub' && ST.sub === 'pkg'
-        ? 'Packages & rates'
-        : n >= 0
-          ? n + 1 + ' ' + SECS[SECS.findIndex((x) => x[0] === sec)][1]
-          : PGNAME[ST.tab] || (SECS.find((x) => x[0] === sec) || [])[1] || '';
+    n = STEPS.indexOf(sec),
+    stepName = n >= 0 ? n + 1 + ' ' + SECS.find((x) => x[0] === sec)[1] : '',
+    grp = n >= 0 ? 'Month close' : ['rul', 'codes'].includes(sec) ? 'Settings' : 'Reports';
+  $('hgrp').textContent = grp;
+  $('hpage').textContent = n >= 0 ? stepName : pgName() || (SECS.find((x) => x[0] === sec) || [])[1] || '';
+  // the page header: title, what it is for, the key figures of a step
+  const kp = (l, v, cls) => `<div><span>${l}</span><b class="${cls || ''}">${v}</b></div>`,
+    ok = Math.abs(R.diff) < 0.01,
+    diff = kp('Difference to CJI3', ok ? '0.00 ✓' : fmt2(R.diff), ok ? 'g' : 'r');
+  let fig = '';
+  if (sec === 'chk') {
+    const b0 = DBF.db ? dbBuilds()[0] : null;
+    fig =
+      diff +
+      kp('CJI3 cost', fmt(META.cost)) +
+      kp('Lines without a bucket', (META.unclassified || 0).toLocaleString('en-US'), META.unclassified ? 'r' : '') +
+      kp('Last update', b0 ? String(b0.built).slice(0, 10) : META.built);
+  } else if (sec === 'cod') {
+    const ls = leftStats(),
+      nn = pkNoName().length;
+    fig =
+      kp('To code', ls.n.toLocaleString('en-US') + ' items') +
+      kp('Left', fmtM(ls.l)) +
+      kp('Coded', ls.pc + '%') +
+      kp('PKG without a name', nn, nn ? 'w' : '') +
+      diff;
+  } else if (sec === 'adj') {
+    const T = stepTasks('adj'),
+      open = T.filter((x) => !x.ok && !x.info).length;
+    fig =
+      kp('Still open', open ? open + ' of ' + T.length : '✓ none', open ? 'w' : 'g') +
+      kp('Added to the cost', fmt((R.unsIn || 0) + (R.ownIn || 0))) +
+      kp('Taken out', fmt((R.excl || 0) + (R.depExc || 0))) +
+      diff;
+  } else if (sec === 'bud') {
+    if (ST.bud) {
+      const C = budCalc(),
+        t = budSum(budPkgs(C).flatMap((p) => [...C.pk.get(p).values()]));
+      fig =
+        kp('BAC', fmtM(t.bac)) +
+        kp('EV', fmtM(t.ev)) +
+        kp('AC', fmtM(t.ac)) +
+        kp('EAC', fmtM(t.eac)) +
+        kp('VAC', fmtM(t.vac), t.vac < -0.5 ? 'r' : 'g');
+    } else fig = kp('Cost report', 'not read yet', 'w');
+  }
+  const line = PGLINE[n >= 0 ? sec : ST.tab] || (ST.tab === 'sub' ? 'subcontractor POs, packages and rates' : '');
+  $('phd').innerHTML =
+    `<div class="r1"><h2>${esc(n >= 0 ? stepName : $('hpage').textContent)}</h2><span>${esc(line)}</span></div>${fig ? `<div class="kp">${fig}</div>` : ''}`;
+  // ‹ back · Next › in the command bar on a step
+  $('cmdNav').innerHTML =
+    n >= 0
+      ? `${n ? `<button data-stp="${STEPS[n - 1]}">‹ ${n} ${esc(SECS.find((x) => x[0] === STEPS[n - 1])[1])}</button>` : ''}${n < STEPS.length - 1 ? `<button class="nx" data-stp="${STEPS[n + 1]}">Next: ${n + 2} ${esc(SECS.find((x) => x[0] === STEPS[n + 1])[1])} ›</button>` : '<button class="nx" data-stp="rep">Reports ›</button>'}`
+      : '';
 }
+$('cmdNav').onclick = (e) => {
+  const b = e.target.closest('[data-stp]');
+  if (!b) return;
+  if (b.dataset.stp === 'rep') {
+    ST.tab = 'sum';
+    render();
+  } else goSec(b.dataset.stp);
+};
 // the 4 steps of the month, each with where it is: ✓ done · gold = the step you are on · number = still to do
 function stepState() {
   const J = jobSteps(),
@@ -234,38 +326,76 @@ function dataIn() {
     .join('')}${cr}<div class="lg">gold line = the cut · click for the Data log</div>`;
 }
 function navBadges() {
-  const st = stepState(),
-    cur = secOf(ST.tab),
-    now = STEPS.includes(cur) ? cur : '';
+  const cur = secOf(ST.tab),
+    ls = leftStats();
+  const badge = {
+    chk: Math.abs(R.diff) < 0.01 && !META.unclassified && !mapStale() ? ['✓', 'ok'] : ['!', 'bad'],
+    cod: ls.n ? [ls.n > 999 ? Math.round(ls.n / 100) / 10 + 'k' : String(ls.n), 'w'] : ['✓', 'ok'],
+    adj: (() => {
+      const o = stepTasks('adj').filter((x) => !x.ok && !x.info).length;
+      return o ? [String(o), 'w'] : ['✓', 'ok'];
+    })(),
+    bud: ST.bud ? ['✓', 'ok'] : ['!', 'bad'],
+  };
+  const st = stepState();
   document.querySelectorAll('#tabs button').forEach((b, n) => {
     const k = b.dataset.s,
-      [done, txt] = st[k],
-      c = b.querySelector('.stc');
-    c.className = 'stc ' + (k === now ? 'now' : done ? 'ok' : 'todo');
-    c.textContent = done && k !== now ? '✓' : String(n + 1);
-    b.querySelector('small').textContent = txt;
-    b.title = n + 1 + ' ' + SECS.find((x) => x[0] === k)[1] + ' · ' + txt;
+      [v, c] = badge[k];
+    b.classList.toggle('on', k === cur);
+    const em = b.querySelector('em');
+    em.textContent = v;
+    em.className = 'nb ' + c;
+    b.title = n + 1 + ' ' + SECS.find((x) => x[0] === k)[1] + ' · ' + st[k][1];
   });
+  document.querySelectorAll('#nrep [data-ngo]').forEach((b) => {
+    const g = b.dataset.ngo;
+    b.classList.toggle(
+      'on',
+      g.startsWith('sub:')
+        ? ST.tab === 'sub' && ST.sub === g.slice(4)
+        : ST.tab === g || (g === 'bsum' && ['bca', 'bprog', 'bpkg'].includes(ST.tab) && false)
+    );
+  });
+  // the project card on top of the menu
   {
     const mon = new Date(String(ST.cut) + 'T00:00:00');
-    $('nmon').textContent =
-      'THE MONTH' + (isNaN(mon) ? '' : ' · ' + MON[mon.getMonth()].toUpperCase() + '-' + String(mon.getFullYear()).slice(2));
+    $('nprj').innerHTML =
+      `<b>${esc(META.project || '')}</b><small>${esc(DBF.name || 'no data file')} · ${isNaN(mon) ? '' : MON[mon.getMonth()] + '-' + String(mon.getFullYear()).slice(2)}</small>`;
   }
   $('din').innerHTML = dataIn();
-  const um = mapUnmapped();
-  const stl = mapStale();
-  $('rulSt').innerHTML = stl
-    ? `<b class="bad">↻ rebuild</b>`
+  const warn = (META.dlog && (META.dlog.files || []).some((f) => f.last && f.last < String(ST.cut).slice(0, 7))) || !ST.bud;
+  $('dataSt').innerHTML = `<b class="${warn ? 'w' : 'ok'}">${warn ? '!' : '✓'}</b>`;
+  const nn = pkNoName().length;
+  $('pklSt').innerHTML = nn ? `<b class="w">${nn}</b>` : '';
+  const um = mapUnmapped(),
+    stl = mapStale();
+  $('rulSt').innerHTML = stl ? `<b class="bad">↻</b>` : um ? `<b class="bad">${um.toLocaleString('en-US')}</b>` : '<b class="ok">✓</b>';
+  $('bRules').title = stl
+    ? 'Mapping rules – lines sorted with older rules: rebuild'
     : um
-      ? `<b class="bad">${um.toLocaleString('en-US')} not mapped</b>`
-      : '<b class="ok">all mapped ✓</b>';
+      ? `Mapping rules – ${um} lines not mapped`
+      : 'Mapping rules – all mapped ✓';
   $('bRules').classList.toggle('on', ST.tab === 'rules');
-  $('bReports').classList.toggle('on', REPSEC.includes(cur) || (ST.tab === 'sub' && ['reg', 'pkg'].includes(ST.sub)) || !$('repm').hidden);
+  $('bPkl').classList.toggle('on', ST.tab === 'pkl');
+  $('bReports').classList.toggle('on', !$('repm').hidden);
 }
+// Data files: the files and months against the cut, opened from the menu
+$('bData').onclick = (e) => {
+  e.stopPropagation();
+  const d = $('din'),
+    r = $('bData').getBoundingClientRect();
+  d.hidden = !d.hidden;
+  d.style.top = Math.min(r.top, innerHeight - 380) + 'px';
+};
 $('din').onclick = () => {
+  $('din').hidden = true;
   ST.tab = 'dlog';
   render();
 };
+document.addEventListener('click', (e) => {
+  if (!$('din').hidden && !e.target.closest('#din') && !e.target.closest('#bData')) $('din').hidden = true;
+});
+$('nprj').onclick = () => $('bDb').click();
 $('bRules').onclick = () => {
   ST.tab = 'rules';
   sel.clear();
@@ -393,7 +523,7 @@ const abbr = (t) => {
     : String(t).slice(0, 3);
 };
 const sdi = (go, on, c, t, a, s1, s2, pg) =>
-  `<div class="sdi${on ? ' on' : ''}" ${go} style="--c:${c}" title="${esc(t)}"><span class="cb"></span><b>${esc(t)}</b><span class="a">${a || ''}</span>${s1 !== undefined ? `<small><span>${s1}</span><span>${s2 || ''}</span></small>` : ''}${pg !== undefined ? `<div class="pg"><i style="width:${pg}%"></i></div>` : ''}</div>`;
+  `<div class="sdi${on ? ' on' : ''}" ${go} style="--c:${c}" title="${esc(t)}${s1 ? ' · ' + String(s1).replace(/<[^>]+>/g, '') : ''}"><b>${esc(t)}</b>${a ? `<span class="a">${a}</span>` : ''}${s1 !== undefined ? `<small>${s1}</small>` : ''}${pg !== undefined ? `<div class="pg"><i style="width:${pg}%"></i></div>` : ''}</div>`;
 function renderSide() {
   const sec = ST.tab === 'sub' && ST.sub === 'pkg' ? 'sub' : secOf(ST.tab),
     el = $('side'),
@@ -407,84 +537,48 @@ function renderSide() {
     foot = '',
     extra = {};
   if (sec === 'cod') {
+    // a tab per bucket (what is left on each) and, for the bucket open, its groups in a pick list
     const LS = leftStats().bk,
       gt = ST.tab === 'lines' ? 'lines' : 'cod',
-      isOn = (bi) => ST.bk === bi;
-    if (SIDEC) {
-      el.className = 'col';
-      el.innerHTML = `<div class="sh" style="padding:10px 6px 6px;justify-content:center"><button data-side="1" title="Show the list">»</button></div><div class="ls">${BK.map((b, bi) => `<div class="sdr${isOn(bi) ? ' on' : ''}" data-gt="${gt}" data-bk="${bi}" style="--c:${LS[bi].n ? '#D97706' : '#4CAF6A'}" title="${esc(b.id)} · ${LS[bi].n ? LS[bi].n + ' to code' : 'all coded'}">${esc(abbr(b.short))}</div>`).join('')}</div>`;
-      return;
-    }
-    const card = (b, bi) => {
-      const x = LS[bi],
-        on = isOn(bi);
-      let grp = '';
-      if (on && b.tree) {
-        const g = new Map();
-        b.items.forEach((it) => {
-          const e = g.get(it.grp) || g.set(it.grp, { n: 0, t: 0, c: 0 }).get(it.grp);
-          e.n++;
-          e.t += it.td;
-          if (it.inc !== 'No' && statusOf(it) !== 'Coded') e.c++;
-        });
-        const cur = ST.grpSel[bi] || '',
-          rt = (c) => (c ? `<span class="tc">${c.toLocaleString('en-US')}</span>` : '<span class="dn">✓</span>'),
-          gl = (k, v, cls) =>
-            `<div class="${cls}${cur === k ? ' on' : ''}" data-grp="${esc(k)}" title="${esc(k)} · ${v.n} items · ${fmtM(v.t)}${v.c ? ' · ' + v.c + ' to code' : ' · all coded'}"><span dir="auto">${esc(String(grpTail(k)).trim() || '(none)')}</span>${rt(v.c)}</div>`;
-        let inner = '';
-        if (hasFam(b)) {
-          const F = new Map();
-          for (const [k, v] of g) {
-            const f = famOf(k),
-              e = F.get(f) || F.set(f, { n: 0, t: 0, c: 0, g: [] }).get(f);
-            e.n += v.n;
-            e.t += v.t;
-            e.c += v.c;
-            e.g.push([k, v]);
-          }
-          const openF = cur.startsWith('F:') ? cur.slice(2) : cur ? famOf(cur) : '';
-          inner = [...F]
-            .sort((x1, y) => y[1].t - x1[1].t)
-            .map(
-              ([f, e]) =>
-                `<div class="fm${f === openF ? ' op' : ''}${cur === 'F:' + f ? ' on' : ''}" data-grp="F:${esc(f)}" title="${esc(f)} · ${e.g.length} group${e.g.length === 1 ? '' : 's'} · ${fmtM(e.t)}"><span>${esc(f)}</span>${rt(e.c)}</div>` +
-                (f === openF
-                  ? e.g
-                      .sort((x1, y) => y[1].t - x1[1].t)
-                      .map(([k, v]) => gl(k, v, 'gi2'))
-                      .join('')
-                  : '')
-            )
-            .join('');
-        } else
-          inner = [...g]
-            .sort((x1, y) => y[1].t - x1[1].t)
-            .map(([k, v]) => gl(k, v, ''))
-            .join('');
-        grp = `<div class="sdg"><div class="${cur ? '' : 'on'}" data-grp=""><span>All groups</span>${rt(x.n)}</div>${inner}</div>`;
-      }
-      return `<div class="rk${on ? ' on' : ''}"><div class="rh" data-gt="${gt}" data-bk="${bi}" title="${esc(b.id)} · to date ${fmtM(b.items.reduce((t, it) => t + it.td, 0))}"><div class="r1"><b>${esc(b.id)}</b>${x.n ? `<span>${fmtM(x.l)} left</span>` : '<span class="dn">✓ all coded</span>'}</div><div class="pg"><i style="width:${x.pc}%"></i></div><small>${x.n ? `${x.n.toLocaleString('en-US')} of ${b.items.length.toLocaleString('en-US')} items to code` : `${b.items.length.toLocaleString('en-US')} items`}${((n) => (n ? ` · <b style="color:#B45309">${n} new</b>` : ''))(b.items.filter((it) => it.nw).length)}</small></div>${grp}</div>`;
+      order = BK.map((b, bi) => bi).sort((x, y) => (LS[y].n ? 1 : 0) - (LS[x].n ? 1 : 0) || 0);
+    const tab = (bi) => {
+      const b = BK[bi],
+        x = LS[bi],
+        on = ST.bk === bi;
+      return `<div class="rk${on ? ' on' : ''}"><div class="rh" data-gt="${gt}" data-bk="${bi}" style="--c:${bkColor(bi)}" title="${esc(b.id)} · to date ${fmtM(b.items.reduce((t, it) => t + it.td, 0))}${x.n ? ' · ' + x.n + ' to code' : ' · all coded'}"><div class="r1"><b>${esc(b.short || b.id)}</b>${x.n ? `<span>${x.n.toLocaleString('en-US')}</span>` : '<span class="dn">✓</span>'}</div><div class="pg"><i style="width:${x.pc}%"></i></div><small>${x.n ? fmtM(x.l) + ' left' : 'all coded'}</small></div></div>`;
     };
-    const todo = [],
-      done = [];
-    BK.forEach((b, bi) => (LS[bi].n || isOn(bi) ? todo : done).push(bi));
-    el.className = '';
-    el.innerHTML = `<div class="sh">Left to code<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls rail">${todo.map((bi) => card(BK[bi], bi)).join('')}${done.length ? `<div class="rdone"><b>✓ Done – nothing to code (${done.length})</b>${done.map((bi) => `<a data-gt="${gt}" data-bk="${bi}">${esc(BK[bi].id)}</a>`).join('')}</div>` : ''}</div>`;
+    let grp = '';
+    const b = BK[ST.bk];
+    if (b && b.tree) {
+      const g = new Map();
+      b.items.forEach((it) => {
+        const e = g.get(it.grp) || g.set(it.grp, { n: 0, t: 0, c: 0 }).get(it.grp);
+        e.n++;
+        e.t += it.td;
+        if (it.inc !== 'No' && statusOf(it) !== 'Coded') e.c++;
+      });
+      const cur = ST.grpSel[ST.bk] || '';
+      grp = `<label class="sgrp">Group <select data-grpsel="1"><option value="">All groups · ${LS[ST.bk].n.toLocaleString('en-US')} to code</option>${[
+        ...g,
+      ]
+        .sort((x1, y) => y[1].t - x1[1].t)
+        .map(
+          ([k, v]) =>
+            `<option value="${esc(k)}" ${cur === k ? 'selected' : ''}>${esc(String(grpTail(k)).trim() || '(none)')} · ${v.c ? v.c + ' to code' : '✓'}</option>`
+        )
+        .join('')}</select></label>`;
+    }
+    el.className = 'tabs';
+    el.innerHTML = `<div class="ls">${order.map(tab).join('')}</div>${grp}`;
     return;
   } else if (sec === 'sub') {
-    const ps = pkSide(SIDEC),
+    const ps = pkSide(false),
       more = [
-        ['po', 'POs', 'in 2 Code › Subcontractor'],
-        ['reg', 'PO register', 'in Reports'],
-        ['bridge', 'Bridge to CJI3', 'in 1 Update'],
+        ['reg', 'PO register', 'every PO and its status'],
+        ['bridge', 'Bridge to CJI3', 'certificates vs CJI3'],
       ];
-    if (SIDEC) {
-      el.className = 'col';
-      el.innerHTML = `<div class="sh" style="padding:10px 6px 6px;justify-content:center"><button data-side="1" title="Show the packages">»</button></div><div class="ls">${ps}</div>`;
-      return;
-    }
-    el.className = '';
-    el.innerHTML = `<div class="sh">Packages<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${ps.body}<div class="sec">More</div>${sdi('data-gt="sum"', false, '#14254A', '← Summary', '', 'Summary, Cost flow, Cost drivers, Rate analysis', '')}${more.map(([k, l, d], i) => sdi(`data-gt="sub" data-sv="${k}"`, ST.sub === k, '#C9CED6', l, '', d, '')).join('')}</div><div class="ft">${ps.foot}</div>`;
+    el.className = 'tabs';
+    el.innerHTML = `<div class="ls">${ps.body}${more.map(([k, l, d]) => sdi(`data-gt="sub" data-sv="${k}"`, ST.sub === k, '#C9CED6', l, '', d, '')).join('')}</div><div class="ft">${ps.foot}</div>`;
     return;
   } else if (sec === 'adj') {
     head = '3 Decide';
@@ -691,17 +785,20 @@ function renderSide() {
         'POs',
       ]);
   }
-  if (SIDEC) {
-    el.className = 'col';
-    el.innerHTML = `<div class="sh" style="padding:10px 6px 6px;justify-content:center"><button data-side="1" title="Show the list">»</button></div><div class="ls">${items
-      .filter((x) => x[0] !== 'sec')
-      .map((x) => `<div class="sdr${x[1] ? ' on' : ''}" ${x[0]} style="--c:${x[2]}" title="${esc(x[3])}">${esc(x[8] || '')}</div>`)
-      .join('')}</div>`;
-    return;
-  }
-  el.className = '';
-  el.innerHTML = `<div class="sh">${head}<button data-side="1" title="Hide the list – more room for the table">« hide</button></div><div class="ls">${items.map((x, k) => (x[0] === 'sec' ? `<div class="sec">${esc(x[1])}</div>` : sdi(...x.slice(0, 8)) + (extra[k] || ''))).join('')}</div>${foot ? `<div class="ft">${foot}</div>` : ''}`;
+  el.className = items.length ? 'tabs' : 'hid';
+  el.innerHTML = `<div class="ls">${items
+    .filter((x) => x[0] !== 'sec')
+    .map((x, k) => sdi(...x.slice(0, 8)) + (extra[k] || ''))
+    .join('')}</div>${foot ? `<div class="ft">${foot}</div>` : ''}`;
 }
+$('side').addEventListener('change', (e) => {
+  const g = e.target.closest('[data-grpsel]');
+  if (!g) return;
+  ST.grpSel[ST.bk] = g.value;
+  sel.clear();
+  render();
+  $('wrap').scrollTop = 0;
+});
 $('side').addEventListener('click', (e) => {
   if (e.target.closest('[data-side]')) {
     SIDEC = !SIDEC;
@@ -838,7 +935,7 @@ function renderStatus() {
         ? DBF.ro
           ? `<a class="asv amb" data-dbgo="latest" title="An older build from the data file – changes are not saved">🔒 Read only · cut ${esc(META.cut)} · back to the latest</a>`
           : DBF.st === 'ok'
-            ? `<span class="asv ok" title="The register of this project – every change is saved to this data file by itself">🗄 ${esc(DBF.name)} · updated ${esc(String((dbBuilds()[0] || {}).built || '').slice(0, 10))}${DBF.at ? ' · saved ' + DBF.at : ''}</span>`
+            ? `<span class="asv ok" title="Every change is saved to ${esc(DBF.name)} by itself · updated ${esc(String((dbBuilds()[0] || {}).built || '').slice(0, 10))}">✓ Saved${DBF.at ? ' · ' + DBF.at : ''}</span>`
             : DBF.st === 'perm'
               ? `<a class="asv amb" data-asgo="allow" title="The browser asks again – one click">⟳ Click to keep saving to ${esc(DBF.name)}</a>`
               : `<a class="asv red" data-dbgo="dl" title="This browser cannot write to the file – download it to keep your work">⇩ Save data file ${esc(DBF.name)}</a>`

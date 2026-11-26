@@ -1,6 +1,5 @@
-// =====================================================================================  the step bar: on top of each step's pages – what is open, where to do it, ‹ back · Next ›
-// A step (1 Update · 2 Code · 3 Decide · 4 Forecast) opens on its first open task; the bar lists the tasks with their state
-// and a link to each. Next always works (some months a step has nothing to do) – the bar says what is still open.
+// =====================================================================================  the tasks of each step: what is open, and where to do it
+// A step (1 Update · 2 Code · 3 Decide · 4 Forecast) opens on its first open task; the menu badge and the page header count them.
 function stepTasks(k) {
   const T = [],
     t = (ok, title, sub, go, info) => T.push({ ok, title, sub, go, info });
@@ -137,49 +136,3 @@ function stepGo(go) {
 }
 // the first open task of a step (else its first page)
 const stepFirst = (k) => (stepTasks(k).find((x) => !x.ok && !x.info) || {}).go;
-function renderStepBar() {
-  const el = $('stepbar'),
-    k = secOf(ST.tab),
-    n = STEPS.indexOf(k);
-  if (n < 0 || ST.tab === 'sub' || !el) {
-    if (el) el.innerHTML = '';
-    return;
-  }
-  const T = stepTasks(k),
-    open = T.filter((x) => !x.ok && !x.info).length,
-    here = (go) => {
-      const [g, a] = String(go).split(':');
-      return (
-        g === ST.tab &&
-        (a === undefined || (g === 'cod' && +a === ST.bk) || (g === 'uns' && a === ST.unsView) || (g === 'bpkg' && a === ST.bpk))
-      );
-    },
-    DONE = {
-      chk: 'the difference to CJI3 is 0.00 and every line has a bucket',
-      cod: 'every item is coded and every PKG has a name',
-      adj: 'each question is answered and every owner material has a rate',
-      bud: 'the cost report is read, the progress typed and the ETC checked',
-    };
-  el.innerHTML = `<div class="sbar${open ? '' : ' ok'}"><div class="sbh"><b>Step ${n + 1} · ${esc(SECS.find((x) => x[0] === k)[1])}</b><span class="sbp">${open ? open + ' of ' + T.filter((x) => !x.info).length + ' still open' : '✓ done'}</span><span class="sbd">Done when ${DONE[k]}</span><span class="sp"></span>${n ? `<button data-stp="${STEPS[n - 1]}">‹ ${n} ${esc(SECS.find((x) => x[0] === STEPS[n - 1])[1])}</button>` : ''}${n < STEPS.length - 1 ? `<button class="pri" data-stp="${STEPS[n + 1]}" title="${open ? open + ' still open in this step – you can come back to it' : ''}">Next: ${n + 2} ${esc(SECS.find((x) => x[0] === STEPS[n + 1])[1])} ›</button>` : `<button class="pri" data-stp="rep">Reports ›</button>`}<button class="sbx" data-stx="1" title="Hide the step bar for this step">✕</button></div>
-  <div class="sbt">${T.map((x) => `<button class="${x.info ? 'inf' : x.ok ? 'ok' : 'todo'}${here(x.go) ? ' on' : ''}" data-stg="${esc(x.go)}"><i>${x.info ? '·' : x.ok ? '✓' : '!'}</i><span><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></span></button>`).join('')}</div></div>`;
-}
-document.addEventListener('click', (e) => {
-  const g = e.target.closest('#stepbar [data-stg]');
-  if (g) {
-    stepGo(g.dataset.stg);
-    return;
-  }
-  const s = e.target.closest('#stepbar [data-stp]');
-  if (s) {
-    const k = s.dataset.stp;
-    if (k === 'rep') {
-      ST.tab = 'sum';
-      render();
-    } else goSec(k);
-    return;
-  }
-  if (e.target.closest('#stepbar [data-stx]')) {
-    const b = $('stepbar');
-    b.innerHTML = '';
-  }
-});

@@ -71,7 +71,8 @@ function showStart(canCancel) {
     ];
     const step = (n, t, d, done) =>
       `<div class="sst"><div class="no">${n}</div><b>${t}</b><p>${d}</p><small>Done when: ${done}</small></div>`;
-    el.innerHTML = `<div class="st0"><h1>Cost Register</h1><p class="lead">One register per project. It reads your SAP files, puts every CJI3 line in a bucket and ties to CJI3 to the cent. Nothing leaves your computer.</p>
+    const logo = (document.querySelector('header.top .brand .bl1') || {}).src || '';
+    el.innerHTML = `<div class="st0"><div class="sthd">${logo ? `<img src="${logo}" alt="">` : ''}<h1>Cost Register</h1></div><p class="lead">One register per project. It reads your SAP files, puts every CJI3 line in a bucket and ties to CJI3 to the cent. Nothing leaves your computer.</p>
     <div class="stw"><div class="stc"><div class="ch">Open your register</div><div class="bd">${dbCard()}
       <div class="stor">or start a new project</div>
       <label id="drop" class="drop"><b>Drop the SAP files here, or click</b>All at once – any file names.<input type="file" id="pick" multiple accept=".xlsx,.xls,.xlsm,.json,.db" hidden></label>

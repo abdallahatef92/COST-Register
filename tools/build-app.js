@@ -19,7 +19,9 @@ function assemble() {
   return (
     rd(path.join(A, 'register.html'))
       .replace('/*__CSS__*/', () => rd(path.join(A, 'css', 'register.css')))
-      .replace('/*__APP__*/', () => js) + '\n'
+      .replace('/*__APP__*/', () => js)
+      .replace('__LOGO__', () => 'data:image/png;base64,' + fs.readFileSync(path.join(A, 'brand', 'logo.png')).toString('base64'))
+      .replace('__MARK__', () => 'data:image/png;base64,' + fs.readFileSync(path.join(A, 'brand', 'mark.png')).toString('base64')) + '\n'
   );
 }
 function page(dataJs) {
