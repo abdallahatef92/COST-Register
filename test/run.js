@@ -857,7 +857,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         const [dt] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bExport')]);
         ok(
           'the top-bar button on a report page exports only that report',
-          /^Expenses_per_month_/.test(dt.suggestedFilename()) && /this report/.test(await p8.$eval('#bExport', (e) => e.textContent)),
+          /^Per_month_/.test(dt.suggestedFilename()) && /Export to Excel/.test(await p8.$eval('#bExport', (e) => e.textContent)),
           dt.suggestedFilename()
         );
       }
@@ -2743,7 +2743,12 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.waitForTimeout(2000);
     ok(
       'after the build the Tool opens from the data file by itself',
-      await q.evaluate(() => DBF.cur === 1 && /Test_register\.db/.test(document.getElementById('hasv').textContent))
+      await q.evaluate(
+        () =>
+          DBF.cur === 1 &&
+          /Test_register\.db/.test(document.getElementById('nprj').textContent) &&
+          /Saved/.test(document.getElementById('hasv').textContent)
+      )
     );
     await q.evaluate(() => __GO('cod'));
     await q.waitForTimeout(400);
@@ -2783,7 +2788,12 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.waitForTimeout(800);
     ok(
       'first click: the browser asks once, the data file is connected',
-      await q.evaluate(() => window.__asked === 1 && /Test_register\.db · updated/.test(document.getElementById('hasv').textContent)),
+      await q.evaluate(
+        () =>
+          window.__asked === 1 &&
+          /Saved/.test(document.getElementById('hasv').textContent) &&
+          /Test_register\.db/.test(document.querySelector('#hasv [title]').title)
+      ),
       await q.$eval('#hasv', (e) => e.textContent)
     );
     const w = await q.evaluate(() => window.__writes || 0);
