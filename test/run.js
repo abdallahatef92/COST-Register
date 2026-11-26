@@ -734,12 +734,18 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         )
       );
       ok(
-        '…Bucket, Item, Description, then the months; PKG, MNL, cost element after To date',
+        '…PKG, MNL, cost element, Item, Description, PO frozen, then the months; Bucket and the rest after To date',
         await p8.evaluate(() => {
           const k = R.D.cols.map((c) => c.k),
             m = k.findIndex((x) => /^s\d/.test(x)),
             td = k.findIndex((x) => /^td/.test(x));
-          return k[0] === 'bk' && k[1] === 'code' && k[2] === 'desc' && m === 3 && k.indexOf('pkg') > td && k.indexOf('ce') > td;
+          return (
+            k.slice(0, 6).join() === 'pkg,mnl,ce,code,desc,po' &&
+            m === 6 &&
+            k.indexOf('bk') > td &&
+            Object.keys(R.fzL).join() === 'pkg,mnl,ce,code,desc,po' &&
+            !!document.querySelector('#tb tr.grp td.fz.fze')
+          );
         })
       );
       await p8.click('#bOpen');
@@ -780,16 +786,18 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p8.$eval('#cnt', (e) => e.textContent)
       );
       ok(
-        '…Bucket, Item, Description, then the months (Qty · Rate · Amount); the codes after',
+        '…PKG, MNL, cost element, Item, Description, PO, then the months (Qty · Rate · Amount); Bucket and Source after',
         await p8.$$eval('#th tr:last-child th', (x) => {
           const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean);
           return (
-            t[0] === 'Bucket' &&
-            t[1] === 'Item' &&
-            t[2] === 'Description' &&
-            t[3] === 'Qty' &&
+            /^PKG/.test(t[0]) &&
+            /^MNL/.test(t[1]) &&
+            t[3] === 'Item' &&
+            t[4] === 'Description' &&
+            t[5] === 'PO' &&
+            t[6] === 'Qty' &&
+            t.indexOf('Bucket') > 6 &&
             t.includes('Source') &&
-            t.some((v) => /^PKG/.test(v)) &&
             t.includes('Rate')
           );
         })
@@ -849,9 +857,10 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       {
         const h = ax[xh],
           ci = h.lastIndexOf('Amount'),
+          bc = h.indexOf('Bucket'),
           last = ax
             .slice(xh + 1)
-            .filter((r) => r[0] && r[0] !== 'TOTAL')
+            .filter((r) => r[bc] && r[0] !== 'TOTAL')
             .reduce((t, r) => t + (+r[ci] || 0), 0);
         ok('…its To date amounts add up to the cost to date', Math.abs(last - td8) <= 5, String(last));
       }

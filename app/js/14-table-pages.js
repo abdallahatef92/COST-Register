@@ -531,11 +531,20 @@ function pageDef() {
       mr.push({ l: sl.label, span: subs.length, cls: sl.idx.includes(rep) ? 'cutb' : '' });
     });
     [yr, qr, mr].forEach((row) => row.push({ l: mode === 'All' ? 'To date' : '', span: subs.length, cls: 'blank' }));
-    // Expenses per month: the months come right after the item – the codes and other details move behind To date
+    // Expenses per month: the coding and the item first, then the months – bucket, source and the other details behind To date
     if (X && !XS) {
-      const front = new Set(['bk', 'code', 'desc']),
-        head = cols.slice(0, nL).filter((c) => front.has(c.k)),
-        tail = cols.slice(0, nL).filter((c) => !front.has(c.k));
+      // the coding stays in view: PKG, MNL, cost element, item, description and PO are frozen on the left
+      const front = ['pkg', 'mnl', 'ce', 'code', 'desc', 'po'],
+        lead0 = cols.slice(0, nL),
+        head = front.map((k) => lead0.find((c) => c.k === k)).filter(Boolean),
+        tail = lead0.filter((c) => !front.includes(c.k));
+      head.forEach((c) => {
+        c.fz = 1;
+        if (c.k === 'desc') c.w = 210;
+      });
+      lead0.forEach((c) => {
+        if (!front.includes(c.k)) c.fz = 0;
+      });
       if (tail.length) {
         const rest = cols.slice(nL);
         cols.length = 0;

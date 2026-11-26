@@ -666,6 +666,9 @@ function renderTable() {
     }
   });
   R.fzL = fzL;
+  // the last frozen column draws the edge the months scroll under
+  R.fzE = Object.keys(fzL).length > 1 ? Object.keys(fzL).reduce((a, b) => (fzL[b] > fzL[a] ? b : a)) : null;
+  const fzc = (k) => (fzL[k] !== undefined ? (k === R.fzE ? ' fz fze' : ' fz') : '');
   const fz = (c) => (fzL[c.k] !== undefined ? ` fz" style="left:${fzL[c.k]}px` : ''),
     HH = 27,
     nb = (D.bands || []).length;
@@ -705,20 +708,27 @@ function renderTable() {
     cols
       .map(
         (c) =>
-          `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzL[c.k] !== undefined ? 'fz' : ''}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.tip || c.l)}">${esc(c.l)}${c.tip ? '<span class="tip">ⓘ</span>' : ''}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}<span class="rz" data-rk="${esc(c.k)}" title="Drag to change the width · double-click to fit"></span></th>`
+          `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzc(c.k)}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.tip || c.l)}">${esc(c.l)}${c.tip ? '<span class="tip">ⓘ</span>' : ''}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}<span class="rz" data-rk="${esc(c.k)}" title="Drag to change the width · double-click to fit"></span></th>`
       )
       .join('') +
     '</tr>';
   const nc = cols.length + (D.sel ? 1 : 0),
     ft = D.foot ? D.foot(rows) : null;
   $('tf').innerHTML = ft
-    ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzL[c.k] !== undefined ? ' fz' : ''}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''}>${j === 0 ? 'TOTAL' : (ft[c.k] ?? '')}</td>`).join('')}</tr>`
+    ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzc(c.k)}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''}>${j === 0 ? 'TOTAL' : (ft[c.k] ?? '')}</td>`).join('')}</tr>`
     : '';
   {
     const tb = [];
     if (D.groups) {
       let groups = new Map();
       for (const r of rows) (groups.get(r.g) || groups.set(r.g, []).get(r.g)).push(r);
+      // a group label that covers just the frozen columns stays put (and solid) while the months scroll
+      const gFz = (span) => {
+        const n = span - (D.sel ? 1 : 0);
+        return n > 1 && cols.slice(0, n).every((c) => fzL[c.k] !== undefined) && Object.keys(fzL).length === n
+          ? ` class="fz fze" style="left:${D.sel ? 0 : fzL[cols[0].k]}px"`
+          : '';
+      };
       const spanOf = () => {
         if (D.gSpanK === 'auto') {
           const fn = cols.findIndex((x) => x.num);
@@ -747,7 +757,7 @@ function renderTable() {
               lab = D.fLabel(f, frs);
             tb.push(
               () =>
-                `<tr class="grp fam" data-g="F:${esc(f)}"><td colspan="${span}" dir="ltr"><span class="gl">${gck(D, rows, 'F:' + f)}<span class="tg">${ff ? '+' : '−'}</span>${lab}</span></td>${cols
+                `<tr class="grp fam" data-g="F:${esc(f)}"><td colspan="${span}" dir="ltr"${gFz(span)}><span class="gl">${gck(D, rows, 'F:' + f)}<span class="tg">${ff ? '+' : '−'}</span>${lab}</span></td>${cols
                   .slice(span - (D.sel ? 1 : 0))
                   .map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`)
                   .join('')}</tr>`
@@ -763,7 +773,7 @@ function renderTable() {
             lab = D.gLabel(g, rs);
           tb.push(
             () =>
-              `<tr class="grp${D.fam ? ' sub' : ''}" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"><span class="gl">${gck(D, rows, g)}<span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td>${cols
+              `<tr class="grp${D.fam ? ' sub' : ''}" data-g="${esc(g)}" style="--gc:${gc}"><td colspan="${span}" dir="ltr"${gFz(span)}><span class="gl">${gck(D, rows, g)}<span class="tg">${folded ? '+' : '−'}</span>${lab}</span></td>${cols
                 .slice(span - (D.sel ? 1 : 0))
                 .map((c) => `<td class="${c.num ? 'num' : ''}">${cells[c.k] ?? ''}</td>`)
                 .join('')}</tr>`
@@ -825,7 +835,7 @@ function rowHtml(D, r, gc) {
   const it = r.it,
     exc = r.i !== undefined ? !R.inc[r.i] : it && it.inc === 'No',
     k = it ? selKey(r) : '';
-  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}${PIN.shown.has(r) ? ' pin' : ''}${D.rowCls ? ' ' + D.rowCls(r) : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`;
+  return `<tr class="it${sel.has(k) ? ' sel' : ''}${exc ? ' exc' : ''}${PIN.shown.has(r) ? ' pin' : ''}${D.rowCls ? ' ' + D.rowCls(r) : ''}" data-k="${k}" style="--gc:${gc}">${D.sel ? `<td class="fz" style="left:0"><input type="checkbox" class="ck" ${sel.has(k) ? 'checked' : ''}></td>` : ''}${D.cols.map((c) => (R.fzL[c.k] !== undefined ? c.h(r).replace(/^<td( class="([^"]*)")?/, (m0, a1, cl) => `<td class="${cl || ''} fz${c.k === R.fzE ? ' fze' : ''}" style="left:${R.fzL[c.k]}px"`) : c.h(r))).join('')}</tr>`;
 }
 function renderVirtual() {
   // only the rows on screen are drawn (fast with thousands of rows)
