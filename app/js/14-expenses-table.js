@@ -3,9 +3,9 @@
 // every row is an item + the codes of its CJI3 lines, so a hand-coded line makes its own row (as in the Expenses sheet)
 const XPAGES = [
   ['sum', 'Summary', 'cumulative · bucket › item or PKG › bucket › item'],
-  ['month', 'Expenses per month', 'every item · qty · rate · amount · quarters, years'],
+  ['month', 'Per month', 'every item · qty · rate · amount · quarters, years'],
   ['ind', 'Indirect per month', 'indirect heads › cost elements, month by month'],
-  ['lines', 'SAP CJI3 transactions', 'every CJI3 line, flat, with its bucket and codes'],
+  ['lines', 'SAP CJI3 lines', 'every CJI3 line, flat, with its bucket and codes'],
 ];
 // an Expenses row opens its CJI3 lines here: the item's lines that carry the row's codes (the same amount as the row)
 const xpGoLines = (it, e) => {
@@ -48,13 +48,20 @@ const srcTag = (s) => `<span class="srct ${SRCC[s] || 'un'}">${esc(s)}</span>`;
 const xpSrcOk = (e) => !ST.xsrc || (ST.xsrc === 'cji3' ? e.src === 'CJI3' : e.src !== 'CJI3');
 const srcCol = { k: 'src', l: 'Source', w: 150, v: (r) => r.e.src, h: (r) => `<td>${srcTag(r.e.src)}</td>` };
 const xpSrcSeg = () =>
-  `<span class="help">Source</span><span class="seg">${[
+  `<label class="tsel">Source <select data-xsrcs="1">${[
     ['', 'All'],
     ['cji3', 'CJI3 only'],
     ['adj', 'Adjustments only'],
   ]
-    .map(([k, l]) => `<button data-xsrc="${k}" class="${(ST.xsrc || '') === k ? 'on' : ''}">${l}</button>`)
-    .join('')}</span>`;
+    .map(([k, l]) => `<option value="${k}" ${(ST.xsrc || '') === k ? 'selected' : ''}>${l}</option>`)
+    .join('')}</select></label>`;
+document.addEventListener('change', (e) => {
+  const s = e.target.closest('[data-xsrcs]');
+  if (s) {
+    ST.xsrc = s.value;
+    render();
+  }
+});
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-xsrc]');
   if (b) {
@@ -87,10 +94,23 @@ const xsSeg = () => {
       ['cm', 'Cut month', rep, rep],
       ['l3', 'Last 3 months', Math.max(1, rep - 2), rep],
     ];
-  return `<span class="help">Period</span><select id="xsF" title="From">${opt(f, 1)}</select><select id="xsT" title="To">${opt(t, 0)}</select><button data-xsm2="-1" title="One month back">◀</button><button data-xsm2="1" title="One month on">▶</button>
-    <span class="seg">${q.map(([k, l, a, b]) => `<button data-xsq="${a}:${b}" class="${f === a && t === b ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+  // one pick list: the quick choices, then each month; a range of your own shows From / To
+  const months = PER.slice(1, NP - 1).map((x, k) => [k + 1, k + 1, x]),
+    hit = q.find(([, , a, b]) => a === f && b === t) || (f === t && f >= 1 ? ['m'] : null),
+    custom = !hit || ST.xsC;
+  return `<label class="tsel">Period <select data-xsp="1">${q.map(([k, l, a, b]) => `<option value="${a}:${b}" ${f === a && t === b && !ST.xsC ? 'selected' : ''}>${l}</option>`).join('')}<optgroup label="One month">${months.map(([a, b, x]) => `<option value="${a}:${b}" ${f === a && t === b && !q.some((z) => z[2] === a && z[3] === b) && !ST.xsC ? 'selected' : ''}>${x}</option>`).join('')}</optgroup><option value="custom" ${custom ? 'selected' : ''}>From … to …</option></select></label>${custom ? `<select id="xsF" title="From">${opt(f, 1)}</select><select id="xsT" title="To">${opt(t, 0)}</select>` : ''}<button class="ar" data-xsm2="-1" title="One month back">◀</button><button class="ar" data-xsm2="1" title="One month on">▶</button><span hidden>${q.map(([k, l, a, b]) => `<button data-xsq="${a}:${b}">${l}</button>`).join('')}</span>`;
 };
 document.addEventListener('change', (e) => {
+  if (e.target.closest('[data-xsp]')) {
+    const v = e.target.value;
+    if (v === 'custom') ST.xsC = 1;
+    else {
+      ST.xsC = 0;
+      [ST.xsF, ST.xsT] = v.split(':').map(Number);
+    }
+    render();
+    return;
+  }
   if (e.target.id === 'xsF') {
     ST.xsF = +e.target.value;
     if ((ST.xsT ?? R.rep) < ST.xsF) ST.xsT = Math.max(1, ST.xsF);
@@ -115,6 +135,7 @@ document.addEventListener('click', (e) => {
   }
   const q = e.target.closest('[data-xsq]');
   if (q) {
+    ST.xsC = 0;
     const [a, b] = q.dataset.xsq.split(':').map(Number);
     ST.xsF = a;
     ST.xsT = b;

@@ -535,9 +535,9 @@ function renderTable() {
   }
   $('tools').classList.toggle('rpt', !!D.rpt);
   if (D.rpt)
+    // one toolbar row: fold / open · view · source · period · search · columns · ⓘ (the title is in the page header, Export in the command bar)
     $('tools').innerHTML =
-      `<div class="rr1">${D.rpt.title}${D.groups && !D.noGroupBtns ? '<span class="seg fold"><button id="bFold" title="Fold every group">− Collapse all</button><button id="bOpen" title="Open every group">+ Expand all</button></span>' : ''}${D.rpt.lead || ''}<span class="help">${D.rpt.hint || ''}</span></div>` +
-      `<div class="rr2"><input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}">${D.status ? '<span class="seg">' + ['All', 'Not coded', 'Coded'].map((s2) => `<button data-st="${s2}" class="${S0.st === s2 ? 'on' : ''}">${s2}</button>`).join('') + '</span>' : ''}${D.rpt.tools || ''}<span class="sp"></span><button id="bClr" class="clr">✕ Clear filters</button>${D.bands ? '' : '<button id="bCols" title="Show or hide columns">Columns ▾</button>'}<button id="bFit" title="Fit every column to its content">↔ Fit</button><span class="help" id="cnt"></span>${xpExport()}</div>`;
+      `<div class="rr2">${D.groups && !D.noGroupBtns ? '<span class="seg fold"><button id="bFold" title="Fold every group">⊟</button><button id="bOpen" title="Open every group">⊞</button></span>' : ''}${D.rpt.lead || ''}${D.status ? '<span class="seg">' + ['All', 'Not coded', 'Coded'].map((s2) => `<button data-st="${s2}" class="${S0.st === s2 ? 'on' : ''}">${s2}</button>`).join('') + '</span>' : ''}${D.rpt.tools || ''}<span class="rgt"><input type="search" id="q" placeholder="Search…  ( / )" value="${esc(S0.q)}"><button id="bClr" class="clr">✕ Clear filters</button>${D.bands ? '' : '<button id="bCols" title="Show or hide columns">Columns ▾</button>'}<button id="bFit" title="Fit every column to its content">↔</button>${D.rpt.hint ? `<span class="rinfo" title="${esc(String(D.rpt.hint).replace(/<[^>]+>/g, ''))}">ⓘ</span>` : ''}<span class="help" id="cnt"></span></span><span hidden>${xpExport()}</span></div>`;
   else if (CODM) {
     // the coding desk: bucket · To code / Coded / All · Items / Lines · search
     const ln = ST.tab !== 'cod',

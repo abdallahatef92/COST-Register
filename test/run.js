@@ -541,14 +541,14 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           )),
         String(w0)
       );
-      await p7.click('#bFold');
+      await p7.click('#bNavFold');
       await p7.waitForTimeout(300);
       ok(
         '☰ folds it to a rail (icon + word), the page gets the width',
         (await p7.$eval('#nav', (e) => e.getBoundingClientRect().width)) < 90 &&
           (await p7.$eval('#mainrow', (e) => e.getBoundingClientRect().left)) < 90
       );
-      await p7.click('#bFold');
+      await p7.click('#bNavFold');
       await p7.waitForTimeout(300);
       ok('…and opens it again', (await p7.$eval('#nav', (e) => e.getBoundingClientRect().width)) > 200);
       // Cost flow: the bands (plus the credits that cannot be drawn) are the cost to date
@@ -729,7 +729,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         '1 Summary opens first, compact (every bucket folded)',
         await p8.evaluate(
           () =>
-            /Summary/.test(document.querySelector('#tools .xpt').textContent) &&
+            /Summary/.test(document.getElementById('hpage').textContent) &&
             document.querySelectorAll('#tb tr.it').length === 0 &&
             document.querySelectorAll('#tb tr.grp').length >= 5
         )
@@ -847,7 +847,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ok('Quarters fold the months', await p8.$$eval('#th th', (x) => x.some((e) => /^Q\d-\d\d total/.test(e.textContent.trim()))));
       await p8.click('[data-pv="Months"]');
       await p8.waitForTimeout(600);
-      const [dx] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]);
+      const [dx] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bExport')]);
       const fx = path.join(OUT, 'expenses.xlsx');
       await dx.saveAs(fx);
       const XL = require('xlsx'),
@@ -945,7 +945,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p8.waitForTimeout(600);
       }
       {
-        const [di] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]);
+        const [di] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bExport')]);
         const fi = path.join(OUT, 'indirect.xlsx');
         await di.saveAs(fi);
         const ai = XL.utils.sheet_to_json(XL.readFile(fi).Sheets[XL.readFile(fi).SheetNames[0]], { header: 1, defval: '' }),
@@ -1073,7 +1073,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p8.click('#side [data-sv="reg"]');
         await p8.waitForTimeout(800);
         ok('Reports › PO register', await p8.evaluate(() => __ST.sub === 'reg' && document.querySelectorAll('#tb tr.it').length > 5));
-        const [dr] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bXpX')]);
+        const [dr] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bExport')]);
         const frg = path.join(OUT, 'po_register.xlsx');
         await dr.saveAs(frg);
         const wr = XL.readFile(frg);
@@ -1506,7 +1506,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       eq("…VAT in lines add up to the footer's VAT in", r2(g.vat), r2(g.vatIn), 1);
       ok('…grouped by kind (+ / −)', await q.evaluate(() => R.D.groups && new Set(R.rows.map((r) => r.g)).size >= 1));
       {
-        const [d] = await Promise.all([q.waitForEvent('download', { timeout: 120000 }), q.click('#bXpX')]);
+        const [d] = await Promise.all([q.waitForEvent('download', { timeout: 120000 }), q.click('#bExport')]);
         const f = path.join(OUT, 'adjustment_lines.xlsx');
         await d.saveAs(f);
         ok('…exports to Excel', require('xlsx').readFile(f).SheetNames[0] === 'Adjustment lines');
@@ -1543,7 +1543,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await q.click('#side [data-xp="sum"]');
       await q.waitForTimeout(800);
       eq('Summary (To date): the total is To date', +String((await tot()).cu).replace(/,/g, ''), r2(await q.evaluate(() => R.toDate)), 1);
-      await q.click('[data-xsrc="adj"]');
+      await q.selectOption('[data-xsrcs]', 'adj');
       await q.waitForTimeout(600);
       ok(
         'Source › Adjustments only: VAT in and owner material rows, no CJI3 rows',
@@ -1555,9 +1555,9 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         r2(await q.evaluate(() => R.vatIn + R.ownIn + R.unsIn)),
         2
       );
-      await q.click('[data-xsrc=""]');
+      await q.selectOption('[data-xsrcs]', '');
       await q.waitForTimeout(400);
-      await q.click('[data-xsq]:nth-child(3)');
+      await q.$eval('[data-xsq]:nth-child(3)', (b) => b.click());
       await q.waitForTimeout(700);
       eq(
         'period › Cut month: the cumulative is the cut month',

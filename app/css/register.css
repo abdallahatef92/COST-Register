@@ -575,3 +575,13 @@ body.navfold #nav button.nlk .tx{white-space:normal}
 .ctabs button b{font-size:12.5px !important;font-weight:600 !important} .ctabs button small,.ctabs button span:not(b){display:none !important}
 .ctabs button.on{background:#14254A !important} .ctabs button.on b{color:#fff !important}
 .st0 .sthd{display:flex;align-items:center;gap:14px}.st0 .sthd img{height:56px}
+/* report toolbar: one row */
+#tools.rpt .rr2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#tools.rpt .tsel{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#6B7280;font-weight:600}
+#tools.rpt .tsel select,#tools.rpt #xsF,#tools.rpt #xsT{font-size:12.5px;border:1px solid #C9D3E3;border-radius:7px;padding:3px 6px;color:#1F2937;font-weight:500}
+#tools.rpt .ar{padding:2px 7px;font-size:11px}
+#tools.rpt .seg.fold button{padding:2px 8px;font-size:14px}
+#tools.rpt .rinfo{display:inline-flex;width:22px;height:22px;border-radius:50%;border:1px solid #C9D3E3;align-items:center;justify-content:center;color:#6B7280;cursor:help;font-size:12px}
+#tools.rpt .rr2{flex-wrap:nowrap} #tools.rpt #q{width:170px;min-width:120px} #tools.rpt .help#cnt{white-space:nowrap}
+#tools.rpt .rr2{flex-wrap:wrap;row-gap:6px} #tools.rpt button,#tools.rpt .seg button{white-space:nowrap}
+#tools.rpt .rgt{display:inline-flex;align-items:center;gap:8px;margin-left:auto;white-space:nowrap}

@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.15",
+    "n": [
+      "Expenses: one title in the page header (Expenses · Summary, to the cut), one toolbar row, one ⇩ Export to Excel in the command bar",
+      "Period and Source are pick lists; the help line is behind ⓘ; fold / open all are ⊟ ⊞ at the start of the toolbar"
+    ]
+  },
+  {
     "v": "5.14",
     "n": [
       "New menu: MONTH CLOSE (1 Update · 2 Code · 3 Decide · 4 Forecast, each with a badge) · REPORTS · SETTINGS – always with words; ☰ folds it to a thin rail for more table width",

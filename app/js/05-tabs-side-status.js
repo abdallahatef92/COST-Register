@@ -86,7 +86,7 @@ try {
 }
 const navFold = () => document.body.classList.toggle('navfold', NAVFOLD);
 navFold();
-$('bFold').onclick = () => {
+$('bNavFold').onclick = () => {
   NAVFOLD = !NAVFOLD;
   try {
     localStorage.setItem('cr-navfold', NAVFOLD ? '1' : '0');
@@ -195,7 +195,8 @@ function renderProg() {
     stepName = n >= 0 ? n + 1 + ' ' + SECS.find((x) => x[0] === sec)[1] : '',
     grp = n >= 0 ? 'Month close' : ['rul', 'codes'].includes(sec) ? 'Settings' : 'Reports';
   $('hgrp').textContent = grp;
-  $('hpage').textContent = n >= 0 ? stepName : pgName() || (SECS.find((x) => x[0] === sec) || [])[1] || '';
+  const xpn = ST.tab === 'xpm' ? (XPAGES.find((x) => x[0] === xpPage()) || XPAGES[0])[1] : '';
+  $('hpage').textContent = n >= 0 ? stepName : (pgName() || (SECS.find((x) => x[0] === sec) || [])[1] || '') + (xpn ? ' · ' + xpn : '');
   // the page header: title, what it is for, the key figures of a step
   const kp = (l, v, cls) => `<div><span>${l}</span><b class="${cls || ''}">${v}</b></div>`,
     ok = Math.abs(R.diff) < 0.01,
@@ -237,7 +238,13 @@ function renderProg() {
         kp('VAC', fmtM(t.vac), t.vac < -0.5 ? 'r' : 'g');
     } else fig = kp('Cost report', 'not read yet', 'w');
   }
-  const line = PGLINE[n >= 0 ? sec : ST.tab] || (ST.tab === 'sub' ? 'subcontractor POs, packages and rates' : '');
+  const cd = new Date(String(ST.cut) + 'T00:00:00'),
+    cutTxt = isNaN(cd) ? '' : ' · to ' + cd.getDate() + ' ' + MON[cd.getMonth()] + ' ' + cd.getFullYear(),
+    line =
+      (xpn
+        ? (XPAGES.find((x) => x[0] === xpPage()) || [])[2] || PGLINE.xpm
+        : PGLINE[n >= 0 ? sec : ST.tab] || (ST.tab === 'sub' ? 'subcontractor POs, packages and rates' : '')) +
+      (n < 0 && ['xpm', 'sum', 'psum', 'cinv', 'gl', 'wbs', 'flow', 'drv'].includes(ST.tab) ? cutTxt : '');
   $('phd').innerHTML =
     `<div class="r1"><h2>${esc(n >= 0 ? stepName : $('hpage').textContent)}</h2><span>${esc(line)}</span></div>${fig ? `<div class="kp">${fig}</div>` : ''}`;
   // ‹ back · Next › in the command bar on a step
@@ -729,9 +736,9 @@ function renderSide() {
         `data-gt="xpm" data-xp="${k}"`,
         ST.tab === 'xpm' && xpPage() === k,
         PAL[n],
-        n + 1 + '  ' + l,
+        l,
         '',
-        d,
+        undefined,
         '',
         undefined,
         String(n + 1),
@@ -1022,7 +1029,7 @@ function renderGuide() {
 function render() {
   {
     const rp = ST.tab === 'xpm' || ST.tab === 'own' || ST.tab === 'adjl' || (ST.tab === 'sub' && ST.sub === 'reg');
-    $('bExport').innerHTML = rp ? '⇩ Export this report' : '⇩ Export Excel';
+    $('bExport').innerHTML = '⇩ Export to Excel';
     $('bExport').title = rp
       ? 'This report only, as on screen – as an Excel file (Shift+click: the full register)'
       : 'Light Excel report: values, formatted, cut date as now';
