@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.16",
+    "n": [
+      "Expenses opens on Per month – the Summary tab is gone (the Summary report shows the month at a glance)",
+      "Per month puts the months first: Bucket · Item · Description, then each month, the cut month highlighted, To date – PKG, MNL, cost element, source and the rest come after"
+    ]
+  },
+  {
     "v": "5.15",
     "n": [
       "Expenses: one title in the page header (Expenses · Summary, to the cut), one toolbar row, one ⇩ Export to Excel in the command bar",

@@ -531,6 +531,19 @@ function pageDef() {
       mr.push({ l: sl.label, span: subs.length, cls: sl.idx.includes(rep) ? 'cutb' : '' });
     });
     [yr, qr, mr].forEach((row) => row.push({ l: mode === 'All' ? 'To date' : '', span: subs.length, cls: 'blank' }));
+    // Expenses per month: the months come right after the item – the codes and other details move behind To date
+    if (X && !XS) {
+      const front = new Set(['bk', 'code', 'desc']),
+        head = cols.slice(0, nL).filter((c) => front.has(c.k)),
+        tail = cols.slice(0, nL).filter((c) => !front.has(c.k));
+      if (tail.length) {
+        const rest = cols.slice(nL);
+        cols.length = 0;
+        cols.push(...head, ...rest, ...tail);
+        mr[0].span = head.length;
+        mr.push({ l: 'details', span: tail.length, cls: 'blank' });
+      }
+    }
     if (X) {
       bands.length = 0;
       if (mode === 'All') bands.push(XS ? xpSumBand(nL, subs) : mr);

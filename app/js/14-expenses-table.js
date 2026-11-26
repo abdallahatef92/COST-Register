@@ -2,7 +2,6 @@
 // 1 Summary – cumulative, compact: bucket › item (or PKG › bucket › item)   2 Expenses per month   3 Indirect per month
 // every row is an item + the codes of its CJI3 lines, so a hand-coded line makes its own row (as in the Expenses sheet)
 const XPAGES = [
-  ['sum', 'Summary', 'cumulative · bucket › item or PKG › bucket › item'],
   ['month', 'Per month', 'every item · qty · rate · amount · quarters, years'],
   ['ind', 'Indirect per month', 'indirect heads › cost elements, month by month'],
   ['lines', 'SAP CJI3 lines', 'every CJI3 line, flat, with its bucket and codes'],
@@ -39,7 +38,8 @@ document.addEventListener('click', (e) => {
     render();
   }
 });
-const xpPage = () => ST.xpPage || 'sum';
+// Expenses opens on Per month (the Summary tab is gone – the Summary report has the month at a glance)
+const xpPage = () => (!ST.xpPage || ST.xpPage === 'sum' ? 'month' : ST.xpPage);
 // the source of an Expenses row: CJI3 (pure CJI3 amount) or an adjustment (its own row, in its month) – filter All / CJI3 only / Adjustments only
 const SRCS = ['CJI3', 'VAT in', 'Owner material', 'Order not yet settled', 'Certificate not in CJI3'],
   srcRank = (s) => SRCS.indexOf(s) + 1 || 9;

@@ -710,12 +710,11 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       );
       await p8.evaluate(() => __GO('xp'));
       await p8.waitForTimeout(1200);
-      eq('the side list holds the four pages', await p8.$$eval('#side [data-xp]', (x) => x.map((e) => e.dataset.xp)), [
-        'sum',
-        'month',
-        'ind',
-        'lines',
-      ]);
+      eq(
+        'the tabs: Per month, Indirect per month, SAP CJI3 lines (no Summary)',
+        await p8.$$eval('#side [data-xp]', (x) => x.map((e) => e.dataset.xp)),
+        ['month', 'ind', 'lines']
+      );
       const nIt = await p8.evaluate(() => [...R.exp.values()].filter((e) => e.p.some((v) => Math.abs(v) >= 0.005)).length),
         td8 = await p8.evaluate(() => R.toDate),
         tm8 = await p8.evaluate(() => R.thisM);
@@ -724,45 +723,25 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           const c = R.D.cols.find((x) => x.k === k2);
           return R.rows.reduce((t, r) => t + c.v(r), 0);
         }, k);
-      // 1 Summary
+      // Expenses opens on Per month: the months right after Item and Description, the codes behind To date
       ok(
-        '1 Summary opens first, compact (every bucket folded)',
+        'Expenses opens on Per month, folded at first',
         await p8.evaluate(
           () =>
-            /Summary/.test(document.getElementById('hpage').textContent) &&
+            /Per month/.test(document.getElementById('hpage').textContent) &&
             document.querySelectorAll('#tb tr.it').length === 0 &&
             document.querySelectorAll('#tb tr.grp').length >= 5
         )
       );
       ok(
-        '…Item, PKG, MNL, Cost element, Source, Qty, then the amounts',
-        await p8.$$eval('#th tr:last-child th', (x) => {
-          const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim());
-          return (
-            t[0] === 'Item' &&
-            t[1] === 'PKG' &&
-            t[2] === 'MNL' &&
-            t[3] === 'Cost element' &&
-            t[4] === 'Source' &&
-            /Material group/.test(t[5]) &&
-            /^Qty/.test(t[6]) &&
-            t.some((v) => /^Previous/.test(v)) &&
-            t.some((v) => /^This month/.test(v)) &&
-            t.some((v) => /^Cumulative/.test(v))
-          );
+        '…Bucket, Item, Description, then the months; PKG, MNL, cost element after To date',
+        await p8.evaluate(() => {
+          const k = R.D.cols.map((c) => c.k),
+            m = k.findIndex((x) => /^s\d/.test(x)),
+            td = k.findIndex((x) => /^td/.test(x));
+          return k[0] === 'bk' && k[1] === 'code' && k[2] === 'desc' && m === 3 && k.indexOf('pkg') > td && k.indexOf('ce') > td;
         })
       );
-      {
-        const pc = await ftot('pc'),
-          tm = await ftot('tm'),
-          cu = await ftot('cu');
-        ok(
-          'previous cumulative + this month = cumulative = cost to date',
-          Math.abs(pc + tm - cu) < 1 && Math.abs(cu - td8) < 2 && Math.abs(tm - tm8) < 2,
-          [pc, tm, cu, td8, tm8].join(' · ')
-        );
-      }
-      eq('every item + code combination is a row', await p8.evaluate(() => R.rows.length), nIt, 0);
       await p8.click('#bOpen');
       await p8.waitForTimeout(600);
       ok('Expand all opens the items', await p8.$$eval('#tb tr.it', (x) => x.length > 5));
@@ -775,8 +754,8 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       await p8.click('#side [data-xp="month"]');
       await p8.waitForTimeout(1000);
       ok(
-        '2 Expenses per month: grouped by bucket like Summary (+ / −), folded at first',
-        await p8.evaluate(() => document.querySelectorAll('#tb tr.grp').length >= 5 && document.querySelectorAll('#tb tr.it').length === 0)
+        'Per month: grouped by bucket (+ / −)',
+        await p8.evaluate(() => new Set(R.rows.map((r) => r.g)).size >= 5 && document.querySelectorAll('#tb tr.grp').length > 0)
       );
       ok(
         '…a Material group / Type of works column',
@@ -801,17 +780,16 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p8.$eval('#cnt', (e) => e.textContent)
       );
       ok(
-        '…bucket, PKG, MNL, Cost element, item, then the months',
+        '…Bucket, Item, Description, then the months (Qty · Rate · Amount); the codes after',
         await p8.$$eval('#th tr:last-child th', (x) => {
           const t = x.map((e) => e.textContent.replace(/[ⓘ▲▼▾\s]+$/g, '').trim()).filter(Boolean);
           return (
             t[0] === 'Bucket' &&
-            /^PKG/.test(t[1]) &&
-            /^MNL/.test(t[2]) &&
-            /^Cost element/.test(t[3]) &&
-            t[4] === 'Source' &&
-            t[5] === 'Item' &&
-            t.includes('Qty') &&
+            t[1] === 'Item' &&
+            t[2] === 'Description' &&
+            t[3] === 'Qty' &&
+            t.includes('Source') &&
+            t.some((v) => /^PKG/.test(v)) &&
             t.includes('Rate')
           );
         })
@@ -819,8 +797,8 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       ok('it is a report: no code boxes', await p8.$$eval('#tb input[data-f]', (x) => x.length === 0));
       {
         const tot = await p8.evaluate(() => {
-          const c = [...document.querySelectorAll('#tf td')];
-          return +c[c.length - 1].textContent.replace(/,/g, '');
+          const c = R.D.cols.find((x) => x.k === 'tdAmount');
+          return R.rows.reduce((t, r) => t + c.v(r), 0);
         });
         ok('the To date total is the cost to date', Math.abs(tot - td8) <= 2, String(tot));
       }
@@ -999,10 +977,10 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await lp.press('Tab');
         await p8.waitForTimeout(500);
         await p8.evaluate(() => __GO('xp'));
-        await p8.click('#side [data-xp="sum"]');
+        await p8.click('#side [data-xp="month"]');
         await p8.waitForTimeout(800);
         eq(
-          "Summary respects a hand-coded line: its own row with the line's code",
+          "Per month respects a hand-coded line: its own row with the line's code",
           await p8.evaluate(
             (x) =>
               R.rows
@@ -1019,12 +997,19 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p8.waitForTimeout(700);
         await p8.click('#bOpen');
         await p8.waitForTimeout(500);
-        const pk = await p8.$$eval('#tb tr.it', (x) => x.map((tr) => tr.cells[1].textContent.replace(/[✎\s]/g, '')).sort());
+        const pk = await p8.evaluate(
+          (x) =>
+            R.rows
+              .filter((r) => r.e.b === x.b && r.e.ii === x.ii)
+              .map((r) => r.e.pkg)
+              .sort(),
+          it0
+        );
         eq('Expenses per month: the same two rows', pk, ['T31', 'T32']);
-        const t2 = await p8.evaluate(() => {
-            const c = [...document.querySelectorAll('#tf td')];
-            return +c[c.length - 1].textContent.replace(/,/g, '');
-          }),
+        const t2 = await p8.evaluate((x) => {
+            const c = R.D.cols.find((y) => y.k === 'tdAmount');
+            return R.rows.filter((r) => r.e.b === x.b && r.e.ii === x.ii).reduce((t, r) => t + c.v(r), 0);
+          }, it0),
           w2 = await p8.evaluate((x) => __BK[x.b].items[x.ii].td, it0);
         ok('…and the two rows add up to the item', Math.abs(t2 - w2) <= 1, t2 + ' vs ' + w2);
       }
@@ -1537,12 +1522,17 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           return R.rows.length === n && Math.abs(+R.D.foot(R.rows).amt.replace(/,/g, '') - t) < 1;
         })
       );
-      // Expenses › Summary: Source column and filter, period
+      // Expenses › Per month: Source filter
       await q.evaluate(() => __GO('xp'));
       await q.waitForTimeout(300);
-      await q.click('#side [data-xp="sum"]');
+      await q.click('#side [data-xp="month"]');
       await q.waitForTimeout(800);
-      eq('Summary (To date): the total is To date', +String((await tot()).cu).replace(/,/g, ''), r2(await q.evaluate(() => R.toDate)), 1);
+      const tdSum = () =>
+        q.evaluate(() => {
+          const c = R.D.cols.find((x) => x.k === 'tdAmount');
+          return R.rows.reduce((t, r) => t + c.v(r), 0);
+        });
+      eq('Per month: the To date total is To date', r2(await tdSum()), r2(await q.evaluate(() => R.toDate)), 1);
       await q.selectOption('[data-xsrcs]', 'adj');
       await q.waitForTimeout(600);
       ok(
@@ -1551,26 +1541,12 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       );
       eq(
         '…their total = VAT in + owner material in (+ what is included from not yet in CJI3)',
-        +String((await tot()).cu).replace(/,/g, ''),
+        r2(await tdSum()),
         r2(await q.evaluate(() => R.vatIn + R.ownIn + R.unsIn)),
         2
       );
       await q.selectOption('[data-xsrcs]', '');
       await q.waitForTimeout(400);
-      await q.$eval('[data-xsq]:nth-child(3)', (b) => b.click());
-      await q.waitForTimeout(700);
-      eq(
-        'period › Cut month: the cumulative is the cut month',
-        +String((await tot()).cu).replace(/,/g, ''),
-        r2(await q.evaluate(() => R.thisM)),
-        1
-      );
-      await q.click('[data-xsm2="-1"]');
-      await q.waitForTimeout(600);
-      ok(
-        '◀ moves the period one month back',
-        await q.evaluate(() => /This month · /.test(document.getElementById('th').textContent) && __ST.xsT === R.rep - 1)
-      );
       eq('difference stays 0', await q.evaluate(() => R.diff), 0);
       await c12.close();
     }

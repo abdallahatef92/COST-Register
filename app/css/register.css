@@ -585,3 +585,8 @@ body.navfold #nav button.nlk .tx{white-space:normal}
 #tools.rpt .rr2{flex-wrap:nowrap} #tools.rpt #q{width:170px;min-width:120px} #tools.rpt .help#cnt{white-space:nowrap}
 #tools.rpt .rr2{flex-wrap:wrap;row-gap:6px} #tools.rpt button,#tools.rpt .seg button{white-space:nowrap}
 #tools.rpt .rgt{display:inline-flex;align-items:center;gap:8px;margin-left:auto;white-space:nowrap}
+/* Expenses per month: the months stand out */
+#pg-tbl #th th.mb,#pg-tbl #th tr:first-child th:not(.blank){font-size:13px;color:#111827}
+#pg-tbl #th th.cut,#pg-tbl #th th.cutb{background:#FFF4D6 !important;color:#8A5A00 !important;font-weight:800}
+#pg-tbl #tb td.mb{box-shadow:inset 1px 0 0 #C9D3E3}
+#pg-tbl #tb td.cutc{background:#FFFBEB}
