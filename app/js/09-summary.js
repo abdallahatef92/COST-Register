@@ -67,17 +67,19 @@ function renderSummary() {
     H = 190,
     pad = 40,
     mxT = Math.max(1, ...ks.map((k) => R.bkP.reduce((x, a) => x + Math.max(0, a[k]), 0))) * 1.08,
-    bw = ((W - pad - 10) / ks.length) * 0.66;
+    slot = (W - pad - 10) / ks.length,
+    bw = Math.min(slot * 0.6, 56); // a slim bar, whatever the number of months
   let svg = `<svg viewBox="0 0 ${W} ${H + 24}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">`;
   for (let g = 0; g <= 4; g++) {
     const y = H - ((H - 14) * g) / 4;
     svg += `<line x1="${pad}" x2="${W}" y1="${y}" y2="${y}" stroke="#EEF0F4"/><text x="${pad - 5}" y="${y + 4}" font-size="11" fill="#6b7280" text-anchor="end">${Math.round((mxT * g) / 4 / 1e6)}M</text>`;
   }
   ks.forEach((k, j) => {
-    const x = pad + 8 + (j * (W - pad - 10)) / ks.length;
+    const x = pad + 4 + j * slot + (slot - bw) / 2;
     let y = H;
     // the cut month: an amber band behind its bar (the same amber as Expenses · Per month)
-    if (k === rep) svg += `<rect x="${x - bw * 0.22}" y="0" width="${bw * 1.44}" height="${H + 22}" rx="4" fill="#FFF4D6"/>`;
+    if (k === rep)
+      svg += `<rect x="${x - Math.min(slot * 0.18, 22)}" y="0" width="${bw + 2 * Math.min(slot * 0.18, 22)}" height="${H + 22}" rx="4" fill="#FFF4D6"/>`;
     svg += `<g class="smo" data-gom="${k}" style="cursor:pointer">`;
     order.forEach((bi) => {
       const v = Math.max(0, R.bkP[bi][k]);
