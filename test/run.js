@@ -2028,13 +2028,27 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     );
     ok(
       '…its lines wait for the next build (rebuild bar)',
-      await q.$eval('#rul', (e) => /wait for your GL changes|waits for your GL changes/.test(e.textContent))
+      await q.$eval('#rul', (e) => /wait for your changes|waits for your changes/.test(e.textContent))
     );
     const base = await q.evaluate((g) => document.querySelector(`[data-mrgb="${g}"]`).title, pick.g);
     const back = (base.match(/built-in: (.*)$/) || [])[1];
     await q.selectOption(`[data-mrgb="${pick.g}"]`, back);
     await q.waitForTimeout(500);
     ok('…back to the built-in bucket: your rule is gone', await q.evaluate((g) => !__ST.rules.some((r) => r.ce === g), pick.g), back);
+    await q.click('[data-mrt="d"]');
+    await q.waitForTimeout(400);
+    const dt = await q.$eval('#rul [data-mrdb]', (e) => e.dataset.mrdb);
+    await q.selectOption(`[data-mrdb="${dt}"]`, 'G&A');
+    await q.waitForTimeout(500);
+    ok(
+      'Document types: a bucket box is kept as your rule (document type → bucket), the lines wait',
+      (await q.evaluate((t) => __ST.rules.some((r) => r.type === t && r.bucket === 'G&A' && !r.ce), dt)) &&
+        (await q.$eval('#rul', (e) => /for your changes/.test(e.textContent))),
+      dt
+    );
+    await q.selectOption(`[data-mrdb="${dt}"]`, '');
+    await q.waitForTimeout(500);
+    ok('…the first choice brings back the built-in rule', await q.evaluate((t) => !__ST.rules.some((r) => r.type === t), dt));
     await c17.close();
   }
   if (RUN('7o')) {

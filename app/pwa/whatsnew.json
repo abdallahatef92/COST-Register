@@ -1,5 +1,14 @@
 [
   {
+    "v": "5.17",
+    "n": [
+      "Mapping rules as lists: the GL list shows every GL with its bucket, G&A group and indirect code – change any of them in its box",
+      "Document types and WBS rules as tables you can change too; a bucket you change is kept as your rule and moves its lines at the next build (↻ Rebuild with your rules)",
+      "Indirect: each head in its colour with its cost elements, GLs and cost underneath · Special rules lists the few exceptions",
+      "Export to Excel starts with the GL list sheet"
+    ]
+  },
+  {
     "v": "5.162",
     "n": [
       "Page tabs: the amount sits beside the tab name, no more text running over it",

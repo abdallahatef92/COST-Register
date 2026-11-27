@@ -587,7 +587,6 @@ function mrTabGl() {
         (!fb || r.bucket === fb) &&
         (!fc || (fc === '(none)' ? mrIndB(r.bucket) && !r.ce : r.ce === fc))
     ),
-    wait = rows.reduce((s, r) => s + r.wait, 0),
     mine = rows.filter((r) => r.own).length,
     bOpt = (r) =>
       r.bucket.startsWith('Revenue')
@@ -609,11 +608,7 @@ function mrTabGl() {
           : '',
     sel = (k, v, list, all) =>
       `<select data-mrfl="${k}"><option value="">${all}</option>${list.map((x) => `<option${x === v ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
-  return `${
-    wait
-      ? `<div class="mrstale"><b>${wait.toLocaleString('en-US')} line${wait === 1 ? ' waits' : 's wait'} for your GL changes</b> – they move at the next build<span class="sp"></span><button class="pri" data-mra="apply">↻ Rebuild with your rules</button><span class="help">uses the SAP files in your data file · your codes are kept</span></div>`
-      : ''
-  }<div class="mrlv"><b>GL list</b><span>every GL in this CJI3 and the built-in ones · its bucket, G&amp;A group and indirect cost element · change them here – a bucket you change is kept as your rule</span></div>
+  return `<div class="mrlv"><b>GL list</b><span>every GL in this CJI3 and the built-in ones · its bucket, G&amp;A group and indirect cost element · change them here – a bucket you change is kept as your rule</span></div>
   <div class="mrflt"><input data-mrq placeholder="Search GL, name, code…" value="${esc(MRV.q || '')}">${sel('fb', fb, [...new Set(rows.map((r) => r.bucket))].filter(Boolean).sort(), 'Every bucket')}${sel('fc', fc, ['(none)', ...ces.filter((c) => rows.some((r) => r.ce === c))], 'Every indirect code')}<span class="help">${shown.length} of ${rows.length} GL${mine ? ` · <b>${mine} changed by you</b>` : ''}</span></div>
   <table class="mrtb mrgl"><thead><tr><th style="width:96px">GL</th><th>GL name</th><th style="width:220px">Bucket</th><th style="width:200px">G&amp;A group</th><th style="width:110px">Indirect code</th><th>Indirect name</th><th class="n" style="width:72px">Lines</th><th class="n" style="width:120px">Amount</th></tr></thead><tbody>${shown
     .map(
@@ -652,16 +647,24 @@ function mrTabDt() {
     e.a += x[2];
   });
   const f = (v) => (Math.abs(v) < 0.5 ? '-' : fmt(v)),
-    rows = [...per].sort((p, q) => (MR_DT[q[0]] ? 1 : 0) - (MR_DT[p[0]] ? 1 : 0) || q[1].n - p[1].n);
+    rows = [...per].sort((p, q) => (MR_DT[q[0]] ? 1 : 0) - (MR_DT[p[0]] ? 1 : 0) || q[1].n - p[1].n),
+    BKS = (META.bucketIds || BK.map((b) => b.id)).filter((b) => b !== 'Unclassified'),
+    own = (t) => ST.rules.find((r) => r.type === t && !r.ce && !r.cen && !r.wbs && r.bucket),
+    // the bucket box: built-in text as the first choice, or one of the buckets (kept as your rule: document type → bucket)
+    box = (t) => {
+      const u = own(t),
+        bi = MR_DT[t] ? MR_DT[t][1] : '→ the GL list decides';
+      return `<select data-mrdb="${esc(t)}" class="${u ? 'own' : ''}" title="${u ? 'changed by you – built-in: ' + esc(bi) : 'built-in'}"><option value="">${esc(bi)}</option>${BKS.map((b) => `<option${u && u.bucket === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
+    };
   return `<div class="mrlv"><b>Document types</b><span>checked first – a document type below decides the bucket; every other type goes by the GL list</span></div>
   <table class="mrtb mrgl"><thead><tr><th style="width:90px">Type</th><th style="width:220px">Meaning</th><th>Bucket</th><th class="n" style="width:90px">Lines</th><th class="n" style="width:130px">Amount</th></tr></thead><tbody>${rows
     .map(
       ([t, e]) =>
-        `<tr class="${MR_DT[t] ? 'dec' : ''}"><td><b>${esc(t)}</b></td><td>${esc(MR_DT[t] ? MR_DT[t][0] : '')}</td><td>${MR_DT[t] ? `<b>${esc(MR_DT[t][1])}</b>` : '<span class="help">→ the GL list decides</span>'}</td><td class="n"><a class="lk" data-mrdt="${esc(t)}">${e.n.toLocaleString('en-US')}</a></td><td class="n">${f(e.a)}</td></tr>`
+        `<tr class="${MR_DT[t] ? 'dec' : ''}${own(t) ? ' own' : ''}"><td><b>${esc(t)}</b></td><td>${esc(MR_DT[t] ? MR_DT[t][0] : '')}</td><td>${t === '(blank)' ? '<span class="help">→ the GL list decides</span>' : box(t)}</td><td class="n"><a class="lk" data-mrdt="${esc(t)}">${e.n.toLocaleString('en-US')}</a></td><td class="n">${f(e.a)}</td></tr>`
     )
     .join(
       ''
-    )}</tbody></table><div class="mrnote">Bold = the document type decides · a rule of yours with a document type (Your rules) comes before these</div>`;
+    )}</tbody></table><div class="mrnote">Change a bucket box to send every line of that document type to one bucket – kept as your rule (amber), checked first at the next build · pick the first choice to go back to the built-in</div>`;
 }
 // WBS rules: one WBS per line and what is assigned on it – built-in (… .IN-02-1 payroll) and yours
 function mrTabWbs() {
@@ -783,12 +786,26 @@ const MR_TABS = [
   ['i', 'Indirect', 'heads and cost elements'],
   ['y', 'Your rules', 'your own rules · settings'],
 ];
+// lines waiting for a change of yours (GL list, document types, WBS rules): they move at the next build
+function mrWaitBar() {
+  const own = ST.rules.filter((r) => r.bucket && (r.ce || r.cen || r.type || r.wbs));
+  if (!own.length) return '';
+  let n = 0;
+  for (let i = 0; i < N; i++) {
+    if (L.uns[i] || L.b[i] < 0) continue;
+    const u = own.find((r) => ruleMatch(r, i));
+    if (u && u.bucket !== BK[L.b[i]].id) n++;
+  }
+  return n
+    ? `<div class="mrstale"><b>${n.toLocaleString('en-US')} line${n === 1 ? ' waits' : 's wait'} for your changes</b> – they move at the next build<span class="sp"></span><button class="pri" data-mra="apply">↻ Rebuild with your rules</button><span class="help">uses the SAP files in your data file · your codes are kept</span></div>`
+    : '';
+}
 function renderRules() {
   const um = mapUnmapped(),
     t = MRV.tab,
     on = t === 'b' ? 's' : t;
   $('rul').innerHTML =
-    `<div class="mrpg"><div class="mrhd"><h2>Mapping rules</h2><span class="mrtabs">${MR_TABS.map(([k, l, d]) => `<button data-mrt="${k}" class="${on === k ? 'on' : ''}">${l}<small>${d}</small></button>`).join('')}</span><span class="sp"></span><span class="mrok ${um ? 'bad' : ''}">${um ? 'Lines without a bucket: ' + um.toLocaleString('en-US') : 'Unmapped lines: 0 ✓'}</span><button data-mra="xl" class="pri">⇩ Export to Excel</button></div>${mrStaleBar()}<div id="rulY"></div></div>`;
+    `<div class="mrpg"><div class="mrhd"><h2>Mapping rules</h2><span class="mrtabs">${MR_TABS.map(([k, l, d]) => `<button data-mrt="${k}" class="${on === k ? 'on' : ''}">${l}<small>${d}</small></button>`).join('')}</span><span class="sp"></span><span class="mrok ${um ? 'bad' : ''}">${um ? 'Lines without a bucket: ' + um.toLocaleString('en-US') : 'Unmapped lines: 0 ✓'}</span><button data-mra="xl" class="pri">⇩ Export to Excel</button></div>${mrStaleBar()}${t === 'y' ? '' : mrWaitBar()}<div id="rulY"></div></div>`;
   const F = { g: mrTabGl, d: mrTabDt, w: mrTabWbs, s: mrTabSp, b: mrTab1, i: mrTabInd }[t];
   if (F) $('rulY').innerHTML = F();
   else renderYourRules();
@@ -920,6 +937,17 @@ $('rul').addEventListener('change', (e) => {
   const gb = e.target.closest('[data-mrgb]');
   if (gb) {
     mrGlSet(gb.dataset.mrgb, gb.value, '');
+    return;
+  }
+  const db = e.target.closest('[data-mrdb]');
+  if (db) {
+    const t = db.dataset.mrdb;
+    ST.rules = ST.rules.filter((r) => !(r.type === t && !r.ce && !r.cen && !r.wbs));
+    if (db.value) ST.rules.unshift({ ce: '', cen: '', type: t, wbs: '', bucket: db.value, sub: '' });
+    persist();
+    MRV.c = null;
+    renderRules();
+    toast(db.value ? `Document type ${t} → ${db.value} – rebuild to move its lines` : `Document type ${t}: back to the built-in rule`);
     return;
   }
   const gg = e.target.closest('[data-mrgg]');
