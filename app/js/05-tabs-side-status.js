@@ -792,7 +792,7 @@ function renderSide() {
         'POs',
       ]);
   }
-  el.className = items.length ? 'tabs' : 'hid';
+  el.className = items.length ? 'tabs' + (sec === 'dash' ? ' nosub' : '') : 'hid';
   el.innerHTML = `<div class="ls">${items
     .filter((x) => x[0] !== 'sec')
     .map((x, k) => sdi(...x.slice(0, 8)) + (extra[k] || ''))

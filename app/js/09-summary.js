@@ -32,50 +32,39 @@ function renderSummary() {
     tA = allInc.reduce((x, y) => x + Math.abs(y.td), 0),
     cAll = tA ? Math.round((100 * allInc.filter((x) => statusOf(x) === 'Coded').reduce((x, y) => x + Math.abs(y.td), 0)) / tA) : 0,
     notTm = allInc.filter((x) => statusOf(x) !== 'Coded').reduce((x, y) => x + y.tm, 0);
-  const kpi = (l, v, sub, cls) => `<div class="sk ${cls || ''}"><span>${l}</span><b>${v}</b><i>${sub}</i></div>`,
-    ok = Math.abs(R.diff) < 0.01;
+  const kpi = (l, v, sub, cls) => `<div class="sk ${cls || ''}"><span>${l}</span><b>${v}</b><i>${sub}</i></div>`;
   const kpis = [
-    kpi('To date', fmt(R.toDate), `previous ${fM(R.toDate - T)} · pending ${fmt(R.pend)}`),
+    kpi('To date', fmt(R.toDate), `${fM(R.toDate - T)} before ${R.repLab}${R.pend > 0.5 ? ' · ' + fM(R.pend) + ' after the cut' : ''}`),
     kpi(
-      'This month · ' + R.repLab,
+      R.repLab,
       fmt(T),
-      P ? `<em class="${dm > 0 ? 'up' : 'dn'}">${dm > 0 ? '▲' : '▼'} ${Math.abs(dm).toFixed(1)}%</em> vs ${PER[pv]} (${fM(P)})` : '',
+      P ? `<em class="${dm > 0 ? 'up' : 'dn'}">${dm > 0 ? '▲' : '▼'} ${Math.abs(dm).toFixed(0)}%</em> vs ${PER[pv]} (${fM(P)})` : '',
       'hl'
     ),
     kpi(
       'Average month · last ' + last6.length,
       fmt(avg6),
-      `this month ${T >= avg6 ? 'above' : 'below'} average by ${Math.abs(avg6 ? (T / avg6 - 1) * 100 : 0).toFixed(0)}%`
+      `${R.repLab} ${T >= avg6 ? 'above' : 'below'} it by ${Math.abs(avg6 ? (T / avg6 - 1) * 100 : 0).toFixed(0)}%`
     ),
-    kpi('Net revenue to date', fmt(netRev), `revenue ${fM(R.rev4)} − deductions ${fM(R.cd)}`),
     kpi(
       'Revenue − cost to date',
       `<span class="${gap < 0 ? 'up' : 'dn'}">${fmt(gap)}</span>`,
-      netRev
-        ? `<em class="${gap < 0 ? 'up' : 'dn'}">cost ${gap < 0 ? 'above' : 'below'} net revenue by ${Math.abs((gap / netRev) * 100).toFixed(1)}%</em>`
-        : ''
-    ),
-    kpi(
-      'Difference to CJI3',
-      ok ? '<span class="dn">0.00 ✓</span>' : `<span class="up">${fmt2(R.diff)}</span>`,
-      `coded ${cAll}%${notTm ? ' · ' + fM(notTm) + ' of ' + R.repLab + ' still to code' : ''}`
+      `net revenue ${fM(netRev)} · cost ${fM(R.toDate)}`
     ),
   ].join('');
   // this month by bucket
-  const mx = Math.max(1, ...order.map((bi) => Math.abs(R.bkP[bi][rep] - (pv > 0 ? R.bkP[bi][pv] : 0))));
   const brow = (bi) => {
     const c = rep > 0 ? R.bkP[bi][rep] : 0,
       p = pv > 0 ? R.bkP[bi][pv] : 0,
       x = c - p,
-      w = ((Math.abs(x) / mx) * 50).toFixed(1),
       pc = codedPc(bi);
-    return `<tr><td><a class="lk" style="color:#1f2937;font-weight:500" data-gob="${bi}"><i class="sdot" style="background:${bkColor(bi)}"></i>${esc(sh(BK[bi]))}</a></td><td class="mut">${fmt(p)}</td><td class="dk" data-dk="${bi}|${rep}"><b>${fmt(c)}</b></td><td class="${x > 0.5 ? 'up' : x < -0.5 ? 'dn' : 'mut'}">${Math.abs(x) < 0.5 ? '-' : (x > 0 ? '+' : '−') + fmt(Math.abs(x))}${p > 0 && c > 0 && Math.abs(x) >= 0.5 ? (p < 0.05 * c ? ' <small>(new)</small>' : ` <small>(${x > 0 ? '+' : ''}${((x / p) * 100).toFixed(0)}%)</small>`) : ''}</td><td><div class="sdv"><span></span><i style="${x >= 0 ? `left:50%;width:${w}%;background:#C98B8B` : `right:50%;width:${w}%;background:#8DB596`}"></i></div></td><td class="dk" data-dk="${bi}|td">${fmt(tdB(bi))}</td><td class="mut">${R.toDate ? ((100 * tdB(bi)) / R.toDate).toFixed(1) : 0}%</td><td><div class="scb"><div><i style="width:${pc}%"></i></div>${pc}%</div></td></tr>`;
+    return `<tr><td><a class="lk" style="color:#1f2937;font-weight:500" data-gob="${bi}"><i class="sdot" style="background:${bkColor(bi)}"></i>${esc(sh(BK[bi]))}</a></td><td class="mut">${fmt(p)}</td><td class="dk" data-dk="${bi}|${rep}"><b>${fmt(c)}</b></td><td class="${x > 0.5 ? 'up' : x < -0.5 ? 'dn' : 'mut'}">${Math.abs(x) < 0.5 ? '-' : (x > 0 ? '+' : '−') + fmt(Math.abs(x))}${p > 0 && c > 0 && Math.abs(x) >= 0.5 ? (p < 0.05 * c ? ' <small>(new)</small>' : ` <small>(${x > 0 ? '+' : ''}${((x / p) * 100).toFixed(0)}%)</small>`) : ''}</td><td class="dk" data-dk="${bi}|td">${fmt(tdB(bi))}</td><td class="mut">${R.toDate ? ((100 * tdB(bi)) / R.toDate).toFixed(1) : 0}%</td><td><div class="scb"><div><i style="width:${pc}%"></i></div>${pc}%</div></td></tr>`;
   };
-  const btab = `<table class="st"><tr><th>Bucket</th><th>${pv > 0 ? PER[pv] : ''}</th><th>${R.repLab}</th><th>Change</th><th style="text-align:center">− change +</th><th>To date</th><th>Share</th><th>Coded</th></tr>${order.map(brow).join('')}<tr class="t"><td>Total</td><td>${fmt(P)}</td><td>${fmt(T)}</td><td class="${T - P > 0 ? 'up' : 'dn'}">${(T - P > 0 ? '+' : '−') + fmt(Math.abs(T - P))}</td><td></td><td>${fmt(R.toDate)}</td><td>100%</td><td>${cAll}%</td></tr></table>`;
+  const btab = `<table class="st"><tr><th>Bucket</th><th>${pv > 0 ? PER[pv] : ''}</th><th>${R.repLab}</th><th>Change</th><th>To date</th><th>Share</th><th>Coded</th></tr>${order.map(brow).join('')}<tr class="t"><td>Total</td><td>${fmt(P)}</td><td>${fmt(T)}</td><td class="${T - P > 0 ? 'up' : 'dn'}">${(T - P > 0 ? '+' : '−') + fmt(Math.abs(T - P))}</td><td>${fmt(R.toDate)}</td><td>100%</td><td>${cAll}%</td></tr></table>`;
   // chart: every bucket in its colour, 6-month average line
   const ks = PER.map((x, k) => k).filter((k) => k > 0 && k < NP - 1 && k <= (rep > 0 ? rep : NM)),
-    W = 600,
-    H = 196,
+    W = 1200,
+    H = 190,
     pad = 40,
     mxT = Math.max(1, ...ks.map((k) => R.bkP.reduce((x, a) => x + Math.max(0, a[k]), 0))) * 1.08,
     bw = ((W - pad - 10) / ks.length) * 0.66;
@@ -87,6 +76,9 @@ function renderSummary() {
   ks.forEach((k, j) => {
     const x = pad + 8 + (j * (W - pad - 10)) / ks.length;
     let y = H;
+    // the cut month: an amber band behind its bar (the same amber as Expenses · Per month)
+    if (k === rep) svg += `<rect x="${x - bw * 0.22}" y="0" width="${bw * 1.44}" height="${H + 22}" rx="4" fill="#FFF4D6"/>`;
+    svg += `<g class="smo" data-gom="${k}" style="cursor:pointer">`;
     order.forEach((bi) => {
       const v = Math.max(0, R.bkP[bi][k]);
       if (!v) return;
@@ -94,9 +86,8 @@ function renderSummary() {
       y -= hh;
       svg += `<rect x="${x}" y="${y}" width="${bw}" height="${hh}" fill="${bkColor(bi)}" stroke="#fff" stroke-width="0.6"><title>${PER[k]} · ${esc(BK[bi].id)}: ${fmt(v)}</title></rect>`;
     });
-    svg += `<text x="${x + bw / 2}" y="${H + 15}" font-size="11" text-anchor="middle" fill="${k === rep ? '#8A6D1F' : '#6b7280'}" font-weight="${k === rep ? 700 : 400}">${PER[k].replace('-', ' ')}</text>`;
-    if (k === rep)
-      svg += `<text x="${x + bw / 2}" y="${y - 6}" font-size="11.5" text-anchor="middle" font-weight="700" fill="#1B2A41">${fM(R.tot[k])}</text>`;
+    svg += `<text x="${x + bw / 2}" y="${H + 15}" font-size="12" text-anchor="middle" fill="${k === rep ? '#8A5A00' : '#4B5563'}" font-weight="${k === rep ? 800 : 500}">${PER[k].replace('-', ' ')}</text>`;
+    svg += `<text x="${x + bw / 2}" y="${y - 6}" font-size="${k === rep ? 12.5 : 11}" text-anchor="middle" font-weight="${k === rep ? 800 : 500}" fill="${k === rep ? '#1B2A41' : '#6B7280'}">${fM(R.tot[k])}</text></g>`;
   });
   const yA = H - ((H - 14) * avg6) / mxT;
   svg += `<line x1="${pad}" x2="${W}" y1="${yA}" y2="${yA}" stroke="#1F3864" stroke-dasharray="4 3"/></svg>`;
@@ -106,21 +97,18 @@ function renderSummary() {
       .map((bi) => `<small><i class="sdot" style="background:${bkColor(bi)}"></i>${esc(sh(BK[bi]))}</small>`)
       .join('') + `<small style="color:#1F3864">- - - ${last6.length}-month average ${fM(avg6)}</small>`;
   // cost drivers (the short list – the full list is Reports › Cost drivers)
-  const drv = sumDrivers(),
-    all = drv.flatMap((g) => g[2]),
-    sT = (a) => a.reduce((x, y) => x + y.td, 0);
-  const dtab = `<table class="st drv">${DV.head()}${drv.map(([bi, l, a]) => DV.gh(bi, l, a) + a.map((x) => DV.row(x)).join('')).join('')}${DV.tot(all, 'Total of these ' + all.length + ' drivers')}</table>`;
-  // reconciliation + needs attention
-  const rec = [
-    ['CJI3 cost', META.cost],
-    ['– To date (counted up to the cut date)', R.toDate],
-    ['– Pending (after the cut date)', R.pend],
-    ['– Excluded by you', R.excl],
-    ...(DEPI >= 0 ? [['– Depreciation excluded', R.depExc]] : []),
-    ['– Client deductions (with revenue)', R.cdAll],
-    ['+ VAT included', R.vatIn],
-    ...(HASUNS ? [['+ Included, not in CJI3 yet', R.unsIn]] : []),
-  ].filter((x, i) => i < 2 || Math.abs(x[1]) >= 0.005);
+  // the top 5 cost drivers (the full list: Cost drivers tab)
+  const top5 = sumDrivers()
+      .flatMap((g) => g[2])
+      .sort((a, b) => b.td - a.td)
+      .slice(0, 5),
+    dtab = `<table class="st drv5"><colgroup><col><col style="width:52px"><col style="width:84px"><col style="width:66px"><col style="width:84px"><col style="width:66px"></colgroup><tr><th>Driver</th><th style="text-align:center">Unit</th><th>${R.repLab}</th><th>vs avg</th><th style="text-align:center">Trend</th><th>To date</th></tr>${top5
+      .map((x) => {
+        const c = DV.calc(x);
+        return `<tr title="${esc(String(x.txt || '').slice(0, 200))}"><td><i class="sdot" style="background:${bkColor(x.bi)}"></i>${x.name}</td><td style="text-align:center">${x.amt ? '<span class="mut" style="font-size:11px">/ month</span>' : `<span class="u" style="background:${unitCol(x.u)}">${esc(x.u)}</span>`}</td><td>${c.cur ? `<b>${x.amt ? DV.fM(c.Lm.r) : DV.fr(c.Lm.r)}</b>` : '<span class="mut">none</span>'}</td><td class="${c.va === null ? 'mut' : DV.cl(c.va)}">${c.va === null ? '-' : DV.ar(c.va) + DV.pf(c.va)}</td><td>${DV.spk(x.s)}</td><td><b>${DV.fM(x.td)}</b></td></tr>`;
+      })
+      .join('')}</table>`;
+  // needs attention: one line on top, each point with its button
   let nPO = 0,
     nSug = 0;
   if (SUBI >= 0) {
@@ -161,25 +149,20 @@ function renderSummary() {
         ]
       : []),
   ];
-  const recH = `<table class="st rec">${rec.map(([l, v]) => `<tr><td>${l}</td><td>${fmt2(v)}</td></tr>`).join('')}<tr class="t ${ok ? 'okr' : 'bad'}"><td>Difference (must be 0)</td><td>${ok ? '0.00 ✓' : fmt2(R.diff)}</td></tr></table>`;
-  const attH =
-    att
-      .map(
-        ([ic, c, t, s, go, l]) =>
-          `<div class="sins"><span style="background:${c}">${ic}</span><div>${t}<small>${s}</small></div><a class="lk" data-gotab="${go}">${l} ›</a></div>`
-      )
-      .join('') || '<div class="help">Nothing – the month is ready.</div>';
-  $('sum').innerHTML = `<div class="sg"><div class="sks">${kpis}</div>
-   <div class="srow r1"><div class="sc"><div class="sct"><b>This month by bucket</b><small>${R.repLab} vs ${pv > 0 ? PER[pv] : '-'} · sorted by to date · click a bucket to code it · double-click a number for its items</small><span class="sp"></span><a class="lk" data-gotab="pm">Full month × bucket table › Per Month</a></div>${btab}</div>
-    <div class="sc"><div class="sct"><b>Cost per month</b><small>up to the cut date</small></div><div class="sleg">${leg}</div><div style="flex:1;min-height:0">${svg}</div></div></div>
-   <div class="srow r2"><div class="sc"><div class="sct"><b>Cost drivers</b><small>${all.length} drivers · <b style="color:#1B2A41">${R.toDate ? ((100 * sT(all)) / R.toDate).toFixed(0) : 0}% of the cost to date</b> · this month vs its 6-month average · ▲ red = dearer</small><span class="sp"></span><a class="lk" data-gotab="drv" style="font-weight:600">Full list – all buckets ›</a></div>${dtab}</div>
-    <div class="sc"><div class="sct"><b>Reconciliation to CJI3</b><small>CJI3 is the single source of truth</small></div>${recH}<div class="sct" style="margin-top:10px"><b>Needs attention</b></div>${attH}
-     <div class="sct" style="margin-top:10px"><b>Revenue</b><small>kept apart, to the cut date</small></div><table class="st rec"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr>${[
-       ...R.cdBy,
-     ]
-       .sort((x, y) => x[1] - y[1])
-       .map(([g, a]) => `<tr class="cdg"><td>· ${esc(g)}</td><td>${fmt(-a)}</td></tr>`)
-       .join('')}<tr class="t"><td>Net revenue</td><td>${fmt(netRev)}</td></tr></table></div></div></div>`;
+  const attL = att.length
+    ? `<div class="satt"><b>Needs attention</b>${att.map(([ic, c, t, s2, go, l]) => `<span class="sai" title="${esc(s2)}"><i style="background:${c}">${ic}</i>${t} <a class="lk" data-gotab="${go}">${l} ›</a></span>`).join('')}</div>`
+    : '';
+  const revH = `<table class="st rec"><tr><td>Revenue (4xxxxxxx)</td><td>${fmt(R.rev4)}</td></tr><tr><td>Client deductions</td><td>${fmt(-R.cd)}</td></tr>${[
+    ...R.cdBy,
+  ]
+    .sort((x, y) => x[1] - y[1])
+    .map(([g, a]) => `<tr class="cdg"><td>· ${esc(g)}</td><td>${fmt(-a)}</td></tr>`)
+    .join('')}<tr class="t"><td>Net revenue</td><td>${fmt(netRev)}</td></tr></table>`;
+  $('sum').innerHTML = `<div class="sg s2">${attL}<div class="sks">${kpis}</div>
+   <div class="sc sch"><div class="sct"><b>Cost per month</b><small>by bucket · up to the cut date · click a month to open it in Expenses · Per month</small></div><div class="sleg">${leg}</div><div style="flex:1;min-height:0">${svg}</div></div>
+   <div class="srow"><div class="sc"><div class="sct"><b>This month by bucket</b><small>${R.repLab} vs ${pv > 0 ? PER[pv] : '-'} · click a bucket to code it</small><span class="sp"></span><a class="lk" data-gotab="pm">Per month ›</a></div>${btab}</div>
+    <div class="sc"><div class="sct"><b>Top 5 cost drivers</b><small>this month vs its 6-month average · ▲ red = dearer</small><span class="sp"></span><a class="lk" data-gotab="drv" style="font-weight:600">All drivers ›</a></div>${dtab}
+     <div class="sct" style="margin-top:12px"><b>Revenue</b><small>kept apart, to the cut date</small></div>${revH}</div></div></div>`;
   $('sum')
     .querySelectorAll('[data-gotab]')
     .forEach((a) => {
@@ -204,6 +187,15 @@ function renderSummary() {
       a.onclick = () => {
         ST.tab = 'cod';
         ST.bk = +a.dataset.gob;
+        render();
+      };
+    });
+  $('sum')
+    .querySelectorAll('[data-gom]')
+    .forEach((g) => {
+      g.onclick = () => {
+        ST.tab = 'xpm';
+        ST.xpPage = 'month';
         render();
       };
     });
