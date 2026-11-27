@@ -598,3 +598,5 @@ body.navfold #nav button.nlk .tx{white-space:normal}
 .sg.s2 .srow{grid-template-columns:1.3fr 1fr} .sch .smo:hover rect{opacity:.85}
 .drv5{table-layout:fixed} .drv5 td{height:24px} .drv5 td:first-child{white-space:normal;line-height:16px;padding-top:3px;padding-bottom:3px}
 #side.tabs.nosub .sdi small{display:none}
+.sleg .slb{border:1px solid transparent;background:none;border-radius:12px;padding:1px 8px;font:inherit;font-size:12px;color:#374151;cursor:pointer} .sleg .slb:hover{border-color:#C9D3E3;background:#F5F7FA} .sleg .slb.on{border-color:#1F3864;background:#EAF0F8;font-weight:700} .sleg .slb.off{opacity:.55} .sleg .slb.all{color:#1F3864;font-weight:600}
+#sum tr.son td{background:#EAF0F8} #sum tr.son td:first-child{box-shadow:inset 3px 0 0 #1F3864}

@@ -1,5 +1,13 @@
 [
   {
+    "v": "5.161",
+    "n": [
+      "Summary is calmer: one Needs attention line on top, 4 number cards with full text, the cost per month wide with the cut month in amber",
+      "Cost per month: the 6-month average written on its line; click a bucket (legend or table) to see it alone, click a month to open it in Expenses · Per month",
+      "Top 5 cost drivers with full names – All drivers › for the full list; Revenue and client deductions below them"
+    ]
+  },
+  {
     "v": "5.16",
     "n": [
       "Expenses opens on Per month – the Summary tab is gone (the Summary report shows the month at a glance)",

@@ -213,6 +213,29 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   head('4. Opening the register');
   eq('opens on the Summary (Reports)', await p.evaluate(() => __SEC()), 'dash');
   eq('the 4 steps of the month', await p.$$eval('#tabs button', (b) => b.map((x) => x.dataset.s)), ['chk', 'cod', 'adj', 'bud']);
+  ok(
+    'Summary: 4 cards, the 6-month average on the chart, no Reconciliation box',
+    await p.evaluate(
+      () =>
+        document.querySelectorAll('#sum .sks .sk').length === 4 &&
+        /month average \d/.test(document.querySelector('#sum svg').textContent) &&
+        !/Reconciliation/.test(document.getElementById('sum').textContent)
+    )
+  );
+  {
+    const f = await p.evaluate(() => {
+      document.querySelector('#sum .sleg [data-sbk]').click();
+      const one = new Set([...document.querySelectorAll('#sum svg g.smo rect')].map((r) => r.getAttribute('fill'))),
+        hi = !!document.querySelector('#sum tr.son');
+      document.querySelector('#sum .sleg [data-sbk=""]').click();
+      return { one: one.size === 1, hi, back: !document.querySelector('#sum .slb.on') && !document.querySelector('#sum tr.son') };
+    });
+    ok(
+      'Summary: a bucket picked shows it alone in the chart, its row marked; All buckets brings them back',
+      f.one && f.hi && f.back,
+      JSON.stringify(f)
+    );
+  }
   const R0 = await p.evaluate(() => ({ diff: R.diff, toDate: R.toDate, cd: R.cdAll, pend: R.pend, excl: R.excl }));
   eq('difference to CJI3 = 0', R0.diff, 0);
   eq('to date', r2(R0.toDate), want('toDate', r2(R0.toDate)));

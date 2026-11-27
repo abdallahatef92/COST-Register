@@ -53,20 +53,24 @@ function renderSummary() {
     ),
   ].join('');
   // this month by bucket
+  const fb = ST.sumBk !== undefined && ST.sumBk !== null && BK[ST.sumBk] ? ST.sumBk : null,
+    cOrd = fb === null ? order : [fb],
+    mv = (k) => cOrd.reduce((x, bi) => x + Math.max(0, R.bkP[bi][k]), 0),
+    avgC = fb === null ? avg6 : last6.reduce((x, k) => x + R.bkP[fb][k], 0) / (last6.length || 1);
   const brow = (bi) => {
     const c = rep > 0 ? R.bkP[bi][rep] : 0,
       p = pv > 0 ? R.bkP[bi][pv] : 0,
       x = c - p,
       pc = codedPc(bi);
-    return `<tr><td><a class="lk" style="color:#1f2937;font-weight:500" data-gob="${bi}"><i class="sdot" style="background:${bkColor(bi)}"></i>${esc(sh(BK[bi]))}</a></td><td class="mut">${fmt(p)}</td><td class="dk" data-dk="${bi}|${rep}"><b>${fmt(c)}</b></td><td class="${x > 0.5 ? 'up' : x < -0.5 ? 'dn' : 'mut'}">${Math.abs(x) < 0.5 ? '-' : (x > 0 ? '+' : '−') + fmt(Math.abs(x))}${p > 0 && c > 0 && Math.abs(x) >= 0.5 ? (p < 0.05 * c ? ' <small>(new)</small>' : ` <small>(${x > 0 ? '+' : ''}${((x / p) * 100).toFixed(0)}%)</small>`) : ''}</td><td class="dk" data-dk="${bi}|td">${fmt(tdB(bi))}</td><td class="mut">${R.toDate ? ((100 * tdB(bi)) / R.toDate).toFixed(1) : 0}%</td><td><div class="scb"><div><i style="width:${pc}%"></i></div>${pc}%</div></td></tr>`;
+    return `<tr${fb === bi ? ' class="son"' : ''}><td><a class="lk" style="color:#1f2937;font-weight:500" data-sbk="${bi}" title="Show ${esc(BK[bi].id)} alone in the chart"><i class="sdot" style="background:${bkColor(bi)}"></i>${esc(sh(BK[bi]))}</a></td><td class="mut">${fmt(p)}</td><td class="dk" data-dk="${bi}|${rep}"><b>${fmt(c)}</b></td><td class="${x > 0.5 ? 'up' : x < -0.5 ? 'dn' : 'mut'}">${Math.abs(x) < 0.5 ? '-' : (x > 0 ? '+' : '−') + fmt(Math.abs(x))}${p > 0 && c > 0 && Math.abs(x) >= 0.5 ? (p < 0.05 * c ? ' <small>(new)</small>' : ` <small>(${x > 0 ? '+' : ''}${((x / p) * 100).toFixed(0)}%)</small>`) : ''}</td><td class="dk" data-dk="${bi}|td">${fmt(tdB(bi))}</td><td class="mut">${R.toDate ? ((100 * tdB(bi)) / R.toDate).toFixed(1) : 0}%</td><td><div class="scb"><div><i style="width:${pc}%"></i></div>${pc}%</div></td></tr>`;
   };
   const btab = `<table class="st"><tr><th>Bucket</th><th>${pv > 0 ? PER[pv] : ''}</th><th>${R.repLab}</th><th>Change</th><th>To date</th><th>Share</th><th>Coded</th></tr>${order.map(brow).join('')}<tr class="t"><td>Total</td><td>${fmt(P)}</td><td>${fmt(T)}</td><td class="${T - P > 0 ? 'up' : 'dn'}">${(T - P > 0 ? '+' : '−') + fmt(Math.abs(T - P))}</td><td>${fmt(R.toDate)}</td><td>100%</td><td>${cAll}%</td></tr></table>`;
-  // chart: every bucket in its colour, 6-month average line
+  // chart: every bucket in its colour, 6-month average line; a bucket picked (legend or table) shows that bucket alone
   const ks = PER.map((x, k) => k).filter((k) => k > 0 && k < NP - 1 && k <= (rep > 0 ? rep : NM)),
     W = 1200,
     H = 190,
     pad = 40,
-    mxT = Math.max(1, ...ks.map((k) => R.bkP.reduce((x, a) => x + Math.max(0, a[k]), 0))) * 1.08,
+    mxT = Math.max(1, avgC, ...ks.map(mv)) * 1.1,
     slot = (W - pad - 10) / ks.length,
     bw = Math.min(slot * 0.6, 56); // a slim bar, whatever the number of months
   let svg = `<svg viewBox="0 0 ${W} ${H + 24}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">`;
@@ -81,7 +85,7 @@ function renderSummary() {
     if (k === rep)
       svg += `<rect x="${x - Math.min(slot * 0.18, 22)}" y="0" width="${bw + 2 * Math.min(slot * 0.18, 22)}" height="${H + 22}" rx="4" fill="#FFF4D6"/>`;
     svg += `<g class="smo" data-gom="${k}" style="cursor:pointer">`;
-    order.forEach((bi) => {
+    cOrd.forEach((bi) => {
       const v = Math.max(0, R.bkP[bi][k]);
       if (!v) return;
       const hh = ((H - 14) * v) / mxT;
@@ -89,15 +93,18 @@ function renderSummary() {
       svg += `<rect x="${x}" y="${y}" width="${bw}" height="${hh}" fill="${bkColor(bi)}" stroke="#fff" stroke-width="0.6"><title>${PER[k]} · ${esc(BK[bi].id)}: ${fmt(v)}</title></rect>`;
     });
     svg += `<text x="${x + bw / 2}" y="${H + 15}" font-size="12" text-anchor="middle" fill="${k === rep ? '#8A5A00' : '#4B5563'}" font-weight="${k === rep ? 800 : 500}">${PER[k].replace('-', ' ')}</text>`;
-    svg += `<text x="${x + bw / 2}" y="${y - 6}" font-size="${k === rep ? 12.5 : 11}" text-anchor="middle" font-weight="${k === rep ? 800 : 500}" fill="${k === rep ? '#1B2A41' : '#6B7280'}">${fM(R.tot[k])}</text></g>`;
+    svg += `<text x="${x + bw / 2}" y="${y - 6}" font-size="${k === rep ? 12.5 : 11}" text-anchor="middle" font-weight="${k === rep ? 800 : 500}" fill="${k === rep ? '#1B2A41' : '#6B7280'}">${fM(fb === null ? R.tot[k] : mv(k))}</text></g>`;
   });
-  const yA = H - ((H - 14) * avg6) / mxT;
-  svg += `<line x1="${pad}" x2="${W}" y1="${yA}" y2="${yA}" stroke="#1F3864" stroke-dasharray="4 3"/></svg>`;
+  const yA = H - ((H - 14) * Math.max(0, avgC)) / mxT;
+  svg += `<line x1="${pad}" x2="${W}" y1="${yA}" y2="${yA}" stroke="#1F3864" stroke-dasharray="4 3"/><text x="${pad + 6}" y="${yA - 6}" font-size="12" font-weight="700" fill="#1F3864" stroke="#fff" stroke-width="4" paint-order="stroke">${last6.length}-month average ${fM(avgC)}</text></svg>`;
   const leg =
     order
       .filter((bi) => R.bkP[bi].some((v) => v > 0))
-      .map((bi) => `<small><i class="sdot" style="background:${bkColor(bi)}"></i>${esc(sh(BK[bi]))}</small>`)
-      .join('') + `<small style="color:#1F3864">- - - ${last6.length}-month average ${fM(avg6)}</small>`;
+      .map(
+        (bi) =>
+          `<button class="slb${fb === bi ? ' on' : fb !== null ? ' off' : ''}" data-sbk="${bi}" title="Show ${esc(BK[bi].id)} alone – click again for all"><i class="sdot" style="background:${bkColor(bi)}"></i>${esc(sh(BK[bi]))}</button>`
+      )
+      .join('') + (fb !== null ? `<button class="slb all" data-sbk="">✕ All buckets</button>` : '');
   // cost drivers (the short list – the full list is Reports › Cost drivers)
   // the top 5 cost drivers (the full list: Cost drivers tab)
   const top5 = sumDrivers()
@@ -161,8 +168,8 @@ function renderSummary() {
     .map(([g, a]) => `<tr class="cdg"><td>· ${esc(g)}</td><td>${fmt(-a)}</td></tr>`)
     .join('')}<tr class="t"><td>Net revenue</td><td>${fmt(netRev)}</td></tr></table>`;
   $('sum').innerHTML = `<div class="sg s2">${attL}<div class="sks">${kpis}</div>
-   <div class="sc sch"><div class="sct"><b>Cost per month</b><small>by bucket · up to the cut date · click a month to open it in Expenses · Per month</small></div><div class="sleg">${leg}</div><div style="flex:1;min-height:0">${svg}</div></div>
-   <div class="srow"><div class="sc"><div class="sct"><b>This month by bucket</b><small>${R.repLab} vs ${pv > 0 ? PER[pv] : '-'} · click a bucket to code it</small><span class="sp"></span><a class="lk" data-gotab="pm">Per month ›</a></div>${btab}</div>
+   <div class="sc sch"><div class="sct"><b>Cost per month</b><small>${fb === null ? 'by bucket' : '<b style="color:' + bkColor(fb) + '">' + esc(BK[fb].id) + '</b> only'} · click a bucket to show it alone · click a month to open it in Expenses · Per month</small></div><div class="sleg">${leg}</div><div style="flex:1;min-height:0">${svg}</div></div>
+   <div class="srow"><div class="sc"><div class="sct"><b>This month by bucket</b><small>${R.repLab} vs ${pv > 0 ? PER[pv] : '-'} · click a bucket to show it in the chart</small><span class="sp"></span><a class="lk" data-gotab="pm">Per month ›</a></div>${btab}</div>
     <div class="sc"><div class="sct"><b>Top 5 cost drivers</b><small>this month vs its 6-month average · ▲ red = dearer</small><span class="sp"></span><a class="lk" data-gotab="drv" style="font-weight:600">All drivers ›</a></div>${dtab}
      <div class="sct" style="margin-top:12px"><b>Revenue</b><small>kept apart, to the cut date</small></div>${revH}</div></div></div>`;
   $('sum')
@@ -184,11 +191,11 @@ function renderSummary() {
       };
     });
   $('sum')
-    .querySelectorAll('[data-gob]')
+    .querySelectorAll('[data-sbk]')
     .forEach((a) => {
       a.onclick = () => {
-        ST.tab = 'cod';
-        ST.bk = +a.dataset.gob;
+        const v = a.dataset.sbk === '' ? null : +a.dataset.sbk;
+        ST.sumBk = ST.sumBk === v ? null : v;
         render();
       };
     });
