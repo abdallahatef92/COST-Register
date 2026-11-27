@@ -565,7 +565,7 @@ body.navfold #nav .nmore button,body.navfold #nav .nvat{padding:5px 2px;font-siz
 #nav button.nlk:hover{background:#EEF1F5} #nav button.nlk.on{background:#fff;color:#111827;font-weight:700}
 #nav button.nlk .tx{white-space:nowrap} #nav .nst{font-size:11px;color:inherit}
 body.navfold #nav button.nlk .tx{white-space:normal}
-#side.tabs .sdi{display:flex !important;grid-template-columns:none;align-items:flex-start}
+#side.tabs .sdi{display:grid !important;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:baseline}
 #side.tabs .sdi small{max-width:200px}
 #side.tabs .sdi>b,#side.tabs .sdi>small,#side.tabs .sdi>.pg{position:static}
 #nav .secs button.on,body.navfold #nav .secs button.on{background:#fff !important;color:#111827 !important;box-shadow:inset 3px 0 0 #2563EB,0 1px 2px rgba(0,0,0,.06)}
@@ -600,3 +600,8 @@ body.navfold #nav button.nlk .tx{white-space:normal}
 #side.tabs.nosub .sdi small{display:none}
 .sleg .slb{border:1px solid transparent;background:none;border-radius:12px;padding:1px 8px;font:inherit;font-size:12px;color:#374151;cursor:pointer} .sleg .slb:hover{border-color:#C9D3E3;background:#F5F7FA} .sleg .slb.on{border-color:#1F3864;background:#EAF0F8;font-weight:700} .sleg .slb.off{opacity:.55} .sleg .slb.all{color:#1F3864;font-weight:600}
 #sum tr.son td{background:#EAF0F8} #sum tr.son td:first-child{box-shadow:inset 3px 0 0 #1F3864}
+/* v5.162: tab amount on the title line (no overlap); the bridge line spaced */
+#side.tabs .sdi>small,#side.tabs .sdi>.pg{grid-column:1/-1}
+#side.tabs .sdi .a{position:static;white-space:nowrap}
+.adjb{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px} .adjb>i{font-style:normal;font-weight:700;color:#6B7280}
+#side.tabs .sdi{max-width:290px}

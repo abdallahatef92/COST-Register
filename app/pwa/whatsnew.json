@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.162",
+    "n": [
+      "Page tabs: the amount sits beside the tab name, no more text running over it",
+      "Adjustment lines: the CJI3 + added − taken out = To date line is spaced and wraps on a narrow screen"
+    ]
+  },
+  {
     "v": "5.161",
     "n": [
       "Summary is calmer: one Needs attention line on top, 4 number cards with full text, the cost per month wide with the cut month in amber",
