@@ -179,7 +179,7 @@ const MR_EQW = {
   'SE-11': 'generator · مولد',
   'SE-17': 'any other equipment',
 };
-const MRV = { tab: 'b', fold: new Set(['zy']), c: null, add: '' };
+const MRV = { tab: 'g', fold: new Set(['zy']), c: null, add: '', q: '', fb: '', fc: '' };
 // every CJI3 line → its rule (index in MR_BOOK, 'zy' or 'yours'), worked out once per build
 function mrCalc() {
   if (MRV.c && MRV.c.n === N) return MRV.c;
@@ -492,13 +492,305 @@ function mrIndMove(gl, ce) {
   if (ce && !next[ce]) next[ce] = gl;
   return next;
 }
+// =====================================================================================  v5.17 – the rules as lists: GL list · Document types · WBS rules · Special rules · Indirect
+// The GL list shows every GL on one row: its bucket, G&A group and indirect cost element. The bucket and group come from the
+// built-in rules (MR_BOOK, tested on the GL alone); a change you make is kept as one of YOUR rules (GL number → bucket), which the
+// engine checks first at the next build – so the engine stays as it is. The indirect code changes the indirect list (mrIndSet).
+const MR_GLGRP = [...MR_GA.map((x) => x[0]), 'Other labour / payroll'];
+const mrGlOwn = (g) => ST.rules.find((r) => r.ce === g && !r.cen && !r.type && !r.wbs && r.bucket);
+// the bucket the built-in rules give a GL by itself (no document type, no WBS)
+function mrGlRule(g, nm) {
+  const x = { ce: g, cen: nm || '', ty: '', wbs: '', b: '', amt: -1 },
+    k = MR_BOOK.findIndex((q) => q.t(x)),
+    q = MR_BOOK[k];
+  return q && q.b !== 'Unclassified' ? { b: q.b === 'Revenue' && q.g ? 'Revenue › Client deductions' : q.b, g: q.g || '', k } : null;
+}
+function mrGlData() {
+  const C = mrCalc(),
+    per = new Map(),
+    get = (g, nm) => {
+      let e = per.get(g);
+      if (!e) per.set(g, (e = { g, nm: nm || '', n: 0, a: 0, by: new Map(), wait: 0 }));
+      if (!e.nm && nm) e.nm = nm;
+      return e;
+    },
+    own = ST.rules.filter((r) => r.bucket && (r.ce || r.cen || r.type || r.wbs));
+  for (let i = 0; i < N; i++) {
+    if (C.r[i] === -3) continue;
+    const g = S[L.ce[i]];
+    if (!g) continue;
+    const e = get(g, S[L.cen[i]]),
+      b = BK[L.b[i]].id;
+    e.n++;
+    e.a += L.amt[i];
+    e.by.set(b, (e.by.get(b) || 0) + 1);
+    if (own.length) {
+      const u = own.find((r) => ruleMatch(r, i));
+      if (u && u.bucket !== b) e.wait++;
+    }
+  }
+  REV.forEach((x) => {
+    const e = get(S[x[4]], S[x[5]]),
+      b = x[3] ? 'Revenue' : 'Revenue › Client deductions';
+    e.n++;
+    e.a += x[2];
+    e.by.set(b, (e.by.get(b) || 0) + 1);
+  });
+  const ce = new Map();
+  Object.entries(indGl()).forEach(([c, s]) =>
+    String(s)
+      .split(' ')
+      .filter(Boolean)
+      .forEach((g) => {
+        ce.set(g, c);
+        get(g, C.nm.get(g) || '');
+      })
+  );
+  Object.entries(MR_GLNO).forEach(([nm, g]) => get(g, nm));
+  ST.rules.forEach((r) => r.ce && !r.cen && !r.type && !r.wbs && get(r.ce, C.nm.get(r.ce) || ''));
+  const rows = [...per.values()].map((e) => {
+    const base = mrGlRule(e.g, e.nm),
+      u = mrGlOwn(e.g),
+      main = [...e.by].sort((p, q) => q[1] - p[1])[0],
+      bucket = u ? u.bucket : base ? base.b : main ? main[0] : '',
+      // lines in another bucket – except those still waiting for your change (they move at the next build)
+      other = [...e.by]
+        .filter(([b]) => b !== bucket)
+        .map(([b, n]) => [b, u && base && b === base.b ? n - e.wait : n])
+        .filter(([, n]) => n > 0);
+    return {
+      ...e,
+      base,
+      own: u || null,
+      bucket,
+      byType: !u && !base && !!main, // no GL rule: the document type (or a special rule) decides
+      grp: u ? u.sub || '' : base ? base.g : '',
+      ce: e.g === '30103100' ? 'by name' : ce.get(e.g) || '',
+      other,
+    };
+  });
+  rows.sort((p, q) => (p.n ? 0 : 1) - (q.n ? 0 : 1) || p.g.localeCompare(q.g));
+  return rows;
+}
+const mrIndB = (b) => MR_IND.includes(b);
+function mrTabGl() {
+  const rows = mrGlData(),
+    BKS = META.bucketIds || BK.map((b) => b.id),
+    ces = MR_IGRP.flatMap(([, c]) => c),
+    f = (v) => (Math.abs(v) < 0.5 ? '-' : fmt(v)),
+    q = (MRV.q || '').toLowerCase(),
+    fb = MRV.fb || '',
+    fc = MRV.fc || '',
+    shown = rows.filter(
+      (r) =>
+        (!q || (r.g + ' ' + r.nm + ' ' + r.bucket + ' ' + r.grp + ' ' + r.ce + ' ' + (PS_NAMES[r.ce] || '')).toLowerCase().includes(q)) &&
+        (!fb || r.bucket === fb) &&
+        (!fc || (fc === '(none)' ? mrIndB(r.bucket) && !r.ce : r.ce === fc))
+    ),
+    wait = rows.reduce((s, r) => s + r.wait, 0),
+    mine = rows.filter((r) => r.own).length,
+    bOpt = (r) =>
+      r.bucket.startsWith('Revenue')
+        ? `<span class="mrfix">${esc(r.bucket)}</span>`
+        : `<select data-mrgb="${esc(r.g)}" class="${r.own ? 'own' : ''}" title="${r.own ? 'changed by you – built-in: ' + esc(r.base ? r.base.b : 'by document type') : 'built-in'}">${r.byType ? `<option value="">${esc(r.bucket)} (by doc. type)</option>` : ''}${BKS.filter(
+            (b) => b !== 'Unclassified'
+          )
+            .map((b) => `<option${b === r.bucket && !r.byType ? ' selected' : ''}>${esc(b)}</option>`)
+            .join('')}</select>`,
+    gOpt = (r) =>
+      r.bucket === 'G&A'
+        ? `<select data-mrgg="${esc(r.g)}" class="${r.own ? 'own' : ''}"><option value=""></option>${MR_GLGRP.map((g) => `<option${g === r.grp ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>`
+        : '',
+    cOpt = (r) =>
+      r.ce === 'by name'
+        ? '<span class="help" title="Inhouse Charge EQ: the cost element by the equipment name (Indirect tab)">by equipment name</span>'
+        : mrIndB(r.bucket)
+          ? `<select data-mrgc="${esc(r.g)}" class="${r.ce ? '' : 'none'}"><option value="">${r.ce ? '– take off –' : '– choose –'}</option>${ces.map((c) => `<option value="${esc(c)}"${c === r.ce ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>`
+          : '',
+    sel = (k, v, list, all) =>
+      `<select data-mrfl="${k}"><option value="">${all}</option>${list.map((x) => `<option${x === v ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+  return `${
+    wait
+      ? `<div class="mrstale"><b>${wait.toLocaleString('en-US')} line${wait === 1 ? ' waits' : 's wait'} for your GL changes</b> – they move at the next build<span class="sp"></span><button class="pri" data-mra="apply">↻ Rebuild with your rules</button><span class="help">uses the SAP files in your data file · your codes are kept</span></div>`
+      : ''
+  }<div class="mrlv"><b>GL list</b><span>every GL in this CJI3 and the built-in ones · its bucket, G&amp;A group and indirect cost element · change them here – a bucket you change is kept as your rule</span></div>
+  <div class="mrflt"><input data-mrq placeholder="Search GL, name, code…" value="${esc(MRV.q || '')}">${sel('fb', fb, [...new Set(rows.map((r) => r.bucket))].filter(Boolean).sort(), 'Every bucket')}${sel('fc', fc, ['(none)', ...ces.filter((c) => rows.some((r) => r.ce === c))], 'Every indirect code')}<span class="help">${shown.length} of ${rows.length} GL${mine ? ` · <b>${mine} changed by you</b>` : ''}</span></div>
+  <table class="mrtb mrgl"><thead><tr><th style="width:96px">GL</th><th>GL name</th><th style="width:220px">Bucket</th><th style="width:200px">G&amp;A group</th><th style="width:110px">Indirect code</th><th>Indirect name</th><th class="n" style="width:72px">Lines</th><th class="n" style="width:120px">Amount</th></tr></thead><tbody>${shown
+    .map(
+      (r) =>
+        `<tr class="${r.n ? '' : 'zero'}${r.own ? ' own' : ''}"><td><b>${esc(r.g)}</b></td><td>${esc(r.nm || '')}${r.other.length ? `<div class="oth" title="lines on this GL that a document type or a special rule puts in another bucket">${r.other.map(([b, n]) => '→ ' + esc(b) + ' ' + n.toLocaleString('en-US')).join(' · ')} <span>by doc. type / special rule</span></div>` : ''}${r.wait ? ` <span class="mrw">${r.wait} wait</span>` : ''}</td><td>${bOpt(r)}</td><td>${gOpt(r)}</td><td>${cOpt(r)}</td><td class="help">${r.ce && r.ce !== 'by name' && mrIndB(r.bucket) ? esc(PS_NAMES[r.ce] || '') : ''}</td><td class="n">${r.n ? `<a class="lk" data-mrgl="${esc(r.g)}">${r.n.toLocaleString('en-US')}</a>` : '0'}</td><td class="n">${f(r.a)}</td></tr>`
+    )
+    .join(
+      ''
+    )}</tbody></table><div class="mrnote">Grey = no line on that GL in this CJI3 · amber = changed by you (Your rules) · lines with a document type that decides (SC, WA, AF, RV) or a special rule keep their bucket – shown after the name</div>`;
+}
+// document types: what each one decides
+const MR_DT = {
+  SC: ['subcontract certificate', 'Subcontractor (deductions: Subcontractor deductions)'],
+  WA: ['goods issue', 'Material'],
+  AF: ['depreciation', 'Asset depreciation'],
+  RV: ['client invoice', 'a positive amount → Revenue › Client deductions'],
+  ZY: ['accrual reversal', 'the bucket of the line it reverses'],
+  UE: ['opening balance', 'keeps its bucket · Opening column'],
+  ZB: ['opening balance', 'keeps its bucket · Opening column'],
+  MD: ['opening balance', 'keeps its bucket · Opening column'],
+  HT: ['opening balance', 'keeps its bucket · Opening column'],
+};
+function mrTabDt() {
+  const per = new Map();
+  for (let i = 0; i < N; i++) {
+    if (L.uns[i] || L.b[i] < 0) continue;
+    const t = S[L.ty[i]] || '(blank)',
+      e = per.get(t) || per.set(t, { n: 0, a: 0 }).get(t);
+    e.n++;
+    e.a += L.amt[i];
+  }
+  REV.forEach((x) => {
+    const t = S[x[7]] || '(blank)',
+      e = per.get(t) || per.set(t, { n: 0, a: 0 }).get(t);
+    e.n++;
+    e.a += x[2];
+  });
+  const f = (v) => (Math.abs(v) < 0.5 ? '-' : fmt(v)),
+    rows = [...per].sort((p, q) => (MR_DT[q[0]] ? 1 : 0) - (MR_DT[p[0]] ? 1 : 0) || q[1].n - p[1].n);
+  return `<div class="mrlv"><b>Document types</b><span>checked first – a document type below decides the bucket; every other type goes by the GL list</span></div>
+  <table class="mrtb mrgl"><thead><tr><th style="width:90px">Type</th><th style="width:220px">Meaning</th><th>Bucket</th><th class="n" style="width:90px">Lines</th><th class="n" style="width:130px">Amount</th></tr></thead><tbody>${rows
+    .map(
+      ([t, e]) =>
+        `<tr class="${MR_DT[t] ? 'dec' : ''}"><td><b>${esc(t)}</b></td><td>${esc(MR_DT[t] ? MR_DT[t][0] : '')}</td><td>${MR_DT[t] ? `<b>${esc(MR_DT[t][1])}</b>` : '<span class="help">→ the GL list decides</span>'}</td><td class="n"><a class="lk" data-mrdt="${esc(t)}">${e.n.toLocaleString('en-US')}</a></td><td class="n">${f(e.a)}</td></tr>`
+    )
+    .join(
+      ''
+    )}</tbody></table><div class="mrnote">Bold = the document type decides · a rule of yours with a document type (Your rules) comes before these</div>`;
+}
+// WBS rules: one WBS per line and what is assigned on it – built-in (… .IN-02-1 payroll) and yours
+function mrTabWbs() {
+  const f = (v) => (Math.abs(v) < 0.5 ? '-' : fmt(v)),
+    pay = new Map(),
+    PAY = ['Salaries', 'Wages', 'Bonus'];
+  for (let i = 0; i < N; i++) {
+    if (L.uns[i] || L.b[i] < 0) continue;
+    const w = S[L.wbs[i]];
+    if (!/^[A-Z]-[A-Z0-9]+\.IN-02-1$/.test(w)) continue;
+    const e = pay.get(w) || pay.set(w, { n: 0, a: 0 }).get(w);
+    if (PAY.includes(S[L.cen[i]])) {
+      e.n++;
+      e.a += L.amt[i];
+    }
+  }
+  const mine = ST.rules.map((r, i) => [r, i]).filter(([r]) => r.wbs),
+    cnt = (r) => {
+      let n = 0,
+        a = 0;
+      for (let i = 0; i < N; i++)
+        if (ruleMatch(r, i)) {
+          n++;
+          a += L.amt[i];
+        }
+      return { n, a };
+    },
+    BKS = (META.bucketIds || BK.map((b) => b.id)).filter((b) => b !== 'Unclassified');
+  const rows = [
+    ...[...pay].map(
+      ([w, e]) =>
+        `<tr><td><b>${esc(w)}</b></td><td>GL name Salaries · Wages · Bonus</td><td><b>G&amp;A</b> · Other labour / payroll</td><td class="help">built-in</td><td class="n">${e.n.toLocaleString('en-US')}</td><td class="n">${f(e.a)}</td><td></td></tr>`
+    ),
+    ...mine.map(([r, i]) => {
+      const c = cnt(r);
+      return `<tr class="own"><td><input data-mrwr="${i}" data-f="wbs" value="${esc(r.wbs)}" placeholder="WBS starts with"></td><td>${[r.ce && 'GL ' + esc(r.ce), r.cen && 'GL name ' + esc(r.cen), r.type && 'doc. type ' + esc(r.type)].filter(Boolean).join(' · ') || '<span class="help">every line on it</span>'}</td><td><select data-mrwr="${i}" data-f="bucket"><option value="">– choose –</option>${BKS.map((b) => `<option${b === r.bucket ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>${r.bucket === 'G&A' ? ` <select data-mrwr="${i}" data-f="sub"><option value=""></option>${MR_GLGRP.map((g) => `<option${g === r.sub ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>` : ''}</td><td class="help">yours</td><td class="n">${c.n.toLocaleString('en-US')}</td><td class="n">${f(c.a)}</td><td><button data-mrwx="${i}" title="delete this rule">✕</button></td></tr>`;
+    }),
+  ];
+  return `<div class="mrlv"><b>WBS rules</b><span>one WBS per line and what goes to it – checked before the special rules</span></div>
+  <table class="mrtb mrgl"><thead><tr><th style="width:230px">WBS</th><th>Lines on it with</th><th style="width:330px">→ Bucket · group</th><th style="width:80px">Rule</th><th class="n" style="width:80px">Lines</th><th class="n" style="width:120px">Amount</th><th style="width:40px"></th></tr></thead><tbody>${rows.join('') || '<tr><td colspan="7" class="help">No WBS rule.</td></tr>'}</tbody></table>
+  <div style="margin-top:8px"><button data-mra="wadd">+ Add a WBS rule</button> <span class="help">a WBS rule is one of your rules: it moves every line on that WBS (and below) at the next build</span></div>`;
+}
+// special rules: the few conditions that need more than a document type, a GL or a WBS
+function mrTabSp() {
+  const D = mrBucketData(),
+    f = (v) => (Math.abs(v) < 0.5 ? '-' : fmt(v)),
+    sp = [
+      [2, 'Subcontract (SC) lines on GL Other Deduction or Main Material', 'Subcontractor deductions'],
+      [MR_BOOK.findIndex((q) => /material number/.test(q.w[0][0])), 'A line with a material number (any document type)', 'Material'],
+      [MR_BOOK.findIndex((q) => q.w[0][1] && q.w[0][1][0] === 'Spare Parts'), 'Spare Parts with no material number', 'Other direct cost'],
+      [
+        MR_BOOK.findIndex((q) => q.w[0][1] && q.w[0][1].includes('Main Material') && q.b === 'Other direct cost'),
+        'Main / consumable material with no material number',
+        'Other direct cost',
+      ],
+      [-1, 'Accrual reversal (ZY): the bucket of the line it reverses – same GL, same month, opposite amount', 'its pair'],
+    ];
+  return `<div class="mrlv"><b>Special rules</b><span>the few conditions that need more than a document type, a GL or a WBS</span><span class="sp"></span><a class="lk" data-mrt="b">Every condition in order ›</a></div>
+  <table class="mrtb mrgl"><thead><tr><th>A line goes there when…</th><th style="width:240px">Bucket</th><th class="n" style="width:90px">Lines</th><th class="n" style="width:130px">Amount</th></tr></thead><tbody>${sp
+    .filter(([k]) => k !== undefined && k >= -1)
+    .map(([k, t, b]) => {
+      const e = D.st.get(k) || { n: 0, a: 0 };
+      return `<tr class="${e.n ? '' : 'zero'}"><td>${esc(t)}</td><td><b>${esc(b)}</b></td><td class="n">${e.n ? `<a class="lk" data-mrl="${k}">${e.n.toLocaleString('en-US')}</a>` : '0'}</td><td class="n">${f(e.a)}</td></tr>`;
+    })
+    .join(
+      ''
+    )}<tr><td>Inhouse Charge EQ (GL 30103100): the indirect cost element by the equipment name</td><td><b>Equipment / fuel</b> · SE by name</td><td class="n"></td><td class="n"></td></tr></tbody></table>`;
+}
+// Indirect: the final list – each head (filled) and its cost elements underneath, with their GLs and cost
+const MR_HCOL = ['#1F4E9A', '#2A9D8F', '#C0504D', '#E9B949', '#8E5EA2', '#6D7B8D'];
+function mrTabInd() {
+  const D = mrIndData(),
+    f = (v) => (Math.abs(v) < 0.5 ? '-' : fmt(v)),
+    ces = MR_IGRP.flatMap(([, c]) => c),
+    tot = D.groups.reduce((s, g) => s + g.ce.reduce((t, x) => t + x.a, 0), 0);
+  return `<div class="mrlv"><b>Indirect</b><span>each head and its cost elements, with the GLs on them and their cost · change a GL in the GL list</span><span class="sp"></span><b>${f(tot)}</b></div>
+  <table class="mrtb mrind"><thead><tr><th style="width:110px">Cost element</th><th style="width:330px">Name</th><th>GL on it</th><th class="n" style="width:80px">Lines</th><th class="n" style="width:130px">Amount</th></tr></thead><tbody>${D.groups
+    .map((g, gi) => {
+      const ga = g.ce.reduce((s, x) => s + x.a, 0),
+        gn = g.ce.reduce((s, x) => s + x.n, 0);
+      return (
+        `<tr class="hd" style="--hc:${MR_HCOL[gi % MR_HCOL.length]}"><td colspan="3">${esc(g.g)} <span>· ${g.ce.filter((x) => x.n).length} of ${g.ce.length} cost elements in use</span></td><td class="n">${gn.toLocaleString('en-US')}</td><td class="n">${f(ga)}</td></tr>` +
+        g.ce
+          .map(
+            (x) =>
+              `<tr class="${x.n ? '' : 'zero'}" style="--hc:${MR_HCOL[gi % MR_HCOL.length]}"><td><b>${esc(x.k)}</b></td><td>${esc(x.name)}</td><td>${x.gls.map((y) => `<span class="ch${y.c ? ' lk' : ' z'}"${y.c ? ` data-mrg="${esc(y.g)}"` : ''}>${y.n ? esc(y.n) + ' ' : ''}<s>${esc(y.g)}</s></span>`).join('')}${x.eq ? `<span class="ch eqn${x.eq.n ? ' lk' : ''}"${x.eq.n ? ` data-mre="${x.k}"` : ''}>Inhouse Charge EQ <s>30103100</s> · <b>${esc(MR_EQW[x.k])}</b></span>` : ''}</td><td class="n">${x.n ? x.n.toLocaleString('en-US') : '-'}</td><td class="n">${f(x.a)}</td></tr>`
+          )
+          .join('')
+      );
+    })
+    .join('')}</tbody></table>
+  ${
+    D.unplaced.length
+      ? `<div class="mrun"><b>GL with indirect cost not on a cost element yet: ${D.unplaced.length}</b>${D.unplaced
+          .map(
+            (y) =>
+              `<div class="mrup"><span class="ch lk" data-mrg="${esc(y.g)}">${esc(y.n || '')} <s>${esc(y.g)}</s></span> <span class="help">${f(y.a)}</span> → <select data-mrmv="${esc(y.g)}"><option value="">choose a cost element ▾</option>${ces.map((c) => `<option value="${esc(c)}">${esc(c)} · ${esc(PS_NAMES[c] || '')}</option>`).join('')}</select></div>`
+          )
+          .join('')}</div>`
+      : '<div class="mrun ok"><b>Every GL with indirect cost has a cost element ✓</b></div>'
+  }<div class="mrnote">${ST.indgl ? '<b>Your list</b> (changed from the built-in one) · <a class="lk" data-mra="indreset">Reset to built-in</a>' : 'The built-in list'} · grey = no line in this CJI3</div>`;
+}
+// a GL to another bucket / G&A group: kept as your rule (GL number → bucket), checked first at the next build
+function mrGlSet(g, b, sub) {
+  const base = mrGlRule(g, mrCalc().nm.get(g) || '');
+  ST.rules = ST.rules.filter((r) => !(r.ce === g && !r.cen && !r.type && !r.wbs));
+  if (b && (!base || base.b !== b || (b === 'G&A' && (sub || '') !== (base.g || ''))))
+    ST.rules.unshift({ ce: g, cen: '', type: '', wbs: '', bucket: b, sub: b === 'G&A' ? sub || '' : '' });
+  persist();
+  MRV.c = null;
+  renderRules();
+  toast(b ? `GL ${g} → ${b}${b === 'G&A' && sub ? ' · ' + sub : ''} – rebuild to move its lines` : `GL ${g}: back to the built-in rule`);
+}
+const MR_TABS = [
+  ['g', 'GL list', 'GL → bucket · group · indirect'],
+  ['d', 'Document types', 'checked first'],
+  ['w', 'WBS rules', 'one WBS per line'],
+  ['s', 'Special rules', 'the few exceptions'],
+  ['i', 'Indirect', 'heads and cost elements'],
+  ['y', 'Your rules', 'your own rules · settings'],
+];
 function renderRules() {
   const um = mapUnmapped(),
-    t = MRV.tab;
+    t = MRV.tab,
+    on = t === 'b' ? 's' : t;
   $('rul').innerHTML =
-    `<div class="mrpg"><div class="mrhd"><h2>Mapping rules</h2><span class="mrtabs"><button data-mrt="b" class="${t === 'b' ? 'on' : ''}">1 · Bucket rules<small>CJI3 line → bucket</small></button><button data-mrt="i" class="${t === 'i' ? 'on' : ''}">2 · Indirect rules<small>indirect line → cost element</small></button><button data-mrt="y" class="${t === 'y' ? 'on' : ''}">3 · Your rules<small>your own rules · settings</small></button></span><span class="sp"></span><span class="mrok ${um ? 'bad' : ''}">${um ? 'Lines without a bucket: ' + um.toLocaleString('en-US') : 'Unmapped lines: 0 ✓'}</span><button data-mra="xl" class="pri">⇩ Export to Excel</button></div>${mrStaleBar()}<div id="rulY"></div></div>`;
-  if (t === 'b') $('rulY').innerHTML = mrTab1();
-  else if (t === 'i') $('rulY').innerHTML = mrTab2();
+    `<div class="mrpg"><div class="mrhd"><h2>Mapping rules</h2><span class="mrtabs">${MR_TABS.map(([k, l, d]) => `<button data-mrt="${k}" class="${on === k ? 'on' : ''}">${l}<small>${d}</small></button>`).join('')}</span><span class="sp"></span><span class="mrok ${um ? 'bad' : ''}">${um ? 'Lines without a bucket: ' + um.toLocaleString('en-US') : 'Unmapped lines: 0 ✓'}</span><button data-mra="xl" class="pri">⇩ Export to Excel</button></div>${mrStaleBar()}<div id="rulY"></div></div>`;
+  const F = { g: mrTabGl, d: mrTabDt, w: mrTabWbs, s: mrTabSp, b: mrTab1, i: mrTabInd }[t];
+  if (F) $('rulY').innerHTML = F();
   else renderYourRules();
 }
 $('rul').addEventListener('click', (e) => {
@@ -520,12 +812,54 @@ $('rul').addEventListener('click', (e) => {
   if (ac) {
     const a = ac.dataset.mra;
     if (a === 'xl') mrExport();
-    else if (a === 'indreset') mrIndSet(JSON.parse(JSON.stringify(IND_GL)), 'Indirect list: back to the built-in one');
+    else if (a === 'apply') {
+      if (DBF.db) updRebuild();
+      else {
+        MRV.tab = 'y';
+        renderRules();
+        toast('Apply your rules here: Apply rules – rebuild');
+      }
+    } else if (a === 'wadd') {
+      ST.rules.push({ ce: '', cen: '', type: '', wbs: '', bucket: '', sub: '' });
+      persist();
+      renderRules();
+      const w = [...document.querySelectorAll('#rul input[data-mrwr]')].pop();
+      if (w) w.focus();
+    } else if (a === 'indreset') mrIndSet(JSON.parse(JSON.stringify(IND_GL)), 'Indirect list: back to the built-in one');
     else if (a === 'rebuild') updRebuild();
     else {
       MRV.fold = a === 'open' ? new Set() : new Set([...MR_ORDER, 'zy', 'yours']);
       renderRules();
     }
+    return;
+  }
+  const wx = e.target.closest('[data-mrwx]');
+  if (wx) {
+    ST.rules.splice(+wx.dataset.mrwx, 1);
+    persist();
+    MRV.c = null;
+    renderRules();
+    return;
+  }
+  const gll = e.target.closest('[data-mrgl]');
+  if (gll) {
+    const g = gll.dataset.mrgl,
+      C = mrCalc(),
+      idx = [];
+    for (let i = 0; i < N; i++) if (C.r[i] !== -3 && S[L.ce[i]] === g) idx.push(i);
+    if (idx.length) mrShow('GL ' + g + ' · ' + (C.nm.get(g) || ''), idx);
+    else {
+      const rv = REV.find((x) => S[x[4]] === g);
+      if (rv) mrShowRev('GL ' + g + ' · ' + S[rv[5]], rv[3] ? 0 : 1, S[rv[5]]);
+    }
+    return;
+  }
+  const dt = e.target.closest('[data-mrdt]');
+  if (dt) {
+    const t = dt.dataset.mrdt,
+      idx = [];
+    for (let i = 0; i < N; i++) if (!L.uns[i] && L.b[i] >= 0 && (S[L.ty[i]] || '(blank)') === t) idx.push(i);
+    mrShow('Document type ' + t, idx);
     return;
   }
   const x = e.target.closest('[data-mrx]');
@@ -583,6 +917,37 @@ $('rul').addEventListener('click', (e) => {
   }
 });
 $('rul').addEventListener('change', (e) => {
+  const gb = e.target.closest('[data-mrgb]');
+  if (gb) {
+    mrGlSet(gb.dataset.mrgb, gb.value, '');
+    return;
+  }
+  const gg = e.target.closest('[data-mrgg]');
+  if (gg) {
+    mrGlSet(gg.dataset.mrgg, 'G&A', gg.value);
+    return;
+  }
+  const gc = e.target.closest('[data-mrgc]');
+  if (gc) {
+    const g = gc.dataset.mrgc;
+    if (g === '30103100') return;
+    mrIndSet(mrIndMove(g, gc.value), gc.value ? `Indirect list: ${g} → ${gc.value}` : `Indirect list: ${g} taken off`);
+    return;
+  }
+  const fl = e.target.closest('[data-mrfl]');
+  if (fl) {
+    MRV[fl.dataset.mrfl] = fl.value;
+    renderRules();
+    return;
+  }
+  const wr = e.target.closest('[data-mrwr]');
+  if (wr) {
+    ST.rules[+wr.dataset.mrwr][wr.dataset.f] = wr.value.trim();
+    persist();
+    MRV.c = null;
+    renderRules();
+    return;
+  }
   const mv = e.target.closest('[data-mrmv]');
   if (mv && mv.value) {
     mrIndSet(mrIndMove(mv.dataset.mrmv, mv.value), `Indirect list: ${mv.dataset.mrmv} → ${mv.value}`);
@@ -603,6 +968,20 @@ $('rul').addEventListener('change', (e) => {
     mrIndSet(mrIndMove(gl, ce), `Indirect list: ${gl} → ${ce}`);
   }
 });
+$('rul').addEventListener('input', (e) => {
+  const q = e.target.closest('[data-mrq]');
+  if (!q) return;
+  clearTimeout(MRV.qt);
+  MRV.qt = setTimeout(() => {
+    MRV.q = q.value;
+    renderRules();
+    const n = document.querySelector('#rul [data-mrq]');
+    if (n) {
+      n.focus();
+      n.setSelectionRange(n.value.length, n.value.length);
+    }
+  }, 250);
+});
 $('rul').addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && e.target.closest('[data-mrin]')) {
     MRV.add = '';
@@ -622,6 +1001,53 @@ async function mrExport() {
       });
       ws.getRow(r).height = 28;
     };
+  {
+    const wg = wb.addWorksheet('GL list', { properties: { tabColor: { argb: NAVY } }, views: [{ state: 'frozen', ySplit: 3 }] });
+    wg.addRow([`Mapping rules · GL list · ${META.project} · cut ${ST.cut}`]).font = { bold: true, size: 14 };
+    wg.addRow(['Every GL: bucket, G&A group, indirect cost element · "yours" = changed by you (kept as your rule)']);
+    wg.addRow([
+      'GL',
+      'GL name',
+      'Bucket',
+      'Yours',
+      'G&A group',
+      'Indirect code',
+      'Indirect name',
+      'Lines',
+      'Amount',
+      'Lines in other buckets',
+    ]);
+    head(wg, 3);
+    mrGlData().forEach((r) =>
+      wg.addRow([
+        r.g,
+        r.nm,
+        r.bucket + (r.byType ? ' (by doc. type)' : ''),
+        r.own ? 'yours' : '',
+        r.grp,
+        r.ce,
+        r.ce && r.ce !== 'by name' ? PS_NAMES[r.ce] || '' : '',
+        r.n,
+        r.a,
+        r.other.map(([b, n]) => b + ' ' + n).join(' · '),
+      ])
+    );
+    wg.columns = [
+      { width: 12 },
+      { width: 28 },
+      { width: 30 },
+      { width: 7 },
+      { width: 26 },
+      { width: 13 },
+      { width: 40 },
+      { width: 9 },
+      { width: 16 },
+      { width: 40 },
+    ];
+    wg.getColumn(8).numFmt = '#,##0';
+    wg.getColumn(9).numFmt = '#,##0;[Red]-#,##0';
+    wg.autoFilter = { from: 'A3', to: 'J3' };
+  }
   const D = mrBucketData(),
     words = (q) => q.w.map(([t, c]) => [t, c ? c.join(' · ') : ''].filter(Boolean).join(' ')).join(' ');
   const ws = wb.addWorksheet('Bucket rules', {

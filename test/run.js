@@ -1926,7 +1926,24 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       Math.round(C.cost * 100) / 100,
       1
     );
-    ok('…tab 1: a block per bucket, the counts open the lines', await q.$$eval('.mrb', (x) => x.length >= 12));
+    ok(
+      '…opens on the GL list: one row per GL with its bucket, the indirect GLs with a cost element box',
+      (await q.$$eval('#rul .mrgl tbody tr', (x) => x.length > 20)) && (await q.$$eval('#rul [data-mrgc]', (x) => x.length > 3))
+    );
+    await q.click('[data-mrt="d"]');
+    await q.waitForTimeout(300);
+    ok(
+      '…Document types: WA → Material, SC → Subcontractor',
+      await q.$eval('#rul', (e) => /WA/.test(e.textContent) && /goods issue/.test(e.textContent))
+    );
+    await q.click('[data-mrt="w"]');
+    await q.waitForTimeout(300);
+    ok('…WBS rules: one WBS per line', await q.$eval('#rul', (e) => /IN-02-1/.test(e.textContent) && /Other labour/.test(e.textContent)));
+    await q.click('[data-mrt="s"]');
+    await q.waitForTimeout(300);
+    await q.click('#rul a[data-mrt="b"]');
+    await q.waitForTimeout(300);
+    ok('…Special rules › every condition in order: a block per bucket', await q.$$eval('.mrb', (x) => x.length >= 12));
     const ln = await q.$('.mrb a.lk[data-mrl]');
     await ln.click();
     await q.waitForTimeout(300);
@@ -1938,8 +1955,9 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.click('[data-mrt="i"]');
     await q.waitForTimeout(300);
     ok(
-      '…tab 2: the indirect cost elements in their groups',
-      await q.$eval('#rul', (e) => /Personnel and Manning/.test(e.textContent) && /SF-01/.test(e.textContent))
+      '…Indirect: each head filled, its cost elements underneath',
+      (await q.$eval('#rul', (e) => /Personnel and Manning/.test(e.textContent) && /SF-01/.test(e.textContent))) &&
+        (await q.$$eval('#rul .mrind tr.hd', (x) => x.length >= 5))
     );
     await q.click('[data-mrt="y"]');
     await q.waitForTimeout(300);
@@ -1947,11 +1965,9 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await c16.close();
   }
   if (RUN('7n')) {
-    head('7n. Mapping rules › Indirect rules: take a GL off, add it, place a GL, undo, reset');
+    head('7n. Mapping rules › GL list: indirect code off / on / moved, undo · a bucket changed is kept as your rule');
     const { ctx: c17, p: q } = await open(APP);
     await q.click('#bRules');
-    await q.waitForTimeout(300);
-    await q.click('[data-mrt="i"]');
     await q.waitForTimeout(400);
     // the GL with the most indirect lines and its cost element; the items coded by the list
     const pick = await q.evaluate(() => {
@@ -1963,10 +1979,10 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('a GL of the list has lines', pick && pick.c > 0, JSON.stringify(pick));
     const coded = () => q.evaluate((ce) => __BK.reduce((n, b) => n + b.items.filter((it) => it.ce === ce).length, 0), pick.ce);
     const n0 = await coded();
-    await q.click(`[data-mrx="${pick.ce}|${pick.g}"]`);
+    await q.selectOption(`[data-mrgc="${pick.g}"]`, '');
     await q.waitForTimeout(500);
     ok(
-      '✕ takes the GL off its cost element (your list)',
+      '"– take off –" takes the GL off its cost element (your list)',
       await q.evaluate(
         (g) =>
           !Object.values(__ST.indgl || {})
@@ -1976,19 +1992,20 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         pick.g
       )
     );
-    ok('…and it is listed as not placed yet', await q.$eval('#rul .mrun', (e, g) => e.textContent.includes(g), pick.g));
     ok('…items coded by the list follow it (fewer on ' + pick.ce + ')', (await coded()) < n0, (await coded()) + ' vs ' + n0);
+    if (await q.$('#asLater')) await q.click('#asLater'); // the first change asks for a data file
+    await q.click('[data-mrt="i"]');
+    await q.waitForTimeout(400);
+    ok('…the Indirect tab lists it as not on a cost element yet', await q.$eval('#rul .mrun', (e, g) => e.textContent.includes(g), pick.g));
     await q.selectOption(`[data-mrmv="${pick.g}"]`, pick.ce);
     await q.waitForTimeout(500);
     eq('placing it back: the items get their cost element again', await coded(), n0, 0);
     eq('…the list is the built-in one again (nothing of yours kept)', await q.evaluate(() => __ST.indgl), null);
-    if (await q.$('#asLater')) await q.click('#asLater'); // the first change asks for a data file
-    await q.click(`[data-mrp="SP-01"]`);
-    await q.waitForTimeout(200);
-    await q.fill('[data-mrin="SP-01"]', pick.g);
-    await q.press('[data-mrin="SP-01"]', 'Enter');
+    await q.click('[data-mrt="g"]');
+    await q.waitForTimeout(400);
+    await q.selectOption(`[data-mrgc="${pick.g}"]`, 'SP-01');
     await q.waitForTimeout(500);
-    ok('+ GL moves a GL to another cost element', await q.evaluate((g) => (__ST.indgl || {})['SP-01'] === g, pick.g));
+    ok('the Indirect code box moves a GL to another cost element', await q.evaluate((g) => (__ST.indgl || {})['SP-01'] === g, pick.g));
     ok(
       '…and the items follow',
       (await q.evaluate(() => __BK.reduce((n, b) => n + b.items.filter((it) => it.ce === 'SP-01').length, 0))) > 0
@@ -2000,6 +2017,24 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.keyboard.press('Control+z');
     await q.waitForTimeout(500);
     eq('Ctrl+Z undoes it: list and items', [await q.evaluate(() => __ST.indgl), await coded()], [null, n0]);
+    // a bucket changed in the GL list: kept as your rule (GL number → bucket); its lines wait for the next build
+    await q.click('[data-mrt="g"]');
+    await q.waitForTimeout(400);
+    await q.selectOption(`[data-mrgb="${pick.g}"]`, 'Other direct cost');
+    await q.waitForTimeout(500);
+    ok(
+      'Bucket box: kept as your rule GL → bucket',
+      await q.evaluate((g) => __ST.rules.some((r) => r.ce === g && r.bucket === 'Other direct cost' && !r.cen && !r.type && !r.wbs), pick.g)
+    );
+    ok(
+      '…its lines wait for the next build (rebuild bar)',
+      await q.$eval('#rul', (e) => /wait for your GL changes|waits for your GL changes/.test(e.textContent))
+    );
+    const base = await q.evaluate((g) => document.querySelector(`[data-mrgb="${g}"]`).title, pick.g);
+    const back = (base.match(/built-in: (.*)$/) || [])[1];
+    await q.selectOption(`[data-mrgb="${pick.g}"]`, back);
+    await q.waitForTimeout(500);
+    ok('…back to the built-in bucket: your rule is gone', await q.evaluate((g) => !__ST.rules.some((r) => r.ce === g), pick.g), back);
     await c17.close();
   }
   if (RUN('7o')) {

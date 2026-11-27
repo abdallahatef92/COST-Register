@@ -605,3 +605,11 @@ body.navfold #nav button.nlk .tx{white-space:normal}
 #side.tabs .sdi .a{position:static;white-space:nowrap}
 .adjb{display:inline-flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px} .adjb>i{font-style:normal;font-weight:700;color:#6B7280}
 #side.tabs .sdi{max-width:290px}
+/* v5.17 Mapping rules as lists */
+.mrflt{display:flex;gap:8px;align-items:center;margin:6px 0 8px} .mrflt input{width:260px;padding:5px 9px;border:1px solid #C9D3E3;border-radius:7px} .mrflt select{padding:4px 6px;border:1px solid #C9D3E3;border-radius:7px}
+.mrgl td{vertical-align:middle} .mrgl select{max-width:100%;padding:2px 4px;border:1px solid #DCE3EE;border-radius:5px;background:#fff;font-size:12.5px} .mrgl select.own{background:#FFF4D6;border-color:#E3A008;font-weight:600} .mrgl select.none{color:#B42318;border-color:#F3B4AE}
+.mrgl tr.own td:first-child{box-shadow:inset 3px 0 0 #E3A008} .mrgl tr.zero td{color:#9AA4B2} .mrgl tr.dec td{background:#F7FAFF} .mrgl input{width:100%;padding:3px 6px;border:1px solid #DCE3EE;border-radius:5px}
+.mrfix{color:#14254A;font-weight:600} .mrw{display:inline-block;background:#FFF4D6;color:#8A5A00;border-radius:8px;padding:0 6px;font-size:11px;font-weight:700}
+.mrind tr.hd td{background:var(--hc);color:#fff;font-weight:700;font-size:13.5px;height:30px} .mrind tr.hd td span{font-weight:400;opacity:.85;font-size:12px} .mrind tr:not(.hd) td:first-child{box-shadow:inset 4px 0 0 color-mix(in srgb,var(--hc) 45%,#fff);padding-left:12px}
+.mrtabs button small{display:block}
+.mrgl .oth{font-size:11.5px;color:#8A5A00;font-weight:600} .mrgl .oth span{font-weight:400;color:#9AA4B2}
