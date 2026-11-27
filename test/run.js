@@ -1930,6 +1930,20 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       '…opens on the GL list: one row per GL with its bucket, the indirect GLs with a cost element box',
       (await q.$$eval('#rul .mrgl tbody tr', (x) => x.length > 20)) && (await q.$$eval('#rul [data-mrgc]', (x) => x.length > 3))
     );
+    ok('…opens with "only GL with lines" ticked', await q.$eval('#rul [data-mron]', (e) => e.checked));
+    await q.click('#rul [data-mron]');
+    await q.waitForTimeout(400);
+    ok(
+      '…the SAP chart of accounts: every cost and revenue GL, grouped by account group (3060 Site / office …)',
+      await q.$eval(
+        '#rul',
+        (e) =>
+          e.querySelectorAll('.mrgl tbody tr:not(.gh)').length >= 250 &&
+          e.querySelectorAll('.mrgl tr.gh').length >= 10 &&
+          /Site \/ office Related cost/.test(e.textContent)
+      )
+    );
+    ok('…the bucket as its colour square', await q.$$eval('#rul .mrbk i', (x) => x.length > 50));
     await q.click('[data-mrt="d"]');
     await q.waitForTimeout(300);
     ok(

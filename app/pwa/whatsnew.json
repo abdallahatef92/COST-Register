@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.173",
+    "n": [
+      "One colour per bucket everywhere: the coloured square shows next to the bucket in Mapping rules, the PKG view of Expenses, the line drawers and the PKG summary items",
+      "GL list opens with “only GL with lines” ticked – untick it to see the whole SAP chart"
+    ]
+  },
+  {
     "v": "5.172",
     "n": [
       "GL list: every cost and revenue account of the SAP chart (260 GL), grouped by account group like the SAP tree – − / + folds a group",

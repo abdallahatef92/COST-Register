@@ -696,7 +696,7 @@ document.addEventListener('dblclick', (e) => {
       .map(([kk, v]) => {
         const [b, i] = kk.split(':').map(Number),
           it = BK[b].items[i];
-        return `<tr class="drl2" data-psit="${kk}"><td style="text-align:left"><a class="lk">${esc(itemCode(it))}</a></td><td style="text-align:left" dir="auto">${esc(itemDesc(it))}</td><td>${esc(BK[b].short)}</td><td><b>${fmt(v)}</b></td></tr>`;
+        return `<tr class="drl2" data-psit="${kk}"><td style="text-align:left"><a class="lk">${esc(itemCode(it))}</a></td><td style="text-align:left" dir="auto">${esc(itemDesc(it))}</td><td><span class="bkc"><i style="background:${bkColor(b)}"></i>${esc(BK[b].short)}</span></td><td><b>${fmt(v)}</b></td></tr>`;
       })
       .join('')}</table>`
   );

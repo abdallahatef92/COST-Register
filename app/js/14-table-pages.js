@@ -1119,7 +1119,15 @@ function pageDef() {
       .map((e) => ({ e, it: BK[e.b].items[e.ii], g: e.pkg || '(no PKG yet)', g2: BK[e.b].id }))
       .sort((x, y) => pIx.get(x.e.pkg) - pIx.get(y.e.pkg) || x.e.b - y.e.b || x.e.ii - y.e.ii);
     const cols = [
-      { k: 'b', l: 'Bucket', w: 150, fz: 1, v: (r) => r.g2, h: (r) => `<td>${esc(r.g2)}</td>` },
+      {
+        k: 'b',
+        l: 'Bucket',
+        w: 150,
+        fz: 1,
+        v: (r) => r.g2,
+        h: (r) =>
+          `<td title="${esc(r.g2)}"><span class="bkc"><i style="background:${bkColor(r.e.b)}"></i>${esc(BK[r.e.b].short)}</span></td>`,
+      },
       {
         k: 'code',
         l: 'Item',

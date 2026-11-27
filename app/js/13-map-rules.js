@@ -179,7 +179,12 @@ const MR_EQW = {
   'SE-11': 'generator · مولد',
   'SE-17': 'any other equipment',
 };
-const MRV = { tab: 'g', fold: new Set(['zy']), c: null, add: '', q: '', fb: '', fc: '' };
+// the colour of a bucket – the same square as in every table of the tool
+const mrBkCol = (b) => {
+  const i = BK.findIndex((x) => x.id === b);
+  return i >= 0 ? bkColor(i) : MR_COL[b] || '#9AA4B2';
+};
+const MRV = { tab: 'g', fold: new Set(['zy']), c: null, add: '', q: '', fb: '', fc: '', on: true };
 // every CJI3 line → its rule (index in MR_BOOK, 'zy' or 'yours'), worked out once per build
 function mrCalc() {
   if (MRV.c && MRV.c.n === N) return MRV.c;
@@ -238,7 +243,7 @@ function mrShow(title, idx) {
       .slice(0, 800)
       .map(
         (i) =>
-          `<tr><td style="text-align:left">${dt(L.d[i])}</td><td style="text-align:left">${esc(S[L.doc[i]])}</td><td style="text-align:left">${esc(S[L.ty[i]])}</td><td style="text-align:left">${esc(S[L.cen[i]])} <span class="help">${esc(S[L.ce[i]])}</span></td><td style="text-align:left">${esc(S[L.wbs[i]])}</td><td style="text-align:left" dir="auto">${esc(S[L.desc[i]] || S[L.name[i]] || '')}</td><td style="text-align:left">${esc(BK[L.b[i]].id)}</td><td>${fmt2(L.amt[i])}</td></tr>`
+          `<tr><td style="text-align:left">${dt(L.d[i])}</td><td style="text-align:left">${esc(S[L.doc[i]])}</td><td style="text-align:left">${esc(S[L.ty[i]])}</td><td style="text-align:left">${esc(S[L.cen[i]])} <span class="help">${esc(S[L.ce[i]])}</span></td><td style="text-align:left">${esc(S[L.wbs[i]])}</td><td style="text-align:left" dir="auto">${esc(S[L.desc[i]] || S[L.name[i]] || '')}</td><td style="text-align:left"><span class="bkc"><i style="background:${bkColor(L.b[i])}"></i>${esc(BK[L.b[i]].short)}</span></td><td>${fmt2(L.amt[i])}</td></tr>`
       )
       .join(
         ''
@@ -315,7 +320,7 @@ function mrTab1() {
       const n = rows.reduce((s, r) => s + r.n, 0),
         a = rows.reduce((s, r) => s + r.a, 0),
         op = !MRV.fold.has(key);
-      return `<div class="mrb${op ? '' : ' fold'}" style="--c:${MR_COL[key] || '#6D7B8D'}"><div class="mrh" data-mrf="${esc(key)}"><span class="tg">${op ? '−' : '+'}</span><b>${esc(title)}</b><span class="cnt">${rows.length} condition${rows.length === 1 ? '' : 's'}</span><span class="sp"></span><span class="num">${n.toLocaleString('en-US')} lines</span><span class="num w">${f(a)}</span></div>${
+      return `<div class="mrb${op ? '' : ' fold'}" style="--c:${mrBkCol(key) || '#6D7B8D'}"><div class="mrh" data-mrf="${esc(key)}"><span class="tg">${op ? '−' : '+'}</span><b>${esc(title)}</b><span class="cnt">${rows.length} condition${rows.length === 1 ? '' : 's'}</span><span class="sp"></span><span class="num">${n.toLocaleString('en-US')} lines</span><span class="num w">${f(a)}</span></div>${
         op
           ? `<table class="mrtb"><tr><th style="width:38px">#</th><th>A line goes here when…</th>${isGA ? '<th style="width:200px">G&amp;A group</th>' : ''}<th class="n" style="width:90px">Lines</th><th class="n" style="width:130px">Amount</th></tr>${rows
               .map(
@@ -603,8 +608,8 @@ function mrTabGl() {
     mine = rows.filter((r) => r.own).length,
     bOpt = (r) =>
       r.bucket.startsWith('Revenue')
-        ? `<span class="mrbk" style="--bc:${MR_COL.Revenue}"><i></i><span class="mrfix">${esc(r.bucket)}</span></span>`
-        : `<span class="mrbk" style="--bc:${r.bucket ? MR_COL[r.bucket] || '#9AA4B2' : 'transparent'}"><i></i><select data-mrgb="${esc(r.g)}" class="${r.own ? 'own' : ''}" title="${r.own ? 'changed by you – built-in: ' + esc(r.base ? r.base.b : 'by document type') : 'built-in'}">${r.byType ? `<option value="">${esc(r.bucket)} (by doc. type)</option>` : !r.bucket ? '<option value="" selected>– no rule yet –</option>' : ''}${BKS.filter(
+        ? `<span class="mrbk" style="--bc:${mrBkCol('Revenue')}"><i></i><span class="mrfix">${esc(r.bucket)}</span></span>`
+        : `<span class="mrbk" style="--bc:${r.bucket ? mrBkCol(r.bucket) : 'transparent'}"><i></i><select data-mrgb="${esc(r.g)}" class="${r.own ? 'own' : ''}" title="${r.own ? 'changed by you – built-in: ' + esc(r.base ? r.base.b : 'by document type') : 'built-in'}">${r.byType ? `<option value="">${esc(r.bucket)} (by doc. type)</option>` : !r.bucket ? '<option value="" selected>– no rule yet –</option>' : ''}${BKS.filter(
             (b) => b !== 'Unclassified'
           )
             .map((b) => `<option${b === r.bucket && !r.byType ? ' selected' : ''}>${esc(b)}</option>`)
@@ -650,7 +655,7 @@ function mrTabGl() {
     )}</tbody></table><div class="mrnote">Grouped by the SAP account group (− / + folds) · point at a name for its long text · grey = no line in this CJI3 · amber = changed by you · → = lines a document type or a special rule puts in another bucket</div>`;
 }
 // document types: what each one decides
-const MR_DTC = { SC: '#E07B39', WA: '#1F4E9A', AF: '#6D7B8D', RV: '#14254A', ZY: '#9CA3AF' };
+const MR_DTC = { SC: 'Subcontractor', WA: 'Material', AF: 'Asset depreciation', RV: 'Revenue', ZY: 'zy' };
 const MR_DT = {
   SC: ['subcontract certificate', 'Subcontractor (deductions: Subcontractor deductions)'],
   WA: ['goods issue', 'Material'],
@@ -685,7 +690,7 @@ function mrTabDt() {
     box = (t) => {
       const u = own(t),
         bi = MR_DT[t] ? MR_DT[t][1] : '→ the GL list decides';
-      return `<span class="mrbk" style="--bc:${u ? MR_COL[u.bucket] || '#9AA4B2' : MR_DTC[t] || 'transparent'}"><i></i><select data-mrdb="${esc(t)}" class="${u ? 'own' : ''}" title="${u ? 'changed by you – built-in: ' + esc(bi) : 'built-in'}"><option value="">${esc(bi)}</option>${BKS.map((b) => `<option${u && u.bucket === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></span>`;
+      return `<span class="mrbk" style="--bc:${u ? mrBkCol(u.bucket) : MR_DTC[t] ? mrBkCol(MR_DTC[t]) : 'transparent'}"><i></i><select data-mrdb="${esc(t)}" class="${u ? 'own' : ''}" title="${u ? 'changed by you – built-in: ' + esc(bi) : 'built-in'}"><option value="">${esc(bi)}</option>${BKS.map((b) => `<option${u && u.bucket === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></span>`;
     };
   return `<div class="mrlv"><b>Document types</b><span>checked first – a document type below decides the bucket; every other type goes by the GL list</span></div>
   <table class="mrtb mrgl"><thead><tr><th style="width:90px">Type</th><th style="width:220px">Meaning</th><th>Bucket</th><th class="n" style="width:90px">Lines</th><th class="n" style="width:130px">Amount</th></tr></thead><tbody>${rows
@@ -733,7 +738,7 @@ function mrTabWbs() {
         const o = ovOf(w),
           b = o ? o.bucket : 'G&A',
           g = o ? o.sub || '' : 'Other labour / payroll';
-        return `<tr class="${o ? 'own' : ''}"><td><b>${esc(w)}</b></td><td>GL name Salaries · Wages · Bonus</td><td><span class="mrbk" style="--bc:${MR_COL[b] || '#9AA4B2'}"><i></i><select data-mrwb="${esc(w)}" data-f="bucket" class="${o ? 'own' : ''}">${BKS.map((x) => `<option${x === b ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></span>${b === 'G&A' ? ` <select data-mrwb="${esc(w)}" data-f="sub" class="${o ? 'own' : ''}"><option value=""></option>${MR_GLGRP.map((x) => `<option${x === g ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}</td><td class="help" title="${o ? 'built-in: G&amp;A · Other labour / payroll' : ''}">${o ? 'yours' : 'built-in'}</td><td class="n">${e.n.toLocaleString('en-US')}</td><td class="n">${f(e.a)}</td><td>${o ? `<button data-mrwbx="${esc(w)}" title="back to the built-in">↺</button>` : ''}</td></tr>`;
+        return `<tr class="${o ? 'own' : ''}"><td><b>${esc(w)}</b></td><td>GL name Salaries · Wages · Bonus</td><td><span class="mrbk" style="--bc:${mrBkCol(b)}"><i></i><select data-mrwb="${esc(w)}" data-f="bucket" class="${o ? 'own' : ''}">${BKS.map((x) => `<option${x === b ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></span>${b === 'G&A' ? ` <select data-mrwb="${esc(w)}" data-f="sub" class="${o ? 'own' : ''}"><option value=""></option>${MR_GLGRP.map((x) => `<option${x === g ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}</td><td class="help" title="${o ? 'built-in: G&amp;A · Other labour / payroll' : ''}">${o ? 'yours' : 'built-in'}</td><td class="n">${e.n.toLocaleString('en-US')}</td><td class="n">${f(e.a)}</td><td>${o ? `<button data-mrwbx="${esc(w)}" title="back to the built-in">↺</button>` : ''}</td></tr>`;
       })()
     ),
     ...mine.map(([r, i]) => {
@@ -770,7 +775,7 @@ function mrTabSp() {
     .filter(([k]) => k !== undefined && k >= -1)
     .map(([k, t, b]) => {
       const e = D.st.get(k) || { n: 0, a: 0 };
-      return `<tr class="${e.n ? '' : 'zero'}"><td>${esc(t)}</td><td><b>${esc(b)}</b></td><td class="n">${e.n ? `<a class="lk" data-mrl="${k}">${e.n.toLocaleString('en-US')}</a>` : '0'}</td><td class="n">${f(e.a)}</td></tr>`;
+      return `<tr class="${e.n ? '' : 'zero'}"><td>${esc(t)}</td><td><span class="bkc"><i style="background:${mrBkCol(b === 'its pair' ? 'zy' : b)}"></i><b>${esc(b)}</b></span></td><td class="n">${e.n ? `<a class="lk" data-mrl="${k}">${e.n.toLocaleString('en-US')}</a>` : '0'}</td><td class="n">${f(e.a)}</td></tr>`;
     })
     .join(
       ''
@@ -1190,7 +1195,7 @@ async function mrExport() {
       a = rows.reduce((s, r) => s + r.a, 0),
       br = ws.addRow([title, '', rows.length + ' condition' + (rows.length === 1 ? '' : 's'), '', '', '', n, a]);
     br.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    br.eachCell({ includeEmpty: true }, (c) => (c.fill = fill('FF' + (MR_COL[key] || '#6D7B8D').slice(1))));
+    br.eachCell({ includeEmpty: true }, (c) => (c.fill = fill('FF' + (mrBkCol(key) || '#6D7B8D').slice(1))));
     for (const r of rows) {
       const cr = ws.addRow([title, r.no, r.txt, '', '', r.g || '', r.n, r.a]);
       cr.outlineLevel = 1;
