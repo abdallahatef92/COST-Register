@@ -2049,6 +2049,22 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.selectOption(`[data-mrdb="${dt}"]`, '');
     await q.waitForTimeout(500);
     ok('…the first choice brings back the built-in rule', await q.evaluate((t) => !__ST.rules.some((r) => r.type === t), dt));
+    await q.click('[data-mrt="w"]');
+    await q.waitForTimeout(400);
+    const wb = await q.$eval('#rul select[data-mrwb][data-f="bucket"]', (e) => e.dataset.mrwb);
+    await q.selectOption(`select[data-mrwb="${wb}"][data-f="bucket"]`, 'Labor');
+    await q.waitForTimeout(500);
+    ok(
+      'WBS rules: the built-in WBS row is editable – Salaries · Wages · Bonus on it → Labor, kept as your rules',
+      await q.evaluate(
+        (w) => ['Salaries', 'Wages', 'Bonus'].every((c) => __ST.rules.some((r) => r.wbs === w && r.cen === c && r.bucket === 'Labor')),
+        wb
+      ),
+      wb
+    );
+    await q.click(`[data-mrwbx="${wb}"]`);
+    await q.waitForTimeout(500);
+    ok('…↺ brings back the built-in', await q.evaluate((w) => !__ST.rules.some((r) => r.wbs === w), wb));
     await c17.close();
   }
   if (RUN('7o')) {

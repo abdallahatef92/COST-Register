@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.171",
+    "n": [
+      "WBS rules: the built-in WBS rows are editable too – pick another bucket or G&A group for Salaries · Wages · Bonus on that WBS; ↺ brings back the built-in",
+      "Your WBS rules: type the GL name the rule applies to (empty = every line on the WBS)"
+    ]
+  },
+  {
     "v": "5.17",
     "n": [
       "Mapping rules as lists: the GL list shows every GL with its bucket, G&A group and indirect code – change any of them in its box",

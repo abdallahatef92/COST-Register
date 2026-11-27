@@ -681,7 +681,10 @@ function mrTabWbs() {
       e.a += L.amt[i];
     }
   }
-  const mine = ST.rules.map((r, i) => [r, i]).filter(([r]) => r.wbs),
+  // your rules on a built-in WBS (Salaries · Wages · Bonus) show on its built-in row, not as separate rows
+  const isPayOv = (r) => r.wbs && pay.has(r.wbs) && PAY.includes(r.cen) && !r.ce && !r.type,
+    ovOf = (w) => ST.rules.find((r) => r.wbs === w && PAY.includes(r.cen) && !r.ce && !r.type && r.bucket),
+    mine = ST.rules.map((r, i) => [r, i]).filter(([r]) => (r.wbs || r.wnew) && !isPayOv(r)),
     cnt = (r) => {
       let n = 0,
         a = 0;
@@ -694,17 +697,26 @@ function mrTabWbs() {
     },
     BKS = (META.bucketIds || BK.map((b) => b.id)).filter((b) => b !== 'Unclassified');
   const rows = [
-    ...[...pay].map(
-      ([w, e]) =>
-        `<tr><td><b>${esc(w)}</b></td><td>GL name Salaries · Wages · Bonus</td><td><b>G&amp;A</b> · Other labour / payroll</td><td class="help">built-in</td><td class="n">${e.n.toLocaleString('en-US')}</td><td class="n">${f(e.a)}</td><td></td></tr>`
+    ...[...pay].map(([w, e]) =>
+      (() => {
+        const o = ovOf(w),
+          b = o ? o.bucket : 'G&A',
+          g = o ? o.sub || '' : 'Other labour / payroll';
+        return `<tr class="${o ? 'own' : ''}"><td><b>${esc(w)}</b></td><td>GL name Salaries · Wages · Bonus</td><td><select data-mrwb="${esc(w)}" data-f="bucket" class="${o ? 'own' : ''}">${BKS.map((x) => `<option${x === b ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>${b === 'G&A' ? ` <select data-mrwb="${esc(w)}" data-f="sub" class="${o ? 'own' : ''}"><option value=""></option>${MR_GLGRP.map((x) => `<option${x === g ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}</td><td class="help" title="${o ? 'built-in: G&amp;A · Other labour / payroll' : ''}">${o ? 'yours' : 'built-in'}</td><td class="n">${e.n.toLocaleString('en-US')}</td><td class="n">${f(e.a)}</td><td>${o ? `<button data-mrwbx="${esc(w)}" title="back to the built-in">↺</button>` : ''}</td></tr>`;
+      })()
     ),
     ...mine.map(([r, i]) => {
       const c = cnt(r);
-      return `<tr class="own"><td><input data-mrwr="${i}" data-f="wbs" value="${esc(r.wbs)}" placeholder="WBS starts with"></td><td>${[r.ce && 'GL ' + esc(r.ce), r.cen && 'GL name ' + esc(r.cen), r.type && 'doc. type ' + esc(r.type)].filter(Boolean).join(' · ') || '<span class="help">every line on it</span>'}</td><td><select data-mrwr="${i}" data-f="bucket"><option value="">– choose –</option>${BKS.map((b) => `<option${b === r.bucket ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>${r.bucket === 'G&A' ? ` <select data-mrwr="${i}" data-f="sub"><option value=""></option>${MR_GLGRP.map((g) => `<option${g === r.sub ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>` : ''}</td><td class="help">yours</td><td class="n">${c.n.toLocaleString('en-US')}</td><td class="n">${f(c.a)}</td><td><button data-mrwx="${i}" title="delete this rule">✕</button></td></tr>`;
+      return `<tr class="own"><td><input data-mrwr="${i}" data-f="wbs" value="${esc(r.wbs)}" placeholder="WBS starts with"></td><td><input data-mrwr="${i}" data-f="cen" value="${esc(r.cen || '')}" placeholder="GL name (empty = every line on it)" list="dl-mrcen">${r.ce || r.type ? ` <span class="help">${[r.ce && 'GL ' + esc(r.ce), r.type && 'doc. type ' + esc(r.type)].filter(Boolean).join(' · ')}</span>` : ''}</td><td><select data-mrwr="${i}" data-f="bucket"><option value="">– choose –</option>${BKS.map((b) => `<option${b === r.bucket ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>${r.bucket === 'G&A' ? ` <select data-mrwr="${i}" data-f="sub"><option value=""></option>${MR_GLGRP.map((g) => `<option${g === r.sub ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>` : ''}</td><td class="help">yours</td><td class="n">${c.n.toLocaleString('en-US')}</td><td class="n">${f(c.a)}</td><td><button data-mrwx="${i}" title="delete this rule">✕</button></td></tr>`;
     }),
   ];
   return `<div class="mrlv"><b>WBS rules</b><span>one WBS per line and what goes to it – checked before the special rules</span></div>
   <table class="mrtb mrgl"><thead><tr><th style="width:230px">WBS</th><th>Lines on it with</th><th style="width:330px">→ Bucket · group</th><th style="width:80px">Rule</th><th class="n" style="width:80px">Lines</th><th class="n" style="width:120px">Amount</th><th style="width:40px"></th></tr></thead><tbody>${rows.join('') || '<tr><td colspan="7" class="help">No WBS rule.</td></tr>'}</tbody></table>
+  <datalist id="dl-mrcen">${[...new Set([...mrCalc().nm.values()])]
+    .filter(Boolean)
+    .sort()
+    .map((x) => `<option value="${esc(x)}">`)
+    .join('')}</datalist>
   <div style="margin-top:8px"><button data-mra="wadd">+ Add a WBS rule</button> <span class="help">a WBS rule is one of your rules: it moves every line on that WBS (and below) at the next build</span></div>`;
 }
 // special rules: the few conditions that need more than a document type, a GL or a WBS
@@ -837,10 +849,10 @@ $('rul').addEventListener('click', (e) => {
         toast('Apply your rules here: Apply rules – rebuild');
       }
     } else if (a === 'wadd') {
-      ST.rules.push({ ce: '', cen: '', type: '', wbs: '', bucket: '', sub: '' });
+      ST.rules.push({ ce: '', cen: '', type: '', wbs: '', bucket: '', sub: '', wnew: 1 });
       persist();
       renderRules();
-      const w = [...document.querySelectorAll('#rul input[data-mrwr]')].pop();
+      const w = [...document.querySelectorAll('#rul input[data-mrwr][data-f="wbs"]')].pop();
       if (w) w.focus();
     } else if (a === 'indreset') mrIndSet(JSON.parse(JSON.stringify(IND_GL)), 'Indirect list: back to the built-in one');
     else if (a === 'rebuild') updRebuild();
@@ -848,6 +860,15 @@ $('rul').addEventListener('click', (e) => {
       MRV.fold = a === 'open' ? new Set() : new Set([...MR_ORDER, 'zy', 'yours']);
       renderRules();
     }
+    return;
+  }
+  const wbx = e.target.closest('[data-mrwbx]');
+  if (wbx) {
+    const w = wbx.dataset.mrwbx;
+    ST.rules = ST.rules.filter((r) => !(r.wbs === w && ['Salaries', 'Wages', 'Bonus'].includes(r.cen) && !r.ce && !r.type));
+    persist();
+    MRV.c = null;
+    renderRules();
     return;
   }
   const wx = e.target.closest('[data-mrwx]');
@@ -968,9 +989,30 @@ $('rul').addEventListener('change', (e) => {
     renderRules();
     return;
   }
+  const wb = e.target.closest('[data-mrwb]');
+  if (wb) {
+    const w = wb.dataset.mrwb,
+      PAY = ['Salaries', 'Wages', 'Bonus'],
+      cur = ST.rules.find((r) => r.wbs === w && PAY.includes(r.cen) && !r.ce && !r.type && r.bucket) || {
+        bucket: 'G&A',
+        sub: 'Other labour / payroll',
+      },
+      b = wb.dataset.f === 'bucket' ? wb.value : cur.bucket,
+      g = wb.dataset.f === 'sub' ? wb.value : wb.dataset.f === 'bucket' ? (b === 'G&A' ? 'Other labour / payroll' : '') : cur.sub || '';
+    ST.rules = ST.rules.filter((r) => !(r.wbs === w && PAY.includes(r.cen) && !r.ce && !r.type));
+    if (!(b === 'G&A' && g === 'Other labour / payroll'))
+      PAY.forEach((c) => ST.rules.unshift({ ce: '', cen: c, type: '', wbs: w, bucket: b, sub: b === 'G&A' ? g : '' }));
+    persist();
+    MRV.c = null;
+    renderRules();
+    toast(`WBS ${w}: Salaries · Wages · Bonus → ${b}${g ? ' · ' + g : ''}`);
+    return;
+  }
   const wr = e.target.closest('[data-mrwr]');
   if (wr) {
-    ST.rules[+wr.dataset.mrwr][wr.dataset.f] = wr.value.trim();
+    const r0 = ST.rules[+wr.dataset.mrwr];
+    r0[wr.dataset.f] = wr.value.trim();
+    if (r0.wbs) delete r0.wnew;
     persist();
     MRV.c = null;
     renderRules();
