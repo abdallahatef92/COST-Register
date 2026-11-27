@@ -1,5 +1,13 @@
 [
   {
+    "v": "5.172",
+    "n": [
+      "GL list: every cost and revenue account of the SAP chart (260 GL), grouped by account group like the SAP tree – − / + folds a group",
+      "One line per GL: point at a name for its long text; the bucket shows as its colour square and name – click it to change",
+      "Filter by account group, or show only the GL with lines; the Excel export carries the account group and long name"
+    ]
+  },
+  {
     "v": "5.171",
     "n": [
       "WBS rules: the built-in WBS rows are editable too – pick another bucket or G&A group for Salaries · Wages · Bonus on that WBS; ↺ brings back the built-in",

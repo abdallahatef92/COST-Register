@@ -389,7 +389,7 @@ function mrIndData() {
       const gls = String(indGl()[k] || '')
         .split(' ')
         .filter(Boolean)
-        .map((x) => ({ g: x, n: C.nm.get(x) || '', c: (per.get(x) || {}).n || 0, a: (per.get(x) || {}).a || 0 }));
+        .map((x) => ({ g: x, n: C.nm.get(x) || (GL_TREE[x] || [])[1] || '', c: (per.get(x) || {}).n || 0, a: (per.get(x) || {}).a || 0 }));
       const q = MR_EQW[k] ? eq.get(k) || { n: 0, a: 0 } : null;
       return {
         k,
@@ -547,6 +547,8 @@ function mrGlData() {
       })
   );
   Object.entries(MR_GLNO).forEach(([nm, g]) => get(g, nm));
+  // every cost and revenue account of the SAP chart (GL account tree)
+  Object.entries(GL_TREE).forEach(([g, t]) => get(g, t[1]));
   ST.rules.forEach((r) => r.ce && !r.cen && !r.type && !r.wbs && get(r.ce, C.nm.get(r.ce) || ''));
   const rows = [...per.values()].map((e) => {
     const base = mrGlRule(e.g, e.nm),
@@ -558,8 +560,12 @@ function mrGlData() {
         .filter(([b]) => b !== bucket)
         .map(([b, n]) => [b, u && base && b === base.b ? n - e.wait : n])
         .filter(([, n]) => n > 0);
+    const t = GL_TREE[e.g];
     return {
       ...e,
+      ag: t ? t[0] : '',
+      long: t && t[2] && t[2] !== e.nm ? t[2] : '',
+      blk: t ? t[3] : 0,
       base,
       own: u || null,
       bucket,
@@ -581,21 +587,28 @@ function mrTabGl() {
     q = (MRV.q || '').toLowerCase(),
     fb = MRV.fb || '',
     fc = MRV.fc || '',
+    fa = MRV.fa || '',
+    agL = (a) => (a ? a + ' ' + (GL_GRP[a] || '') : ''),
     shown = rows.filter(
       (r) =>
-        (!q || (r.g + ' ' + r.nm + ' ' + r.bucket + ' ' + r.grp + ' ' + r.ce + ' ' + (PS_NAMES[r.ce] || '')).toLowerCase().includes(q)) &&
+        (!q ||
+          (r.g + ' ' + r.nm + ' ' + r.long + ' ' + agL(r.ag) + ' ' + r.bucket + ' ' + r.grp + ' ' + r.ce + ' ' + (PS_NAMES[r.ce] || ''))
+            .toLowerCase()
+            .includes(q)) &&
+        (!fa || (fa === '(not in the tree)' ? !r.ag : agL(r.ag) === fa)) &&
+        (!MRV.on || r.n) &&
         (!fb || r.bucket === fb) &&
         (!fc || (fc === '(none)' ? mrIndB(r.bucket) && !r.ce : r.ce === fc))
     ),
     mine = rows.filter((r) => r.own).length,
     bOpt = (r) =>
       r.bucket.startsWith('Revenue')
-        ? `<span class="mrfix">${esc(r.bucket)}</span>`
-        : `<select data-mrgb="${esc(r.g)}" class="${r.own ? 'own' : ''}" title="${r.own ? 'changed by you – built-in: ' + esc(r.base ? r.base.b : 'by document type') : 'built-in'}">${r.byType ? `<option value="">${esc(r.bucket)} (by doc. type)</option>` : ''}${BKS.filter(
+        ? `<span class="mrbk" style="--bc:${MR_COL.Revenue}"><i></i><span class="mrfix">${esc(r.bucket)}</span></span>`
+        : `<span class="mrbk" style="--bc:${r.bucket ? MR_COL[r.bucket] || '#9AA4B2' : 'transparent'}"><i></i><select data-mrgb="${esc(r.g)}" class="${r.own ? 'own' : ''}" title="${r.own ? 'changed by you – built-in: ' + esc(r.base ? r.base.b : 'by document type') : 'built-in'}">${r.byType ? `<option value="">${esc(r.bucket)} (by doc. type)</option>` : !r.bucket ? '<option value="" selected>– no rule yet –</option>' : ''}${BKS.filter(
             (b) => b !== 'Unclassified'
           )
             .map((b) => `<option${b === r.bucket && !r.byType ? ' selected' : ''}>${esc(b)}</option>`)
-            .join('')}</select>`,
+            .join('')}</select></span>`,
     gOpt = (r) =>
       r.bucket === 'G&A'
         ? `<select data-mrgg="${esc(r.g)}" class="${r.own ? 'own' : ''}"><option value=""></option>${MR_GLGRP.map((g) => `<option${g === r.grp ? ' selected' : ''}>${esc(g)}</option>`).join('')}</select>`
@@ -604,22 +617,40 @@ function mrTabGl() {
       r.ce === 'by name'
         ? '<span class="help" title="Inhouse Charge EQ: the cost element by the equipment name (Indirect tab)">by equipment name</span>'
         : mrIndB(r.bucket)
-          ? `<select data-mrgc="${esc(r.g)}" class="${r.ce ? '' : 'none'}"><option value="">${r.ce ? '– take off –' : '– choose –'}</option>${ces.map((c) => `<option value="${esc(c)}"${c === r.ce ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>`
+          ? `<select data-mrgc="${esc(r.g)}" class="${r.ce ? '' : 'none'}"><option value="">${r.ce ? '– take off –' : '–'}</option>${ces.map((c) => `<option value="${esc(c)}"${c === r.ce ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>`
           : '',
     sel = (k, v, list, all) =>
       `<select data-mrfl="${k}"><option value="">${all}</option>${list.map((x) => `<option${x === v ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
   return `<div class="mrlv"><b>GL list</b><span>every GL in this CJI3 and the built-in ones · its bucket, G&amp;A group and indirect cost element · change them here – a bucket you change is kept as your rule</span></div>
-  <div class="mrflt"><input data-mrq placeholder="Search GL, name, code…" value="${esc(MRV.q || '')}">${sel('fb', fb, [...new Set(rows.map((r) => r.bucket))].filter(Boolean).sort(), 'Every bucket')}${sel('fc', fc, ['(none)', ...ces.filter((c) => rows.some((r) => r.ce === c))], 'Every indirect code')}<span class="help">${shown.length} of ${rows.length} GL${mine ? ` · <b>${mine} changed by you</b>` : ''}</span></div>
-  <table class="mrtb mrgl"><thead><tr><th style="width:96px">GL</th><th>GL name</th><th style="width:220px">Bucket</th><th style="width:200px">G&amp;A group</th><th style="width:110px">Indirect code</th><th>Indirect name</th><th class="n" style="width:72px">Lines</th><th class="n" style="width:120px">Amount</th></tr></thead><tbody>${shown
-    .map(
-      (r) =>
-        `<tr class="${r.n ? '' : 'zero'}${r.own ? ' own' : ''}"><td><b>${esc(r.g)}</b></td><td>${esc(r.nm || '')}${r.other.length ? `<div class="oth" title="lines on this GL that a document type or a special rule puts in another bucket">${r.other.map(([b, n]) => '→ ' + esc(b) + ' ' + n.toLocaleString('en-US')).join(' · ')} <span>by doc. type / special rule</span></div>` : ''}${r.wait ? ` <span class="mrw">${r.wait} wait</span>` : ''}</td><td>${bOpt(r)}</td><td>${gOpt(r)}</td><td>${cOpt(r)}</td><td class="help">${r.ce && r.ce !== 'by name' && mrIndB(r.bucket) ? esc(PS_NAMES[r.ce] || '') : ''}</td><td class="n">${r.n ? `<a class="lk" data-mrgl="${esc(r.g)}">${r.n.toLocaleString('en-US')}</a>` : '0'}</td><td class="n">${f(r.a)}</td></tr>`
-    )
+  <div class="mrflt"><input data-mrq placeholder="Search GL, name, code…" value="${esc(MRV.q || '')}">${sel('fb', fb, [...new Set(rows.map((r) => r.bucket))].filter(Boolean).sort(), 'Every bucket')}${sel('fc', fc, ['(none)', ...ces.filter((c) => rows.some((r) => r.ce === c))], 'Every indirect code')}${sel('fa', fa, [...[...new Set(rows.map((r) => r.ag).filter(Boolean))].sort().map(agL), ...(rows.some((r) => !r.ag) ? ['(not in the tree)'] : [])], 'Every account group')}<label class="help"><input type="checkbox" data-mron${MRV.on ? ' checked' : ''}> only GL with lines</label><span class="help">${shown.length} of ${rows.length} GL${mine ? ` · <b>${mine} changed by you</b>` : ''}</span></div>
+  <table class="mrtb mrgl mrglg"><colgroup><col style="width:92px"><col><col style="width:196px"><col style="width:168px"><col style="width:92px"><col style="width:190px"><col style="width:64px"><col style="width:112px"></colgroup><thead><tr><th>GL</th><th>GL name</th><th>Bucket</th><th>G&amp;A group</th><th>Indirect</th><th>Indirect name</th><th class="n">Lines</th><th class="n">Amount</th></tr></thead><tbody>${[
+    ...new Set(shown.map((r) => r.ag || '~')),
+  ]
+    .sort()
+    .map((ag, gi) => {
+      const rs = shown.filter((r) => (r.ag || '~') === ag),
+        op = !MRV.gf || !MRV.gf.has(ag),
+        n = rs.reduce((t, r) => t + r.n, 0),
+        a = rs.reduce((t, r) => t + r.a, 0),
+        used = rs.filter((r) => r.n).length;
+      return (
+        `<tr class="gh" data-mrgf="${esc(ag)}" style="--hc:${ag === '~' ? '#6B7280' : MR_HCOL[gi % MR_HCOL.length]}"><td colspan="6"><span class="tg">${op ? '−' : '+'}</span><b>${ag === '~' ? 'Not in the SAP chart' : esc(ag) + ' · ' + esc(GL_GRP[ag] || '')}</b> <span>${rs.length} GL · ${used} with lines</span></td><td class="n">${n ? n.toLocaleString('en-US') : '-'}</td><td class="n">${f(a)}</td></tr>` +
+        (op
+          ? rs
+              .map(
+                (r) =>
+                  `<tr class="${r.n ? '' : 'zero'}${r.own ? ' own' : ''}"><td><b>${esc(r.g)}</b></td><td title="${esc([r.nm, r.long, r.other.length ? 'other buckets: ' + r.other.map(([b, k]) => b + ' ' + k).join(', ') + ' (document type / special rule)' : ''].filter(Boolean).join(' · '))}">${esc(r.nm || '')}${r.blk ? ' <span class="mrblk" title="blocked for posting or marked for deletion in SAP">blocked</span>' : ''}${r.other.length ? ` <span class="oth">→ ${r.other.map(([b, k]) => esc(b) + ' ' + k.toLocaleString('en-US')).join(' · ')}</span>` : ''}${r.wait ? ` <span class="mrw">${r.wait} wait</span>` : ''}</td><td>${bOpt(r)}</td><td>${gOpt(r)}</td><td>${cOpt(r)}</td><td class="help" title="${esc(r.ce && r.ce !== 'by name' && mrIndB(r.bucket) ? PS_NAMES[r.ce] || '' : '')}">${r.ce && r.ce !== 'by name' && mrIndB(r.bucket) ? esc(PS_NAMES[r.ce] || '') : ''}</td><td class="n">${r.n ? `<a class="lk" data-mrgl="${esc(r.g)}">${r.n.toLocaleString('en-US')}</a>` : '0'}</td><td class="n">${f(r.a)}</td></tr>`
+              )
+              .join('')
+          : '')
+      );
+    })
     .join(
       ''
-    )}</tbody></table><div class="mrnote">Grey = no line on that GL in this CJI3 · amber = changed by you (Your rules) · lines with a document type that decides (SC, WA, AF, RV) or a special rule keep their bucket – shown after the name</div>`;
+    )}</tbody></table><div class="mrnote">Grouped by the SAP account group (− / + folds) · point at a name for its long text · grey = no line in this CJI3 · amber = changed by you · → = lines a document type or a special rule puts in another bucket</div>`;
 }
 // document types: what each one decides
+const MR_DTC = { SC: '#E07B39', WA: '#1F4E9A', AF: '#6D7B8D', RV: '#14254A', ZY: '#9CA3AF' };
 const MR_DT = {
   SC: ['subcontract certificate', 'Subcontractor (deductions: Subcontractor deductions)'],
   WA: ['goods issue', 'Material'],
@@ -654,7 +685,7 @@ function mrTabDt() {
     box = (t) => {
       const u = own(t),
         bi = MR_DT[t] ? MR_DT[t][1] : '→ the GL list decides';
-      return `<select data-mrdb="${esc(t)}" class="${u ? 'own' : ''}" title="${u ? 'changed by you – built-in: ' + esc(bi) : 'built-in'}"><option value="">${esc(bi)}</option>${BKS.map((b) => `<option${u && u.bucket === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
+      return `<span class="mrbk" style="--bc:${u ? MR_COL[u.bucket] || '#9AA4B2' : MR_DTC[t] || 'transparent'}"><i></i><select data-mrdb="${esc(t)}" class="${u ? 'own' : ''}" title="${u ? 'changed by you – built-in: ' + esc(bi) : 'built-in'}"><option value="">${esc(bi)}</option>${BKS.map((b) => `<option${u && u.bucket === b ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select></span>`;
     };
   return `<div class="mrlv"><b>Document types</b><span>checked first – a document type below decides the bucket; every other type goes by the GL list</span></div>
   <table class="mrtb mrgl"><thead><tr><th style="width:90px">Type</th><th style="width:220px">Meaning</th><th>Bucket</th><th class="n" style="width:90px">Lines</th><th class="n" style="width:130px">Amount</th></tr></thead><tbody>${rows
@@ -702,7 +733,7 @@ function mrTabWbs() {
         const o = ovOf(w),
           b = o ? o.bucket : 'G&A',
           g = o ? o.sub || '' : 'Other labour / payroll';
-        return `<tr class="${o ? 'own' : ''}"><td><b>${esc(w)}</b></td><td>GL name Salaries · Wages · Bonus</td><td><select data-mrwb="${esc(w)}" data-f="bucket" class="${o ? 'own' : ''}">${BKS.map((x) => `<option${x === b ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>${b === 'G&A' ? ` <select data-mrwb="${esc(w)}" data-f="sub" class="${o ? 'own' : ''}"><option value=""></option>${MR_GLGRP.map((x) => `<option${x === g ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}</td><td class="help" title="${o ? 'built-in: G&amp;A · Other labour / payroll' : ''}">${o ? 'yours' : 'built-in'}</td><td class="n">${e.n.toLocaleString('en-US')}</td><td class="n">${f(e.a)}</td><td>${o ? `<button data-mrwbx="${esc(w)}" title="back to the built-in">↺</button>` : ''}</td></tr>`;
+        return `<tr class="${o ? 'own' : ''}"><td><b>${esc(w)}</b></td><td>GL name Salaries · Wages · Bonus</td><td><span class="mrbk" style="--bc:${MR_COL[b] || '#9AA4B2'}"><i></i><select data-mrwb="${esc(w)}" data-f="bucket" class="${o ? 'own' : ''}">${BKS.map((x) => `<option${x === b ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select></span>${b === 'G&A' ? ` <select data-mrwb="${esc(w)}" data-f="sub" class="${o ? 'own' : ''}"><option value=""></option>${MR_GLGRP.map((x) => `<option${x === g ? ' selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}</td><td class="help" title="${o ? 'built-in: G&amp;A · Other labour / payroll' : ''}">${o ? 'yours' : 'built-in'}</td><td class="n">${e.n.toLocaleString('en-US')}</td><td class="n">${f(e.a)}</td><td>${o ? `<button data-mrwbx="${esc(w)}" title="back to the built-in">↺</button>` : ''}</td></tr>`;
       })()
     ),
     ...mine.map(([r, i]) => {
@@ -826,6 +857,15 @@ $('rul').addEventListener('click', (e) => {
   const tb = e.target.closest('[data-mrt]');
   if (tb) {
     MRV.tab = tb.dataset.mrt;
+    renderRules();
+    return;
+  }
+  const gf = e.target.closest('[data-mrgf]');
+  if (gf && !e.target.closest('select,a')) {
+    const k = gf.dataset.mrgf;
+    MRV.gf = MRV.gf || new Set();
+    if (MRV.gf.has(k)) MRV.gf.delete(k);
+    else MRV.gf.add(k);
     renderRules();
     return;
   }
@@ -983,6 +1023,11 @@ $('rul').addEventListener('change', (e) => {
     mrIndSet(mrIndMove(g, gc.value), gc.value ? `Indirect list: ${g} → ${gc.value}` : `Indirect list: ${g} taken off`);
     return;
   }
+  if (e.target.matches('[data-mron]')) {
+    MRV.on = e.target.checked;
+    renderRules();
+    return;
+  }
   const fl = e.target.closest('[data-mrfl]');
   if (fl) {
     MRV[fl.dataset.mrfl] = fl.value;
@@ -1078,6 +1123,9 @@ async function mrExport() {
     wg.addRow([
       'GL',
       'GL name',
+      'Long text',
+      'Account group',
+      'Blocked',
       'Bucket',
       'Yours',
       'G&A group',
@@ -1092,6 +1140,9 @@ async function mrExport() {
       wg.addRow([
         r.g,
         r.nm,
+        r.long,
+        r.ag ? r.ag + ' ' + (GL_GRP[r.ag] || '') : '',
+        r.blk ? 'blocked' : '',
         r.bucket + (r.byType ? ' (by doc. type)' : ''),
         r.own ? 'yours' : '',
         r.grp,
@@ -1105,6 +1156,9 @@ async function mrExport() {
     wg.columns = [
       { width: 12 },
       { width: 28 },
+      { width: 36 },
+      { width: 30 },
+      { width: 9 },
       { width: 30 },
       { width: 7 },
       { width: 26 },
@@ -1114,9 +1168,9 @@ async function mrExport() {
       { width: 16 },
       { width: 40 },
     ];
-    wg.getColumn(8).numFmt = '#,##0';
-    wg.getColumn(9).numFmt = '#,##0;[Red]-#,##0';
-    wg.autoFilter = { from: 'A3', to: 'J3' };
+    wg.getColumn(11).numFmt = '#,##0';
+    wg.getColumn(12).numFmt = '#,##0;[Red]-#,##0';
+    wg.autoFilter = { from: 'A3', to: 'M3' };
   }
   const D = mrBucketData(),
     words = (q) => q.w.map(([t, c]) => [t, c ? c.join(' · ') : ''].filter(Boolean).join(' ')).join(' ');
