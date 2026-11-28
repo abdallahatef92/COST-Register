@@ -303,6 +303,10 @@ function pageDef() {
         );
         PCT_TOT = tot;
       } // the codes first, then what the item costs and its share
+      {
+        const iw = cols.findIndex((c) => c.k === 'why');
+        if (iw >= 0) cols.push(cols.splice(iw, 1)[0]); // the suggestion reason goes last
+      }
       // narrow columns, short headers: the coding fits the screen (the explanation stays on hover)
       {
         const W = {

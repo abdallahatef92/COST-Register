@@ -1,5 +1,11 @@
 [
   {
+    "v": "5.181",
+    "n": [
+      "2 Code: the “Suggested because” column moved to the end of the row"
+    ]
+  },
+  {
     "v": "5.18",
     "n": [
       "DIV is dropped: a Subcontractor item is coded with PKG, MNL and cost element, like every other bucket – also gone from the PO screens and the Excel exports",
