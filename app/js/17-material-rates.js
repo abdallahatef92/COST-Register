@@ -309,6 +309,15 @@ document.addEventListener('click', (e) => {
   const cv = e.target.closest('[data-cv]');
   if (!cv) return;
   const v = cv.dataset.cv;
+  if (v === 'subpk') {
+    ST.tab = 'sub';
+    ST.sub = 'pkg';
+    ST.pkView = ST.pkView || 'alloc';
+    ST.bk = SUBI;
+    sel.clear();
+    render();
+    return;
+  }
   if (v === 'subpo') {
     ST.tab = 'sub';
     ST.sub = 'po';

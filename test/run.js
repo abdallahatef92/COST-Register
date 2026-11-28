@@ -1094,10 +1094,12 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p8.click('#side [data-sv="bridge"]');
         await p8.waitForTimeout(600);
         ok('Check › Bridge to CJI3', await p8.evaluate(() => __ST.sub === 'bridge' && __SEC() === 'chk'));
-        await p8.evaluate(() => __GO('rep'));
-        await p8.click('#side [data-sv="reg"]');
+        await p8.click('#nrep [data-ngo="sub:reg"]'); // its one home: the Reports menu
         await p8.waitForTimeout(800);
-        ok('Reports › PO register', await p8.evaluate(() => __ST.sub === 'reg' && document.querySelectorAll('#tb tr.it').length > 5));
+        ok(
+          'Reports › PO register (its own page, no tabs)',
+          await p8.evaluate(() => __ST.sub === 'reg' && __SEC() === 'reg' && document.querySelectorAll('#tb tr.it').length > 5)
+        );
         const [dr] = await Promise.all([p8.waitForEvent('download', { timeout: 120000 }), p8.click('#bExport')]);
         const frg = path.join(OUT, 'po_register.xlsx');
         await dr.saveAs(frg);
@@ -1106,6 +1108,16 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
           '…and it exports to Excel',
           wr.SheetNames[0] === 'PO register' && XL.utils.sheet_to_json(wr.Sheets['PO register'], { header: 1 }).length > 10
         );
+        await p8.evaluate(() => __GO('cod'));
+        await p8.waitForTimeout(400);
+        await p8.evaluate(() => {
+          const i = __BK.findIndex((b) => b.id === 'Subcontractor');
+          document.querySelector('#side [data-bk="' + i + '"]').click();
+        });
+        await p8.waitForTimeout(500);
+        await p8.click('[data-cv="subpk"]');
+        await p8.waitForTimeout(800);
+        ok('2 Code › Packages: the packages open under Code', await p8.evaluate(() => __ST.sub === 'pkg' && __SEC() === 'cod'));
       }
       eq('difference stays 0', await p8.evaluate(() => R.diff), 0);
       await c8.close();
@@ -1645,17 +1657,18 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
   }
 
   if (RUN('7j')) {
-    head('7j. Monthly job: 5 steps with their status, Go opens the place');
+    head('7j. Monthly job: the 4 steps of the menu with their status, Go opens the place, then the export');
     const { ctx: c14, p: q } = await open(APP);
-    ok('the side navigation shows Monthly job n / 5', /Monthly job\s*\d \/ 5/.test(await q.$eval('#bJob', (e) => e.textContent)));
+    ok('the side navigation shows Monthly job n / 4', /Monthly job\s*\d \/ 4/.test(await q.$eval('#bJob', (e) => e.textContent)));
     await more(q).then(() => q.click('#bJob'));
     await q.waitForTimeout(500);
     ok(
-      'the panel: 5 steps, Update and Check done (difference 0)',
+      'the panel: the 4 steps of the menu + the closing export; Update done (difference 0)',
       await q.evaluate(
         () =>
-          document.querySelectorAll('#mjob .st').length === 5 &&
-          document.querySelectorAll('#mjob .st.ok').length >= 2 &&
+          document.querySelectorAll('#mjob .st:not(.end)').length === 4 &&
+          !!document.querySelector('#mjob .st.end') &&
+          document.querySelectorAll('#mjob .st.ok:not(.end)').length >= 1 &&
           /difference 0\.00/.test(document.getElementById('mjob').textContent)
       )
     );
@@ -1663,20 +1676,23 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await q.waitForTimeout(600);
     ok('"Now" step › Go opens it (Coding)', await q.evaluate(() => __ST.tab === 'cod'));
     {
-      const g4 = await q.evaluate(() => document.querySelectorAll('#mjob .st')[3].querySelector('.go').dataset.job);
-      ok('step 4 › Go points at a place of Adjust (' + g4 + ')', ['uns', 'dep', 'own', 'adjl'].includes(g4));
+      const g3 = await q.evaluate(() => document.querySelectorAll('#mjob .st')[2].querySelector('.go').dataset.job),
+        g4 = await q.evaluate(() => document.querySelectorAll('#mjob .st')[3].querySelector('.go').dataset.job);
+      ok('step 3 Decide › Go points at a place of Decide (' + g3 + ')', ['uns', 'dep', 'own', 'adjl'].includes(g3));
+      eq('step 4 Forecast › Go opens the budget', g4, 'bsum');
     }
     // from the Expenses page, where the top Export Excel exports only the page: the panel's button exports the monthly report
     if (await q.evaluate(() => document.getElementById('mjob').hidden)) await more(q).then(() => q.click('#bJob'));
-    await q.evaluate(() => document.querySelectorAll('#mjob .st')[4].querySelector('.go').click());
+    await q.evaluate(() => document.querySelector('#mjob .st.end .go.x2').click());
     await q.waitForTimeout(600);
-    ok('step 5 › Expenses opens the Expenses page', await q.evaluate(() => __ST.tab === 'xpm'));
-    await q.click('#mjob .go.x2');
+    ok('the closing row › Expenses opens the Expenses page', await q.evaluate(() => __ST.tab === 'xpm'));
+    if (await q.evaluate(() => document.getElementById('mjob').hidden)) await more(q).then(() => q.click('#bJob'));
+    await q.evaluate(() => document.querySelector('#mjob .st.end .go').click());
     await q.waitForTimeout(1500);
     ok(
-      'step 5 › Export the monthly report: step 5 is done at once, panel still open',
+      'Export the monthly report: marked exported at once, panel still open',
       await q.evaluate(
-        () => !document.getElementById('mjob').hidden && /exported for this cut/.test(document.querySelectorAll('#mjob .st')[4].textContent)
+        () => !document.getElementById('mjob').hidden && /exported for this cut ✓/.test(document.querySelector('#mjob .st.end').textContent)
       )
     );
     await c14.close();

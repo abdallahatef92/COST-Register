@@ -153,7 +153,18 @@ const numC = (k, l, w, get, o = {}) => ({
 let PCT_TOT = 1; // the bucket total behind the % of a group row (2 Code)
 // the three pages of Coding, as tabs: each says what it is
 const codTabs = (cur) =>
-  `<div class="ctabs">${[['cod', 'Items', 'one row per item – code here'], ['lines', 'SAP transaction lines', 'the CJI3 lines of this bucket, with their codes'], ...(ST.bk === SUBI && SUBI >= 0 ? [['subpo', 'POs', 'the items of every PO, with their certificates – code by PO']] : [])].map(([k, l, h]) => `<button data-cv="${k}" class="${cur === k ? 'on' : ''}"><b>${l}</b><small>${h}</small></button>`).join('')}</div>`;
+  `<div class="ctabs">${[
+    ['cod', 'Items', 'one row per item – code here'],
+    ['lines', 'SAP transaction lines', 'the CJI3 lines of this bucket, with their codes'],
+    ...(ST.bk === SUBI && SUBI >= 0
+      ? [
+          ['subpo', 'POs', 'the items of every PO, with their certificates – code by PO'],
+          ['subpk', 'Packages', 'put each PO in a package · rates'],
+        ]
+      : []),
+  ]
+    .map(([k, l, h]) => `<button data-cv="${k}" class="${cur === k ? 'on' : ''}"><b>${l}</b><small>${h}</small></button>`)
+    .join('')}</div>`;
 function pageDef() {
   if (ST.tab !== 'lines' && ST.tab !== 'xpm' && ST.bk < 0) ST.bk = Math.max(0, MATI);
   const bi = ST.bk,

@@ -11,11 +11,12 @@ const SECS = [
   ['codes', 'PKG names', ['pkl']],
   ['rul', 'Mapping rules', ['rules']],
   ['cli', 'Reports', ['cinv']],
+  ['reg', 'Reports', []], // the PO register: its own page, no tabs
 ];
 const STEPS = ['chk', 'cod', 'adj', 'bud'],
-  REPSEC = ['dash', 'xp', 'rep', 'cli'];
-// the subcontractor pages live in other sections: POs in Code, Packages & rates and PO register in Reports, Bridge in Update
-const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'rep', bridge: 'chk' };
+  REPSEC = ['dash', 'xp', 'rep', 'cli', 'reg'];
+// the subcontractor pages live in other sections: POs and Packages in Code, the PO register in Reports, the Bridge in Update
+const SUBSEC = { po: 'cod', pkg: 'cod', reg: 'reg', bridge: 'chk' };
 const secOf = (t) => (t === 'sub' ? SUBSEC[ST.sub] || 'dash' : (SECS.find((x) => x[2].includes(t)) || SECS[0])[0]),
   LASTT = {},
   LASTS = {};
@@ -114,6 +115,13 @@ const goSec = (k) => {
   if (!LASTT[k] && ['cod', 'adj'].includes(k)) {
     const f = stepFirst(k);
     if (f) return stepGo(f);
+  }
+  if (k === 'reg') {
+    ST.tab = 'sub';
+    ST.sub = 'reg';
+    sel.clear();
+    render();
+    return;
   }
   ST.tab = sc[0] === 'chk' ? 'chk' : LASTT[sc[0]] || sc[2][0];
   if (ST.tab === 'sub') ST.sub = LASTS[sc[0]] || 'pkg';
@@ -452,12 +460,7 @@ function repMenu() {
       a('bpkg', 'PKG pages', 'EVM · ETC · EAC', ST.tab === 'bpkg'),
       a('bca', 'Cost Analysis', 'BOQ items · resources', ST.tab === 'bca'),
     ]) +
-    (SUBI >= 0
-      ? g('SUBCONTRACT', '#E07B39', [
-          a('sub:reg', 'PO register', 'every PO and its status', isSub('reg')),
-          a('sub:pkg', 'Packages &amp; rates', 'rate per unit by month', isSub('pkg')),
-        ])
-      : '') +
+    (SUBI >= 0 ? g('SUBCONTRACT', '#E07B39', [a('sub:reg', 'PO register', 'every PO and its status', isSub('reg'))]) : '') +
     (MATI >= 0
       ? g('MATERIAL', '#8E5EA2', [
           a('mrate', 'Material rates', 'rate per unit by month', ST.tab === 'mrate'),
@@ -469,7 +472,7 @@ function repMenu() {
 }
 const repClose = () => {
   $('repm').hidden = true;
-  $('bReports').classList.toggle('on', REPSEC.includes(secOf(ST.tab)) || (ST.tab === 'sub' && ['reg', 'pkg'].includes(ST.sub)));
+  $('bReports').classList.toggle('on', REPSEC.includes(secOf(ST.tab)) || (ST.tab === 'sub' && ST.sub === 'reg'));
 };
 $('bReports').onclick = (e) => {
   e.stopPropagation();
@@ -590,10 +593,7 @@ function renderSide() {
     return;
   } else if (sec === 'sub') {
     const ps = pkSide(false),
-      more = [
-        ['reg', 'PO register', 'every PO and its status'],
-        ['bridge', 'Bridge to CJI3', 'certificates vs CJI3'],
-      ];
+      more = [];
     el.className = 'tabs';
     el.innerHTML = `<div class="ls">${ps.body}${more.map(([k, l, d]) => sdi(`data-gt="sub" data-sv="${k}"`, ST.sub === k, '#C9CED6', l, '', d, '')).join('')}</div><div class="ft">${ps.foot}</div>`;
     return;
@@ -773,7 +773,7 @@ function renderSide() {
         undefined,
         'Rat',
       ]);
-  } else {
+  } else if (sec !== 'reg') {
     head = 'Reports';
     [['psum', 'PKG summary', 'Direct by PKG · Indirect by cost element']].forEach(([k, l, d], i) =>
       items.push([`data-gt="${k}"`, ST.tab === k, PAL[i], l, '', d, '', undefined, l.slice(0, 3)])
@@ -789,18 +789,6 @@ function renderSide() {
       undefined,
       'GL',
     ]);
-    if (SUBI >= 0)
-      items.push([
-        'data-gt="sub" data-sv="reg"',
-        ST.tab === 'sub' && ST.sub === 'reg',
-        '#E07B39',
-        'PO register',
-        '',
-        'every PO and its status · Excel',
-        '',
-        undefined,
-        'POs',
-      ]);
   }
   el.className = items.length ? 'tabs' + (sec === 'dash' ? ' nosub' : '') : 'hid';
   el.innerHTML = `<div class="ls">${items
