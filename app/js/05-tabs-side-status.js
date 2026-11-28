@@ -990,6 +990,48 @@ try {
 } catch (e) {
   /* per-viewer only */
 }
+// 2 Code: one line above the table – what is still empty in this bucket, and a jump to that column (it may sit off the right edge)
+function renderCodMiss() {
+  const el = $('codmiss');
+  if (!el) return;
+  const b = BK[ST.bk];
+  if (ST.tab !== 'cod' || !b) {
+    el.hidden = true;
+    return;
+  }
+  const fs = codeF(ST.bk),
+    its = b.items.filter((it) => it.inc !== 'No' && statusOf(it) !== 'Coded'),
+    cnt = fs.map((f) => [f, its.filter((it) => !it[f]).length]).filter(([, n]) => n);
+  if (!its.length || !cnt.length) {
+    el.hidden = true;
+    return;
+  }
+  cnt.sort((x, y) => y[1] - x[1]);
+  const nm = (f) => (f === 'ce' ? 'a cost element' : 'a ' + FN[f]),
+    full = fs.filter((f) => !cnt.some(([g]) => g === f)).map((f) => FN[f]),
+    n = its.length.toLocaleString('en-US');
+  el.hidden = false;
+  el.innerHTML = `<span class="ic">⚠</span><span>${
+    cnt.length === 1
+      ? `<b>${n} item${its.length === 1 ? '' : 's'} still need${its.length === 1 ? 's' : ''} ${nm(cnt[0][0])}</b>${full.length ? ` – ${full.join(', ').replace(/, ([^,]*)$/, ' and $1')} already filled` : ''}`
+      : `<b>${n} item${its.length === 1 ? '' : 's'} still to code</b> – empty: ${cnt.map(([f, k]) => `${FN[f]} ${k.toLocaleString('en-US')}`).join(' · ')}`
+  }</span><a class="lk" data-cmgo="${cnt[0][0]}">Show the ${FN[cnt[0][0]]} column ›</a>`;
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-cmgo]');
+  if (!a) return;
+  const f = a.dataset.cmgo,
+    th = document.querySelector(`#th button.fb[data-k="${f}"]`),
+    w = $('wrap');
+  if (th && w) {
+    const c = th.closest('th'),
+      r = c.getBoundingClientRect(),
+      wr = w.getBoundingClientRect();
+    w.scrollLeft += r.left - wr.left - wr.width / 2 + r.width / 2;
+  }
+  const i = [...document.querySelectorAll(`#tb input[data-f="${f}"]`)].find((x) => !x.value);
+  if (i) setTimeout(() => i.focus(), 60);
+});
 function renderGuide() {
   const g = $('guide');
   if (ST.tab === 'cod' && ST.next) {
@@ -1039,6 +1081,7 @@ function render() {
     if (ST.tab === 'sub') LASTS[secOf('sub')] = ST.sub;
   }
   /* Dashboard reopens its own pages, not the packages */ renderGuide();
+  renderCodMiss();
   navBadges();
   renderProg();
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.s === secOf(ST.tab)));

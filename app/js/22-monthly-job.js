@@ -108,6 +108,8 @@ function jobOpen(on) {
     document.body.appendChild(m);
   }
   m.hidden = !on;
+  // one side panel at a time: the Monthly job closes the drawer
+  if (on && $('drawer')) $('drawer').classList.remove('open', 'wide');
   renderJob();
 }
 document.addEventListener('click', (e) => {
@@ -137,3 +139,13 @@ document.addEventListener('click', (e) => {
   render();
 });
 $('bJob').onclick = () => jobOpen($('mjob') ? $('mjob').hidden : true);
+
+// one side panel at a time: a drawer that opens closes the Monthly job; Esc closes it
+new MutationObserver(() => {
+  const m = $('mjob');
+  if ($('drawer').classList.contains('open') && m && !m.hidden) jobOpen(false);
+}).observe($('drawer'), { attributes: true, attributeFilter: ['class'] });
+document.addEventListener('keydown', (e) => {
+  const m = $('mjob');
+  if (e.key === 'Escape' && m && !m.hidden) jobOpen(false);
+});

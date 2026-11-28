@@ -1825,3 +1825,8 @@ document.addEventListener('click', (e) => {
   if (t.id === 'dNone') depSet('none', [], 'Depreciation: all counted');
   else depSet('all', [], 'Depreciation: all excluded');
 });
+// a code box: clicking it selects the whole code, so typing replaces it (as in Excel and SAP) instead of mixing with it
+document.addEventListener('focusin', (e) => {
+  const t = e.target;
+  if (t.matches && t.matches('td.c input')) setTimeout(() => t === document.activeElement && t.select(), 0);
+});

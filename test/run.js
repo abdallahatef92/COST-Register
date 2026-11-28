@@ -2081,6 +2081,53 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     ok('…↺ brings back the built-in', await q.evaluate((w) => !__ST.rules.some((r) => r.wbs === w), wb));
     await c17.close();
   }
+  if (RUN('7q')) {
+    head('7q. Coding safety: what is still empty, typing replaces a code, one side panel at a time');
+    const { ctx: c19, p: q } = await open(APP);
+    await q.evaluate(() => document.getElementById('bJob').click());
+    await q.waitForTimeout(400);
+    await q.keyboard.press('Escape');
+    await q.waitForTimeout(300);
+    ok('Esc closes the Monthly job panel', await q.evaluate(() => document.getElementById('mjob').hidden));
+    await q.click('#tabs button[data-s="cod"]');
+    await q.waitForTimeout(1000);
+    ok(
+      '2 Code: a line says what is still empty in the bucket, with a jump to that column',
+      await q.$eval('#codmiss', (e) => !e.hidden && /still/.test(e.textContent) && !!e.querySelector('[data-cmgo]'))
+    );
+    await q.evaluate(() => document.getElementById('bJob').click());
+    await q.waitForTimeout(300);
+    await q.click('#tb a.lk.open');
+    await q.waitForTimeout(600);
+    ok(
+      'opening an item closes the Monthly job panel (one side panel at a time)',
+      await q.evaluate(() => document.getElementById('mjob').hidden && document.getElementById('drawer').classList.contains('open'))
+    );
+    await q.evaluate(() => document.getElementById('dClose').click());
+    await q.waitForTimeout(300);
+    const box = await q.$('#tb input[data-f="pkg"]'),
+      bb = await box.boundingBox();
+    await q.fill('#tb input[data-f="pkg"]', 'ZZ1');
+    await q.keyboard.press('Enter');
+    await q.waitForTimeout(600);
+    if (await q.$('#asLater')) await q.click('#asLater'); // the first change asks for a data file
+    await q.waitForTimeout(300);
+    const b2 = (await (await q.$('#tb input[data-f="pkg"]')).boundingBox()) || bb;
+    await q.mouse.click(b2.x + 12, b2.y + b2.height / 2);
+    await q.waitForTimeout(200);
+    ok(
+      'clicking a filled code box selects the whole code',
+      await q.evaluate(() => {
+        const e = document.activeElement;
+        return !!e && e.value !== undefined && e.value.length > 0 && e.selectionStart === 0 && e.selectionEnd === e.value.length;
+      })
+    );
+    await q.keyboard.type('S03');
+    await q.keyboard.press('Enter');
+    await q.waitForTimeout(600);
+    eq('…typing replaces it (no mixed code)', await q.evaluate(() => __ST.log.slice(-1)[0].label), 'PKG = S03');
+    await c19.close();
+  }
   if (RUN('7o')) {
     head('7o. Reports › Client invoices: invoice register by month, WBS × month with cost and margin');
     const { ctx: c18, p: q } = await open(APP);

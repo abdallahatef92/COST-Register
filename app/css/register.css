@@ -625,3 +625,5 @@ body.navfold #nav button.nlk .tx{white-space:normal}
 .mrbk select{border-color:transparent!important;background:transparent;padding-left:0;font-weight:500;color:#1F2937;min-width:0;flex:1;cursor:pointer} .mrbk select:hover,.mrbk select:focus{border-color:#C9D3E3!important;background:#fff}
 .mrbk select.own{background:#FFF4D6!important;border-color:#E3A008!important;padding-left:4px;font-weight:700}
 .mrgl select{border-color:transparent;background:transparent} .mrgl select:hover,.mrgl select:focus{border-color:#C9D3E3;background:#fff} .mrgl select.none{border-color:#F3B4AE}
+/* 2 Code: what is still empty in the bucket */
+.codmiss{display:flex;gap:10px;align-items:center;background:#FFF1F0;border:1px solid #F3B4AE;color:#8A1F17;border-radius:8px;padding:6px 12px;margin:0 0 6px;font-size:13px} .codmiss b{color:#B42318} .codmiss .ic{font-weight:700} .codmiss a{font-weight:600}

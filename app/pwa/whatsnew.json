@@ -1,5 +1,13 @@
 [
   {
+    "v": "5.174",
+    "n": [
+      "2 Code: a line above the table says what is still empty in the bucket (e.g. cost element 97) – “Show the column ›” jumps to it",
+      "Clicking a code box selects the whole code, so what you type replaces it – no more mixed codes",
+      "One side panel at a time: Esc closes the Monthly job, and opening an item closes it; Undo also closes the “name the new PKG” question"
+    ]
+  },
+  {
     "v": "5.173",
     "n": [
       "One colour per bucket everywhere: the coloured square shows next to the bucket in Mapping rules, the PKG view of Expenses, the line drawers and the PKG summary items",

@@ -189,6 +189,7 @@ function doUndo() {
   redo.push(u);
   setDirty(DIRTY + 1);
   logIt('Undone: ' + u.label, u.rec.length);
+  if ($('pkask')) $('pkask').hidden = true; // a "name the new PKG" question raised by the change goes with it
   after('Undone: ' + u.label);
 }
 function doRedo() {
