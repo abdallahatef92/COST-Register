@@ -1,10 +1,10 @@
 // ---- the table renderer
 let VROW = 27;
-// 2 Code › SAP transaction lines and POs: the same order as Items – what the line is, its codes, its amounts, then the details
+// 2 Code › POs: the same order as Items – what the line is, its codes, its amounts, then the details
 function codLayout(D) {
   const lines = ST.tab === 'lines',
     po = ST.tab === 'sub' && ST.sub === 'po';
-  if (!(lines || po) || !D || !D.cols) return D;
+  if (!po || !D || !D.cols) return D; // the SAP transaction lines keep their own order (owner, 5.182)
   const cols = D.cols,
     by = (k) => cols.find((c) => c.k === k);
   // what identifies the line: date and period, the item (service / material / item code) and its description
