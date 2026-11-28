@@ -299,12 +299,26 @@ function pageDef() {
       const bar = `<span class="nxp" title="Share of this bucket's to-date cost on coded items"><span class="nxb"><i style="width:${((100 * done) / tot).toFixed(1)}%"></i><u></u></span><small><b>${((100 * done) / tot).toFixed(1)}%</b> coded · ${done / tot >= 0.8 ? 'past <b>80%</b> of the cost' : `the next <b>${n80}</b> item${n80 === 1 ? '' : 's'} bring you to <b>80%</b>`} · ${todo.length.toLocaleString('en-US')} to code</small></span>`;
       const gb = document.getElementById('nxbar');
       if (gb) gb.innerHTML = bar; // the progress sits in the keys strip
+      // Subcontractor: grouped by type of works (the group row carries it, so the column goes and the code boxes come on screen)
+      const byT = isSub(bi);
+      let rows2 = todo.map((it, i) => ({ it, g: byT ? String(it.vals[0] || '(no type of works)') : '', rk: i + 1 }));
+      if (byT) {
+        const gt = new Map();
+        rows2.forEach((r) => gt.set(r.g, (gt.get(r.g) || 0) + Math.abs(r.it.td)));
+        rows2 = rows2.sort((x, y) => gt.get(y.g) - gt.get(x.g) || x.rk - y.rk);
+        const ix0 = cols.findIndex((c) => c.k === 'c0');
+        if (ix0 >= 0) cols.splice(ix0, 1);
+      }
       return {
         cols,
-        rows: todo.map((it, i) => ({ it, g: '', rk: i + 1 })),
+        rows: rows2,
         sel: true,
         status: true,
-        groups: false,
+        groups: byT,
+        gSpanK: (cols[cols.findIndex((c) => c.k === 'td') - 1] || {}).k,
+        gCells: byT ? (g, rs) => ({ td: fmt(rs.reduce((x, r) => x + r.it.td, 0)) }) : null,
+        gLabel: (g, rs) =>
+          `<b dir="auto" style="unicode-bidi:isolate">${esc(g)}</b> <span class="gm">${rs.length} to code · ${fmtM(rs.reduce((x, r) => x + Math.abs(r.it.td), 0))}</span>`,
         cm,
         extraTools: '',
         rowCls: () => '',
