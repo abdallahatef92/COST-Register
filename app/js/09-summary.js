@@ -129,7 +129,32 @@ function renderSummary() {
       /* none */
     }
   }
+  // indirect cost (PKG Indirect) whose cost element is empty or in no indirect head: it lands in "Other indirect" in every indirect report
+  const indHead = new Set(psCfg().indirect.flatMap((g) => g.c)),
+    noCe = { a: 0, n: 0, by: new Map() };
+  for (const e of R.exp.values()) {
+    if (!isIndPkg(e.pkg) || indHead.has(e.ce)) continue;
+    let a = 0;
+    for (let k = 0; k <= rep && k < e.p.length; k++) a += e.p[k];
+    if (Math.abs(a) < 0.5) continue;
+    noCe.a += a;
+    noCe.n++;
+    noCe.by.set(e.b, (noCe.by.get(e.b) || 0) + a);
+  }
+  const noCeBk = [...noCe.by].sort((x, y) => Math.abs(y[1]) - Math.abs(x[1]))[0];
   const att = [
+    ...(noCe.a > 0.5
+      ? [
+          [
+            '◇',
+            '#8E5EA2',
+            `Indirect without a cost element: ${fM(noCe.a)}`,
+            `${noCe.n} items coded PKG Indirect have no indirect cost element – they show as "Other indirect" · most in ${BK[noCeBk[0]].id}`,
+            'cod:' + noCeBk[0],
+            'Code',
+          ],
+        ]
+      : []),
     ...(notTm > 0.5
       ? [['!', '#8A6D1F', `Not coded: ${fM(notTm)} of ${R.repLab}`, 'code the largest items first – Code › New this month', 'cod', 'Code']]
       : []),
@@ -177,6 +202,12 @@ function renderSummary() {
     .forEach((a) => {
       a.onclick = () => {
         const t = a.dataset.gotab;
+        if (t.startsWith('cod:')) {
+          ST.tab = 'cod';
+          ST.bk = +t.slice(4);
+          render();
+          return;
+        }
         if (t === 'sub') {
           ST.tab = 'sub';
           ST.sub = 'pkg';
