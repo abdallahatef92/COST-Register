@@ -627,3 +627,9 @@ body.navfold #nav button.nlk .tx{white-space:normal}
 .mrgl select{border-color:transparent;background:transparent} .mrgl select:hover,.mrgl select:focus{border-color:#C9D3E3;background:#fff} .mrgl select.none{border-color:#F3B4AE}
 /* 2 Code: what is still empty in the bucket */
 .codmiss{display:flex;gap:10px;align-items:center;background:#FFF1F0;border:1px solid #F3B4AE;color:#8A1F17;border-radius:8px;padding:6px 12px;margin:0 0 6px;font-size:13px} .codmiss b{color:#B42318} .codmiss .ic{font-weight:700} .codmiss a{font-weight:600}
+/* 2 Code, compact: the Items / SAP lines / POs switch sits in the toolbar; keys behind a button; progress on the red line */
+.ctabs.sm{margin:0 10px 0 0 !important;vertical-align:middle} .ctabs.sm button{padding:3px 11px !important} .ctabs.sm button b{font-size:13px} .ctabs.sm button small{display:none}
+.codmiss .sp{flex:1} .codmiss #nxbar{color:#4B5563;font-size:12px} .codmiss #nxbar .nxb{display:none}
+.codmiss.ok{background:#E6F2E8;border-color:#A7D7B2;color:#1E7B34}
+.mkeys{border:1px solid #C9D3E3;border-radius:6px;padding:2px 9px;font-size:12px;color:#374151;background:#fff;cursor:pointer} .mkeys.on{background:#14254A;color:#fff;border-color:#14254A}
+.gs[hidden],.codmiss[hidden]{display:none!important}

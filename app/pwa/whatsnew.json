@@ -1,5 +1,13 @@
 [
   {
+    "v": "5.175",
+    "n": [
+      "2 Code is compact: the menu folds to the rail while you code (☰ opens it), the Items / SAP lines / POs switch sits in the toolbar, the keys are behind ⌨ Keys – about 50% more rows on screen",
+      "Subcontractor: the items to code are grouped by type of works, largest first – the code boxes, cost element included, now fit on the screen",
+      "The coding progress (… the next 10 items bring you to 80%) moved to the red line"
+    ]
+  },
+  {
     "v": "5.174",
     "n": [
       "2 Code: a line above the table says what is still empty in the bucket (e.g. cost element 97) – “Show the column ›” jumps to it",

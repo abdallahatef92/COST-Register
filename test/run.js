@@ -325,7 +325,10 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
     await p.evaluate(() => __GO('cod'));
     await p.click('#side [data-gt="cod"][data-bk="0"]');
     await p.waitForTimeout(400);
-    ok('Start here guide on the Code page', await p.$eval('#guide', (g) => !g.hidden));
+    ok(
+      'Code page: the guide is there (Start here, or the keys behind ⌨ Keys)',
+      await p.evaluate(() => !document.getElementById('guide').hidden || !!document.querySelector('#codmiss [data-keys]'))
+    );
     const first = await p.$('#tb input[data-f="pkg"]');
     await first.fill('T01');
     await first.press('Enter');
@@ -647,11 +650,16 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         'Coding opens on To code, largest cost first',
         (await p7.$eval('#tools [data-cm="todo"]', (b) => b.classList.contains('on'))) &&
           (await p7.evaluate(() => {
-            const t = [...document.querySelectorAll('#tb tr.it')].slice(0, 10).map((tr) => {
-              const [bi, ii] = tr.dataset.k.split(':');
-              return Math.abs(__BK[+bi].items[+ii].td);
+            // largest first – inside each group when the list is grouped (Subcontractor: by type of works)
+            const segs = [[]];
+            [...document.querySelectorAll('#tb tr')].slice(0, 40).forEach((tr) => {
+              if (tr.classList.contains('grp')) segs.push([]);
+              else if (tr.classList.contains('it')) {
+                const [bi, ii] = tr.dataset.k.split(':');
+                segs[segs.length - 1].push(Math.abs(__BK[+bi].items[+ii].td));
+              }
             });
-            return t.length > 1 && t.every((v, i) => !i || v <= t[i - 1]);
+            return segs.some((t) => t.length > 1) && segs.every((t) => t.every((v, i) => !i || v <= t[i - 1]));
           }))
       );
       const left = await p7.evaluate(() => {
@@ -2340,6 +2348,8 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
       const later = await q.$('#asLater');
       if (later) await later.click(); // the auto-save question after the first code
     }
+    await q.evaluate(() => __GO('dash')); // the menu is folded while coding
+    await q.waitForTimeout(400);
     await more(q);
     await q.selectOption('#vat', 'Include VAT before date');
     await q.hover('#vat');

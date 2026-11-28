@@ -522,7 +522,7 @@ function renderTable() {
   } else if (ST.tab === 'pm') {
     $('bkbar').style.display = '';
     $('bkbar').innerHTML = bkChips({ all: false, cur: ST.bk, fig: codedOf });
-  } else if (CODM || (ST.tab === 'sub' && ST.sub === 'po')) {
+  } else if (ST.tab === 'sub' && ST.sub === 'po') {
     $('bkbar').style.display = '';
     $('bkbar').innerHTML = codTabs(ST.tab === 'sub' ? 'subpo' : ST.tab);
   } else $('bkbar').style.display = 'none';
@@ -564,7 +564,7 @@ function renderTable() {
       nf = (n) => n.toLocaleString('en-US'),
       nNew = !ln && !ST.next ? D.rows.filter((r) => r.it && r.it.nw).length : 0;
     $('tools').innerHTML =
-      `<b class="tt">${esc(ST.bk < 0 ? 'All buckets' : BK[ST.bk].id)}</b><span class="help ts">${ST.tab === 'lines' ? 'every CJI3 line' : ST.tab === 'xpm' ? 'every item, by month' : ST.next ? 'largest cost first' : ''}</span>
+      `${CODM ? codTabs(ST.tab).replace('class="ctabs"', 'class="ctabs sm"') : ''}<b class="tt">${esc(ST.bk < 0 ? 'All buckets' : BK[ST.bk].id)}</b><span class="help ts">${ST.tab === 'lines' ? 'every CJI3 line' : ST.tab === 'xpm' ? 'every item, by month' : ST.next ? 'largest cost first' : ''}</span>
       <span class="seg big" title="To code: what is still without codes · Coded: what is done · All: everything">${[
         ['todo', 'To code'],
         ['coded', 'Coded'],

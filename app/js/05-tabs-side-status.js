@@ -84,14 +84,24 @@ try {
 } catch (e) {
   /* per-viewer only */
 }
-const navFold = () => document.body.classList.toggle('navfold', NAVFOLD);
+// 2 Code works in a compact view: the menu folds to the rail while you code (☰ opens it for this visit)
+let CODOPEN = false;
+const navFold = () => {
+  const f = ST.tab === 'cod' || ST.tab === 'lines' ? !CODOPEN : NAVFOLD,
+    was = document.body.classList.contains('navfold');
+  document.body.classList.toggle('navfold', f);
+  if (was !== f) window.dispatchEvent(new Event('resize'));
+};
 navFold();
 $('bNavFold').onclick = () => {
-  NAVFOLD = !NAVFOLD;
-  try {
-    localStorage.setItem('cr-navfold', NAVFOLD ? '1' : '0');
-  } catch (e) {
-    /* none */
+  if (ST.tab === 'cod' || ST.tab === 'lines') CODOPEN = !CODOPEN;
+  else {
+    NAVFOLD = !NAVFOLD;
+    try {
+      localStorage.setItem('cr-navfold', NAVFOLD ? '1' : '0');
+    } catch (e) {
+      /* none */
+    }
   }
   navFold();
   window.dispatchEvent(new Event('resize'));
@@ -246,7 +256,7 @@ function renderProg() {
         : PGLINE[n >= 0 ? sec : ST.tab] || (ST.tab === 'sub' ? 'subcontractor POs, packages and rates' : '')) +
       (n < 0 && ['xpm', 'sum', 'psum', 'cinv', 'gl', 'wbs', 'flow', 'drv'].includes(ST.tab) ? cutTxt : '');
   $('phd').innerHTML =
-    `<div class="r1"><h2>${esc(n >= 0 ? stepName : $('hpage').textContent)}</h2><span>${esc(line)}</span></div>${fig ? `<div class="kp">${fig}</div>` : ''}`;
+    `<div class="r1"><h2>${esc(n >= 0 ? stepName : $('hpage').textContent)}</h2><span>${esc(line)}</span></div>${fig && ST.tab !== 'cod' && ST.tab !== 'lines' ? `<div class="kp">${fig}</div>` : ''}`;
   // ‹ back · Next › in the command bar on a step
   $('cmdNav').innerHTML =
     n >= 0
@@ -991,6 +1001,7 @@ try {
   /* per-viewer only */
 }
 // 2 Code: one line above the table – what is still empty in this bucket, and a jump to that column (it may sit off the right edge)
+let KEYS_ON = false;
 function renderCodMiss() {
   const el = $('codmiss');
   if (!el) return;
@@ -999,13 +1010,17 @@ function renderCodMiss() {
     el.hidden = true;
     return;
   }
+  const keys = `<span class="sp"></span><span id="nxbar"></span>${ST.next ? `<button class="mkeys${KEYS_ON ? ' on' : ''}" data-keys title="The keyboard keys for coding">⌨ Keys</button>` : ''}`;
   const fs = codeF(ST.bk),
     its = b.items.filter((it) => it.inc !== 'No' && statusOf(it) !== 'Coded'),
     cnt = fs.map((f) => [f, its.filter((it) => !it[f]).length]).filter(([, n]) => n);
   if (!its.length || !cnt.length) {
-    el.hidden = true;
+    el.hidden = !ST.next;
+    el.className = 'codmiss ok';
+    el.innerHTML = `<span>✓ Everything in this bucket is coded</span>${keys}`;
     return;
   }
+  el.className = 'codmiss';
   cnt.sort((x, y) => y[1] - x[1]);
   const nm = (f) => (f === 'ce' ? 'a cost element' : 'a ' + FN[f]),
     full = fs.filter((f) => !cnt.some(([g]) => g === f)).map((f) => FN[f]),
@@ -1015,9 +1030,15 @@ function renderCodMiss() {
     cnt.length === 1
       ? `<b>${n} item${its.length === 1 ? '' : 's'} still need${its.length === 1 ? 's' : ''} ${nm(cnt[0][0])}</b>${full.length ? ` – ${full.join(', ').replace(/, ([^,]*)$/, ' and $1')} already filled` : ''}`
       : `<b>${n} item${its.length === 1 ? '' : 's'} still to code</b> – empty: ${cnt.map(([f, k]) => `${FN[f]} ${k.toLocaleString('en-US')}`).join(' · ')}`
-  }</span><a class="lk" data-cmgo="${cnt[0][0]}">Show the ${FN[cnt[0][0]]} column ›</a>`;
+  }</span><a class="lk" data-cmgo="${cnt[0][0]}">Show the ${FN[cnt[0][0]]} column ›</a>${keys}`;
 }
 document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-keys]')) {
+    KEYS_ON = !KEYS_ON;
+    renderGuide();
+    renderCodMiss();
+    return;
+  }
   const a = e.target.closest('[data-cmgo]');
   if (!a) return;
   const f = a.dataset.cmgo,
@@ -1035,10 +1056,10 @@ document.addEventListener('click', (e) => {
 function renderGuide() {
   const g = $('guide');
   if (ST.tab === 'cod' && ST.next) {
-    g.hidden = false;
+    g.hidden = !KEYS_ON;
     g.className = 'gs kb';
     g.innerHTML =
-      '<b>Keys:</b><span><kbd>Enter</kbd> accept the grey suggestion / next row</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd> same as the row above</span><span><kbd>Esc</kbd> skip</span><span>☐ tick several rows → one code for all</span><span id="nxbar" style="margin-left:auto"></span>';
+      '<b>Keys:</b><span><kbd>Enter</kbd> accept the grey suggestion / next row</span><span><kbd>Ctrl</kbd>+<kbd>D</kbd> same as the row above</span><span><kbd>Esc</kbd> skip</span><span>☐ tick several rows → one code for all</span>';
     return;
   }
   g.className = 'gs';
@@ -1080,6 +1101,8 @@ function render() {
     LASTT[secOf(ST.tab)] = ST.tab;
     if (ST.tab === 'sub') LASTS[secOf('sub')] = ST.sub;
   }
+  if (ST.tab !== 'cod' && ST.tab !== 'lines') CODOPEN = false;
+  navFold();
   /* Dashboard reopens its own pages, not the packages */ renderGuide();
   renderCodMiss();
   navBadges();
