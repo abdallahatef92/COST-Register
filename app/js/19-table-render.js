@@ -1,5 +1,75 @@
 // ---- the table renderer
 let VROW = 27;
+// 2 Code › SAP transaction lines and POs: the same order as Items – what the line is, its codes, its amounts, then the details
+function codLayout(D) {
+  const lines = ST.tab === 'lines',
+    po = ST.tab === 'sub' && ST.sub === 'po';
+  if (!(lines || po) || !D || !D.cols) return D;
+  const cols = D.cols,
+    by = (k) => cols.find((c) => c.k === k);
+  // what identifies the line: date and period, the item (service / material / item code) and its description
+  const mat = !!by('c4'),
+    idK = lines ? ['date', 'per', ...(mat ? ['c3', 'c4', 'c5'] : ['c1', 'c2', 'c3'])] : ['po', 'sup', 'svc', 'desc'],
+    codeK = ['pkg', 'mnl', 'ce'],
+    numK = lines ? ['amt', 'qty', 'inc', 'st'] : ['td', 'tm', 'qty', 'st'],
+    W = {
+      date: 96,
+      per: 66,
+      c1: 96,
+      pkg: 96,
+      mnl: 74,
+      ce: 112,
+      amt: 120,
+      qty: 100,
+      inc: 66,
+      st: 92,
+      po: 100,
+      td: 104,
+      tm: 100,
+      ty: 58,
+      ce2: 92,
+      doc: 100,
+    },
+    L = {
+      ce: 'Cost el.',
+      inc: 'Incl.',
+      ce2: 'GL',
+      cen: 'GL name',
+      td: 'To date',
+      tm: 'This month',
+      qty: 'Qty',
+      date: 'Date',
+      per: 'Month',
+    },
+    first = [...idK, ...codeK, ...numK].map(by).filter(Boolean),
+    rest = cols.filter((c) => !first.includes(c));
+  // the description of the item gets room; on the lines view the item's own description is the wide one
+  const descK = lines ? (by('c4') ? 'c4' : 'c2') : 'desc';
+  first.forEach((c) => {
+    if (W[c.k]) {
+      c.w = W[c.k];
+      c.fixW = 1;
+    }
+    if (c.l === 'Unit') {
+      c.w = 66;
+      c.fixW = 1;
+    }
+    if (mat && c.k === 'c3') {
+      c.w = 100;
+      c.fixW = 1;
+    }
+    if (c.k === descK) {
+      c.w = 300;
+      c.fixW = 1;
+    }
+  });
+  [...first, ...rest].forEach((c) => {
+    if (L[c.k]) c.l = L[c.k];
+    if (['mnl', 'inc'].includes(c.k)) c.noI = 1;
+  });
+  D.cols = [...first, ...rest];
+  return D;
+}
 // ---- column widths: fitted to what the column holds (header and values), or the width you dragged (kept in this browser)
 let CW = {};
 try {
@@ -473,7 +543,7 @@ function gck(D, rows, k) {
   return `<input type="checkbox" class="gck" data-gk="${esc(k)}" ${on ? 'checked' : ''} ${some ? 'data-some="1"' : ''} title="Tick all ${rs.length} in this group">`;
 }
 function renderTable() {
-  const D = pageDef(),
+  const D = codLayout(pageDef()),
     S0 = vs();
   R.D = D;
   const CODM = ST.tab === 'cod' || ST.tab === 'lines';
