@@ -1085,9 +1085,13 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         await p8.click('[data-rt="s"]'); // Rates › Subcontractor
         await p8.waitForTimeout(800);
         ok(
-          'Dashboard › Subcontractor rates & coding',
+          'Reports › Rates › Subcontractor: rates by PKG, read only (no code boxes, no PO allocation)',
           await p8.evaluate(
-            () => __ST.sub === 'pkg' && __ST.pkView === 'rate' && document.getElementById('pg-pkg').classList.contains('on')
+            () =>
+              __ST.sub === 'pkg' &&
+              __SEC() === 'dash' &&
+              document.getElementById('pg-pkg').classList.contains('on') &&
+              !document.querySelector('#pg-pkg input[data-wf], #pg-pkg [data-pkv], #pkAddT, #pfGo')
           )
         );
         await p8.evaluate(() => __GO('chk'));
@@ -1110,14 +1114,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         );
         await p8.evaluate(() => __GO('cod'));
         await p8.waitForTimeout(400);
-        await p8.evaluate(() => {
-          const i = __BK.findIndex((b) => b.id === 'Subcontractor');
-          document.querySelector('#side [data-bk="' + i + '"]').click();
-        });
-        await p8.waitForTimeout(500);
-        await p8.click('[data-cv="subpk"]');
-        await p8.waitForTimeout(800);
-        ok('2 Code › Packages: the packages open under Code', await p8.evaluate(() => __ST.sub === 'pkg' && __SEC() === 'cod'));
+        ok('2 Code has no Packages tab: Subcontractor is coded on Items', !(await p8.$('[data-cv="subpk"]')));
       }
       eq('difference stays 0', await p8.evaluate(() => R.diff), 0);
       await c8.close();

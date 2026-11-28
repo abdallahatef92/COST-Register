@@ -118,17 +118,6 @@ function renderSummary() {
       })
       .join('')}</table>`;
   // needs attention: one line on top, each point with its button
-  let nPO = 0,
-    nSug = 0;
-  if (SUBI >= 0) {
-    try {
-      const D0 = pkData();
-      nPO = D0.pos.filter((p) => p.code === '').length;
-      nSug = D0.pos.filter((p) => p.code === '' && p.sug).length;
-    } catch (e) {
-      /* none */
-    }
-  }
   // indirect cost (PKG Indirect) whose cost element is empty or in no indirect head: it lands in "Other indirect" in every indirect report
   const indHead = new Set(psCfg().indirect.flatMap((g) => g.c)),
     noCe = { a: 0, n: 0, by: new Map() };
@@ -167,18 +156,6 @@ function renderSummary() {
             `orders not settled ${fM(R.unsExcK.o)} · certificates ${fM(R.unsExcK.c)}`,
             'uns',
             'Adjust',
-          ],
-        ]
-      : []),
-    ...(nPO
-      ? [
-          [
-            '○',
-            '#5F6B7A',
-            `${nPO} POs not in a package`,
-            nSug ? nSug + ' suggestions ready' : 'Subcontractor › Packages',
-            'sub',
-            'Packages',
           ],
         ]
       : []),

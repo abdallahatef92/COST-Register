@@ -156,12 +156,7 @@ const codTabs = (cur) =>
   `<div class="ctabs">${[
     ['cod', 'Items', 'one row per item – code here'],
     ['lines', 'SAP transaction lines', 'the CJI3 lines of this bucket, with their codes'],
-    ...(ST.bk === SUBI && SUBI >= 0
-      ? [
-          ['subpo', 'POs', 'the items of every PO, with their certificates – code by PO'],
-          ['subpk', 'Packages', 'put each PO in a package · rates'],
-        ]
-      : []),
+    ...(ST.bk === SUBI && SUBI >= 0 ? [['subpo', 'POs', 'the items of every PO, with their certificates – code by PO']] : []),
   ]
     .map(([k, l, h]) => `<button data-cv="${k}" class="${cur === k ? 'on' : ''}"><b>${l}</b><small>${h}</small></button>`)
     .join('')}</div>`;

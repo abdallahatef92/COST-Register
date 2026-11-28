@@ -15,8 +15,8 @@ const SECS = [
 ];
 const STEPS = ['chk', 'cod', 'adj', 'bud'],
   REPSEC = ['dash', 'xp', 'rep', 'cli', 'reg'];
-// the subcontractor pages live in other sections: POs and Packages in Code, the PO register in Reports, the Bridge in Update
-const SUBSEC = { po: 'cod', pkg: 'cod', reg: 'reg', bridge: 'chk' };
+// the subcontractor pages live in other sections: POs in Code, the rates (Rates › Subcontractor) and the PO register in Reports, the Bridge in Update
+const SUBSEC = { po: 'cod', pkg: 'dash', reg: 'reg', bridge: 'chk' };
 const secOf = (t) => (t === 'sub' ? SUBSEC[ST.sub] || 'dash' : (SECS.find((x) => x[2].includes(t)) || SECS[0])[0]),
   LASTT = {},
   LASTS = {};
@@ -203,7 +203,7 @@ const pgName = () =>
   ST.tab === 'sub' && ST.sub === 'reg'
     ? 'PO register'
     : ST.tab === 'sub' && ST.sub === 'pkg'
-      ? 'Packages & rates'
+      ? 'Rates · Subcontractor'
       : ST.tab === 'sub' && ST.sub === 'bridge'
         ? 'Bridge to CJI3'
         : PGNAME[ST.tab] || (ST.tab === 'dlog' ? 'Data log' : ST.tab === 'log' ? 'Changes' : '');
@@ -261,8 +261,12 @@ function renderProg() {
     line =
       (xpn
         ? (XPAGES.find((x) => x[0] === xpPage()) || [])[2] || PGLINE.xpm
-        : PGLINE[n >= 0 ? sec : ST.tab] || (ST.tab === 'sub' ? 'subcontractor POs, packages and rates' : '')) +
-      (n < 0 && ['xpm', 'sum', 'psum', 'cinv', 'gl', 'wbs', 'flow', 'drv'].includes(ST.tab) ? cutTxt : '');
+        : PGLINE[n >= 0 ? sec : ST.tab] ||
+          (ST.tab === 'sub'
+            ? ST.sub === 'pkg'
+              ? 'rate per unit by PO and month, grouped by the PKG on the items'
+              : 'subcontractor POs'
+            : '')) + (n < 0 && ['xpm', 'sum', 'psum', 'cinv', 'gl', 'wbs', 'flow', 'drv'].includes(ST.tab) ? cutTxt : '');
   $('phd').innerHTML =
     `<div class="r1"><h2>${esc(n >= 0 ? stepName : $('hpage').textContent)}</h2><span>${esc(line)}</span></div>${fig && ST.tab !== 'cod' && ST.tab !== 'lines' ? `<div class="kp">${fig}</div>` : ''}`;
   // ‹ back · Next › in the command bar on a step

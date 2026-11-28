@@ -197,7 +197,7 @@ const fMk = (v) => (Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(Math.abs(v) >= 1e7 ? 
 function pkSide(collapsed) {
   const D0 = pkData(),
     list = D0.list,
-    view = ST.sub === 'pkg' ? ST.pkView || 'alloc' : '',
+    view = ST.sub === 'pkg' ? 'rate' : '',
     sel = ST.pkSel ?? '',
     P = view === 'alloc' ? null : R.pkP || (R.pkP = pkRates()),
     cnt = (f) => D0.pos.filter(f),
@@ -227,7 +227,7 @@ function pkSide(collapsed) {
             1
           ),
         ]
-      : [it('', 'Not allocated', 0, na, 1)]),
+      : [it('', 'No PKG yet', 0, na, 1)]),
     ...list.map((x, i) =>
       it(
         x.c,
@@ -241,16 +241,13 @@ function pkSide(collapsed) {
   ];
   if (collapsed) return rows.join('');
   return {
-    body:
-      rows.join('') +
-      (ST.pkAdd
-        ? `<div class="pkadd"><input id="pkNewC" placeholder="Code, e.g. P01" maxlength="12"><input id="pkNewN" placeholder="Name (optional)"><button id="pkNew" class="pri">Add</button></div>`
-        : ''),
-    foot: `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px"><button id="pkAddT" style="border:0;background:none;color:#2F5597;padding:2px 4px">+ Add package</button>${list.length && sel && !['', '*', '~'].includes(sel) ? `<span><button class="pke" data-pke="${esc(sel)}" style="border:0;background:none;color:#6b7280" title="Rename ${esc(sel)}">✎ Rename</button><button data-pkx="${esc(sel)}" style="border:0;background:none;color:#9B2C2C" title="Remove ${esc(sel)}">✕</button></span>` : ''}</div>${ST.pkEdit ? `<div class="pkadd"><b style="align-self:center">${esc(ST.pkEdit)}</b><input class="pkn" data-pkn="${esc(ST.pkEdit)}" value="${esc((list.find((x) => x.c === ST.pkEdit) || {}).n || '')}" placeholder="name…"></div>` : ''}`,
+    body: rows.join('') + '',
+    foot: `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px"><span class="help">packages = the PKG codes of the items</span>${list.length && sel && !['', '*', '~'].includes(sel) ? `<span><button class="pke" data-pke="${esc(sel)}" style="border:0;background:none;color:#6b7280" title="Rename ${esc(sel)}">✎ Rename</button><button data-pkx="${esc(sel)}" style="border:0;background:none;color:#9B2C2C" title="Remove ${esc(sel)}">✕</button></span>` : ''}</div>${ST.pkEdit ? `<div class="pkadd"><b style="align-self:center">${esc(ST.pkEdit)}</b><input class="pkn" data-pkn="${esc(ST.pkEdit)}" value="${esc((list.find((x) => x.c === ST.pkEdit) || {}).n || '')}" placeholder="name…"></div>` : ''}`,
   };
 }
 function renderPkg() {
-  const view = ST.pkView || 'alloc',
+  ST.pkView = 'rate'; // the packages are the PKG codes of the items (2 Code): this page only shows the rates (5.184)
+  const view = 'rate',
     D0 = pkData(),
     list = D0.list,
     q = (ST.pkQ || '').toLowerCase(),
@@ -267,16 +264,7 @@ function renderPkg() {
       return i < 0 ? '#9ca3af' : PKC[i % PKC.length];
     },
     tot = (a) => a.reduce((s1, p) => s1 + p.amt, 0);
-  const steps = `<div class="pkst">${codTabs('subpk').replace('class="ctabs"', 'class="ctabs sm"')}${[
-    ['alloc', 'Packages', 'put each PO in a package'],
-    ['rate', 'Rates & coding', 'one package at a time'],
-    ['review', 'Review', 'check, then export'],
-  ]
-    .map(
-      ([k, l, d], i) =>
-        `<button data-pkv="${k}" class="${view === k ? 'on' : ''}"><i>${i + 1}</i><span><b>${l}</b><small>${d}</small></span></button>`
-    )
-    .join('<span class="pkar">›</span>')}</div>`;
+  const steps = `<div class="pkst ro"><b>Subcontractor rates</b><span class="help">rate per unit, PO by PO and month by month · grouped by the PKG coded on the items – to change a code: <a class="lk" data-cv="cod">2 Code › Items</a></span></div>`;
   let main = '';
   if (view === 'alloc') {
     const tk = ST.pkTick || (ST.pkTick = new Set());
@@ -368,7 +356,7 @@ function renderPkg() {
     };
     const ci = (w, fld) => {
       const v = w.it[fld] || '';
-      return `<td class="c"><input data-wi="${w.ii}" data-wf="${fld}" value="${esc(v)}" list="dl-${fld}" class="${v ? '' : 'miss'}"></td>`;
+      return v ? `<td><b>${esc(v)}</b></td>` : '<td class="help">–</td>';
     };
     const op = ST.pkOpenW;
     main = `<div class="pkt"><b class="pkttl">${esc(code)}${nm ? ' · ' + esc(nm) : ''}</b><span class="help">${pos.size} POs · ${nAll} work items · coded ${pkCoded(m)}%</span><input id="pkQ" placeholder="Search work item, service, code…" value="${esc(ST.pkQ || '')}">${[
@@ -377,19 +365,17 @@ function renderPkg() {
       ['sp', 'Spread ≥ 10%'],
     ]
       .map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-pkrf="${k}">${l}</button>`)
-      .join(
-        ''
-      )}<button data-fxfit="pk2" title="Fit every column to its content">↔ Fit</button><span style="flex:1"></span><span class="pkfill">MNL <input id="pfMNL" list="dl-mnl"> Cost element <input id="pfCE" list="dl-ce"> <button id="pfGo" title="Fill these codes on every work item shown that has them empty">Fill empty</button></span></div>
+      .join('')}<button data-fxfit="pk2" title="Fit every column to its content">↔ Fit</button><span style="flex:1"></span></div>
       <div class="pkg"><table class="t pkgt pkrt fxt" data-fx="pk2"><colgroup><col style="width:30px"><col><col style="width:66px"><col style="width:100px"><col style="width:62px"><col style="width:250px"><col style="width:92px"><col style="width:92px"><col style="width:96px"><col style="width:96px"><col style="width:84px"><col style="width:120px"><col style="width:110px"></colgroup>
-      <thead><tr><th></th><th>Work item</th><th>Unit</th><th class="num">Qty</th><th class="num">POs</th><th title="Each dot is one PO's rate; the line is the average; green the lowest, red the highest">Rate range · ● PO | average</th><th class="num">Average</th><th class="num">Final</th><th title="Certified rate per month">Trend</th><th class="code">DIV</th><th class="code">MNL</th><th class="code">Cost element</th><th>Status</th></tr></thead>
+      <thead><tr><th></th><th>Work item</th><th>Unit</th><th class="num">Qty</th><th class="num">POs</th><th title="Each dot is one PO's rate; the line is the average; green the lowest, red the highest">Rate range · ● PO | average</th><th class="num">Average</th><th class="num">Final</th><th title="Certified rate per month">Trend</th><th class="code">MNL</th><th class="code">Cost element</th><th>Status</th></tr></thead>
       <tbody>${
         ws
           .map((w) => {
             const s1 = statusOf(w.it),
               o = op === w.ii;
-            return `<tr class="pkw2${o ? ' op' : ''}" data-wo="${w.ii}"><td class="tgc">${w.np ? (o ? '−' : '+') : ''}</td><td dir="auto" title="${esc(w.it.vals[1] + ' · ' + w.it.vals[2])}"><span class="wi">${esc(w.it.vals[2])}</span><span class="help wsv">${esc(w.it.vals[1])} · <span dir="auto">${esc(String(w.it.vals[0]).replace(/^مقاولين-\s?/, ''))}</span></span></td><td>${w.it.vals[3] ? `<span class="u" style="background:${unitCol(w.it.vals[3])}">${esc(w.it.vals[3])}</span>` : ''}</td><td class="num">${w.q ? fq(w.q) : '-'}</td><td class="num">${w.np || '-'}</td><td>${rng(w)}</td><td class="num"><b>${w.np ? frt(w.avg) : '-'}</b></td><td class="num" style="color:var(--navy);font-weight:700">${w.np ? frt(w.lr) : '-'}</td><td>${spark(w.ms)}</td>${ci(w, 'div')}${ci(w, 'mnl')}${ci(w, 'ce')}<td><span class="st ${s1.split(' ')[0]}">${s1}</span></td></tr>${
+            return `<tr class="pkw2${o ? ' op' : ''}" data-wo="${w.ii}"><td class="tgc">${w.np ? (o ? '−' : '+') : ''}</td><td dir="auto" title="${esc(w.it.vals[1] + ' · ' + w.it.vals[2])}"><span class="wi">${esc(w.it.vals[2])}</span><span class="help wsv">${esc(w.it.vals[1])} · <span dir="auto">${esc(String(w.it.vals[0]).replace(/^مقاولين-\s?/, ''))}</span></span></td><td>${w.it.vals[3] ? `<span class="u" style="background:${unitCol(w.it.vals[3])}">${esc(w.it.vals[3])}</span>` : ''}</td><td class="num">${w.q ? fq(w.q) : '-'}</td><td class="num">${w.np || '-'}</td><td>${rng(w)}</td><td class="num"><b>${w.np ? frt(w.avg) : '-'}</b></td><td class="num" style="color:var(--navy);font-weight:700">${w.np ? frt(w.lr) : '-'}</td><td>${spark(w.ms)}</td>${ci(w, 'mnl')}${ci(w, 'ce')}<td><span class="st ${s1.split(' ')[0]}">${s1}</span></td></tr>${
               o
-                ? `<tr class="pkex"><td></td><td colspan="12"><div class="pol">${[...w.by.entries()]
+                ? `<tr class="pkex"><td></td><td colspan="11"><div class="pol">${[...w.by.entries()]
                     .filter(([, x]) => x.q)
                     .sort((a, b) => a[1].a / a[1].q - b[1].a / b[1].q)
                     .map(([po, x]) => {

@@ -1,5 +1,13 @@
 [
   {
+    "v": "5.184",
+    "n": [
+      "Subcontractor is coded once, on 2 Code › Items, like every bucket – the separate “put each PO in a package” step is gone (a PO's package was always the PKG of its lines)",
+      "Reports › Rates › Subcontractor: the rate per unit by PO and month, grouped by the PKG on the items – read only",
+      "Monthly job: the same 4 steps as the menu, then “Export the monthly report”; the PO register has one home in Reports"
+    ]
+  },
+  {
     "v": "5.183",
     "n": [
       "Summary › Needs attention: indirect cost without a cost element (the “Other indirect” in the reports) is now listed first, with Code › to fix it"
