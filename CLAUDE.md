@@ -24,3 +24,9 @@
 - Version: `VERSION` file → `out/Cost_Register_Tool_vX.Y.html` (v30 became 3.0, then 3.1, 3.2 …); bump on every release. A release after the full set takes the next number (3.8 → 3.9); a UI-only release after the quick checks adds a digit (3.8 → 3.81, 3.82 …).
 - Each release: add 2–4 short user notes on top of `app/pwa/whatsnew.json` (shown in the app's What's new; `npm run build:site` refuses without them).
 - Code style: Prettier (`.prettierrc.json`); run `npm run format` after editing – `npm test` refuses unformatted code.
+
+## Deep test (only when the owner asks for "deep test" – never part of a release)
+A full UI / user-experience review, as a senior UI manager with SAP PS/CO and cost-control knowledge who opens the tool for the first time.
+- Walk every feature in order: start page (empty), open a data file, the 4 month-close steps and every tab, every report, Settings, the ⋯ More menu, export, undo/redo, search and filters, the drawer, folding the menu, a smaller screen.
+- Measure on every screen: JavaScript errors, sideways overflow, cut-off text, buttons without a name, small click targets, time to show.
+- Report: what works, findings ranked (blocker · major · minor · polish) with the screen, what a cost controller expects instead, and a screenshot; then the owner's decisions as multiple choice. Findings only – nothing is changed without the owner.
