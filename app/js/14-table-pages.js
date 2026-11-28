@@ -150,6 +150,7 @@ const numC = (k, l, w, get, o = {}) => ({
   ...o,
 });
 // ---- page definitions: rows, columns, groups
+let PCT_TOT = 1; // the bucket total behind the % of a group row (2 Code)
 // the three pages of Coding, as tabs: each says what it is
 const codTabs = (cur) =>
   `<div class="ctabs">${[['cod', 'Items', 'one row per item – code here'], ['lines', 'SAP transaction lines', 'the CJI3 lines of this bucket, with their codes'], ...(ST.bk === SUBI && SUBI >= 0 ? [['subpo', 'POs', 'the items of every PO, with their certificates – code by PO']] : [])].map(([k, l, h]) => `<button data-cv="${k}" class="${cur === k ? 'on' : ''}"><b>${l}</b><small>${h}</small></button>`).join('')}</div>`;
@@ -288,14 +289,52 @@ function pageDef() {
           cols.findIndex((c) => c.k === 'td'),
           1
         )[0];
-        td.l = 'Cost to date';
+        td.l = 'To date';
+        // % = the item's share of its group (Subcontractor: its type of works), else of the bucket; the group row: its share of the bucket
+        const byT0 = isSub(bi),
+          gKey = (it) => (byT0 ? String(it.vals[0] || '(no type of works)') : ''),
+          gTot = new Map();
+        inc.forEach((it) => gTot.set(gKey(it), (gTot.get(gKey(it)) || 0) + Math.abs(it.td)));
         cols.splice(
-          cols.findIndex((c) => c.code),
+          cols.findIndex((c) => c.k === 'ce') + 1,
           0,
           td,
-          numC('cum', 'Cumul.', 86, (r) => cum.get(r.it) || 0, { f: (x) => (100 * x).toFixed(1) + '%' })
+          numC('pct', '%', 64, (r) => Math.abs(r.it.td) / (gTot.get(gKey(r.it)) || 1), { f: (x) => (100 * x).toFixed(1) + '%' })
         );
-      } // the cost sits before the code boxes: you see what you are coding
+        PCT_TOT = tot;
+      } // the codes first, then what the item costs and its share
+      // narrow columns, short headers: the coding fits the screen (the explanation stays on hover)
+      {
+        const W = {
+            rk: 52,
+            c1: 88,
+            c3: 70,
+            c5: 70,
+            td: 100,
+            pct: 64,
+            pkg: 96,
+            mnl: 74,
+            ce: 112,
+            why: 150,
+            inc: 66,
+            qty: 88,
+            rate: 82,
+            tm: 100,
+          },
+          L = { pkg: 'PKG', ce: 'Cost el.', inc: 'Incl.', qty: 'Qty', why: 'Suggested' };
+        cols.forEach((c) => {
+          if (W[c.k]) {
+            c.w = W[c.k];
+            c.fixW = 1;
+          }
+          if (L[c.k]) c.l = L[c.k];
+          if (['mnl', 'inc', 'pct'].includes(c.k)) c.noI = 1;
+          if (/^Description$/.test(c.l)) {
+            c.w = 300;
+            c.fixW = 1;
+          }
+        });
+      }
       const bar = `<span class="nxp" title="Share of this bucket's to-date cost on coded items"><span class="nxb"><i style="width:${((100 * done) / tot).toFixed(1)}%"></i><u></u></span><small><b>${((100 * done) / tot).toFixed(1)}%</b> coded · ${done / tot >= 0.8 ? 'past <b>80%</b> of the cost' : `the next <b>${n80}</b> item${n80 === 1 ? '' : 's'} bring you to <b>80%</b>`} · ${todo.length.toLocaleString('en-US')} to code</small></span>`;
       const gb = document.getElementById('nxbar');
       if (gb) gb.innerHTML = bar; // the progress sits in the keys strip
@@ -316,7 +355,12 @@ function pageDef() {
         status: true,
         groups: byT,
         gSpanK: (cols[cols.findIndex((c) => c.k === 'td') - 1] || {}).k,
-        gCells: byT ? (g, rs) => ({ td: fmt(rs.reduce((x, r) => x + r.it.td, 0)) }) : null,
+        gCells: byT
+          ? (g, rs) => {
+              const t = rs.reduce((x, r) => x + r.it.td, 0);
+              return { td: fmt(t), pct: `<b>${((100 * Math.abs(t)) / (PCT_TOT || 1)).toFixed(1)}%</b>` };
+            }
+          : null,
         gLabel: (g, rs) =>
           `<b dir="auto" style="unicode-bidi:isolate">${esc(g)}</b> <span class="gm">${rs.length} to code · ${fmtM(rs.reduce((x, r) => x + Math.abs(r.it.td), 0))}</span>`,
         cm,

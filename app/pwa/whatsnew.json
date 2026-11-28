@@ -2,8 +2,9 @@
   {
     "v": "5.18",
     "n": [
-      "DIV is dropped: a Subcontractor item is coded with PKG, MNL and cost element, like every other bucket",
-      "DIV left the Code page, the PO and package screens and the Excel exports (the Subcontractor coding sheet and Packages & rates)"
+      "DIV is dropped: a Subcontractor item is coded with PKG, MNL and cost element, like every other bucket – also gone from the PO screens and the Excel exports",
+      "2 Code: the code boxes come right after the description; To date and % follow them. % is the item's share of its type of works; the group row shows its share of all subcontractors",
+      "Narrower columns with short headers, and a wider Description so you see the service you are coding"
     ]
   },
   {

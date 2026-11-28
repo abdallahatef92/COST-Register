@@ -329,7 +329,7 @@ function fitCols(D) {
     }
     const hw = tw(c.l, '600 12px "Segoe UI",Arial,sans-serif') + 38 + (c.tip ? 16 : 0);
     if (c.code) {
-      c.w = Math.max(c.w, Math.min(hw, 150));
+      if (!c.fixW) c.w = Math.max(c.w, Math.min(hw, 150));
       continue;
     }
     if (c.fixW || (c.slot !== undefined && !c.num)) continue;
@@ -708,14 +708,14 @@ function renderTable() {
     cols
       .map(
         (c) =>
-          `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzc(c.k)}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.tip || c.l)}">${esc(c.l)}${c.tip ? '<span class="tip">ⓘ</span>' : ''}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}<span class="rz" data-rk="${esc(c.k)}" title="Drag to change the width · double-click to fit"></span></th>`
+          `<th class="${c.code ? 'code' : ''} ${c.num ? 'num' : ''} ${c.th || ''} ${fzc(c.k)}"${fzL[c.k] !== undefined ? ` data-fz="1"` : ''} style="top:${nb * HH}px;${fzL[c.k] !== undefined ? `left:${fzL[c.k]}px;` : ''}" title="${esc(c.tip || c.l)}">${esc(c.l)}${c.tip && !c.noI ? '<span class="tip">ⓘ</span>' : ''}${S0.sort && S0.sort.k === c.k ? `<span class="sa"> ${S0.sort.d > 0 ? '▲' : '▼'}</span>` : ''}${D.noFilter ? '' : `<button class="fb ${S0.f[c.k] && S0.f[c.k].set ? 'act' : ''}" data-k="${c.k}">▾</button>`}<span class="rz" data-rk="${esc(c.k)}" title="Drag to change the width · double-click to fit"></span></th>`
       )
       .join('') +
     '</tr>';
   const nc = cols.length + (D.sel ? 1 : 0),
     ft = D.foot ? D.foot(rows) : null;
   $('tf').innerHTML = ft
-    ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzc(c.k)}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''}>${j === 0 ? 'TOTAL' : (ft[c.k] ?? '')}</td>`).join('')}</tr>`
+    ? `<tr class="tot">${D.sel ? '<td class="fz" style="left:0"></td>' : ''}${cols.map((c, j) => `<td class="${c.num ? 'num' : ''}${fzc(c.k)}" ${fzL[c.k] !== undefined ? `style="left:${fzL[c.k]}px"` : ''} title="${j === 0 ? 'Total' : ''}">${j === 0 ? (c.w < 72 ? 'Σ' : 'TOTAL') : (ft[c.k] ?? '')}</td>`).join('')}</tr>`
     : '';
   {
     const tb = [];
