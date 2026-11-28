@@ -385,7 +385,7 @@ function renderPkg() {
       .map(([k, l]) => `<button class="chip ${f === k ? 'on' : ''}" data-pkrf="${k}">${l}</button>`)
       .join(
         ''
-      )}<button data-fxfit="pk2" title="Fit every column to its content">↔ Fit</button><span style="flex:1"></span><span class="pkfill">DIV <input id="pfDIV" list="dl-div"> MNL <input id="pfMNL" list="dl-mnl"> Cost element <input id="pfCE" list="dl-ce"> <button id="pfGo" title="Fill these codes on every work item shown that has them empty">Fill empty</button></span></div>
+      )}<button data-fxfit="pk2" title="Fit every column to its content">↔ Fit</button><span style="flex:1"></span><span class="pkfill">MNL <input id="pfMNL" list="dl-mnl"> Cost element <input id="pfCE" list="dl-ce"> <button id="pfGo" title="Fill these codes on every work item shown that has them empty">Fill empty</button></span></div>
       <div class="pkg"><table class="t pkgt pkrt fxt" data-fx="pk2"><colgroup><col style="width:30px"><col><col style="width:66px"><col style="width:100px"><col style="width:62px"><col style="width:250px"><col style="width:92px"><col style="width:92px"><col style="width:96px"><col style="width:96px"><col style="width:84px"><col style="width:120px"><col style="width:110px"></colgroup>
       <thead><tr><th></th><th>Work item</th><th>Unit</th><th class="num">Qty</th><th class="num">POs</th><th title="Each dot is one PO's rate; the line is the average; green the lowest, red the highest">Rate range · ● PO | average</th><th class="num">Average</th><th class="num">Final</th><th title="Certified rate per month">Trend</th><th class="code">DIV</th><th class="code">MNL</th><th class="code">Cost element</th><th>Status</th></tr></thead>
       <tbody>${

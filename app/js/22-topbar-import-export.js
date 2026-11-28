@@ -726,12 +726,11 @@ $('bExport').onclick = async (ev) => {
         'Highest',
         'Spread',
         'Final',
-        'DIV',
         'MNL',
         'Cost element',
         'Status',
       ],
-      ['DIV', 'MNL', 'Cost element']
+      ['MNL', 'Cost element']
     );
     rr = 5;
     [...P]
@@ -757,7 +756,6 @@ $('bExport').onclick = async (ev) => {
                 w.mx,
                 w.sp / 100,
                 w.lr,
-                w.it.div || '',
                 w.it.mnl || '',
                 w.it.ce || '',
                 statusOf(w.it),
@@ -982,9 +980,9 @@ $('bExport').onclick = async (ev) => {
   }
   {
     const wc2 = wb.addWorksheet('Coding rules', { properties: { tabColor: { argb: 'FFC55A11' } } });
-    wc2.addRow(['Applies to', 'Group / service', 'DIV', 'PKG', 'MNL', 'Cost element']);
+    wc2.addRow(['Applies to', 'Group / service', 'PKG', 'MNL', 'Cost element']);
     Object.entries(ST.crules).forEach(([k, r]) =>
-      wc2.addRow([k[0] === 'm' ? 'Material group' : 'Subcontractor service', k.slice(2), r.div || '', r.pkg || '', r.mnl || '', r.ce || ''])
+      wc2.addRow([k[0] === 'm' ? 'Material group' : 'Subcontractor service', k.slice(2), r.pkg || '', r.mnl || '', r.ce || ''])
     );
     wc2.getRow(1).font = { name: A, bold: true };
     [22, 18, 10, 10, 8, 14].forEach((w, i) => {

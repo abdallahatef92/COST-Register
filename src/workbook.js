@@ -233,23 +233,22 @@ function bucketSheets(wb, b, model, opts) {
     cod1 = toolC ? 5 : COD_1;
   const C = toolC
     ? {
-        div: 5,
-        pkg: 6,
-        mnl: 7,
-        ce: 8,
-        st: 9,
-        inc: 10,
-        qty: 11,
-        rate: 12,
-        td: 13,
-        tm: 14,
-        nw: 15,
-        pos: 16,
-        subs: 17,
-        fp: 18,
-        lp: 19,
-        id: 20,
-        key: 21,
+        pkg: 5,
+        mnl: 6,
+        ce: 7,
+        st: 8,
+        inc: 9,
+        qty: 10,
+        rate: 11,
+        td: 12,
+        tm: 13,
+        nw: 14,
+        pos: 15,
+        subs: 16,
+        fp: 17,
+        lp: 18,
+        id: 19,
+        key: 20,
       }
     : isMat
       ? {
@@ -1099,7 +1098,7 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
     n2po = 0,
     tdNot = 0,
     tmNot = 0;
-  const miss = { div: 0, pkg: 0, mnl: 0, ce: 0 };
+  const miss = { pkg: 0, mnl: 0, ce: 0 };
   b.items.forEach((it) => {
     const r = it.crow,
       incl = it.lines.filter((l) => l.inc === 'Yes'),
@@ -1121,7 +1120,6 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
       if (c === 1) x.fill = fill(hashBand('s' + v));
     });
     [
-      ['div', it.div],
       ['pkg', it.pkg],
       ['mnl', it.mnl],
       ['ce', it.ce],
@@ -1132,9 +1130,9 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
       x.font = font({ bold: true });
       x.border = box;
     });
-    const full = it.div && it.pkg && it.mnl && it.ce,
+    const full = it.pkg && it.mnl && it.ce,
       status = full ? 'Coded' : 'Not coded';
-    setF(ws.getCell(r, C.st), `IF(COUNTA(${colL(C.div)}${r}:${colL(C.ce)}${r})=4,"Coded","Not coded")`, status);
+    setF(ws.getCell(r, C.st), `IF(COUNTA(${colL(C.pkg)}${r}:${colL(C.ce)}${r})=3,"Coded","Not coded")`, status);
     const x1 = ws.getCell(r, C.qty);
     setF(x1, blockTerms(it, D.qty, '">0"', '"<>Pending"').join('+') || '0', q);
     x1.numFmt = '#,##0.00;[Red]\\-#,##0.00;"-"';
@@ -1203,12 +1201,11 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
       `${nFull} of ${nFull + nNot}`,
       'General',
     ],
-    [5, 'DIV missing', `COUNTIFS(${rg(C.div)},"",${rg(C.id)},">0")`, miss.div, NUM0],
-    [6, 'PKG missing', `COUNTIFS(${rg(C.pkg)},"",${rg(C.id)},">0")`, miss.pkg, NUM0],
-    [7, 'MNL missing', `COUNTIFS(${rg(C.mnl)},"",${rg(C.id)},">0")`, miss.mnl, NUM0],
-    [8, 'Cost element missing', `COUNTIFS(${rg(C.ce)},"",${rg(C.id)},">0")`, miss.ce, NUM0],
+    [C.pkg, 'PKG missing', `COUNTIFS(${rg(C.pkg)},"",${rg(C.id)},">0")`, miss.pkg, NUM0],
+    [C.mnl, 'MNL missing', `COUNTIFS(${rg(C.mnl)},"",${rg(C.id)},">0")`, miss.mnl, NUM0],
+    [C.ce, 'Cost element missing', `COUNTIFS(${rg(C.ce)},"",${rg(C.id)},">0")`, miss.ce, NUM0],
     [
-      9,
+      C.st,
       'Coded – share of To date',
       `IFERROR(SUMIFS(${rg(C.td)},${rg(C.st)},"Coded")/SUM(${rg(C.td)}),0)`,
       tdSum ? fullSum / tdSum : 0,
@@ -1284,7 +1281,6 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
     'Service',
     'Description',
     'Unit',
-    'DIV',
     'PKG',
     'MNL',
     'Cost element',
@@ -1307,22 +1303,16 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
     if (h === null) setF(x, `"This month · "&${CUTLAB}`, 'This month · ' + rep);
     else x.value = h;
     navy(x);
-    if ((i + 1 >= C.div && i + 1 <= C.ce) || i + 1 === C.inc) x.fill = fill(GOLD);
+    if ((i + 1 >= C.pkg && i + 1 <= C.ce) || i + 1 === C.inc) x.fill = fill(GOLD);
   });
   ws.getRow(4).height = 30;
   // ---- formats, widths, filter, freeze, CF
-  [26, 11, 46, 7, 11, 9, 8, 14, 13, 8, 12, 11, 14, 14, 6, 6, 30, 10, 10, 6, 18].forEach((w, i) => {
+  [26, 11, 46, 7, 9, 8, 14, 13, 8, 12, 11, 14, 14, 6, 6, 30, 10, 10, 6, 18].forEach((w, i) => {
     ws.getColumn(i + 1).width = w;
   });
   ws.views = [{ showGridLines: false, state: 'frozen', xSplit: 4, ySplit: 4 }];
   ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: lastR, column: C.key } };
   ws.dataValidations.add(`${colL(C.inc)}${R1}:${colL(C.inc)}${lastR}`, { type: 'list', allowBlank: true, formulae: ['"Yes,No"'] });
-  ws.dataValidations.add(`${colL(C.div)}${R1}:${colL(C.div)}${lastR}`, {
-    type: 'list',
-    allowBlank: true,
-    showErrorMessage: false,
-    formulae: ['"' + [...DIVS.map((d) => 'DIV ' + d), 'DIV 0302', 'INDIRECT'].join(',') + '"'],
-  });
   const cf = (ref, f, c, pr) =>
     ws.addConditionalFormatting({
       ref,
@@ -1335,7 +1325,7 @@ function toolCoding(ws, b, def, C, R1, lastR, model, opts, blockTerms, D, nDat) 
         },
       ],
     });
-  cf(`${colL(C.div)}${R1}:${colL(C.ce)}${lastR}`, `AND($${colL(C.id)}${R1}<>"",LEN(TRIM(${colL(C.div)}${R1}))=0)`, 'F8CBAD', 5);
+  cf(`${colL(C.pkg)}${R1}:${colL(C.ce)}${lastR}`, `AND($${colL(C.id)}${R1}<>"",LEN(TRIM(${colL(C.pkg)}${R1}))=0)`, 'F8CBAD', 5);
   const st = colL(C.st);
   cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Coded"`, 'E2EFDA', 6);
   cf(`${st}${R1}:${st}${lastR}`, `$${st}${R1}="Not coded"`, 'FCE4D6', 8);

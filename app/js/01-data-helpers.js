@@ -61,7 +61,7 @@ const CTIP = {
   inc: 'Include = count this item in the cost. No = leave it out (shows in the footer as Excluded)',
 };
 const isSub = (bi) => bi === SUBI,
-  codeF = (bi) => (isSub(bi) ? ['div', 'pkg', 'mnl', 'ce'] : ['pkg', 'mnl', 'ce']),
+  codeF = () => ['pkg', 'mnl', 'ce'], // the same 3 codes in every bucket (DIV was dropped in 5.18)
   FN = { div: 'DIV', pkg: 'PKG', mnl: 'MNL', ce: 'Cost element' };
 const itemCode = (it) =>
   it.bi === MATI

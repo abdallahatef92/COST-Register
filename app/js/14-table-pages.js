@@ -1251,7 +1251,7 @@ function subDef() {
         v: (r) => r.it.vals[2],
         h: (r) => `<td dir="auto" title="${esc(r.it.vals[2])}">${esc(r.it.vals[2])}</td>`,
       },
-      ...['div', 'pkg', 'mnl', 'ce'].map((f) => ({
+      ...['pkg', 'mnl', 'ce'].map((f) => ({
         k: f,
         l: FN[f],
         w: f === 'ce' ? 100 : f === 'div' ? 88 : f === 'mnl' ? 66 : 80,

@@ -1,5 +1,12 @@
 [
   {
+    "v": "5.18",
+    "n": [
+      "DIV is dropped: a Subcontractor item is coded with PKG, MNL and cost element, like every other bucket",
+      "DIV left the Code page, the PO and package screens and the Excel exports (the Subcontractor coding sheet and Packages & rates)"
+    ]
+  },
+  {
     "v": "5.175",
     "n": [
       "2 Code is compact: the menu folds to the rail while you code (☰ opens it), the Items / SAP lines / POs switch sits in the toolbar, the keys are behind ⌨ Keys – about 50% more rows on screen",

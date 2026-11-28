@@ -666,7 +666,7 @@ const RUN = (k) => (!ONLY || ONLY.includes(k)) && !(QUICK && (k === '9' || k ===
         let n = 0;
         __BK.forEach((b) =>
           b.items.forEach((it) => {
-            if (it.inc !== 'No' && !(it.pkg && it.mnl && it.ce && (b.id !== 'Subcontractor' || it.div))) n++;
+            if (it.inc !== 'No' && !(it.pkg && it.mnl && it.ce)) n++;
           })
         );
         return n;

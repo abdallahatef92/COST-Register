@@ -86,7 +86,7 @@ document.addEventListener('click', (e) => {
     return;
   }
   if (t.id === 'pfGo') {
-    const v = { div: $('pfDIV').value.trim(), mnl: $('pfMNL').value.trim(), ce: $('pfCE').value.trim() },
+    const v = { mnl: $('pfMNL').value.trim(), ce: $('pfCE').value.trim() },
       ch = [];
     (R.pkRateRows || []).forEach((w) =>
       Object.entries(v).forEach(([f, x]) => {
